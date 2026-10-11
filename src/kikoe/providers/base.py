@@ -22,6 +22,11 @@ class TranscriptionError(Exception):
 
 
 class TranscriptionProvider(Protocol):
+    @property
+    def max_upload_bytes(self) -> int | None:
+        """Largest file :meth:`transcribe_file` accepts; longer audio must be split first."""
+        ...
+
     async def transcribe_file(
         self, audio: Path, model: ModelSpec, options: TranscriptionOptions
     ) -> tuple[Segment, ...]:
