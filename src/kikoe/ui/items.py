@@ -2,7 +2,7 @@
 
 from gi.repository import GObject
 
-from kikoe.core.models import ModelSpec, NoteSummary, Provider
+from kikoe.core.models import ModelSpec, NoteSummary, Provider, Recording, Segment
 
 
 class ProviderItem(GObject.Object):
@@ -21,3 +21,21 @@ class NoteItem(GObject.Object):
     def __init__(self, summary: NoteSummary) -> None:
         super().__init__()
         self.summary = summary
+
+
+class TranscriptItem(GObject.Object):
+    """A row of the note view: a recording header when ``segment`` is None."""
+
+    def __init__(
+        self,
+        recording: Recording,
+        number: int,
+        segment: Segment | None = None,
+        speaker_name: str | None = None,
+    ) -> None:
+        super().__init__()
+        self.recording = recording
+        self.number = number
+        """1-based position of the recording in its note."""
+        self.segment = segment
+        self.speaker_name = speaker_name

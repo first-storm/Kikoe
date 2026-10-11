@@ -5,12 +5,13 @@ from datetime import datetime
 
 from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 
-from kikoe.core.models import Note
+from kikoe.core.models import DisplayOptions, Note
 from kikoe.i18n import _
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.items import NoteItem
 from kikoe.ui.labels import note_subtitle, note_title_subtitle
+from kikoe.ui.note_view import NoteView
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
 
@@ -28,18 +29,27 @@ class Window(Adw.ApplicationWindow):
     content_page: Adw.NavigationPage = Gtk.Template.Child()
     window_title: Adw.WindowTitle = Gtk.Template.Child()
     note_menu_button: Gtk.MenuButton = Gtk.Template.Child()
+    display_options_button: Gtk.MenuButton = Gtk.Template.Child()
+    timestamps_row: Adw.SwitchRow = Gtk.Template.Child()
+    speakers_row: Adw.SwitchRow = Gtk.Template.Child()
     content_stack: Gtk.Stack = Gtk.Template.Child()
+    note_view_slot: Adw.Bin = Gtk.Template.Child()
 
     def __init__(
         self, application: Gtk.Application, providers: ProviderRepository, notes: NoteRepository
     ) -> None:
         super().__init__(application=application)
+        # Added from code: Blueprint cannot tell the custom widget scrolls by itself.
+        self.note_view = NoteView()
+        self.note_view_slot.set_child(self.note_view)
         self._providers = providers
         self._notes = notes
         self._note: Note | None = None
         self._providers_loaded = False
         self._selecting = False
         """True while the sidebar selection is changed from code, not by the user."""
+        self._showing = False
+        """True while widgets are filled from a note, so their signals are not user input."""
         self._note_items: Gio.ListStore[NoteItem] = Gio.ListStore(item_type=NoteItem)
         self.notes_list.bind_model(self._note_items, self._create_note_row)
         self._add_action("new-note", self._on_new_note)
@@ -61,6 +71,7 @@ class Window(Adw.ApplicationWindow):
         """Select ``note_id`` in the sidebar and show it."""
         if self._select_row(note_id):
             run_task(self._open_note(note_id), self)
+            self.split_view.set_show_content(True)
 
     def _add_action(
         self, name: str, callback: Callable[[Gio.SimpleAction, GLib.Variant | None], None]
@@ -140,6 +151,7 @@ class Window(Adw.ApplicationWindow):
     def _show_note(self, note: Note | None) -> None:
         self._note = note
         self.note_menu_button.set_visible(note is not None)
+        self.display_options_button.set_visible(note is not None)
         for name in _NOTE_ACTIONS:
             action = self.lookup_action(name)
             if isinstance(action, Gio.SimpleAction):
@@ -152,7 +164,24 @@ class Window(Adw.ApplicationWindow):
             self.content_page.set_title(note.title)
             self.window_title.set_title(note.title)
             self.window_title.set_subtitle(note_title_subtitle(note))
+            self._showing = True
+            try:
+                self.timestamps_row.set_active(note.display.show_timestamps)
+                self.speakers_row.set_active(note.display.show_speakers)
+            finally:
+                self._showing = False
+            self.note_view.show_note(note)
         self._update_content()
+
+    @Gtk.Template.Callback()
+    def _on_display_row_notify_active(
+        self, _row: Adw.SwitchRow, _pspec: GObject.ParamSpec | None
+    ) -> None:
+        if self._showing or self._note is None:
+            return
+        options = DisplayOptions(self.timestamps_row.get_active(), self.speakers_row.get_active())
+        if options != self._note.display:
+            run_task(self._notes.set_display_options(self._note.note_id, options), self)
 
     def _update_content(self) -> None:
         if self._note is not None:
@@ -173,7 +202,6 @@ class Window(Adw.ApplicationWindow):
     async def _create_note(self) -> None:
         note = await self._notes.create_note(_("New Note"))
         self.select_note(note.note_id)
-        self.split_view.set_show_content(True)
 
     def _on_rename_note(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         note = self._note

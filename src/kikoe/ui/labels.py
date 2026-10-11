@@ -4,8 +4,20 @@ from datetime import datetime
 
 from gi.repository import GLib
 
-from kikoe.core.formatting import RelativeDay, format_duration, relative_day
-from kikoe.core.models import ApiKind, Capabilities, Note, NoteSummary, RecordingSource
+from kikoe.core.formatting import (
+    RelativeDay,
+    format_duration,
+    relative_day,
+    transcript_features,
+)
+from kikoe.core.models import (
+    ApiKind,
+    Capabilities,
+    Note,
+    NoteSummary,
+    Recording,
+    RecordingSource,
+)
 from kikoe.core.validation import Capability, ModelError, ProviderError, capability_list
 from kikoe.i18n import _, ngettext
 
@@ -98,3 +110,15 @@ def _format(when: datetime, pattern: str) -> str:
     local = GLib.DateTime.new_from_unix_local(int(when.timestamp()))
     formatted = local.format(pattern) if local is not None else None
     return formatted or when.astimezone().strftime("%Y-%m-%d %H:%M")
+
+
+def recording_meta(recording: Recording, now: datetime) -> str:
+    """Header line, e.g. “Today 14:30 · 0:58 · Groq whisper-large-v3 · Timestamps”."""
+    parts = [
+        day_label(recording.created_at, now),
+        format_duration(recording.duration),
+        f"{recording.provider_name} {recording.model_id}",
+    ]
+    if features := transcript_features(recording.segments):
+        parts.append(", ".join(capability_label(feature) for feature in features))
+    return " · ".join(parts)

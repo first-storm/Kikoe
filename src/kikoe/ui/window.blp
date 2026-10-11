@@ -81,6 +81,56 @@ template $KikoeWindow: Adw.ApplicationWindow {
               menu-model: note_menu;
               visible: false;
             }
+
+            [end]
+            MenuButton display_options_button {
+              icon-name: "view-reveal-symbolic";
+              tooltip-text: _("Display Options");
+              visible: false;
+
+              popover: Popover {
+                child: Box {
+                  orientation: vertical;
+                  spacing: 12;
+                  margin-top: 6;
+                  margin-bottom: 6;
+                  margin-start: 6;
+                  margin-end: 6;
+
+                  ListBox {
+                    selection-mode: none;
+
+                    styles [
+                      "boxed-list",
+                    ]
+
+                    Adw.SwitchRow timestamps_row {
+                      title: _("Show _Timestamps");
+                      use-underline: true;
+                      notify::active => $_on_display_row_notify_active();
+                    }
+
+                    Adw.SwitchRow speakers_row {
+                      title: _("Show _Speakers");
+                      use-underline: true;
+                      notify::active => $_on_display_row_notify_active();
+                    }
+                  }
+
+                  Label {
+                    label: _("Only changes how this note is shown and exported. The transcript is not modified.");
+                    wrap: true;
+                    max-width-chars: 36;
+                    xalign: 0;
+
+                    styles [
+                      "caption",
+                      "dim-label",
+                    ]
+                  }
+                };
+              };
+            }
           }
 
           content: Stack content_stack {
@@ -127,11 +177,7 @@ template $KikoeWindow: Adw.ApplicationWindow {
             StackPage {
               name: "note";
 
-              child: Adw.StatusPage {
-                icon-name: "audio-x-generic-symbolic";
-                title: _("No Recordings Yet");
-                description: _("Import audio to add a transcript to this note.");
-              };
+              child: Adw.Bin note_view_slot {};
             }
           };
         };

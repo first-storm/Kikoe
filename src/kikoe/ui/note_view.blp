@@ -1,0 +1,39 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeNoteView: Adw.Bin {
+  child: Stack stack {
+    StackPage {
+      name: "transcript";
+
+      child: ScrolledWindow {
+        hscrollbar-policy: never;
+
+        styles [
+          "view",
+        ]
+
+        child: Adw.ClampScrollable {
+          maximum-size: 860;
+          tightening-threshold: 600;
+
+          child: ListView transcript_list {
+            margin-start: 12;
+            margin-end: 12;
+            margin-bottom: 24;
+          };
+        };
+      };
+    }
+
+    StackPage {
+      name: "no-recordings";
+
+      child: Adw.StatusPage {
+        icon-name: "audio-x-generic-symbolic";
+        title: _("No Recordings Yet");
+        description: _("Import audio to add a transcript to this note.");
+      };
+    }
+  };
+}

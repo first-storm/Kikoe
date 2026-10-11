@@ -1,0 +1,68 @@
+using Gtk 4.0;
+
+template $KikoeTranscriptRow: Box {
+  orientation: vertical;
+
+  Box header_box {
+    orientation: vertical;
+    spacing: 2;
+    margin-top: 24;
+    margin-bottom: 8;
+
+    Label title_label {
+      xalign: 0;
+
+      styles [
+        "heading",
+      ]
+    }
+
+    Label meta_label {
+      xalign: 0;
+      wrap: true;
+
+      styles [
+        "caption",
+        "dim-label",
+      ]
+    }
+  }
+
+  Box segment_box {
+    spacing: 12;
+    margin-top: 3;
+    margin-bottom: 3;
+
+    Label speaker_label {
+      xalign: 0;
+      yalign: 0;
+      width-chars: 10;
+      max-width-chars: 10;
+      ellipsize: end;
+
+      styles [
+        "heading",
+      ]
+    }
+
+    Label timestamp_label {
+      xalign: 0;
+      yalign: 0;
+      width-chars: 5;
+
+      styles [
+        "monospace",
+        "numeric",
+        "dim-label",
+      ]
+    }
+
+    Label text_label {
+      xalign: 0;
+      yalign: 0;
+      hexpand: true;
+      wrap: true;
+      wrap-mode: word_char;
+    }
+  }
+}
