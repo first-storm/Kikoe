@@ -7,6 +7,8 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
 from kikoe.constants import APP_ID, APP_NAME, ISSUE_URL, VERSION, WEBSITE
 from kikoe.i18n import _
+from kikoe.storage.library import Library, audio_dir, database_path
+from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.storage.secrets import KeyringSecretStore
 from kikoe.storage.settings import SettingsStore, default_settings_path
@@ -29,6 +31,7 @@ class Application(Adw.Application):
         self.providers = ProviderRepository(
             SettingsStore(default_settings_path()), KeyringSecretStore()
         )
+        self.notes = NoteRepository(Library(database_path(), audio_dir()))
         self._add_action("quit", self._on_quit, ["<primary>q"])
         self._add_action("preferences", self._on_preferences, ["<primary>comma"])
         self._add_action("add-provider", self._on_add_provider)
@@ -41,8 +44,9 @@ class Application(Adw.Application):
     def do_activate(self) -> None:
         window = self.get_active_window()
         if window is None:
-            window = Window(application=self, repository=self.providers)
+            window = Window(self, self.providers, self.notes)
             run_task(self.providers.load(), window)
+            run_task(self.notes.load(), window)
         window.present()
 
     def _add_action(

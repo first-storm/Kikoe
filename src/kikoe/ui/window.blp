@@ -16,93 +16,124 @@ template $KikoeWindow: Adw.ApplicationWindow {
     }
   }
 
-  content: Adw.NavigationSplitView split_view {
-    sidebar: Adw.NavigationPage {
-      title: _("Kikoe");
+  content: Adw.ToastOverlay toast_overlay {
+    child: Adw.NavigationSplitView split_view {
+      sidebar: Adw.NavigationPage {
+        title: _("Kikoe");
 
-      child: Adw.ToolbarView {
-        [top]
-        Adw.HeaderBar {
-          [end]
-          MenuButton {
-            primary: true;
-            icon-name: "open-menu-symbolic";
-            tooltip-text: _("Main Menu");
-            menu-model: primary_menu;
+        child: Adw.ToolbarView {
+          [top]
+          Adw.HeaderBar {
+            [start]
+            Button {
+              icon-name: "list-add-symbolic";
+              tooltip-text: _("New Note");
+              action-name: "win.new-note";
+            }
+
+            [end]
+            MenuButton {
+              primary: true;
+              icon-name: "open-menu-symbolic";
+              tooltip-text: _("Main Menu");
+              menu-model: primary_menu;
+            }
           }
-        }
 
-        content: ScrolledWindow {
-          hscrollbar-policy: never;
+          content: ScrolledWindow {
+            hscrollbar-policy: never;
 
-          child: ListBox notes_list {
-            styles [
-              "navigation-sidebar",
-            ]
-
-            [placeholder]
-            Label {
-              label: _("No Notes Yet");
-              margin-top: 24;
+            child: ListBox notes_list {
+              row-selected => $_on_notes_list_row_selected();
 
               styles [
-                "dim-label",
+                "navigation-sidebar",
               ]
-            }
+
+              [placeholder]
+              Label {
+                label: _("No Notes Yet");
+                margin-top: 24;
+
+                styles [
+                  "dim-label",
+                ]
+              }
+            };
           };
         };
       };
-    };
 
-    content: Adw.NavigationPage {
-      title: _("Kikoe");
+      content: Adw.NavigationPage content_page {
+        title: _("Kikoe");
 
-      child: Adw.ToolbarView {
-        [top]
-        Adw.HeaderBar {
-          show-title: false;
-        }
-
-        content: Stack content_stack {
-          StackPage {
-            name: "loading";
-
-            child: Box {};
-          }
-
-          StackPage {
-            name: "empty";
-
-            child: Adw.StatusPage {
-              icon-name: "io.github.first_storm.Kikoe";
-              title: _("No Note Selected");
-              description: _("Record or import audio to create a note.");
+        child: Adw.ToolbarView {
+          [top]
+          Adw.HeaderBar {
+            title-widget: Adw.WindowTitle window_title {
+              title: _("Kikoe");
             };
+
+            [end]
+            MenuButton note_menu_button {
+              icon-name: "view-more-symbolic";
+              tooltip-text: _("Note Menu");
+              menu-model: note_menu;
+              visible: false;
+            }
           }
 
-          StackPage {
-            name: "welcome";
+          content: Stack content_stack {
+            StackPage {
+              name: "loading";
 
-            child: Adw.StatusPage {
-              icon-name: "io.github.first_storm.Kikoe";
-              title: _("Welcome to Kikoe");
-              description: _(
-                "Kikoe turns speech into text using cloud services. Add a provider and a model first, then record or import audio."
-              );
+              child: Box {};
+            }
 
-              child: Button {
-                label: _("_Add Provider");
-                use-underline: true;
-                halign: center;
-                action-name: "app.add-provider";
+            StackPage {
+              name: "empty";
 
-                styles [
-                  "pill",
-                  "suggested-action",
-                ]
+              child: Adw.StatusPage {
+                icon-name: "io.github.first_storm.Kikoe";
+                title: _("No Note Selected");
+                description: _("Record or import audio to create a note.");
               };
-            };
-          }
+            }
+
+            StackPage {
+              name: "welcome";
+
+              child: Adw.StatusPage {
+                icon-name: "io.github.first_storm.Kikoe";
+                title: _("Welcome to Kikoe");
+                description: _(
+                  "Kikoe turns speech into text using cloud services. Add a provider and a model first, then record or import audio."
+                );
+
+                child: Button {
+                  label: _("_Add Provider");
+                  use-underline: true;
+                  halign: center;
+                  action-name: "app.add-provider";
+
+                  styles [
+                    "pill",
+                    "suggested-action",
+                  ]
+                };
+              };
+            }
+
+            StackPage {
+              name: "note";
+
+              child: Adw.StatusPage {
+                icon-name: "audio-x-generic-symbolic";
+                title: _("No Recordings Yet");
+                description: _("Import audio to add a transcript to this note.");
+              };
+            }
+          };
         };
       };
     };
@@ -119,6 +150,22 @@ menu primary_menu {
     item {
       label: _("_About Kikoe");
       action: "app.about";
+    }
+  }
+}
+
+menu note_menu {
+  section {
+    item {
+      label: _("_Rename…");
+      action: "win.rename-note";
+    }
+  }
+
+  section {
+    item {
+      label: _("_Delete Note");
+      action: "win.delete-note";
     }
   }
 }

@@ -2,7 +2,7 @@
 
 from gi.repository import GObject
 
-from kikoe.core.models import ModelSpec, Provider
+from kikoe.core.models import ModelSpec, NoteSummary, Provider
 
 
 class ProviderItem(GObject.Object):
@@ -15,3 +15,9 @@ class ModelItem(GObject.Object):
     def __init__(self, model: ModelSpec) -> None:
         super().__init__()
         self.model = model
+
+
+class NoteItem(GObject.Object):
+    def __init__(self, summary: NoteSummary) -> None:
+        super().__init__()
+        self.summary = summary
