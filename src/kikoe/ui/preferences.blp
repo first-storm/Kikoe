@@ -2,6 +2,10 @@ using Gtk 4.0;
 using Adw 1;
 
 template $KikoePreferencesDialog: Adw.PreferencesDialog {
+  content-width: 640;
+  content-height: 600;
+  closed => $_on_dialog_closed();
+
   Adw.PreferencesPage {
     name: "general";
     title: _("General");
@@ -20,6 +24,36 @@ template $KikoePreferencesDialog: Adw.PreferencesDialog {
     Adw.PreferencesGroup providers_group {
       title: _("Providers");
       description: _("Transcription happens in the cloud. A provider can offer several models.");
+
+      header-suffix: Button {
+        label: _("_Add Provider");
+        use-underline: true;
+        valign: center;
+        clicked => $_on_add_provider_button_clicked();
+
+        styles [
+          "suggested-action",
+        ]
+      };
+
+      ListBox providers_list {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+
+        [placeholder]
+        Label {
+          label: _("No Providers Yet");
+          margin-top: 12;
+          margin-bottom: 12;
+
+          styles [
+            "dim-label",
+          ]
+        }
+      }
     }
   }
 }

@@ -7,7 +7,11 @@ from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
 from kikoe.constants import APP_ID, APP_NAME, ISSUE_URL, VERSION, WEBSITE
 from kikoe.i18n import _
+from kikoe.storage.providers import ProviderRepository
+from kikoe.storage.secrets import KeyringSecretStore
+from kikoe.storage.settings import SettingsStore, default_settings_path
 from kikoe.ui.preferences import PreferencesDialog
+from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import UI_DIR
 from kikoe.ui.window import Window
 
@@ -22,8 +26,12 @@ class Application(Adw.Application):
             application_id=APP_ID,
             flags=Gio.ApplicationFlags.DEFAULT_FLAGS,
         )
+        self.providers = ProviderRepository(
+            SettingsStore(default_settings_path()), KeyringSecretStore()
+        )
         self._add_action("quit", self._on_quit, ["<primary>q"])
         self._add_action("preferences", self._on_preferences, ["<primary>comma"])
+        self._add_action("add-provider", self._on_add_provider)
         self._add_action("about", self._on_about)
 
     def do_startup(self) -> None:
@@ -31,7 +39,10 @@ class Application(Adw.Application):
         self._load_style()
 
     def do_activate(self) -> None:
-        window = self.get_active_window() or Window(application=self)
+        window = self.get_active_window()
+        if window is None:
+            window = Window(application=self, repository=self.providers)
+            run_task(self.providers.load(), window)
         window.present()
 
     def _add_action(
@@ -63,7 +74,12 @@ class Application(Adw.Application):
         self.quit()
 
     def _on_preferences(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        PreferencesDialog().present(self.get_active_window())
+        PreferencesDialog(self.providers).present(self.get_active_window())
+
+    def _on_add_provider(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        dialog = PreferencesDialog(self.providers)
+        dialog.present(self.get_active_window())
+        dialog.start_add_provider()
 
     def _on_about(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         about = Adw.AboutDialog(

@@ -65,6 +65,22 @@ template $KikoeWindow: Adw.ApplicationWindow {
 
         content: Stack content_stack {
           StackPage {
+            name: "loading";
+
+            child: Box {};
+          }
+
+          StackPage {
+            name: "empty";
+
+            child: Adw.StatusPage {
+              icon-name: "io.github.first_storm.Kikoe";
+              title: _("No Note Selected");
+              description: _("Record or import audio to create a note.");
+            };
+          }
+
+          StackPage {
             name: "welcome";
 
             child: Adw.StatusPage {
@@ -78,7 +94,7 @@ template $KikoeWindow: Adw.ApplicationWindow {
                 label: _("_Add Provider");
                 use-underline: true;
                 halign: center;
-                action-name: "app.preferences";
+                action-name: "app.add-provider";
 
                 styles [
                   "pill",

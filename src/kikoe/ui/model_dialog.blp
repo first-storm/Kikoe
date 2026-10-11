@@ -1,0 +1,124 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeModelDialog: Adw.Dialog {
+  title: _("Add Model");
+  content-width: 480;
+  content-height: 600;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      show-start-title-buttons: false;
+      show-end-title-buttons: false;
+
+      [start]
+      Button {
+        label: _("_Cancel");
+        use-underline: true;
+        clicked => $_on_cancel_button_clicked();
+      }
+
+      [end]
+      Button confirm_button {
+        label: _("_Add");
+        use-underline: true;
+        clicked => $_on_confirm_button_clicked();
+
+        styles [
+          "suggested-action",
+        ]
+      }
+    }
+
+    content: Adw.PreferencesPage {
+      Adw.PreferencesGroup {
+        Adw.EntryRow model_id_row {
+          title: _("Model ID");
+        }
+
+        Adw.EntryRow display_name_row {
+          title: _("Display Name");
+        }
+      }
+
+      Adw.PreferencesGroup {
+        title: _("This Model Supports");
+
+        Adw.ActionRow {
+          title: _("Realtime Transcription");
+          subtitle: _("Text appears while recording. If unchecked, the whole recording is uploaded after it stops.");
+          activatable-widget: realtime_check;
+
+          [prefix]
+          CheckButton realtime_check {
+            valign: center;
+          }
+        }
+
+        Adw.ActionRow {
+          title: _("Timestamps");
+          subtitle: _("Each segment carries a time. Needed for subtitle export.");
+          activatable-widget: timestamps_check;
+
+          [prefix]
+          CheckButton timestamps_check {
+            valign: center;
+          }
+        }
+
+        Adw.ActionRow {
+          title: _("Speaker Detection");
+          subtitle: _("Tells different people apart and labels them.");
+          activatable-widget: diarization_check;
+
+          [prefix]
+          CheckButton diarization_check {
+            valign: center;
+          }
+        }
+      }
+
+      Adw.PreferencesGroup {
+        Label error_label {
+          visible: false;
+          wrap: true;
+          xalign: 0;
+
+          styles [
+            "error",
+          ]
+        }
+
+        Label {
+          label: _(
+            "Different models from the same provider can differ. Check the provider’s documentation. Unchecked options are shown as unavailable when recording."
+          );
+          wrap: true;
+          xalign: 0;
+
+          styles [
+            "dim-label",
+            "caption",
+          ]
+        }
+      }
+
+      Adw.PreferencesGroup remove_group {
+        visible: false;
+
+        Button {
+          label: _("_Remove Model");
+          use-underline: true;
+          halign: center;
+          clicked => $_on_remove_button_clicked();
+
+          styles [
+            "destructive-action",
+            "pill",
+          ]
+        }
+      }
+    };
+  };
+}

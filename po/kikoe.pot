@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kikoe\n"
 "Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
-"POT-Creation-Date: 2026-10-12 04:16+1100\n"
+"POT-Creation-Date: 2026-10-12 04:37+1100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,23 +16,224 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
 #. Translators: replace with your name(s), one per line.
-#: src/kikoe/application.py:78
+#: src/kikoe/application.py:94
 msgid "translator-credits"
 msgstr ""
 
-#: src/kikoe/ui/preferences.ui:13 src/kikoe/ui/preferences.ui:17
+#: src/kikoe/ui/labels.py:11 src/kikoe/ui/provider_page.ui:46
+msgid "Deepgram"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:13 src/kikoe/ui/provider_page.ui:47
+msgid "OpenAI"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:15 src/kikoe/ui/provider_page.ui:48
+msgid "OpenAI-compatible"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:21
+msgid "Realtime"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:23 src/kikoe/ui/model_dialog.ui:71
+msgid "Timestamps"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:25
+msgid "Speakers"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:31
+msgid "Text only"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:37
+msgid "Enter a name for this provider."
+msgstr ""
+
+#: src/kikoe/ui/labels.py:39
+msgid "Enter the base URL of the API."
+msgstr ""
+
+#: src/kikoe/ui/labels.py:41
+msgid ""
+"The base URL must start with http:// or https:// and include a host name."
+msgstr ""
+
+#: src/kikoe/ui/labels.py:47
+msgid "Enter the model ID."
+msgstr ""
+
+#: src/kikoe/ui/labels.py:49
+msgid "This provider already has a model with that ID."
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.py:36 src/kikoe/ui/provider_page.py:79
+#: src/kikoe/ui/provider_page.py:83
+msgid "Edit Model"
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.py:37 src/kikoe/ui/provider_page.ui:18
+msgid "_Save"
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.ui:10
+msgid "Add Model"
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.ui:21 src/kikoe/ui/provider_page.py:144
+msgid "_Cancel"
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.ui:28
+msgid "_Add"
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.ui:44
+msgid "Model ID"
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.ui:49
+msgid "Display Name"
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.ui:56
+msgid "This Model Supports"
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.ui:59
+msgid "Realtime Transcription"
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.ui:60
+msgid ""
+"Text appears while recording. If unchecked, the whole recording is uploaded "
+"after it stops."
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.ui:72
+msgid "Each segment carries a time. Needed for subtitle export."
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.ui:83
+msgid "Speaker Detection"
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.ui:84
+msgid "Tells different people apart and labels them."
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.ui:109
+msgid ""
+"Different models from the same provider can differ. Check the provider’s "
+"documentation. Unchecked options are shown as unavailable when recording."
+msgstr ""
+
+#: src/kikoe/ui/model_dialog.ui:125
+msgid "_Remove Model"
+msgstr ""
+
+#: src/kikoe/ui/preferences.py:64
+#, python-brace-format
+msgid "{api} API · {count} model"
+msgid_plural "{api} API · {count} models"
+msgstr[0] ""
+msgstr[1] ""
+
+#: src/kikoe/ui/preferences.ui:16 src/kikoe/ui/preferences.ui:20
 msgid "General"
 msgstr ""
 
-#: src/kikoe/ui/preferences.ui:25 src/kikoe/ui/preferences.ui:29
+#: src/kikoe/ui/preferences.ui:28 src/kikoe/ui/preferences.ui:32
 msgid "Providers"
 msgstr ""
 
-#: src/kikoe/ui/preferences.ui:30
+#: src/kikoe/ui/preferences.ui:33
 msgid ""
 "Transcription happens in the cloud. A provider can offer several models."
+msgstr ""
+
+#: src/kikoe/ui/preferences.ui:36 src/kikoe/ui/window.ui:107
+msgid "_Add Provider"
+msgstr ""
+
+#: src/kikoe/ui/preferences.ui:53
+msgid "No Providers Yet"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.py:141
+#, python-brace-format
+msgid "Remove “{name}”?"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.py:142
+msgid "Its models and API key will be deleted."
+msgstr ""
+
+#: src/kikoe/ui/provider_page.py:145
+msgid "_Remove"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:10
+msgid "Add Provider"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:32
+msgid "Connection"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:33
+msgid ""
+"The API type decides the request format. Most providers offer an “OpenAI-"
+"compatible” API."
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:36
+msgid "Name"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:41
+msgid "API Type"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:56
+msgid "Base URL"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:62
+msgid "API Key"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:83
+msgid "Models"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:84
+msgid "What each model can do is set when you add it."
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:88
+msgid "Add _Model"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:102
+msgid "No Models Yet"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:119
+msgid "_Remove Provider"
+msgstr ""
+
+#: src/kikoe/ui/tasks.py:19
+msgid "Something Went Wrong"
+msgstr ""
+
+#: src/kikoe/ui/tasks.py:20
+msgid "_Close"
 msgstr ""
 
 #: src/kikoe/ui/window.ui:10 src/kikoe/ui/window.ui:25
@@ -48,24 +249,28 @@ msgstr ""
 msgid "No Notes Yet"
 msgstr ""
 
-#: src/kikoe/ui/window.ui:83
+#: src/kikoe/ui/window.ui:91
+msgid "No Note Selected"
+msgstr ""
+
+#: src/kikoe/ui/window.ui:92
+msgid "Record or import audio to create a note."
+msgstr ""
+
+#: src/kikoe/ui/window.ui:103
 msgid "Welcome to Kikoe"
 msgstr ""
 
-#: src/kikoe/ui/window.ui:84
+#: src/kikoe/ui/window.ui:104
 msgid ""
 "Kikoe turns speech into text using cloud services. Add a provider and a "
 "model first, then record or import audio."
 msgstr ""
 
-#: src/kikoe/ui/window.ui:87
-msgid "_Add Provider"
-msgstr ""
-
-#: src/kikoe/ui/window.ui:113
+#: src/kikoe/ui/window.ui:133
 msgid "_Preferences"
 msgstr ""
 
-#: src/kikoe/ui/window.ui:117
+#: src/kikoe/ui/window.ui:137
 msgid "_About Kikoe"
 msgstr ""

@@ -1,0 +1,116 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeProviderPage: Adw.NavigationPage {
+  title: _("Add Provider");
+  hidden => $_on_page_hidden();
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      [end]
+      Button {
+        label: _("_Save");
+        use-underline: true;
+        clicked => $_on_save_button_clicked();
+
+        styles [
+          "suggested-action",
+        ]
+      }
+    }
+
+    content: Adw.PreferencesPage {
+      Adw.PreferencesGroup {
+        title: _("Connection");
+        description: _("The API type decides the request format. Most providers offer an “OpenAI-compatible” API.");
+
+        Adw.EntryRow name_row {
+          title: _("Name");
+        }
+
+        Adw.ComboRow api_row {
+          title: _("API Type");
+          notify::selected => $_on_api_row_notify_selected();
+
+          model: StringList {
+            strings [
+              _("Deepgram"),
+              _("OpenAI"),
+              _("OpenAI-compatible"),
+            ]
+          };
+        }
+
+        Adw.EntryRow base_url_row {
+          title: _("Base URL");
+          input-purpose: url;
+        }
+
+        Adw.PasswordEntryRow api_key_row {
+          title: _("API Key");
+        }
+      }
+
+      Adw.PreferencesGroup {
+        Label error_label {
+          visible: false;
+          wrap: true;
+          xalign: 0;
+
+          styles [
+            "error",
+          ]
+        }
+      }
+
+      Adw.PreferencesGroup models_group {
+        title: _("Models");
+        description: _("What each model can do is set when you add it.");
+        visible: false;
+
+        header-suffix: Button {
+          label: _("Add _Model");
+          use-underline: true;
+          valign: center;
+          clicked => $_on_add_model_button_clicked();
+        };
+
+        ListBox models_list {
+          selection-mode: none;
+
+          styles [
+            "boxed-list",
+          ]
+
+          [placeholder]
+          Label {
+            label: _("No Models Yet");
+            margin-top: 12;
+            margin-bottom: 12;
+
+            styles [
+              "dim-label",
+            ]
+          }
+        }
+      }
+
+      Adw.PreferencesGroup remove_group {
+        visible: false;
+
+        Button {
+          label: _("_Remove Provider");
+          use-underline: true;
+          halign: center;
+          clicked => $_on_remove_button_clicked();
+
+          styles [
+            "destructive-action",
+            "pill",
+          ]
+        }
+      }
+    };
+  };
+}
