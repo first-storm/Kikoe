@@ -1,0 +1,25 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoePreferencesDialog: Adw.PreferencesDialog {
+  Adw.PreferencesPage {
+    name: "general";
+    title: _("General");
+    icon-name: "preferences-system-symbolic";
+
+    Adw.PreferencesGroup {
+      title: _("General");
+    }
+  }
+
+  Adw.PreferencesPage {
+    name: "providers";
+    title: _("Providers");
+    icon-name: "network-server-symbolic";
+
+    Adw.PreferencesGroup providers_group {
+      title: _("Providers");
+      description: _("Transcription happens in the cloud. A provider can offer several models.");
+    }
+  }
+}

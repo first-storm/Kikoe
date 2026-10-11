@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Kikoe
+Comment=Turn speech into text notes
+Exec=kikoe
+Icon=io.github.first_storm.Kikoe
+Terminal=false
+Type=Application
+Categories=AudioVideo;Audio;Utility;
+Keywords=transcription;speech;voice;notes;subtitles;
+StartupNotify=true
+DBusActivatable=false

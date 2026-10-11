@@ -1,0 +1,111 @@
+[project]
+name = "kikoe"
+version = "0.1.0"
+description = "Turn speech into text notes with cloud transcription services."
+readme = "README.md"
+requires-python = ">=3.14"
+authors = [{ name = "first-storm" }]
+classifiers = [
+  "Private :: Do Not Upload",
+  "Programming Language :: Python :: 3.14",
+  "Environment :: X11 Applications :: GTK",
+]
+dependencies = [
+  "PyGObject>=3.58",
+  "platformdirs>=4.3",
+]
+
+[project.gui-scripts]
+kikoe = "kikoe.main:main"
+
+[dependency-groups]
+dev = [
+  "blueprint-compiler @ git+https://gitlab.gnome.org/GNOME/blueprint-compiler.git@v0.22.2",
+  "pygobject-stubs>=2.17",
+  "pyright>=1.1.400",
+  "pytest>=8.4",
+  "ruff>=0.13",
+]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/kikoe"]
+# Generated files are gitignored but must ship in the wheel.
+artifacts = ["src/kikoe/**/*.ui", "src/kikoe/locale/**/*.mo"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+# ---------------------------------------------------------------- ruff
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = [
+  "E", "W",   # pycodestyle
+  "F",        # pyflakes
+  "I",        # isort
+  "N",        # pep8-naming
+  "UP",       # pyupgrade
+  "B",        # bugbear
+  "SIM",      # simplify
+  "C4",       # comprehensions
+  "RUF",      # ruff-specific
+  "PTH",      # pathlib instead of os.path (cross-platform paths)
+  "T20",      # no print()
+  "LOG", "G", # logging hygiene
+  "DTZ",      # timezone-aware datetimes
+  "ASYNC",    # async pitfalls
+  "TID",      # tidy imports (layering, see banned-api below)
+  "PLC", "PLE", "PLW",
+  "PIE",
+  "RET",
+  "S602", "S604", "S605", # no shell=True subprocesses
+]
+ignore = [
+  "PLC0415", # imports inside functions are fine for lazy loading
+]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+# GTK/GLib may only be imported by the UI layer. Everything else stays pure Python,
+# testable without a display and portable without GObject. See AGENTS.md "Layers".
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"gi".msg = "Only kikoe.ui, kikoe.application and kikoe.main may import gi (see AGENTS.md)."
+
+[tool.ruff.lint.per-file-ignores]
+"src/kikoe/ui/**" = ["TID251"]
+"src/kikoe/application.py" = ["TID251"]
+"src/kikoe/main.py" = ["TID251"]
+"scripts/**" = ["T20"]
+"tests/**" = ["TID251"]
+
+[tool.ruff.format]
+quote-style = "double"
+docstring-code-format = true
+
+# ---------------------------------------------------------------- pyright
+[tool.pyright]
+include = ["src", "tests", "scripts"]
+pythonVersion = "3.14"
+typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
+# gi.repository modules exist only as stubs (pygobject-stubs); that is expected.
+reportMissingModuleSource = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "tests"
+reportPrivateUsage = false
+
+# ---------------------------------------------------------------- pytest
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers"]
+markers = ["gtk: needs GTK typelibs (skipped automatically when unavailable)"]

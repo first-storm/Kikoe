@@ -1,0 +1,108 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeWindow: Adw.ApplicationWindow {
+  title: _("Kikoe");
+  default-width: 1180;
+  default-height: 780;
+  width-request: 360;
+  height-request: 294;
+
+  Adw.Breakpoint {
+    condition ("max-width: 640sp")
+
+    setters {
+      split_view.collapsed: true;
+    }
+  }
+
+  content: Adw.NavigationSplitView split_view {
+    sidebar: Adw.NavigationPage {
+      title: _("Kikoe");
+
+      child: Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {
+          [end]
+          MenuButton {
+            primary: true;
+            icon-name: "open-menu-symbolic";
+            tooltip-text: _("Main Menu");
+            menu-model: primary_menu;
+          }
+        }
+
+        content: ScrolledWindow {
+          hscrollbar-policy: never;
+
+          child: ListBox notes_list {
+            styles [
+              "navigation-sidebar",
+            ]
+
+            [placeholder]
+            Label {
+              label: _("No Notes Yet");
+              margin-top: 24;
+
+              styles [
+                "dim-label",
+              ]
+            }
+          };
+        };
+      };
+    };
+
+    content: Adw.NavigationPage {
+      title: _("Kikoe");
+
+      child: Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {
+          show-title: false;
+        }
+
+        content: Stack content_stack {
+          StackPage {
+            name: "welcome";
+
+            child: Adw.StatusPage {
+              icon-name: "io.github.first_storm.Kikoe";
+              title: _("Welcome to Kikoe");
+              description: _(
+                "Kikoe turns speech into text using cloud services. Add a provider and a model first, then record or import audio."
+              );
+
+              child: Button {
+                label: _("_Add Provider");
+                use-underline: true;
+                halign: center;
+                action-name: "app.preferences";
+
+                styles [
+                  "pill",
+                  "suggested-action",
+                ]
+              };
+            };
+          }
+        };
+      };
+    };
+  };
+}
+
+menu primary_menu {
+  section {
+    item {
+      label: _("_Preferences");
+      action: "app.preferences";
+    }
+
+    item {
+      label: _("_About Kikoe");
+      action: "app.about";
+    }
+  }
+}

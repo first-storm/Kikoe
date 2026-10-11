@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install GTK and build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgirepository-2.0-dev libcairo2-dev pkg-config \
+            gir1.2-gtk-4.0 gir1.2-adw-1 gettext
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Install project
+        run: uv sync --locked
+
+      - name: Lint and format
+        run: |
+          uv run ruff check
+          uv run ruff format --check
+          uv run scripts/build_ui.py --check
+
+      - name: Type check
+        run: |
+          uv run scripts/build_ui.py
+          uv run pyright
+
+      - name: Test
+        run: uv run pytest

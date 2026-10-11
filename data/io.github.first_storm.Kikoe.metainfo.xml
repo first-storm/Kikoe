@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.first_storm.Kikoe</id>
+  <name>Kikoe</name>
+  <summary>Turn speech into text notes</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <!-- TODO: choose a license and set project_license (SPDX), e.g. GPL-3.0-or-later. -->
+  <developer id="io.github.first_storm">
+    <name>first-storm</name>
+  </developer>
+  <description>
+    <p>
+      Kikoe records or imports audio and transcribes it with cloud speech-to-text
+      services such as Deepgram, OpenAI, or any OpenAI-compatible API. Transcripts can
+      include timestamps and speaker labels and can be exported as text, Markdown,
+      SRT, or WebVTT.
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.first_storm.Kikoe.desktop</launchable>
+  <url type="homepage">https://github.com/first-storm/Kikoe</url>
+  <url type="bugtracker">https://github.com/first-storm/Kikoe/issues</url>
+  <content_rating type="oars-1.1"/>
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>keyboard</control>
+    <control>pointing</control>
+    <control>touch</control>
+  </supports>
+  <releases>
+    <release version="0.1.0" date="2026-10-12">
+      <description><p>Project skeleton.</p></description>
+    </release>
+  </releases>
+</component>

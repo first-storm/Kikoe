@@ -1,0 +1,71 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the kikoe package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: kikoe\n"
+"Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
+"POT-Creation-Date: 2026-10-12 04:16+1100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#. Translators: replace with your name(s), one per line.
+#: src/kikoe/application.py:78
+msgid "translator-credits"
+msgstr ""
+
+#: src/kikoe/ui/preferences.ui:13 src/kikoe/ui/preferences.ui:17
+msgid "General"
+msgstr ""
+
+#: src/kikoe/ui/preferences.ui:25 src/kikoe/ui/preferences.ui:29
+msgid "Providers"
+msgstr ""
+
+#: src/kikoe/ui/preferences.ui:30
+msgid ""
+"Transcription happens in the cloud. A provider can offer several models."
+msgstr ""
+
+#: src/kikoe/ui/window.ui:10 src/kikoe/ui/window.ui:25
+#: src/kikoe/ui/window.ui:67
+msgid "Kikoe"
+msgstr ""
+
+#: src/kikoe/ui/window.ui:34
+msgid "Main Menu"
+msgstr ""
+
+#: src/kikoe/ui/window.ui:50
+msgid "No Notes Yet"
+msgstr ""
+
+#: src/kikoe/ui/window.ui:83
+msgid "Welcome to Kikoe"
+msgstr ""
+
+#: src/kikoe/ui/window.ui:84
+msgid ""
+"Kikoe turns speech into text using cloud services. Add a provider and a "
+"model first, then record or import audio."
+msgstr ""
+
+#: src/kikoe/ui/window.ui:87
+msgid "_Add Provider"
+msgstr ""
+
+#: src/kikoe/ui/window.ui:113
+msgid "_Preferences"
+msgstr ""
+
+#: src/kikoe/ui/window.ui:117
+msgid "_About Kikoe"
+msgstr ""

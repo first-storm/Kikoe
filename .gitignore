@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+build/
+dist/
+*.egg-info/
+
+# Tool caches
+.ruff_cache/
+.pytest_cache/
+.pyright/
+
+# Generated from Blueprint sources (run scripts/build_ui.py)
+src/kikoe/**/*.ui
+
+# Compiled translations (run scripts/i18n.py compile)
+src/kikoe/locale/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
