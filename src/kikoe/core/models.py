@@ -62,6 +62,13 @@ class Segment:
     speaker_id: str | None = None
 
 
+class RecordingSource(StrEnum):
+    """Where a recording's audio came from."""
+
+    IMPORTED = "imported"
+    RECORDED = "recorded"
+
+
 @dataclass(frozen=True, slots=True)
 class Recording:
     """One recorded or imported piece of audio inside a note, with its transcript."""
@@ -69,10 +76,21 @@ class Recording:
     recording_id: str
     created_at: datetime
     duration: timedelta
+    source: RecordingSource
+    provider_name: str
+    """The provider's name when transcribed, so the label survives removing the provider."""
     model_id: str
     segments: tuple[Segment, ...] = ()
     audio_path: Path | None = None
     """Retained original audio, used for re-transcription and raw export."""
+
+
+@dataclass(frozen=True, slots=True)
+class DisplayOptions:
+    """How a note is shown and exported. Never changes the stored transcript."""
+
+    show_timestamps: bool = True
+    show_speakers: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,3 +102,24 @@ class Note:
     created_at: datetime
     recordings: tuple[Recording, ...] = ()
     speakers: tuple[Speaker, ...] = ()
+    display: DisplayOptions = DisplayOptions()
+
+    @property
+    def duration(self) -> timedelta:
+        return sum((r.duration for r in self.recordings), timedelta())
+
+    def speaker_name(self, speaker_id: str) -> str | None:
+        return next((s.name for s in self.speakers if s.speaker_id == speaker_id), None)
+
+
+@dataclass(frozen=True, slots=True)
+class NoteSummary:
+    """What the sidebar shows for a note, without loading its transcript."""
+
+    note_id: str
+    title: str
+    created_at: datetime
+    recording_count: int
+    duration: timedelta
+    source: RecordingSource | None
+    """Source of the first recording; None for a note without recordings."""
