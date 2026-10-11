@@ -12,6 +12,7 @@ classifiers = [
 ]
 dependencies = [
   "PyGObject>=3.58",
+  "httpx>=0.28.1",
   "keyring>=25.7.0",
   "platformdirs>=4.3",
 ]
