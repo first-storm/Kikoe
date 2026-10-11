@@ -1,11 +1,105 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-  <!-- Placeholder icon. Replace before release. -->
-  <rect x="8" y="8" width="112" height="112" rx="24" fill="#1c71d8"/>
-  <g fill="#ffffff">
-    <rect x="30" y="54" width="8" height="20" rx="4"/>
-    <rect x="46" y="42" width="8" height="44" rx="4"/>
-    <rect x="62" y="32" width="8" height="64" rx="4"/>
-    <rect x="78" y="46" width="8" height="36" rx="4"/>
-    <rect x="94" y="56" width="8" height="16" rx="4"/>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="121 114.5 817 817" fill="none" role="img" aria-labelledby="title description">
+  <title id="title">语音文档</title>
+  <desc id="description">倾斜的米白色圆角文档，带有三条文字横线和五条声波。右下方叠放一个蓝色圆形麦克风徽章。</desc>
+
+  <defs>
+    <linearGradient id="paper-edge" x1="206" y1="175" x2="660" y2="844" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#DDD6C8"/>
+      <stop offset="1" stop-color="#AFA797"/>
+    </linearGradient>
+    <linearGradient id="paper-middle" x1="220" y1="184" x2="678" y2="817" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EFE9DD"/>
+      <stop offset="1" stop-color="#CFC6B5"/>
+    </linearGradient>
+    <linearGradient id="paper-face" x1="250" y1="190" x2="684" y2="790" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFCF6"/>
+      <stop offset="1" stop-color="#F2EBDD"/>
+    </linearGradient>
+    <linearGradient id="ink" x1="276" y1="302" x2="598" y2="658" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9EADBF"/>
+      <stop offset="1" stop-color="#8DA1B5"/>
+    </linearGradient>
+    <linearGradient id="badge-edge" x1="588" y1="509" x2="826" y2="822" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1689EF"/>
+      <stop offset="1" stop-color="#0D4691"/>
+    </linearGradient>
+    <linearGradient id="badge-rim" x1="656" y1="434" x2="766" y2="794" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5CC0FF"/>
+      <stop offset="0.48" stop-color="#258EF0"/>
+      <stop offset="1" stop-color="#125CB5"/>
+    </linearGradient>
+    <linearGradient id="badge-face" x1="608" y1="465" x2="809" y2="788" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#42A6F6"/>
+      <stop offset="0.52" stop-color="#2685E8"/>
+      <stop offset="1" stop-color="#1462C4"/>
+    </linearGradient>
+    <linearGradient id="mic-face" x1="687" y1="484" x2="751" y2="738" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFEF9"/>
+      <stop offset="0.45" stop-color="#EFF6F8"/>
+      <stop offset="1" stop-color="#BCDEFA"/>
+    </linearGradient>
+
+    <filter id="document-shadow" x="-20%" y="-15%" width="150%" height="150%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="15"/>
+      <feOffset dx="9" dy="22" result="shadow-offset"/>
+      <feFlood flood-color="#3B372F" flood-opacity="0.18"/>
+      <feComposite in2="shadow-offset" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="badge-shadow" x="-25%" y="-20%" width="150%" height="155%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="13"/>
+      <feOffset dx="-3" dy="19" result="shadow-offset"/>
+      <feFlood flood-color="#182D49" flood-opacity="0.24"/>
+      <feComposite in2="shadow-offset" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="mic-shadow" x="-25%" y="-15%" width="150%" height="145%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dy="4" result="shadow-offset"/>
+      <feFlood flood-color="#073E84" flood-opacity="0.36"/>
+      <feComposite in2="shadow-offset" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+<g id="document" transform="rotate(-12 462 482)">
+    <rect id="paper-back" x="184" y="206" width="514" height="620" rx="54" fill="url(#paper-edge)" filter="url(#document-shadow)"/>
+    <rect id="paper-middle-layer" x="195" y="190" width="514" height="620" rx="54" fill="url(#paper-middle)"/>
+    <rect id="paper-front" x="206" y="175" width="514" height="620" rx="54" fill="url(#paper-face)" stroke="#E7E0D3" stroke-width="1.5"/>
+
+    <g id="text-lines" stroke="url(#ink)" stroke-width="28" stroke-linecap="round">
+      <path d="M 277 304 H 632"/>
+      <path d="M 277 383 H 632"/>
+      <path d="M 277 462 H 452"/>
+    </g>
+
+    <g id="waveform" stroke="url(#ink)" stroke-width="25" stroke-linecap="round">
+      <path d="M 276 598 V 610"/>
+      <path d="M 312 578 V 630"/>
+      <path d="M 348 546 V 662"/>
+      <path d="M 384 578 V 630"/>
+      <path d="M 420 598 V 610"/>
+    </g>
+  </g>
+
+  <g id="microphone-badge" filter="url(#badge-shadow)">
+    <circle id="badge-depth" cx="716" cy="635" r="198" fill="url(#badge-edge)"/>
+    <circle id="badge-border" cx="716" cy="618" r="198" fill="url(#badge-rim)"/>
+    <circle id="badge-front" cx="716" cy="618" r="190" fill="url(#badge-face)"/>
+  </g>
+
+  <g id="microphone" filter="url(#mic-shadow)">
+    <rect id="mic-capsule" x="666" y="483" width="100" height="177" rx="50" fill="url(#mic-face)"/>
+    <path id="mic-stand" d="M 628 605 A 88 88 0 0 0 804 605 M 716 693 V 738 M 683 738 H 749" stroke="url(#mic-face)" stroke-width="25" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 </svg>
