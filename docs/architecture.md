@@ -51,9 +51,19 @@ Top-level helpers (`constants`, `paths`, `i18n`) are importable from any layer.
   `dataclasses.replace`.
 - Library: SQLite at `paths.data_dir()/library.sqlite3`; retained original audio under
   `paths.data_dir()/audio/`. (Not implemented yet.)
-- Settings: a small TOML/JSON file in `paths.config_dir()`. GSettings is avoided
-  because it needs compiled schemas on every platform.
-- Secrets (API keys): the OS credential store via `keyring`, never in settings files.
+- Settings: `paths.config_dir()/settings.json`, written atomically by
+  `storage.settings.SettingsStore`. Shape: `{"version": 1, "providers": [{"id", "name",
+  "api", "base_url", "models": [{"id", "name", "realtime", "timestamps",
+  "diarization"}]}]}`. A file with a newer `version` or damaged content is reported to the
+  user, not overwritten silently. GSettings is avoided because it needs compiled schemas on
+  every platform.
+- Secrets (API keys): the OS credential store via `keyring` (service = app ID, username =
+  provider ID), wrapped by `storage.secrets.KeyringSecretStore`. Never in settings files or
+  logs. If no backend is available the user gets an error; there is no plain-text fallback.
+  Behavior inside Flatpak (Secret Service over D-Bus needs `--talk-name=org.freedesktop.secrets`)
+  is still to be verified.
+- `storage.providers.ProviderRepository` combines both, keeps the provider list in memory and
+  notifies listeners (window, preferences) after each persisted change.
 
 ## Audio pipeline (planned)
 
