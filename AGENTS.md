@@ -48,6 +48,7 @@ src/kikoe/
   providers/   cloud transcription clients             (no gi; async)
   media/       ffmpeg gateway, microphone capture      (no gi)
   storage/     SQLite library, settings, audio files   (no gi)
+  services/    workflows across providers/media/storage (no gi; e.g. import audio)
   ui/          widgets: one foo.py + foo.blp per widget, style.css, icons/
 scripts/       dev tools (build_ui.py, i18n.py)
 tests/         pytest, mirrors src/kikoe names: test_<module>.py
@@ -59,8 +60,10 @@ po/            translations
 
 - Only `kikoe/ui/`, `kikoe/application.py` and `kikoe/main.py` may import `gi`.
   Ruff enforces this (`TID251`). Do not add `noqa` to get around it.
-- Dependencies point downward: `ui → providers/media/storage → core`. Lower layers never
-  import `kikoe.ui`. `core` imports only the stdlib and other `core` modules.
+- Dependencies point downward: `ui → services → providers/media/storage → core`. Lower
+  layers never import `kikoe.ui` or `kikoe.services`; providers, media and storage do not
+  import each other. A flow that needs several of them goes in `services`.
+  `core` imports only the stdlib and other `core` modules.
 - Business logic (formatting a transcript, merging speakers, deciding which options a
   model allows) goes in `core` with tests, not in widget code. Widgets only bind data
   to the screen and forward user intent.
@@ -142,8 +145,8 @@ po/            translations
 
 ## Tests
 
-- Every `core`, `providers`, `media`, `storage` change comes with pytest tests. Tests use
-  `tmp_path` and `monkeypatch`; no network, no real API keys, no real microphone.
+- Every `core`, `providers`, `media`, `storage`, `services` change comes with pytest tests.
+  Tests use `tmp_path` and `monkeypatch`; no network, no real API keys, no real microphone.
 - Provider clients are tested against recorded/fake HTTP responses.
 - UI code is verified by running the app; pure logic must not hide in widgets so that
   it can be tested.

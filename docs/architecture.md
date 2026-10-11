@@ -14,19 +14,22 @@
             │ kikoe.ui  (GTK 4 + libadwaita)       │  widgets, dialogs, Blueprints
             └───────────────┬──────────────────────┘
                             │ calls (never the other way)
+            ┌───────────────┴──────────────────────┐
+            │ kikoe.services                       │  workflows, e.g. import audio
+            └───────────────┬──────────────────────┘
    ┌────────────┬───────────┴────┬───────────────┐
    │ providers  │ media          │ storage       │  I/O adapters, async
    │ (HTTP/WS)  │ (ffmpeg, mic)  │ (SQLite, files│
    └─────┬──────┴──────┬─────────┴──────┬────────┘
          └─────────────┴─ kikoe.core ───┘           pure domain types + logic
 ```
-
 Rules (enforced by ruff `TID251` where possible, see `pyproject.toml`):
 
 | Package | May import | Must not import |
 | --- | --- | --- |
 | `kikoe.core` | stdlib | `gi`, other kikoe packages |
-| `kikoe.providers`, `kikoe.media`, `kikoe.storage` | stdlib, `kikoe.core`, `kikoe.paths`, third-party I/O libs | `gi`, `kikoe.ui` |
+| `kikoe.providers`, `kikoe.media`, `kikoe.storage` | stdlib, `kikoe.core`, `kikoe.paths`, third-party I/O libs | `gi`, `kikoe.ui`, `kikoe.services`, each other |
+| `kikoe.services` | the rows above | `gi`, `kikoe.ui` |
 | `kikoe.ui` | everything above, `gi` | — |
 | `kikoe.application`, `kikoe.main` | everything | — |
 
