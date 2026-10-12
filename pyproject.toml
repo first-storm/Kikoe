@@ -102,6 +102,7 @@ docstring-code-format = true
 # ---------------------------------------------------------------- pyright
 [tool.pyright]
 include = ["src", "tests", "scripts"]
+extraPaths = ["src"]
 pythonVersion = "3.14"
 typeCheckingMode = "strict"
 venvPath = "."
