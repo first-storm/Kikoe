@@ -53,9 +53,8 @@ Default size 1180×780. Two panes.
 **Content header**: note title ("Podcast Topics") with subtitle "2 recordings · 1:39".
 Header buttons: *Undo* and *Redo* at the start (icon buttons, transcript edits only);
 at the end:
-- *Display Options* (popover):
-  - Switch "Show Timestamps", switch "Show Speakers".
-  - Footnote: "Only changes how this note is shown and exported. The transcript is not modified."
+- *Display Options* (menu): check items "Show Timestamps" and "Show Speakers". They
+  only change how this note is shown and exported; the transcript is not modified.
 - *Note Menu*: "Rename…", "Copy All Text", "Export…", "Delete Note" (destructive).
   Export is a menu item rather than its own header button so the header still fits
   at 360 px with Undo and Redo.
