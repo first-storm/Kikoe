@@ -111,7 +111,8 @@ jobs:
       - name: Install flatpak-builder
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder elfutils
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder elfutils \
+            librsvg2-common
           flatpak remote-add --user --if-not-exists flathub \
             https://dl.flathub.org/repo/flathub.flatpakrepo
 
