@@ -61,7 +61,19 @@ jobs:
           name: wheel-linux
           path: dist
 
-      - uses: actions/cache@v4
+      # Saved right away, so a later failure in the job does not waste the build.
+      - id: ffmpeg-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build/ffmpeg
+          key: ffmpeg-linux-${{ matrix.arch }}-${{ hashFiles('packaging/ffmpeg/*.sh') }}
+
+      - name: Build ffmpeg
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: packaging/ffmpeg/build.sh build/ffmpeg
+
+      - if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
         with:
           path: build/ffmpeg
           key: ffmpeg-linux-${{ matrix.arch }}-${{ hashFiles('packaging/ffmpeg/*.sh') }}

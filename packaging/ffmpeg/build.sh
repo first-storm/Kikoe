@@ -38,11 +38,18 @@ fetch() {
 fetch "https://downloads.xiph.org/releases/opus/opus-$OPUS_VERSION.tar.gz" "$OPUS_SHA256"
 fetch "https://ffmpeg.org/releases/ffmpeg-$FFMPEG_VERSION.tar.xz" "$FFMPEG_SHA256"
 
+opus_configure=()
+case "${MSYSTEM:-}" in
+    # Opus has no ARM CPU detection for Windows; NEON is always present on arm64.
+    CLANGARM64) opus_configure+=(--disable-rtcd) ;;
+esac
+
 deps="$work/deps"
 (
     cd "$work/opus-$OPUS_VERSION"
     ./configure --prefix="$deps" --enable-static --disable-shared \
-        --disable-doc --disable-extra-programs
+        --disable-doc --disable-extra-programs \
+        ${opus_configure[@]+"${opus_configure[@]}"}
     make -j"$jobs"
     make install
 )
