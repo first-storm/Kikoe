@@ -54,7 +54,7 @@ jobs:
         run: |
           export XDG_RUNTIME_DIR=/tmp/kikoe-runtime
           mkdir -m 700 -p "$XDG_RUNTIME_DIR"
-          dbus-uuidgen --ensure=/etc/machine-id
+          if [ ! -s /etc/machine-id ]; then dbus-uuidgen > /etc/machine-id; fi
           pulseaudio -n --daemonize=no --exit-idle-time=-1 --log-target=stderr \
             --load=module-native-protocol-unix --load='module-null-sink sink_name=kikoe_test' \
             > "$RUNNER_TEMP/kikoe-pulse.log" 2>&1 &
