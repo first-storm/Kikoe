@@ -122,6 +122,24 @@ template $KikoeBottomBar: Adw.Bin {
                     toggled => $_on_feature_check_toggled();
                   }
 
+                  Box granularity_box {
+                    orientation: vertical;
+                    spacing: 6;
+                    margin-start: 24;
+
+                    CheckButton segment_check {
+                      label: _("_Segment");
+                      use-underline: true;
+                      toggled => $_on_granularity_toggled();
+                    }
+
+                    CheckButton word_check {
+                      label: _("_Word");
+                      use-underline: true;
+                      toggled => $_on_granularity_toggled();
+                    }
+                  }
+
                   CheckButton speakers_check {
                     label: _("_Speakers");
                     use-underline: true;

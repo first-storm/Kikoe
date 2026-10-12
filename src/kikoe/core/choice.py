@@ -3,7 +3,7 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from kikoe.core.models import Capabilities, ModelSpec, Provider
+from kikoe.core.models import Capabilities, ModelSpec, Provider, TimestampGranularity
 from kikoe.core.validation import Capability
 
 
@@ -41,13 +41,25 @@ class RequestedFeatures:
 
     timestamps: bool = True
     diarization: bool = True
+    timestamp_granularities: tuple[TimestampGranularity, ...] = (TimestampGranularity.SEGMENT,)
+    """Timestamp detail; only OpenRouter honours the selection for now."""
 
     def allowed_by(self, capabilities: Capabilities) -> RequestedFeatures:
         """Drop what the model cannot do; those options are shown as unavailable."""
         return RequestedFeatures(
             timestamps=self.timestamps and capabilities.timestamps,
             diarization=self.diarization and capabilities.diarization,
+            timestamp_granularities=self.timestamp_granularities,
         )
+
+
+def normalize_granularities(
+    values: Iterable[TimestampGranularity],
+) -> tuple[TimestampGranularity, ...]:
+    """Deduplicate a granularity selection into canonical order, never empty."""
+    selected = set(values)
+    ordered = tuple(g for g in TimestampGranularity if g in selected)
+    return ordered or (TimestampGranularity.SEGMENT,)
 
 
 def unsupported_features(capabilities: Capabilities) -> tuple[Capability, ...]:

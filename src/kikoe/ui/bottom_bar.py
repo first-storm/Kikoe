@@ -9,10 +9,11 @@ from kikoe.core.choice import (
     ModelChoice,
     RequestedFeatures,
     available_models,
+    normalize_granularities,
     resolve_choice,
 )
 from kikoe.core.formatting import format_timestamp
-from kikoe.core.models import ModelSpec
+from kikoe.core.models import ApiKind, ModelSpec, TimestampGranularity
 from kikoe.core.preferences import preferred_model
 from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.core.transcription import model_support
@@ -35,6 +36,9 @@ class BottomBar(Adw.Bin):
     provider_label: Gtk.Label = Gtk.Template.Child()
     options_box: Gtk.Box = Gtk.Template.Child()
     timestamps_check: Gtk.CheckButton = Gtk.Template.Child()
+    granularity_box: Gtk.Box = Gtk.Template.Child()
+    segment_check: Gtk.CheckButton = Gtk.Template.Child()
+    word_check: Gtk.CheckButton = Gtk.Template.Child()
     speakers_check: Gtk.CheckButton = Gtk.Template.Child()
     hint_label: Gtk.Label = Gtk.Template.Child()
     model_popover: Gtk.Popover = Gtk.Template.Child()
@@ -206,6 +210,7 @@ class BottomBar(Adw.Bin):
     def _show_options(self, model: ModelSpec | None) -> None:
         self.options_box.set_visible(model is not None)
         if model is None:
+            self.granularity_box.set_visible(False)
             self.hint_label.set_label("")
             self.hint_label.set_tooltip_text(None)
             return
@@ -234,6 +239,19 @@ class BottomBar(Adw.Bin):
                     if supported
                     else unsupported_feature_tooltip(capability, model.display_name)
                 )
+            granular = (
+                self._choice is not None
+                and self._choice.provider.api is ApiKind.OPENROUTER
+                and model.capabilities.timestamps
+            )
+            self.granularity_box.set_visible(granular)
+            if granular:
+                self.segment_check.set_active(
+                    TimestampGranularity.SEGMENT in self._wanted.timestamp_granularities
+                )
+                self.word_check.set_active(
+                    TimestampGranularity.WORD in self._wanted.timestamp_granularities
+                )
         finally:
             self._updating = False
         hint = transcription_hint(model.capabilities)
@@ -254,6 +272,29 @@ class BottomBar(Adw.Bin):
             else self._wanted.diarization,
         )
         self._show_options(replace(self._choice.model, capabilities=caps))
+
+    @Gtk.Template.Callback()
+    def _on_granularity_toggled(self, check: Gtk.CheckButton) -> None:
+        if self._updating or self._choice is None:
+            return
+        if not (self.segment_check.get_active() or self.word_check.get_active()):
+            self._updating = True
+            try:
+                check.set_active(True)
+            finally:
+                self._updating = False
+            return
+        self._wanted = replace(
+            self._wanted,
+            timestamp_granularities=normalize_granularities(
+                granularity
+                for granularity, box in (
+                    (TimestampGranularity.SEGMENT, self.segment_check),
+                    (TimestampGranularity.WORD, self.word_check),
+                )
+                if box.get_active()
+            ),
+        )
 
     def _create_model_row(self, item: GObject.Object) -> Gtk.Widget:
         assert isinstance(item, ModelChoiceItem)

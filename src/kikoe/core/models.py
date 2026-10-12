@@ -31,6 +31,13 @@ class Capabilities:
     """Segments are attributed to distinct speakers."""
 
 
+class TimestampGranularity(StrEnum):
+    """Detail level requested in a verbose transcription response."""
+
+    SEGMENT = "segment"
+    WORD = "word"
+
+
 @dataclass(frozen=True, slots=True)
 class ModelSpec:
     model_id: str

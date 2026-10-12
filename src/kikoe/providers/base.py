@@ -4,12 +4,12 @@ import asyncio
 import logging
 from collections.abc import AsyncIterator
 from contextlib import AsyncExitStack
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import timedelta
 from pathlib import Path
 from typing import Protocol
 
-from kikoe.core.models import ModelSpec, Segment
+from kikoe.core.models import ModelSpec, Segment, TimestampGranularity
 from kikoe.core.transcription import TranscriptEvent
 
 log = logging.getLogger(__name__)
@@ -32,6 +32,10 @@ class TranscriptionOptions:
     diarization: bool = True
     language: str | None = None
     """BCP 47 tag, or None to let the service detect it."""
+    timestamp_granularities: tuple[TimestampGranularity, ...] = field(
+        default=(TimestampGranularity.SEGMENT,), kw_only=True
+    )
+    """Timestamp detail; only OpenRouter honours the selection for now."""
 
 
 class TranscriptionError(Exception):

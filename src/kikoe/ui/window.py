@@ -1008,6 +1008,7 @@ class Window(Adw.ApplicationWindow):
             timestamps=features.timestamps,
             diarization=features.diarization,
             language=self._providers.preferences.language,
+            timestamp_granularities=features.timestamp_granularities,
         )
         task = asyncio.ensure_future(self._import(path, note_id, choice, options))
         self._import_task = task
@@ -1097,6 +1098,7 @@ class Window(Adw.ApplicationWindow):
             timestamps=features.timestamps,
             diarization=features.diarization,
             language=self._providers.preferences.language,
+            timestamp_granularities=features.timestamp_granularities,
         )
         note_id = self._note.note_id if self._note else None
         self._recording_task = run_task(self._record(note_id, choice, options), self)
@@ -1265,6 +1267,7 @@ class Window(Adw.ApplicationWindow):
             timestamps=features.timestamps,
             diarization=features.diarization,
             language=self._providers.preferences.language,
+            timestamp_granularities=features.timestamp_granularities,
         )
         self._recording_task = run_task(
             self._retry_recording(note.note_id, recording, choice, options), self

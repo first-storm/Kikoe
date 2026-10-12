@@ -43,6 +43,16 @@ template $KikoeRetranscribeDialog: Adw.Dialog {
           title: _("Timestamps");
         }
 
+        Adw.SwitchRow segment_row {
+          title: _("Segment Timestamps");
+          notify::active => $_on_granularity_row_toggled();
+        }
+
+        Adw.SwitchRow word_row {
+          title: _("Word Timestamps");
+          notify::active => $_on_granularity_row_toggled();
+        }
+
         Adw.SwitchRow speakers_row {
           title: _("Speaker Detection");
         }

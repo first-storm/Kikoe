@@ -4,9 +4,9 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GObject, Gtk
 
-from kikoe.core.choice import ModelChoice, available_models
+from kikoe.core.choice import ModelChoice, available_models, normalize_granularities
 from kikoe.core.formatting import format_duration
-from kikoe.core.models import Recording
+from kikoe.core.models import ApiKind, Recording, TimestampGranularity
 from kikoe.core.transcription import model_support
 from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionOptions
@@ -22,6 +22,8 @@ class RetranscribeDialog(Adw.Dialog):
     intro_group: Adw.PreferencesGroup = Gtk.Template.Child()
     model_row: Adw.ComboRow = Gtk.Template.Child()
     timestamps_row: Adw.SwitchRow = Gtk.Template.Child()
+    segment_row: Adw.SwitchRow = Gtk.Template.Child()
+    word_row: Adw.SwitchRow = Gtk.Template.Child()
     speakers_row: Adw.SwitchRow = Gtk.Template.Child()
     transcribe_button: Gtk.Button = Gtk.Template.Child()
 
@@ -41,6 +43,7 @@ class RetranscribeDialog(Adw.Dialog):
         )
         self._want_timestamps = any(s.start is not None for s in recording.segments)
         self._want_speakers = any(s.speaker_id is not None for s in recording.segments)
+        self._want_granularities: tuple[TimestampGranularity, ...] = (TimestampGranularity.SEGMENT,)
         self.intro_group.set_description(
             _(
                 "Re-transcribe “Recording {number}” ({duration}) from the kept original audio. "
@@ -80,6 +83,15 @@ class RetranscribeDialog(Adw.Dialog):
                 self._want_timestamps = self.timestamps_row.get_active()
             if self.speakers_row.get_sensitive():
                 self._want_speakers = self.speakers_row.get_active()
+            if self.segment_row.get_visible():
+                self._want_granularities = normalize_granularities(
+                    granularity
+                    for granularity, row in (
+                        (TimestampGranularity.SEGMENT, self.segment_row),
+                        (TimestampGranularity.WORD, self.word_row),
+                    )
+                    if row.get_active()
+                )
         self._choice = self._choices[index]
         self._update_options()
 
@@ -87,23 +99,60 @@ class RetranscribeDialog(Adw.Dialog):
         choice = self._choice
         self.transcribe_button.set_sensitive(choice is not None)
         capabilities = model_support(choice.provider.api, choice.model).batch if choice else None
-        for row, supported, wanted in (
-            (
-                self.timestamps_row,
-                capabilities.timestamps if capabilities else False,
-                self._want_timestamps,
-            ),
-            (
-                self.speakers_row,
-                capabilities.diarization if capabilities else False,
-                self._want_speakers,
-            ),
-        ):
-            row.set_sensitive(supported)
-            row.set_active(wanted and supported)
-            row.set_tooltip_text(
-                None if supported else _("This model does not support this option.")
+        granular = (
+            choice is not None
+            and choice.provider.api is ApiKind.OPENROUTER
+            and capabilities is not None
+            and capabilities.timestamps
+        )
+        self._updating = True
+        try:
+            for row, supported, wanted in (
+                (
+                    self.timestamps_row,
+                    capabilities.timestamps if capabilities else False,
+                    self._want_timestamps,
+                ),
+                (
+                    self.speakers_row,
+                    capabilities.diarization if capabilities else False,
+                    self._want_speakers,
+                ),
+            ):
+                row.set_sensitive(supported)
+                row.set_active(wanted and supported)
+                row.set_tooltip_text(
+                    None if supported else _("This model does not support this option.")
+                )
+            self.segment_row.set_visible(granular)
+            self.word_row.set_visible(granular)
+            if granular:
+                self.segment_row.set_active(
+                    TimestampGranularity.SEGMENT in self._want_granularities
+                )
+                self.word_row.set_active(TimestampGranularity.WORD in self._want_granularities)
+        finally:
+            self._updating = False
+
+    @Gtk.Template.Callback()
+    def _on_granularity_row_toggled(self, row: Adw.SwitchRow, _spec: GObject.ParamSpec) -> None:
+        if self._updating:
+            return
+        if not (self.segment_row.get_active() or self.word_row.get_active()):
+            self._updating = True
+            try:
+                row.set_active(True)
+            finally:
+                self._updating = False
+            return
+        self._want_granularities = normalize_granularities(
+            granularity
+            for granularity, option in (
+                (TimestampGranularity.SEGMENT, self.segment_row),
+                (TimestampGranularity.WORD, self.word_row),
             )
+            if option.get_active()
+        )
 
     @Gtk.Template.Callback()
     def _on_cancel_button_clicked(self, _button: Gtk.Button) -> None:
@@ -118,6 +167,7 @@ class RetranscribeDialog(Adw.Dialog):
                     timestamps=self.timestamps_row.get_active(),
                     diarization=self.speakers_row.get_active(),
                     language=self._providers.preferences.language,
+                    timestamp_granularities=self._want_granularities,
                 ),
             )
             self.close()

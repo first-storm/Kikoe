@@ -3,10 +3,11 @@ from dataclasses import replace
 from kikoe.core.choice import (
     RequestedFeatures,
     available_models,
+    normalize_granularities,
     resolve_choice,
     unsupported_features,
 )
-from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider
+from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider, TimestampGranularity
 from kikoe.core.validation import Capability
 
 WHISPER = ModelSpec("whisper-1", "Whisper", Capabilities(timestamps=True))
@@ -51,6 +52,32 @@ def test_requested_features_are_limited_to_the_model() -> None:
 
     assert wanted.allowed_by(Capabilities(timestamps=True, diarization=True)) == wanted
     assert wanted.allowed_by(Capabilities()) == RequestedFeatures(False, False)
+
+
+def test_granularity_defaults_to_segment() -> None:
+    assert RequestedFeatures().timestamp_granularities == (TimestampGranularity.SEGMENT,)
+
+
+def test_allowed_by_preserves_granularity_selection() -> None:
+    wanted = RequestedFeatures(
+        timestamp_granularities=(TimestampGranularity.SEGMENT, TimestampGranularity.WORD)
+    )
+
+    assert wanted.allowed_by(Capabilities()).timestamp_granularities == (
+        TimestampGranularity.SEGMENT,
+        TimestampGranularity.WORD,
+    )
+
+
+def test_normalize_granularities_dedupes_orders_and_falls_back() -> None:
+    assert normalize_granularities(
+        [
+            TimestampGranularity.WORD,
+            TimestampGranularity.WORD,
+            TimestampGranularity.SEGMENT,
+        ]
+    ) == (TimestampGranularity.SEGMENT, TimestampGranularity.WORD)
+    assert normalize_granularities([]) == (TimestampGranularity.SEGMENT,)
 
 
 def test_unsupported_features_feed_the_hint() -> None:

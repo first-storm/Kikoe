@@ -6,6 +6,7 @@ from pathlib import Path
 import httpx
 from openrouter import OpenRouter
 
+from kikoe.core.choice import normalize_granularities
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.i18n import _
 from kikoe.providers.base import (
@@ -52,7 +53,11 @@ class OpenRouterClient:
                     language=options.language,
                     diarize=diarize,
                     response_format="verbose_json" if timed or diarize else "json",
-                    timestamp_granularities=["word", "segment"] if timed else None,
+                    timestamp_granularities=(
+                        [g.value for g in normalize_granularities(options.timestamp_granularities)]
+                        if timed
+                        else None
+                    ),
                 )
                 data = result.model_dump()
                 # OpenRouter attaches speaker identity to words, not every segment.
