@@ -1,0 +1,192 @@
+name: Desktop packages
+
+on:
+  pull_request:
+  push:
+    branches: [main, 'build/**']
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: packages-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux / ${{ matrix.arch }} / AppImage + Flatpak
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    # Match the current GTK/libadwaita requirement on both architectures.
+    container:
+      image: ubuntu:26.04
+      options: --privileged
+    timeout-minutes: 60
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      UV_PYTHON_PREFERENCE: only-managed
+      GTK_A11Y: none
+      GSK_RENDERER: cairo
+    steps:
+      - name: Install native and packaging dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates git gcc binutils patchelf curl pkg-config \
+            libgirepository-2.0-dev libcairo2-dev \
+            gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-girepository-3.0 \
+            gettext libportaudio2 ffmpeg adwaita-icon-theme \
+            libglib2.0-bin glib-networking xvfb xauth dbus-x11 \
+            flatpak flatpak-builder desktop-file-utils appstream
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked --group packaging
+      - name: Validate desktop metadata
+        run: |
+          desktop-file-validate data/*.desktop
+          appstreamcli validate --no-net data/*.metainfo.xml
+      - name: Freeze application and test the bundle
+        run: |
+          uv run --locked --group packaging scripts/package.py freeze
+          xvfb-run -a dbus-run-session -- dist/kikoe/kikoe --self-test
+          uv run --locked --group packaging scripts/package.py archive
+      - name: Build and test AppImage
+        run: |
+          uv run --locked --group packaging scripts/package.py appimage
+          xvfb-run -a dbus-run-session -- env APPIMAGE_EXTRACT_AND_RUN=1 \
+            dist/Kikoe-*.AppImage --self-test
+      - name: Build and test Flatpak
+        run: |
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+          uv run --locked --group packaging scripts/package.py flatpak
+          flatpak install --user --noninteractive dist/Kikoe-*.flatpak
+          xvfb-run -a dbus-run-session -- flatpak run io.github.first_storm.Kikoe --self-test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kikoe-linux-${{ matrix.arch }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            dist/*.AppImage
+            dist/*.flatpak
+            dist/*.tar.gz
+            dist/*.sha256
+
+  macos:
+    name: macOS / ${{ matrix.arch }} / DMG
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            arch: x86_64
+          - runner: macos-15
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    env:
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
+      - name: Install native dependencies
+        run: |
+          brew install gtk4 libadwaita gobject-introspection pkg-config ffmpeg gettext portaudio adwaita-icon-theme librsvg
+          echo "$(brew --prefix gettext)/bin" >> "$GITHUB_PATH"
+          echo "DYLD_LIBRARY_PATH=$(brew --prefix)/lib" >> "$GITHUB_ENV"
+      - run: uv sync --locked --group packaging
+      - name: Freeze application and test the bundle
+        run: |
+          uv run --locked --group packaging scripts/package.py freeze
+          env -u DYLD_LIBRARY_PATH -u GI_TYPELIB_PATH dist/Kikoe.app/Contents/MacOS/kikoe --self-test
+          uv run --locked --group packaging scripts/package.py archive
+          uv run --locked --group packaging scripts/package.py dmg
+      - name: Test the disk image
+        run: |
+          hdiutil attach dist/Kikoe-*.dmg -mountpoint "$RUNNER_TEMP/kikoe-dmg"
+          env -u DYLD_LIBRARY_PATH -u GI_TYPELIB_PATH "$RUNNER_TEMP/kikoe-dmg/Kikoe.app/Contents/MacOS/kikoe" --self-test
+          hdiutil detach "$RUNNER_TEMP/kikoe-dmg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kikoe-macos-${{ matrix.arch }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/*.sha256
+
+  windows:
+    name: Windows / ${{ matrix.arch }} / installer
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2022
+            arch: x86_64
+            msystem: UCRT64
+            prefix: mingw-w64-ucrt-x86_64
+            installer_arch: x64compatible
+          - runner: windows-11-arm
+            arch: aarch64
+            msystem: CLANGARM64
+            prefix: mingw-w64-clang-aarch64
+            installer_arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          install: git
+          pacboy: >-
+            uv:p python:p python-gobject:p gtk4:p libadwaita:p
+            gobject-introspection:p adwaita-icon-theme:p ffmpeg:p gettext:p portaudio:p
+            pyinstaller:p python-hatchling:p python-setuptools:p python-maturin:p
+            python-cffi:p python-cryptography:p rust:p cc:p pkgconf:p
+      - name: Build native application
+        shell: msys2 {0}
+        run: bash packaging/windows/build.sh
+      - name: Test the bundle without MSYS2 on PATH
+        shell: pwsh
+        run: |
+          $process = Start-Process -FilePath dist/kikoe/kikoe.exe -ArgumentList '--self-test' -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Bundle self-test failed: $($process.ExitCode)" }
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $version = (Get-Content pyproject.toml | Select-String '^version = "(.+)"$').Matches.Groups[1].Value
+          $appId = (Get-Content src/kikoe/constants.py | Select-String '^APP_ID = "(.+)"$').Matches.Groups[1].Value
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DAppId=$appId" "/DAppVersion=$version" "/DAppArch=${{ matrix.installer_arch }}" packaging/windows/kikoe.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Installer build failed' }
+      - name: Test installer and uninstaller
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem dist/*-setup.exe | Select-Object -First 1
+          $installDir = Join-Path $env:RUNNER_TEMP 'Kikoe installed'
+          $process = Start-Process -FilePath $installer.FullName -ArgumentList "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /DIR=`"$installDir`"" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Installation failed' }
+          $process = Start-Process -FilePath "$installDir/kikoe.exe" -ArgumentList '--self-test' -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Installed app self-test failed' }
+          $process = Start-Process -FilePath "$installDir/unins000.exe" -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw 'Uninstallation failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kikoe-windows-${{ matrix.arch }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            dist/*-setup.exe
+            dist/*.zip
+            dist/*.sha256

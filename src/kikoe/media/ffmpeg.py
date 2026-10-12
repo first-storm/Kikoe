@@ -38,9 +38,15 @@ def find_ffmpeg() -> Path:
         raise FFmpegNotFoundError(msg)
 
     if getattr(sys, "frozen", False):
-        bundled = Path(sys.executable).resolve().parent / _EXE_NAME
-        if bundled.is_file():
-            return bundled
+        # PyInstaller 6 stores binaries in _internal (or Contents/Frameworks on
+        # macOS). Retain the adjacent-executable layout for other packagers.
+        directories = [Path(sys.executable).resolve().parent]
+        if bundle_root := getattr(sys, "_MEIPASS", None):
+            directories.insert(0, Path(bundle_root))
+        for directory in directories:
+            bundled = directory / _EXE_NAME
+            if bundled.is_file():
+                return bundled
 
     if found := shutil.which("ffmpeg"):
         return Path(found)

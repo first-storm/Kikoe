@@ -1,53 +1,128 @@
-# Packaging plan
+# Desktop packaging
 
-Nothing here is automated yet. This records the intended approach so code stays
-compatible with it.
+`.github/workflows/package.yml` builds native packages on every PR, main push and
+`v*` tag, and can be started manually from Actions. Download each platform's artifacts
+from the **Desktop packages** workflow. These are review builds, not signed releases.
+
+| Platform | Architecture | Runner / native stack | Outputs |
+| --- | --- | --- | --- |
+| macOS | x86_64 | macos-15-intel / Homebrew | `.app` in ZIP, DMG |
+| macOS | ARM64 | macos-15 / Homebrew | `.app` in ZIP, DMG |
+| Windows | x86_64 | windows-2022 / MSYS2 UCRT64 | portable ZIP, Inno Setup installer |
+| Windows | ARM64 | windows-11-arm / MSYS2 CLANGARM64 | portable ZIP, Inno Setup installer |
+| Linux | x86_64 | ubuntu-24.04 / Ubuntu 26.04 container | AppImage, Flatpak, tar.gz |
+| Linux | ARM64 | ubuntu-24.04-arm / Ubuntu 26.04 container | AppImage, Flatpak, tar.gz |
+
+Here x86 means 64-bit x86, and ARM means ARM64 (`aarch64`). 32-bit x86 and ARMv7
+are not supported. AppImages and portable Linux archives require a host compatible
+with Ubuntu 26.04's glibc; Flatpak uses the GNOME 50 runtime for a consistent base.
+macOS builds target macOS 14 or newer. Windows builds target Windows 10/11 on x64
+and Windows 11 on ARM64; the ARM package contains native ARM binaries.
 
 ## Shared build steps
 
-1. `uv run scripts/build_ui.py` — `.blp` → `.ui` (inside the package).
-2. `uv run scripts/i18n.py compile` — `.po` → `.mo` (inside the package).
-3. Build a wheel: `uv build`. Generated `.ui`/`.mo` are included via hatch `artifacts`.
+Install the platform's GTK ≥ 4, libadwaita ≥ 1.8, introspection data, ffmpeg,
+PortAudio, gettext, a compiler and pkg-config first. On Linux also install binutils,
+patchelf, Xvfb, dbus, Flatpak and flatpak-builder. Then:
+
+```sh
+uv sync --locked --group packaging
+uv run --locked --group packaging scripts/package.py freeze
+uv run --locked --group packaging scripts/package.py archive
+```
+
+`freeze` compiles Blueprint and catalogs before running `packaging/kikoe.spec`.
+PyInstaller includes Python, application data, GTK/libadwaita, typelibs, icon themes,
+ffmpeg with its linked libraries, PortAudio, SDKs and keyring backends. The runtime
+hook locates data, schemas and PortAudio inside the bundle. ffmpeg lookup understands
+PyInstaller's `_internal` and macOS Frameworks layouts, without needing a host ffmpeg.
+Set `KIKOE_NATIVE_PREFIX` when the native stack lives outside the system prefix.
+
+Each archive/AppImage/DMG/Flatpak has a `.sha256` file. `build-info.json` records the
+source commit, Python, platform, architecture and installed package versions. The
+bundle includes the application license and available native redistribution notices.
+Do not publish a binary release without supplying the corresponding GPL source and
+checking the licenses of the native toolchain's included libraries.
+
+CI runs the frozen app with `--self-test`, then tests AppImage, installed Flatpak,
+mounted DMG and the installed Windows application. The test opens GTK, imports all
+providers and keyring, checks compiled UI/catalog/version data and creates synthetic
+FLAC using bundled ffmpeg. It does not contact a provider or access the microphone.
+Windows also tests silent install and uninstall, including an installation path with
+spaces. Review these checks separately from the hardware acceptance checklist below.
+
+For an ordinary Python wheel, run `uv run scripts/build_ui.py`,
+`uv run scripts/i18n.py compile`, then `uv build`. Generated `.ui`/`.mo` are included
+via hatch `artifacts`.
 
 Because UI files, icons, CSS and translations live inside `src/kikoe/`, every packager
 only has to ship the Python package, GTK/libadwaita, ffmpeg, and PortAudio.
 Microphone capture uses sounddevice/CFFI; NumPy and libsndfile are not required.
 
-## Linux — Flatpak (primary)
+## Linux — AppImage and Flatpak
 
-- Runtime: `org.gnome.Platform` (the first version whose Python is ≥ 3.14).
-- Python deps: generate a module with `flatpak-pip-generator` from `uv export`.
-- Include PortAudio built with an audio backend compatible with the runtime audio socket.
-  The final manifest and sandbox microphone test remain part of distribution work.
-- Install `data/*.desktop`, `data/*.metainfo.xml` and the icon under
-  `/app/share/...` using the app ID `io.github.first_storm.Kikoe`.
-- ffmpeg: from the runtime / `org.freedesktop.Platform.ffmpeg-full` extension.
-- Permissions to request: `--socket=wayland`, `--socket=fallback-x11`,
-  `--share=ipc`, `--device=dri`, `--socket=pulseaudio` (mic), `--share=network`.
-  Use the file chooser portal for import/export instead of filesystem access.
+```sh
+uv run --locked --group packaging scripts/package.py appimage
+flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+uv run --locked --group packaging scripts/package.py flatpak
+flatpak install --user dist/Kikoe-*.flatpak
+```
+
+AppImage uses appimagetool 1.9.1, checked against committed SHA-256 hashes for both
+architectures. `AppRun` resolves the frozen directory relative to itself and forwards
+arguments. In CI, `APPIMAGE_EXTRACT_AND_RUN=1` exercises the image without requiring
+FUSE. On hosts without FUSE, use `./Kikoe-*.AppImage --appimage-extract-and-run`.
+
+The Flatpak manifest is generated under `build/` from the app constants and the frozen
+directory. It reuses the same Python/native payload as AppImage, so it does not need
+network access during the module build or rely on the runtime's Python version.
+`org.gnome.Platform`/`org.gnome.Sdk` version 50 supplies the sandbox base. The generated
+manifest installs the launcher, desktop file, metainfo and icon under `/app`.
+
+Permissions are Wayland, fallback X11, IPC, DRI, PulseAudio (microphone), network and
+`org.freedesktop.secrets` for keyring. There is no general filesystem or session-bus
+grant. Import/export uses the file chooser portal. The host must provide a working
+Secret Service keyring and a portal/audio service; sandbox microphone verification
+remains a hardware acceptance step. ffmpeg and PortAudio are bundled directly.
 
 ## macOS — PyInstaller `.app`
 
 - GTK, libadwaita, PyGObject from Homebrew; freeze with PyInstaller (it has hooks for
   `gi`). Gaphor's build is a good reference.
-- Bundle a static `ffmpeg` next to the executable; `kikoe.media.ffmpeg` finds it there.
+- Bundle Homebrew ffmpeg and its dynamic dependencies in the application Frameworks.
 - Microphone access requires `NSMicrophoneUsageDescription` in `Info.plist`, for example
   "Kikoe records your microphone to turn speech into text notes." Verify the system
   permission prompt, denial and subsequent permission changes with the packaged app.
 - Bundle the PortAudio library used by sounddevice; verify PyInstaller includes the
   platform library from the wheel or Homebrew installation.
-- Sign and notarize for distribution.
+- `uv run --locked --group packaging scripts/package.py dmg` creates the DMG.
+- PyInstaller ad-hoc signs review builds. For a distribution build, set
+  `KIKOE_CODESIGN_IDENTITY` to an installed Developer ID Application identity before
+  `freeze`; the spec includes audio-input and library-validation entitlements.
+  Submit the resulting DMG with `xcrun notarytool submit --wait` using your configured
+  Apple credentials, then `xcrun stapler staple` it. Signing/notarization credentials
+  are not stored in this repository and release notarization is not automated.
 
 ## Windows — MSYS2 + PyInstaller
 
-- Build in the MSYS2 UCRT64 environment (GTK, libadwaita, PyGObject from pacman) and
-  freeze with PyInstaller; or use gvsbuild for an MSVC toolchain.
-- Bundle `ffmpeg.exe` next to `kikoe.exe` and sounddevice's PortAudio DLL (or the MSYS2
-  PortAudio library when building there). Verify Windows microphone privacy settings.
+- Build in MSYS2 UCRT64 for x64 and CLANGARM64 on a Windows ARM64 runner. GTK,
+  libadwaita, Python 3.14, PyGObject, Cairo, CFFI, cryptography, PyInstaller, ffmpeg
+  and PortAudio come from the matching native pacman prefix.
+- `packaging/windows/build.sh` creates a uv environment with system packages, exports
+  locked runtime dependencies and installs them with `uv pip`. It keeps the native
+  GI/Cairo/CFFI/cryptography packages, and builds jiter/pydantic-core for MinGW using
+  Rust/maturin. MSVC Python extension wheels cannot be mixed with the MinGW interpreter.
+  `build-info.json` records the actual pacman/Python versions for review.
+- Bundle ffmpeg, PortAudio and their DLLs inside `_internal`. Verify Windows microphone
+  privacy settings on real hardware.
 - Python gettext translates `.ui` templates into the user cache before GTK loads them,
   including on systems without `locale.bindtextdomain`. Bundle the compiled `zh_CN`
   catalog and verify both template and Python labels in the packaged app.
-- Installer: Inno Setup or MSIX.
+- Installer: `packaging/windows/kikoe.iss` (Inno Setup 6), per-user installation,
+  matching architecture restrictions, Start menu entry and optional desktop shortcut.
+  The workflow passes the version/app ID from their source definitions. Review
+  installers are unsigned; public releases need an Authenticode certificate and
+  signing of the application and installer.
 
 ## Cross-platform pitfalls to avoid in code
 

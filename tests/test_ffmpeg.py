@@ -43,6 +43,22 @@ def test_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
         ffmpeg.find_ffmpeg()
 
 
+def test_frozen_binary_uses_internal_bundle_before_host_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    internal = tmp_path / "_internal"
+    internal.mkdir()
+    bundled = internal / ("ffmpeg.exe" if sys.platform == "win32" else "ffmpeg")
+    bundled.touch()
+    monkeypatch.delenv("KIKOE_FFMPEG", raising=False)
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(internal), raising=False)
+    monkeypatch.setattr(sys, "executable", str(tmp_path / "kikoe"))
+    monkeypatch.setenv("PATH", "")
+
+    assert ffmpeg.find_ffmpeg() == bundled
+
+
 @pytest.mark.parametrize("output_rate", [16000, 24000])
 def test_streaming_resampler_drains_all_audio(output_rate: int) -> None:
     import asyncio

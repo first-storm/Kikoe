@@ -24,7 +24,10 @@ into searchable, editable notes with cloud speech-to-text services.
 Built with Python 3.14, GTK 4, and libadwaita ≥ 1.8, with adaptive layouts,
 light/dark themes, and Simplified Chinese.
 
-> **Linux first; still in development.** macOS and Windows packaging is planned.
+> **Linux first; still in development.** Desktop packaging covers macOS, Windows and
+> Linux on x86_64 and ARM64. Review builds are available from the
+> [Desktop packages workflow](https://github.com/first-storm/Kikoe/actions/workflows/package.yml):
+> macOS DMG/ZIP, Windows installer/ZIP, and Linux AppImage/Flatpak/tar.gz.
 > Cloud transcription requires a provider API key. Real provider accounts and
 > macOS/Windows realtime capture are not yet verified.
 

@@ -35,6 +35,10 @@ dev = [
   "pytest>=8.4",
   "ruff>=0.13",
 ]
+packaging = [
+    "hatchling>=1.27",
+    "pyinstaller>=6.16,<7",
+]
 
 [build-system]
 requires = ["hatchling>=1.27"]
