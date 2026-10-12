@@ -1,0 +1,82 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeBottomBar: Adw.Bin {
+  child: ActionBar {
+    [start]
+    MenuButton model_button {
+      tooltip-text: _("Transcription Model");
+      always-show-arrow: true;
+
+      child: Label model_label {
+        ellipsize: end;
+        max-width-chars: 28;
+      };
+
+      popover: Popover model_popover {
+        child: Box {
+          orientation: vertical;
+          spacing: 6;
+
+          ScrolledWindow {
+            hscrollbar-policy: never;
+            propagate-natural-height: true;
+            max-content-height: 360;
+
+            child: ListBox model_list {
+              selection-mode: none;
+              row-activated => $_on_model_list_row_activated();
+
+              styles [
+                "navigation-sidebar",
+              ]
+            };
+          }
+
+          Separator {}
+
+          Button {
+            label: _("_Manage Providers and Models…");
+            use-underline: true;
+            action-name: "app.preferences";
+
+            styles [
+              "flat",
+            ]
+          }
+        };
+      };
+    }
+
+    [start]
+    Box progress_box {
+      spacing: 9;
+      visible: false;
+
+      Adw.Spinner {}
+
+      Label progress_label {
+        ellipsize: end;
+      }
+    }
+
+    [end]
+    Button import_button {
+      label: _("_Import Audio…");
+      use-underline: true;
+      action-name: "win.import-audio";
+
+      styles [
+        "suggested-action",
+      ]
+    }
+
+    [end]
+    Button cancel_button {
+      label: _("_Cancel");
+      use-underline: true;
+      visible: false;
+      action-name: "win.cancel-import";
+    }
+  };
+}

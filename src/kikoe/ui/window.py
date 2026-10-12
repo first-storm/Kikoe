@@ -1,19 +1,28 @@
 """The main window: notes sidebar on the left, the selected note on the right."""
 
+import asyncio
+import logging
 from collections.abc import Callable
 from datetime import datetime
+from pathlib import Path
 
 from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 
+from kikoe.core.choice import ModelChoice
 from kikoe.core.models import DisplayOptions, Note
 from kikoe.i18n import _
+from kikoe.providers.factory import create_client
+from kikoe.services.importer import ImportStage, import_audio
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
+from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.items import NoteItem
-from kikoe.ui.labels import note_subtitle, note_title_subtitle
+from kikoe.ui.labels import import_stage_label, note_subtitle, note_title_subtitle
 from kikoe.ui.note_view import NoteView
-from kikoe.ui.tasks import run_task
+from kikoe.ui.tasks import USER_FACING_ERRORS, run_task, show_error
 from kikoe.ui.templates import ui_file
+
+log = logging.getLogger(__name__)
 
 _NOTE_ACTIONS = ("rename-note", "delete-note")
 """Window actions that act on the shown note and are disabled without one."""
@@ -34,14 +43,17 @@ class Window(Adw.ApplicationWindow):
     speakers_row: Adw.SwitchRow = Gtk.Template.Child()
     content_stack: Gtk.Stack = Gtk.Template.Child()
     note_view_slot: Adw.Bin = Gtk.Template.Child()
+    bottom_bar_slot: Adw.Bin = Gtk.Template.Child()
 
     def __init__(
         self, application: Gtk.Application, providers: ProviderRepository, notes: NoteRepository
     ) -> None:
         super().__init__(application=application)
-        # Added from code: Blueprint cannot tell the custom widget scrolls by itself.
+        # Custom widgets are added from code: Blueprint's linter cannot inspect their types.
         self.note_view = NoteView()
         self.note_view_slot.set_child(self.note_view)
+        self.bottom_bar = BottomBar()
+        self.bottom_bar_slot.set_child(self.bottom_bar)
         self._providers = providers
         self._notes = notes
         self._note: Note | None = None
@@ -55,9 +67,14 @@ class Window(Adw.ApplicationWindow):
         self._add_action("new-note", self._on_new_note)
         self._add_action("rename-note", self._on_rename_note)
         self._add_action("delete-note", self._on_delete_note)
+        self._add_action("import-audio", self._on_import_audio)
+        self._add_action("cancel-import", self._on_cancel_import)
+        self._import_task: asyncio.Task[None] | None = None
         self._show_note(None)
         providers.connect_changed(self._on_providers_changed)
         notes.connect_changed(self._on_notes_changed)
+        self.bottom_bar.connect("choice-changed", self._on_bottom_bar_choice_changed)
+        self.bottom_bar.bind_providers(providers)
 
     @property
     def note(self) -> Note | None:
@@ -193,6 +210,7 @@ class Window(Adw.ApplicationWindow):
         else:
             page = "empty"
         self.content_stack.set_visible_child_name(page)
+        self.bottom_bar_slot.set_visible(page in ("note", "empty"))
 
     # Note actions
 
@@ -248,3 +266,105 @@ class Window(Adw.ApplicationWindow):
 
         dialog.connect("response", respond)
         dialog.present(self)
+
+    # Import
+
+    def _on_bottom_bar_choice_changed(self, _bar: BottomBar) -> None:
+        self._update_import_actions()
+
+    def _update_import_actions(self) -> None:
+        busy = self._import_task is not None
+        for name, enabled in (
+            ("import-audio", not busy and self.bottom_bar.choice is not None),
+            ("cancel-import", busy),
+        ):
+            action = self.lookup_action(name)
+            if isinstance(action, Gio.SimpleAction):
+                action.set_enabled(enabled)
+
+    def _on_import_audio(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        run_task(self._pick_and_import(), self)
+
+    def _on_cancel_import(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        if self._import_task is not None:
+            self._import_task.cancel()
+
+    async def _pick_and_import(self) -> None:
+        path = await self._pick_audio_file()
+        choice = self.bottom_bar.choice
+        if path is None or choice is None or self._import_task is not None:
+            return
+        note_id = self._note.note_id if self._note else None
+        task = asyncio.ensure_future(self._import(path, note_id, choice))
+        self._import_task = task
+        self._update_import_actions()
+        self.bottom_bar.set_progress(import_stage_label(ImportStage.CONVERTING, 1, 1))
+        try:
+            await task
+        except asyncio.CancelledError:
+            if not task.cancelled():
+                raise  # This coroutine itself was cancelled, not the import.
+            self.add_toast(Adw.Toast(title=_("Import cancelled")))
+        finally:
+            self._import_task = None
+            self.bottom_bar.set_progress(None)
+            self._update_import_actions()
+
+    async def _pick_audio_file(self) -> Path | None:
+        """Ask for an audio or video file; None if the dialog was dismissed."""
+        media = Gtk.FileFilter(name=_("Audio and Video"))
+        media.add_mime_type("audio/*")
+        media.add_mime_type("video/*")
+        filters: Gio.ListStore[Gtk.FileFilter] = Gio.ListStore(item_type=Gtk.FileFilter)
+        filters.append(media)
+        dialog = Gtk.FileDialog(title=_("Import Audio"), filters=filters, default_filter=media)
+        future: asyncio.Future[Gio.File | None] = asyncio.get_running_loop().create_future()
+
+        def done(_dialog: Gtk.FileDialog, result: Gio.AsyncResult) -> None:
+            try:
+                future.set_result(dialog.open_finish(result))
+            except GLib.Error as error:
+                if error.matches(Gtk.dialog_error_quark(), Gtk.DialogError.DISMISSED):
+                    future.set_result(None)
+                else:
+                    future.set_exception(error)
+
+        dialog.open(self, None, done)
+        file = await future
+        if file is None:
+            return None
+        path = file.get_path()
+        if path is None:
+            show_error(self, _("Only files on this computer can be imported."))
+            return None
+        return Path(path)
+
+    async def _import(self, path: Path, note_id: str | None, choice: ModelChoice) -> None:
+        def on_progress(stage: ImportStage, part: int, parts: int) -> None:
+            self.bottom_bar.set_progress(import_stage_label(stage, part, parts))
+
+        try:
+            api_key = await self._providers.get_api_key(choice.provider.provider_id)
+            note = await import_audio(
+                path,
+                note_id,
+                choice.provider,
+                choice.model,
+                client=create_client(choice.provider, api_key),
+                notes=self._notes,
+                on_progress=on_progress,
+            )
+        except USER_FACING_ERRORS as error:
+            log.warning("Import of %s failed: %s", path, error)
+            self._show_import_failure(str(error))
+            return
+        self.select_note(note.note_id)
+
+    def _show_import_failure(self, message: str) -> None:
+        toast = Adw.Toast(title=_("Transcription failed"), button_label=_("_Details"), timeout=10)
+
+        def show_details(_toast: Adw.Toast) -> None:
+            show_error(self, message)
+
+        toast.connect("button-clicked", show_details)
+        self.add_toast(toast)

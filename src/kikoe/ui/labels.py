@@ -20,6 +20,7 @@ from kikoe.core.models import (
 )
 from kikoe.core.validation import Capability, ModelError, ProviderError, capability_list
 from kikoe.i18n import _, ngettext
+from kikoe.services.importer import ImportStage
 
 
 def api_label(api: ApiKind) -> str:
@@ -106,10 +107,19 @@ def _recording_count(count: int) -> str:
 
 
 def _format(when: datetime, pattern: str) -> str:
-    """Format with GLib, whose month names follow the UI locale on every platform."""
-    local = GLib.DateTime.new_from_unix_local(int(when.timestamp()))
-    formatted = local.format(pattern) if local is not None else None
-    return formatted or when.astimezone().strftime("%Y-%m-%d %H:%M")
+    """Format with GLib, whose month names follow the UI locale on every platform.
+
+    The time zone comes from Python so both agree even where GLib cannot find the
+    system zone (e.g. some containers).
+    """
+    local = when.astimezone()
+    offset = local.utcoffset()
+    zone = GLib.TimeZone.new_offset(int(offset.total_seconds()) if offset else 0)
+    moment = GLib.DateTime.new(
+        zone, local.year, local.month, local.day, local.hour, local.minute, local.second
+    )
+    formatted = moment.format(pattern) if moment is not None else None
+    return formatted or local.strftime("%Y-%m-%d %H:%M")
 
 
 def recording_meta(recording: Recording, now: datetime) -> str:
@@ -122,3 +132,18 @@ def recording_meta(recording: Recording, now: datetime) -> str:
     if features := transcript_features(recording.segments):
         parts.append(", ".join(capability_label(feature) for feature in features))
     return " · ".join(parts)
+
+
+def import_stage_label(stage: ImportStage, part: int, parts: int) -> str:
+    """Progress text for the bottom bar, e.g. “Transcribing part 2 of 3…”."""
+    match stage:
+        case ImportStage.CONVERTING if parts > 1:
+            return _("Converting part {part} of {parts}…").format(part=part, parts=parts)
+        case ImportStage.CONVERTING:
+            return _("Converting audio…")
+        case ImportStage.TRANSCRIBING if parts > 1:
+            return _("Transcribing part {part} of {parts}…").format(part=part, parts=parts)
+        case ImportStage.TRANSCRIBING:
+            return _("Transcribing…")
+        case ImportStage.SAVING:
+            return _("Saving…")

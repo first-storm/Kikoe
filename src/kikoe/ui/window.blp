@@ -180,6 +180,11 @@ template $KikoeWindow: Adw.ApplicationWindow {
               child: Adw.Bin note_view_slot {};
             }
           };
+
+          [bottom]
+          Adw.Bin bottom_bar_slot {
+            visible: false;
+          }
         };
       };
     };

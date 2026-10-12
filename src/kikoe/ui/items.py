@@ -2,6 +2,7 @@
 
 from gi.repository import GObject
 
+from kikoe.core.choice import ModelChoice
 from kikoe.core.models import ModelSpec, NoteSummary, Provider, Recording, Segment
 
 
@@ -39,3 +40,9 @@ class TranscriptItem(GObject.Object):
         """1-based position of the recording in its note."""
         self.segment = segment
         self.speaker_name = speaker_name
+
+
+class ModelChoiceItem(GObject.Object):
+    def __init__(self, choice: ModelChoice) -> None:
+        super().__init__()
+        self.choice = choice
