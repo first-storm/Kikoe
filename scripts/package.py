@@ -9,6 +9,7 @@ import shutil
 import struct
 import subprocess
 import sys
+import time
 from importlib.metadata import distributions
 from pathlib import Path
 
@@ -340,10 +341,12 @@ def dmg() -> None:
     if staging.exists():
         shutil.rmtree(staging)
     staging.mkdir(parents=True)
-    run("ditto", str(DIST / "Kikoe.app"), str(staging / "Kikoe.app"))
+    env = dict(os.environ)
+    env.pop("DYLD_LIBRARY_PATH", None)
+    run("ditto", str(DIST / "Kikoe.app"), str(staging / "Kikoe.app"), env=env)
     (staging / "Applications").symlink_to("/Applications")
     output = artifact_name(".dmg")
-    run(
+    command = [
         "hdiutil",
         "create",
         "-ov",
@@ -354,7 +357,18 @@ def dmg() -> None:
         "-srcfolder",
         str(staging),
         str(output),
-    )
+    ]
+    for attempt in range(3):
+        result = subprocess.run(
+            command, cwd=ROOT, env=env, capture_output=True, text=True, check=False
+        )
+        print(result.stdout, end="")
+        print(result.stderr, end="", file=sys.stderr)
+        if result.returncode == 0:
+            break
+        if "Resource busy" not in result.stderr or attempt == 2:
+            result.check_returncode()
+        time.sleep(3)
     checksum(output)
 
 

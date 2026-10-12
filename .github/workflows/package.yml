@@ -46,7 +46,7 @@ jobs:
             gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-girepository-3.0 \
             gettext libportaudio2 libasound2-data libasound2-plugins ffmpeg adwaita-icon-theme \
             libglib2.0-bin glib-networking xvfb xauth dbus-x11 \
-            flatpak flatpak-builder desktop-file-utils appstream pulseaudio pulseaudio-utils
+            flatpak flatpak-builder elfutils desktop-file-utils appstream pulseaudio pulseaudio-utils
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --locked --group packaging
@@ -133,9 +133,9 @@ jobs:
           uv run --locked --group packaging scripts/package.py dmg
       - name: Test the disk image
         run: |
-          hdiutil attach dist/Kikoe-*.dmg -mountpoint "$RUNNER_TEMP/kikoe-dmg"
+          env -u DYLD_LIBRARY_PATH hdiutil attach dist/Kikoe-*.dmg -mountpoint "$RUNNER_TEMP/kikoe-dmg"
           env -u DYLD_LIBRARY_PATH -u GI_TYPELIB_PATH "$RUNNER_TEMP/kikoe-dmg/Kikoe.app/Contents/MacOS/kikoe" --self-test
-          hdiutil detach "$RUNNER_TEMP/kikoe-dmg"
+          env -u DYLD_LIBRARY_PATH hdiutil detach "$RUNNER_TEMP/kikoe-dmg"
       - uses: actions/upload-artifact@v4
         with:
           name: Kikoe-macos-${{ matrix.arch }}
@@ -155,12 +155,10 @@ jobs:
           - runner: windows-2022
             arch: x86_64
             msystem: UCRT64
-            prefix: mingw-w64-ucrt-x86_64
             installer_arch: x64compatible
           - runner: windows-11-arm
             arch: aarch64
             msystem: CLANGARM64
-            prefix: mingw-w64-clang-aarch64
             installer_arch: arm64
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 90
@@ -174,13 +172,30 @@ jobs:
         with:
           msystem: ${{ matrix.msystem }}
           release: true
-          update: true
-          install: git
-          pacboy: >-
-            uv:p python:p python-gobject:p gtk4:p libadwaita:p
-            gobject-introspection:p adwaita-icon-theme:p ffmpeg:p gettext:p portaudio:p
-            pyinstaller:p python-hatchling:p python-setuptools:p python-maturin:p librsvg:p
-            python-cffi:p python-cryptography:p rust:p cc:p pkgconf:p
+      - name: Initialize the MSYS2 package signing keys
+        shell: msys2 {0}
+        run: |
+          pacman-key --init
+          pacman-key --populate msys2
+      - name: Upgrade MSYS2
+        shell: pwsh
+        run: |
+          # A core runtime upgrade can terminate the first MSYS2 process.
+          & msys2.cmd -c 'pacman --noconfirm -Syuu'
+          & taskkill.exe /F /FI 'MODULES eq msys-2.0.dll'
+          & msys2.cmd -c 'pacman --noconfirm -Syuu'
+          if ($LASTEXITCODE -ne 0) { throw 'MSYS2 upgrade failed' }
+      - name: Install native packaging dependencies
+        shell: msys2 {0}
+        run: |
+          packages=(git)
+          for package in uv python python-gobject gtk4 libadwaita \
+            gobject-introspection adwaita-icon-theme ffmpeg gettext portaudio \
+            pyinstaller python-hatchling python-setuptools python-maturin librsvg \
+            python-cffi python-cryptography rust cc pkgconf; do
+            packages+=("$MINGW_PACKAGE_PREFIX-$package")
+          done
+          pacman --noconfirm -S --needed "${packages[@]}"
       - name: Build native application
         shell: msys2 {0}
         env:

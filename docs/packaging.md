@@ -23,7 +23,7 @@ and Windows 11 on ARM64; the ARM package contains native ARM binaries.
 
 Install the platform's GTK ≥ 4, libadwaita ≥ 1.8, introspection data, ffmpeg,
 PortAudio, gettext, a compiler and pkg-config first. On Linux also install binutils,
-patchelf, file, ALSA data/plugins, Xvfb, dbus, Flatpak and flatpak-builder. Then:
+patchelf, file, ALSA data/plugins, Xvfb, dbus, Flatpak, flatpak-builder and elfutils. Then:
 
 ```sh
 uv sync --locked --group packaging
