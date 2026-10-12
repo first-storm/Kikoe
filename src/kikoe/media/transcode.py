@@ -4,6 +4,7 @@ Opus at 32 kbit/s mono keeps about 1¾ hours under a 25 MB upload limit while st
 clear enough for speech recognition; OpenAI, Groq and most compatible APIs accept Ogg.
 """
 
+import asyncio
 import re
 from datetime import timedelta
 from pathlib import Path
@@ -19,6 +20,31 @@ _SILENCE_FILTER = "silencedetect=noise=-35dB:d=0.4"
 """Quieter than -35 dB for 0.4 s counts as a pause between words or sentences."""
 
 _OUT_TIME = re.compile(r"^out_time_us=(\d+)$", re.MULTILINE)
+
+
+async def pcm_to_flac(source: Path, destination: Path, sample_rate: int) -> None:
+    """Keep captured speech lossless; a partial output never replaces a finished file."""
+    temporary = destination.with_suffix(".part.flac")
+    try:
+        await ffmpeg.run(
+            "-f",
+            "s16le",
+            "-ar",
+            str(sample_rate),
+            "-ac",
+            "1",
+            "-i",
+            str(source),
+            "-c:a",
+            "flac",
+            "-y",
+            str(temporary),
+        )
+        await asyncio.to_thread(temporary.replace, destination)
+    finally:
+        await asyncio.to_thread(temporary.unlink, missing_ok=True)
+
+
 _SILENCE_START = re.compile(r"silence_start: (-?[\d.]+)")
 _SILENCE_END = re.compile(r"silence_end: ([\d.]+)")
 

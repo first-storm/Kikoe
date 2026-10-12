@@ -96,3 +96,40 @@ async def test_missing_ffmpeg_is_not_blamed_on_the_file(
 
     with pytest.raises(ffmpeg.FFmpegNotFoundError, match="not found"):
         await transcode.to_upload(tmp_path / "a.wav", tmp_path / "out.ogg")
+
+
+@needs_ffmpeg
+@run_async
+async def test_capture_is_saved_losslessly_before_upload(tmp_path: Path) -> None:
+    import asyncio
+    import struct
+
+    pcm = struct.pack("<h", 1234) * 48000
+    source = tmp_path / "capture.pcm"
+    await asyncio.to_thread(source.write_bytes, pcm)
+    flac = tmp_path / "capture.flac"
+    await transcode.pcm_to_flac(source, flac, 48000)
+    decoded = tmp_path / "decoded.pcm"
+    await ffmpeg.run("-i", str(flac), "-f", "s16le", "-y", str(decoded))
+    assert decoded.read_bytes() == pcm
+    assert not flac.with_suffix(".part.flac").exists()
+    duration = await transcode.to_upload(flac, tmp_path / "upload.ogg")
+    assert abs(duration - timedelta(seconds=1)) < timedelta(milliseconds=100)
+
+
+@run_async
+async def test_failed_flac_conversion_preserves_the_pcm(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "capture.pcm"
+    source.write_bytes(b"\0\0")
+    destination = tmp_path / "capture.flac"
+
+    async def fail(*_args: str, loglevel: str = "error") -> ffmpeg.FFmpegOutput:
+        raise ffmpeg.FFmpegError("Conversion interrupted")
+
+    monkeypatch.setattr(ffmpeg, "run", fail)
+    with pytest.raises(ffmpeg.FFmpegError):
+        await transcode.pcm_to_flac(source, destination, 16000)
+    assert source.read_bytes() == b"\0\0"
+    assert not destination.exists()

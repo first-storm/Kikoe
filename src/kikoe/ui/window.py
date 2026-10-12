@@ -4,7 +4,7 @@ import asyncio
 import logging
 import shutil
 from collections.abc import Callable
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
@@ -12,12 +12,17 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 from kikoe.core.choice import ModelChoice
 from kikoe.core.export import ExportFormat, export_filename, export_note
 from kikoe.core.formatting import transcript_features
-from kikoe.core.models import DisplayOptions, Note, Recording
+from kikoe.core.models import DisplayOptions, Note, Recording, TranscriptionState
+from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.core.validation import Capability
 from kikoe.i18n import _
+from kikoe.media.ffmpeg import find_ffmpeg
+from kikoe.media.recorder import SoundDeviceRecorder
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.providers.factory import create_client
 from kikoe.services.importer import ImportStage, import_audio
+from kikoe.services.recording import RecordingSession, recover_recording, transcribe_recording
+from kikoe.storage.captures import CaptureStore, capture_dir
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.bottom_bar import BottomBar
@@ -27,6 +32,7 @@ from kikoe.ui.labels import (
     import_stage_label,
     note_subtitle,
     note_title_subtitle,
+    recording_note_title,
 )
 from kikoe.ui.note_view import NoteView
 from kikoe.ui.tasks import USER_FACING_ERRORS, run_task, show_error
@@ -98,6 +104,19 @@ class Window(Adw.ApplicationWindow):
         self._add_action("import-audio", self._on_import_audio)
         self._add_action("cancel-import", self._on_cancel_import)
         self._import_task: asyncio.Task[None] | None = None
+        self._recording_task: asyncio.Task[None] | None = None
+        self._session: RecordingSession | None = None
+        self._recording_note_id: str | None = None
+        self._recording_summary = ""
+        self._closing = False
+        self._recovery_checked = False
+        self._recovery_busy = False
+        self._recovery_task: asyncio.Task[None] | None = None
+        self._add_action("start-recording", self._on_start_recording)
+        self._add_action("pause-recording", self._on_pause_recording)
+        self._add_action("resume-recording", self._on_resume_recording)
+        self._add_action("stop-recording", self._on_stop_recording)
+        self._add_action("retry-recording", self._on_retry_recording, GLib.VariantType.new("s"))
         self._set_action_enabled("new-note", False)  # Until providers are loaded.
         self._show_note(None)
         providers.connect_changed(self._on_providers_changed)
@@ -135,8 +154,14 @@ class Window(Adw.ApplicationWindow):
         assert isinstance(item, NoteItem)
         summary = item.summary
         title = Gtk.Label(label=summary.title, xalign=0, ellipsize=Pango.EllipsizeMode.END)
+        session = self._session
+        active = summary.note_id == self._recording_note_id and session is not None
         subtitle = Gtk.Label(
-            label=note_subtitle(summary, datetime.now().astimezone()),
+            label=_("Paused")
+            if active and session is not None and session.state is CaptureState.PAUSED
+            else _("Recording")
+            if active and session is not None and session.state is CaptureState.RECORDING
+            else note_subtitle(summary, datetime.now().astimezone()),
             xalign=0,
             ellipsize=Pango.EllipsizeMode.END,
             css_classes=["caption", "dim-label"],
@@ -145,7 +170,17 @@ class Window(Adw.ApplicationWindow):
             orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=6, margin_bottom=6
         )
         box.append(title)
-        box.append(subtitle)
+        if active and session is not None and session.state is not CaptureState.STOPPED:
+            subtitle.remove_css_class("dim-label")
+            subtitle.add_css_class("recording-status")
+            indicator = Gtk.Image(icon_name="media-record-symbolic", pixel_size=7)
+            indicator.add_css_class("recording-indicator")
+            status = Gtk.Box(spacing=6)
+            status.append(indicator)
+            status.append(subtitle)
+            box.append(status)
+        else:
+            box.append(subtitle)
         return box
 
     def _select_row(self, note_id: str | None) -> bool:
@@ -169,12 +204,18 @@ class Window(Adw.ApplicationWindow):
     def _on_notes_list_row_selected(self, _list: Gtk.ListBox, row: Gtk.ListBoxRow | None) -> None:
         if self._selecting or row is None:
             return
+        if self._recording_task is not None or self._import_task is not None or self._recovery_busy:
+            self._select_row(self._note.note_id if self._note else None)
+            return
         item = self._note_items.get_item(row.get_index())
         if item is not None:
             run_task(self._open_note(item.summary.note_id), self)
             self.split_view.set_show_content(True)
 
     def _on_notes_changed(self, note_id: str | None) -> None:
+        if not self._recovery_checked:
+            self._recovery_checked = True
+            self._recovery_task = run_task(self._offer_recovery(), self)
         self._note_items.splice(
             0, self._note_items.get_n_items(), [NoteItem(s) for s in self._notes.notes]
         )
@@ -193,6 +234,7 @@ class Window(Adw.ApplicationWindow):
         # Matches the first-run design: nothing to transcribe with, so no new notes yet.
         self._set_action_enabled("new-note", bool(self._providers.providers))
         self._update_content()
+        self._update_import_actions()
 
     def _set_action_enabled(self, name: str, enabled: bool) -> None:
         action = self.lookup_action(name)
@@ -202,7 +244,10 @@ class Window(Adw.ApplicationWindow):
     # Content
 
     async def _open_note(self, note_id: str) -> None:
-        self._show_note(await self._notes.get_note(note_id))
+        note = await self._notes.get_note(note_id)
+        current = self._recording_note_id or (self._note.note_id if self._note else None)
+        if self._recording_task is None or note_id == current:
+            self._show_note(note)
 
     def _show_note(self, note: Note | None) -> None:
         self._note = note
@@ -227,7 +272,15 @@ class Window(Adw.ApplicationWindow):
                 self._showing = False
             self.note_view.show_note(note)
             self._update_subtitle_buttons(note)
+            self.bottom_bar.set_note(bool(note.recordings))
+            if self._session is not None and self._session.state is not CaptureState.STOPPED:
+                self.note_view.show_recording(self._recording_summary, self._recording_model)
+                self.note_view.recording_view.set_state(self._session.state)
+                self.window_title.set_subtitle(
+                    _("Paused") if self._session.state is CaptureState.PAUSED else _("Recording")
+                )
         self._update_content()
+        self._update_import_actions()
 
     @Gtk.Template.Callback()
     def _on_display_row_notify_active(
@@ -460,9 +513,30 @@ class Window(Adw.ApplicationWindow):
         self._update_import_actions()
 
     def _update_import_actions(self) -> None:
-        busy = self._import_task is not None
-        self._set_action_enabled("import-audio", not busy and self.bottom_bar.choice is not None)
-        self._set_action_enabled("cancel-import", busy)
+        busy = (
+            self._import_task is not None or self._recording_task is not None or self._recovery_busy
+        )
+        available = self.bottom_bar.choice is not None and not busy
+        self._set_action_enabled("import-audio", available)
+        self._set_action_enabled("start-recording", available)
+        self._set_action_enabled("retry-recording", available and self._note is not None)
+        self._set_action_enabled("cancel-import", self._import_task is not None)
+        session = self._session
+        state = session.state if session is not None else CaptureState.STOPPED
+        self._set_action_enabled(
+            "pause-recording", state is CaptureState.RECORDING and not self._closing
+        )
+        self._set_action_enabled(
+            "resume-recording", state is CaptureState.PAUSED and not self._closing
+        )
+        self._set_action_enabled(
+            "stop-recording", state is not CaptureState.STOPPED and not self._closing
+        )
+        self.notes_list.set_can_target(not busy)
+        self._set_action_enabled("new-note", not busy and bool(self._providers.providers))
+        self._set_action_enabled("delete-note", not busy and self._note is not None)
+        self.export_button.set_sensitive(not busy)
+        self._set_action_enabled("export-audio", not busy and self._note is not None)
 
     def _on_import_audio(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         run_task(self._pick_and_import(), self)
@@ -474,7 +548,12 @@ class Window(Adw.ApplicationWindow):
     async def _pick_and_import(self) -> None:
         path = await self._pick_audio_file()
         choice = self.bottom_bar.choice
-        if path is None or choice is None or self._import_task is not None:
+        if (
+            path is None
+            or choice is None
+            or self._import_task is not None
+            or self._recording_task is not None
+        ):
             return
         note_id = self._note.note_id if self._note else None
         features = self.bottom_bar.requested_features
@@ -561,3 +640,270 @@ class Window(Adw.ApplicationWindow):
 
         toast.connect("button-clicked", show_details)
         self.add_toast(toast)
+
+    # Recording
+
+    def _on_start_recording(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        choice = self.bottom_bar.choice
+        if choice is None or self._recording_task is not None or self._import_task is not None:
+            return
+        features = self.bottom_bar.requested_features
+        options = TranscriptionOptions(
+            timestamps=features.timestamps, diarization=features.diarization
+        )
+        note_id = self._note.note_id if self._note else None
+        self._recording_task = run_task(self._record(note_id, choice, options), self)
+        self._update_import_actions()
+
+    async def _record(
+        self, note_id: str | None, choice: ModelChoice, options: TranscriptionOptions
+    ) -> None:
+        try:
+            await asyncio.to_thread(find_ffmpeg)
+            # Validate the batch backend before opening the microphone.
+            create_client(choice.provider, "")
+            directory = await asyncio.to_thread(capture_dir)
+            session = RecordingSession(SoundDeviceRecorder(), CaptureStore(directory), self._notes)
+            self._session = session
+            title = recording_note_title(datetime.now(UTC))
+            note = await session.start(note_id, title, choice)
+            self._recording_note_id = note.note_id
+            self._recording_model = choice.model.display_name
+            labels: list[str] = []
+            if options.timestamps:
+                labels.append(_("Timestamps"))
+            if options.diarization:
+                labels.append(_("Speakers"))
+            self._recording_summary = _("{provider} {model} · {options}").format(
+                provider=choice.provider.name,
+                model=choice.model.display_name,
+                options=_("Text only") if not labels else ", ".join(labels),
+            )
+            self._show_note(note)
+            self._refresh_recording_sidebar()
+            self.split_view.set_show_content(True)
+            self.bottom_bar.show_recording(self._recording_summary)
+            self._on_capture_progress(CaptureProgress(CaptureState.RECORDING, session.elapsed, 0))
+            if self._closing:
+                await session.stop()
+            error = await session.capture(self._on_capture_progress)
+            self.note_view.hide_recording()
+            self.bottom_bar.set_progress(_("Saving recording…"))
+            self._update_import_actions()
+            saved = await session.save()
+            if saved is not None:
+                self._show_note(saved)
+                if error is None and not self._closing:
+                    recording = next(
+                        r
+                        for r in saved.recordings
+                        if session.journal is not None
+                        and r.recording_id == session.journal.recording_id
+                    )
+                    await self._begin_recording_upload(saved.note_id, recording, choice, options)
+            elif error is None:
+                self.add_toast(Adw.Toast(title=_("No audio was recorded")))
+            if error is not None:
+                log.warning("Microphone capture stopped: %s", error)
+                show_error(self, str(error))
+        finally:
+            if self._session is not None:
+                await self._session.stop()
+            self._session = None
+            self._recording_note_id = None
+            self._recording_task = None
+            self.note_view.hide_recording()
+            self.bottom_bar.set_progress(None)
+            self._refresh_recording_sidebar()
+            self._show_note(self._note)
+
+    def _refresh_recording_sidebar(self) -> None:
+        self._note_items.splice(
+            0, self._note_items.get_n_items(), [NoteItem(s) for s in self._notes.notes]
+        )
+        self._select_row(self._note.note_id if self._note else None)
+
+    def _on_capture_progress(self, progress: CaptureProgress) -> None:
+        self.bottom_bar.update_recording(progress)
+        self.note_view.recording_view.set_state(progress.state)
+        if progress.state is not CaptureState.STOPPED:
+            self.window_title.set_subtitle(
+                _("Paused") if progress.state is CaptureState.PAUSED else _("Recording")
+            )
+        self._update_import_actions()
+
+    def _on_pause_recording(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        if self._session is not None:
+            run_task(self._change_capture_state(True), self)
+
+    def _on_resume_recording(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        if self._session is not None:
+            run_task(self._change_capture_state(False), self)
+
+    async def _change_capture_state(self, pause: bool) -> None:
+        if self._session is None:
+            return
+        if pause:
+            await self._session.pause()
+        else:
+            await self._session.resume()
+        self._refresh_recording_sidebar()
+
+    def _on_stop_recording(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        if self._session is not None:
+            run_task(self._session.stop(), self)
+
+    def _on_retry_recording(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
+        choice, note = self.bottom_bar.choice, self._note
+        if (
+            choice is None
+            or note is None
+            or param is None
+            or self._import_task is not None
+            or self._recording_task is not None
+        ):
+            return
+        recording = next((r for r in note.recordings if r.recording_id == param.get_string()), None)
+        if recording is None or recording.transcription_state is TranscriptionState.READY:
+            return
+        features = self.bottom_bar.requested_features
+        options = TranscriptionOptions(
+            timestamps=features.timestamps, diarization=features.diarization
+        )
+        self._recording_task = run_task(
+            self._retry_recording(note.note_id, recording, choice, options), self
+        )
+        self._update_import_actions()
+
+    async def _retry_recording(
+        self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
+    ) -> None:
+        try:
+            await self._begin_recording_upload(note_id, recording, choice, options)
+        finally:
+            self._recording_task = None
+            self.bottom_bar.set_progress(None)
+            self._update_import_actions()
+
+    async def _begin_recording_upload(
+        self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
+    ) -> None:
+        if self._closing:
+            return
+        self._import_task = run_task(
+            self._upload_recording(note_id, recording, choice, options), self
+        )
+        self.bottom_bar.set_progress(_("Transcribing…"))
+        self._update_import_actions()
+        try:
+            await self._import_task
+        except asyncio.CancelledError:
+            self.add_toast(Adw.Toast(title=_("Transcription cancelled. Your audio has been kept.")))
+        finally:
+            self._import_task = None
+
+    async def _upload_recording(
+        self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
+    ) -> None:
+        def progress(stage: ImportStage, part: int, parts: int) -> None:
+            self.bottom_bar.set_progress(import_stage_label(stage, part, parts))
+
+        try:
+            key = await self._providers.get_api_key(choice.provider.provider_id)
+            note = await transcribe_recording(
+                note_id,
+                recording,
+                choice,
+                client=create_client(choice.provider, key),
+                notes=self._notes,
+                options=options,
+                on_progress=progress,
+            )
+        except USER_FACING_ERRORS as error:
+            await self._notes.update_transcription(
+                note_id, recording.recording_id, TranscriptionState.FAILED
+            )
+            self._show_import_failure(str(error))
+            return
+        self._show_note(note)
+
+    async def _offer_recovery(self) -> None:
+        store = CaptureStore(await asyncio.to_thread(capture_dir))
+        journals = await asyncio.to_thread(store.pending)
+        if not journals:
+            return
+        dialog = Adw.AlertDialog(
+            heading=_("Recover Recordings?"),
+            body=_(
+                "Kikoe found unfinished recordings. Recover their audio now, then "
+                "choose a model to transcribe them."
+            ),
+        )
+        dialog.add_response("later", _("_Later"))
+        dialog.add_response("recover", _("_Recover"))
+        dialog.set_response_appearance("recover", Adw.ResponseAppearance.SUGGESTED)
+        dialog.set_default_response("recover")
+        dialog.set_close_response("later")
+        future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
+
+        def respond(_dialog: Adw.AlertDialog, response: str) -> None:
+            if not future.done():
+                future.set_result(response)
+
+        dialog.connect("response", respond)
+        dialog.present(self)
+        try:
+            response = await future
+        finally:
+            dialog.close()
+        if response != "recover":
+            return
+        self._recovery_busy = True
+        self.bottom_bar.set_progress(_("Recovering recordings…"))
+        self._update_import_actions()
+        try:
+            for journal in journals:
+                note = await recover_recording(journal, store, self._notes)
+                if note is not None:
+                    self._show_note(note)
+                    self._select_row(note.note_id)
+                    self.split_view.set_show_content(True)
+        finally:
+            self._recovery_busy = False
+            self.bottom_bar.set_progress(None)
+            self._update_import_actions()
+
+    @Gtk.Template.Callback()
+    def _on_window_close_request(self, _window: Gtk.Window) -> bool:
+        if self._closing:
+            return True
+        recovery_pending = self._recovery_task is not None and not self._recovery_task.done()
+        if self._recording_task is None and self._import_task is None and not recovery_pending:
+            return False
+        self._closing = True
+        run_task(self._save_and_close(), self)
+        return True
+
+    async def _save_and_close(self) -> None:
+        try:
+            task = self._recording_task
+            if self._session is not None:
+                await self._session.stop()
+            if self._import_task is not None:
+                self._import_task.cancel()
+            recovery = self._recovery_task
+            if recovery is not None and not recovery.done():
+                if not self._recovery_busy:
+                    recovery.cancel()
+                try:
+                    await recovery
+                except asyncio.CancelledError:
+                    if not recovery.cancelled():
+                        raise
+            if task is not None:
+                await task
+            self.destroy()
+        except USER_FACING_ERRORS:
+            self._closing = False
+            self._update_import_actions()
+            raise

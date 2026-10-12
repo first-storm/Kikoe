@@ -97,6 +97,11 @@ def day_label(when: datetime, now: datetime) -> str:
             return _format(when, _("%b %-d, %Y"))
 
 
+def recording_note_title(when: datetime) -> str:
+    """Use a localized date rather than a title that still says Today next week."""
+    return _("{date} Recording").format(date=_format(when, _("%b %-d %H:%M")))
+
+
 def note_subtitle(summary: NoteSummary, now: datetime) -> str:
     """Sidebar line, e.g. “Today 15:12 · 2 recordings” or “Oct 9 · Imported audio · 26:31”."""
     parts = [day_label(summary.created_at, now)]
@@ -183,19 +188,11 @@ def chip_tooltip(capability: Capability, model: str, supported: bool, active: bo
 def transcription_hint(capabilities: Capabilities) -> str:
     """E.g. “Transcribes after recording · This model does not support timestamps”."""
     missing = ", ".join(_feature_name(c) for c in unsupported_features(capabilities))
-    match capabilities.realtime, bool(missing):
-        case True, False:
-            return _("Transcribes while recording")
-        case False, False:
-            return _("Transcribes after recording")
-        case True, True:
-            return _("Transcribes while recording · This model does not support {features}").format(
-                features=missing
-            )
-        case False, True:
-            return _("Transcribes after recording · This model does not support {features}").format(
-                features=missing
-            )
+    if missing:
+        return _("Transcribes after recording · This model does not support {features}").format(
+            features=missing
+        )
+    return _("Transcribes after recording")
 
 
 def _feature_name(capability: Capability) -> str:

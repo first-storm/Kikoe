@@ -162,3 +162,31 @@ async def test_repository_notifies_with_the_changed_note(tmp_path: Path) -> None
 
     assert changes == [None, note.note_id, note.note_id]
     assert [s.title for s in repository.notes] == ["Final"]
+
+
+def test_version_one_library_migrates_without_changing_existing_transcript(tmp_path: Path) -> None:
+    from kikoe.core.models import TranscriptionState
+    from kikoe.storage.library import _MIGRATIONS
+
+    database = tmp_path / "library.sqlite3"
+    with sqlite3.connect(database) as connection:
+        connection.executescript(_MIGRATIONS[0])
+        connection.execute("PRAGMA user_version = 1")
+        connection.execute(
+            "INSERT INTO notes VALUES (?, ?, ?, 1, 1)", ("n", "Old", WHEN.isoformat())
+        )
+        connection.execute(
+            "INSERT INTO recordings VALUES (?, ?, 0, ?, 1000, ?, ?, ?, NULL)",
+            ("r", "n", WHEN.isoformat(), "imported", "Groq", "whisper"),
+        )
+        connection.execute(
+            "INSERT INTO segments VALUES (?, 0, 0, 1000, NULL, ?)", ("r", "Existing transcript")
+        )
+    migrated = Library(database, tmp_path / "audio")
+    migrated.migrate()
+    note = migrated.get_note("n")
+    assert note.recordings[0].transcription_state is TranscriptionState.READY
+    assert note.recordings[0].segments == (
+        Segment("Existing transcript", timedelta(), timedelta(seconds=1)),
+    )
+    assert note.title == "Old"

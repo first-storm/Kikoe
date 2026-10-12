@@ -93,9 +93,10 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   with "Export Original Audio…"; the bottom bar's model picker, Timestamps/Speakers chips
   (they set what the next transcription requests), hint text, and "Import Audio…", which
   adds to the open note or creates one named after the file, with progress, Cancel and a
-  failure toast.
+  failure toast; Record/Append Recording, pause/resume, Stop, live level meter, batch
+  transcription after stopping, retained-audio retry, and startup recovery.
 - Not yet: *Search Notes*, the banner, *Play This Recording*, "Re-transcribe…",
-  "Delete This Recording", renaming speakers, "Append Recording"/"Record".
+  "Delete This Recording", renaming speakers, and realtime transcription.
 
 ## 2. Recording in progress
 
@@ -105,12 +106,33 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 - Section "Recording 1", meta "In progress · Deepgram nova-3 · Timestamps, Speakers".
 - **Realtime model**: segments stream in ("Speaker 1 00:02 …"); the last line is
   partial (shown dimmed until finalized).
-- **Non-realtime model**: placeholder text "whisper-1 can't transcribe while recording.
-  The audio will be uploaded and transcribed automatically after you stop, and the text
-  will appear here."
-- Bottom bar replaces the controls with: red recording indicator, "Recording", live
-  level meter (bars), elapsed time `00:31` (tabular digits), model/options summary,
-  destructive "Stop" button.
+- **M4 batch mode**: centered 88 px circle containing a microphone icon, "Recording"
+  heading, and "Kikoe will upload the audio to {model} and transcribe it automatically
+  after you stop. The text will appear here." Existing recordings remain above the
+  appended recording section. All currently supported models use this branch, including
+  models whose configured capabilities include realtime; streaming arrives in M5.
+- Bottom bar follows the HTML's order: 10 px red recording indicator, elapsed time
+  `00:31` (monospace/tabular digits), 28 live level bars (3 px wide, up to 28 px high),
+  model/options summary, round icon-only "Pause Recording" button, and a destructive
+  "Stop" pill with stop icon. The normal model/import/record controls are replaced.
+- Pause changes the central heading and header/sidebar subtitle to "Paused", freezes
+  the timer, clears the meter, and switches the pause control to "Resume Recording".
+  The red indicator dims while paused. Resume appends audio to the same recording.
+- At 360 px, the bottom controls wrap; pause/resume and Stop stay together and visible.
+  At 1180×780, the recording controls stay on one line. Below 480 sp, the content
+  header keeps only the close window decoration so all app controls still fit. Colors
+  follow the Adwaita theme. The red recording dot pulses while animations are enabled.
+- During recording/saving/transcription, starting another capture, importing, changing
+  notes and deleting the target note are disabled; exporting is disabled. Display
+  options remain available. The selected model/options are fixed for the session.
+- Stop saves original FLAC before automatically starting batch transcription. Upload
+  progress has a Cancel button; cancellation or failure retains audio and displays a
+  per-recording "Retry Transcription" button. Retrying uses the current bottom-bar
+  model/options and updates that recording, rather than appending another one.
+- Closing or quitting stops and saves audio; pending transcription can be retried later.
+  Startup offers "Recover" or "Later" for interrupted captures. Recovery only restores
+  audio and the note; uploading requires an explicit retry. Failed conversion leaves
+  files intact so startup recovery can be attempted again.
 
 ## 3. First run (no providers, no notes)
 

@@ -42,6 +42,26 @@ template $KikoeTranscriptRow: Box {
     }
 
     Separator {}
+
+    Box pending_box {
+      spacing: 12;
+      visible: false;
+
+      Label pending_label {
+        hexpand: true;
+        xalign: 0;
+        wrap: true;
+
+        styles [
+          "dim-label",
+        ]
+      }
+
+      Button retry_button {
+        label: _("_Retry Transcription");
+        use-underline: true;
+      }
+    }
   }
 
   Box segment_box {

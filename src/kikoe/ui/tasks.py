@@ -8,7 +8,9 @@ from gi.repository import Adw, Gio, Gtk
 
 from kikoe.i18n import _
 from kikoe.media.ffmpeg import FFmpegError
+from kikoe.media.recorder import RecorderError
 from kikoe.providers.base import TranscriptionError
+from kikoe.storage.captures import CaptureStoreError
 from kikoe.storage.library import LibraryError, NoteNotFoundError
 from kikoe.storage.providers import ProviderNotFoundError
 from kikoe.storage.secrets import SecretStoreError
@@ -24,6 +26,8 @@ USER_FACING_ERRORS = (
     NoteNotFoundError,
     TranscriptionError,
     FFmpegError,
+    RecorderError,
+    CaptureStoreError,
 )
 """Exceptions whose message is written for the user and can be shown as is."""
 

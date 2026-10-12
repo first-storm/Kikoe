@@ -2,37 +2,55 @@ using Gtk 4.0;
 using Adw 1;
 
 template $KikoeNoteView: Adw.Bin {
-  child: Stack stack {
-    StackPage {
-      name: "transcript";
+  child: Box {
+    orientation: vertical;
 
-      child: ScrolledWindow {
-        hscrollbar-policy: never;
+    Stack stack {
+      hhomogeneous: false;
+      vhomogeneous: false;
+      vexpand: true;
 
-        styles [
-          "view",
-        ]
+      StackPage {
+        name: "transcript";
 
-        child: Adw.ClampScrollable {
-          maximum-size: 760;
-          tightening-threshold: 600;
+        child: ScrolledWindow transcript_scroll {
+          hscrollbar-policy: never;
 
-          child: ListView transcript_list {
-            margin-start: 24;
-            margin-end: 24;
-            margin-bottom: 32;
+          styles [
+            "view",
+          ]
+
+          child: Adw.ClampScrollable {
+            maximum-size: 760;
+            tightening-threshold: 600;
+
+            child: ListView transcript_list {
+              margin-start: 24;
+              margin-end: 24;
+              margin-bottom: 32;
+            };
           };
         };
-      };
+      }
+
+      StackPage {
+        name: "no-recordings";
+
+        child: Adw.StatusPage {
+          icon-name: "audio-x-generic-symbolic";
+          title: _("No Recordings Yet");
+          description: _("Record or import audio to add a transcript to this note.");
+        };
+      }
     }
 
-    StackPage {
-      name: "no-recordings";
+    Adw.Clamp {
+      maximum-size: 760;
+      tightening-threshold: 600;
 
-      child: Adw.StatusPage {
-        icon-name: "audio-x-generic-symbolic";
-        title: _("No Recordings Yet");
-        description: _("Import audio to add a transcript to this note.");
+      child: Adw.Bin recording_slot {
+        visible: false;
+        vexpand: true;
       };
     }
   };

@@ -75,7 +75,11 @@ class Application(Adw.Application):
         )
 
     def _on_quit(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        self.quit()
+        window = self.get_active_window()
+        if window is not None:
+            window.close()
+        else:
+            self.quit()
 
     def _on_preferences(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         PreferencesDialog(self.providers).present(self.get_active_window())

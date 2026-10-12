@@ -1,0 +1,78 @@
+using Gtk 4.0;
+
+template $KikoeRecordingView: Box {
+  orientation: vertical;
+  margin-start: 24;
+  margin-end: 24;
+  margin-bottom: 32;
+
+  Box {
+    orientation: vertical;
+    spacing: 8;
+    margin-top: 18;
+
+    Box {
+      spacing: 10;
+
+      Label title_label {
+        xalign: 0;
+
+        styles [
+          "caption-heading",
+        ]
+      }
+
+      Label meta_label {
+        xalign: 0;
+        hexpand: true;
+        wrap: true;
+
+        styles [
+          "caption",
+          "dim-label",
+        ]
+      }
+    }
+
+    Separator {}
+  }
+
+  Box {
+    orientation: vertical;
+    vexpand: true;
+    valign: center;
+    halign: center;
+    spacing: 10;
+    margin-top: 48;
+    margin-bottom: 48;
+
+    Image {
+      icon-name: "audio-input-microphone-symbolic";
+      pixel-size: 40;
+      halign: center;
+
+      styles [
+        "recording-microphone",
+      ]
+    }
+
+    Label status_label {
+      label: _("Recording");
+      margin-top: 8;
+
+      styles [
+        "title-2",
+      ]
+    }
+
+    Label description_label {
+      wrap: true;
+      justify: center;
+      max-width-chars: 42;
+
+      styles [
+        "dim-label",
+      ]
+    }
+  }
+}

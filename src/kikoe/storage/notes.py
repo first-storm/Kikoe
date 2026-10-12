@@ -5,7 +5,14 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-from kikoe.core.models import DisplayOptions, Note, NoteSummary, Recording
+from kikoe.core.models import (
+    DisplayOptions,
+    Note,
+    NoteSummary,
+    Recording,
+    Segment,
+    TranscriptionState,
+)
 from kikoe.storage.library import Library
 
 type NoteListener = Callable[[str | None], None]
@@ -36,6 +43,9 @@ class NoteRepository:
 
     async def get_note(self, note_id: str) -> Note:
         return await asyncio.to_thread(self._library.get_note, note_id)
+
+    async def find_recording_note(self, recording_id: str) -> Note | None:
+        return await asyncio.to_thread(self._library.find_recording_note, recording_id)
 
     async def create_note(self, title: str) -> Note:
         note = await asyncio.to_thread(self._library.create_note, title, datetime.now(UTC))
@@ -70,3 +80,26 @@ class NoteRepository:
         self._notes = await asyncio.to_thread(self._library.list_notes)
         for listener in self._listeners:
             listener(changed)
+
+    async def update_transcription(
+        self,
+        note_id: str,
+        recording_id: str,
+        state: TranscriptionState,
+        *,
+        segments: tuple[Segment, ...] = (),
+        provider_name: str | None = None,
+        model_id: str | None = None,
+    ) -> Note:
+        """Persist the result without adding another recording on retries."""
+        note = await asyncio.to_thread(
+            self._library.update_transcription,
+            note_id,
+            recording_id,
+            state,
+            segments=segments,
+            provider_name=provider_name,
+            model_id=model_id,
+        )
+        await self._refresh(note_id)
+        return note

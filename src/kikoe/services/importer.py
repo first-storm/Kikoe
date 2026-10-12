@@ -52,21 +52,20 @@ async def import_audio(
     The original is copied into the library first. If anything fails or the task is
     cancelled, the copy is removed again and nothing is saved.
     """
-    job = _Job(uuid.uuid4().hex, work_dir or paths.cache_dir(), on_progress)
-    on_progress(ImportStage.CONVERTING, 1, 1)
-    original = await notes.store_audio(source, job.recording_id)
+    recording_id = uuid.uuid4().hex
+    original = await notes.store_audio(source, recording_id)
     try:
-        duration, parts = await job.prepare(original, client.max_upload_bytes)
-        segments: list[Segment] = []
-        for index, (path, offset) in enumerate(parts, start=1):
-            on_progress(ImportStage.TRANSCRIBING, index, len(parts))
-            transcript = await client.transcribe_file(
-                path, model, options or TranscriptionOptions()
-            )
-            segments += offset_segments(transcript, offset)
+        duration, segments = await transcribe_audio(
+            original,
+            model,
+            client=client,
+            options=options,
+            on_progress=on_progress,
+            work_dir=work_dir,
+        )
         on_progress(ImportStage.SAVING, 1, 1)
         recording = Recording(
-            recording_id=job.recording_id,
+            recording_id=recording_id,
             created_at=datetime.now(UTC),
             duration=duration,
             source=RecordingSource.IMPORTED,
@@ -79,10 +78,36 @@ async def import_audio(
     except BaseException:
         await notes.discard_audio(original)
         raise
-    finally:
-        await job.clean_up()
     log.info("Imported %s into note %s", source.name, note.note_id)
     return note
+
+
+async def transcribe_audio(
+    source: Path,
+    model: ModelSpec,
+    *,
+    client: TranscriptionProvider,
+    options: TranscriptionOptions | None = None,
+    on_progress: ProgressCallback = _ignore_progress,
+    work_dir: Path | None = None,
+) -> tuple[timedelta, tuple[Segment, ...]]:
+    """Share conversion and chunk offsets without deciding who owns the original audio."""
+    directory = work_dir or await asyncio.to_thread(paths.cache_dir)
+    await asyncio.to_thread(directory.mkdir, parents=True, exist_ok=True)
+    job = _Job(uuid.uuid4().hex, directory, on_progress)
+    on_progress(ImportStage.CONVERTING, 1, 1)
+    try:
+        duration, parts = await job.prepare(source, client.max_upload_bytes)
+        segments: list[Segment] = []
+        for index, (path, offset) in enumerate(parts, start=1):
+            on_progress(ImportStage.TRANSCRIBING, index, len(parts))
+            transcript = await client.transcribe_file(
+                path, model, options or TranscriptionOptions()
+            )
+            segments.extend(offset_segments(transcript, offset))
+        return duration, tuple(segments)
+    finally:
+        await job.clean_up()
 
 
 class _Job:

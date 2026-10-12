@@ -11,6 +11,7 @@ from kikoe.core.models import Note
 from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.ui.items import TranscriptItem
+from kikoe.ui.recording_view import RecordingView
 from kikoe.ui.templates import ui_file
 from kikoe.ui.transcript_row import TranscriptRow
 
@@ -20,10 +21,14 @@ class NoteView(Adw.Bin):
     __gtype_name__ = "KikoeNoteView"
 
     stack: Gtk.Stack = Gtk.Template.Child()
+    recording_slot: Adw.Bin = Gtk.Template.Child()
+    transcript_scroll: Gtk.ScrolledWindow = Gtk.Template.Child()
     transcript_list: Gtk.ListView = Gtk.Template.Child()
 
     def __init__(self) -> None:
         super().__init__()
+        self.recording_view = RecordingView()
+        self.recording_slot.set_child(self.recording_view)
         self._note: Note | None = None
         self._has_speakers = False
         self._items: Gio.ListStore[TranscriptItem] = Gio.ListStore(item_type=TranscriptItem)
@@ -58,6 +63,22 @@ class NoteView(Adw.Bin):
         self._items.splice(0, self._items.get_n_items(), _rows(note))
         if not same_note and self._items.get_n_items():
             self.transcript_list.scroll_to(0, Gtk.ListScrollFlags.NONE, None)
+
+    def show_recording(self, summary: str, model: str) -> None:
+        """Append the live section while preserving the existing transcript above it."""
+        count = len(self._note.recordings) if self._note else 0
+        self.recording_view.configure(count + 1, summary, model)
+        self.recording_slot.set_visible(True)
+        self.stack.set_visible(count > 0)
+        self.stack.set_vexpand(False)
+        self.transcript_scroll.set_max_content_height(260)
+        self.transcript_scroll.set_propagate_natural_height(True)
+
+    def hide_recording(self) -> None:
+        self.recording_slot.set_visible(False)
+        self.stack.set_visible(True)
+        self.stack.set_vexpand(True)
+        self.transcript_scroll.set_propagate_natural_height(False)
 
     def _on_factory_setup(self, _factory: Gtk.SignalListItemFactory, item: GObject.Object) -> None:
         assert isinstance(item, Gtk.ListItem)

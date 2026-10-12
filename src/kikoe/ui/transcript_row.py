@@ -5,6 +5,7 @@ from datetime import datetime
 from gi.repository import Gio, GLib, Gtk
 
 from kikoe.core.formatting import SPEAKER_COLOR_COUNT, format_timestamp
+from kikoe.core.models import TranscriptionState
 from kikoe.i18n import _
 from kikoe.ui.items import TranscriptItem
 from kikoe.ui.labels import recording_meta
@@ -21,6 +22,9 @@ _META_WIDTH_TIMES_ONLY = 56
 class TranscriptRow(Gtk.Box):
     __gtype_name__ = "KikoeTranscriptRow"
 
+    pending_box: Gtk.Box = Gtk.Template.Child()
+    pending_label: Gtk.Label = Gtk.Template.Child()
+    retry_button: Gtk.Button = Gtk.Template.Child()
     header_box: Gtk.Box = Gtk.Template.Child()
     title_label: Gtk.Label = Gtk.Template.Child()
     meta_label: Gtk.Label = Gtk.Template.Child()
@@ -40,6 +44,18 @@ class TranscriptRow(Gtk.Box):
             self.title_label.set_label(_("Recording {number}").format(number=item.number))
             self.meta_label.set_label(recording_meta(item.recording, datetime.now().astimezone()))
             self.recording_menu_button.set_menu_model(_recording_menu(item.recording.recording_id))
+            state = item.recording.transcription_state
+            self.pending_box.set_visible(state is not TranscriptionState.READY)
+            self.pending_label.set_label(
+                _("Transcription failed. Your audio has been kept.")
+                if state is TranscriptionState.FAILED
+                else _("Audio saved. Transcription is pending.")
+            )
+            self.retry_button.set_action_name(None)
+            self.retry_button.set_action_target_value(
+                GLib.Variant("s", item.recording.recording_id)
+            )
+            self.retry_button.set_action_name("win.retry-recording")
             self.recording_menu_button.set_visible(True)
             return
         self.recording_menu_button.set_visible(False)

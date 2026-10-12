@@ -69,6 +69,14 @@ class RecordingSource(StrEnum):
     RECORDED = "recorded"
 
 
+class TranscriptionState(StrEnum):
+    """Whether retained audio still needs a successful transcription."""
+
+    PENDING = "pending"
+    READY = "ready"
+    FAILED = "failed"
+
+
 @dataclass(frozen=True, slots=True)
 class Recording:
     """One recorded or imported piece of audio inside a note, with its transcript."""
@@ -83,6 +91,7 @@ class Recording:
     segments: tuple[Segment, ...] = ()
     audio_path: Path | None = None
     """Retained original audio, used for re-transcription and raw export."""
+    transcription_state: TranscriptionState = TranscriptionState.READY
 
 
 @dataclass(frozen=True, slots=True)

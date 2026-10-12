@@ -1,6 +1,8 @@
 """Bar below the note: model picker, feature chips, Import Audio, and import progress."""
 
-from gi.repository import Adw, Gio, GObject, Gtk, Pango
+import math
+
+from gi.repository import Adw, Gdk, Gio, GObject, Gtk, Pango
 
 from kikoe.core.choice import (
     ModelChoice,
@@ -8,12 +10,15 @@ from kikoe.core.choice import (
     available_models,
     resolve_choice,
 )
+from kikoe.core.formatting import format_timestamp
 from kikoe.core.models import ModelSpec
+from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.items import ModelChoiceItem
 from kikoe.ui.labels import capability_summary, chip_tooltip, transcription_hint
+from kikoe.ui.level_meter import LevelMeter
 from kikoe.ui.templates import ui_file
 
 
@@ -29,13 +34,24 @@ class BottomBar(Adw.Bin):
     hint_label: Gtk.Label = Gtk.Template.Child()
     model_popover: Gtk.Popover = Gtk.Template.Child()
     model_list: Gtk.ListBox = Gtk.Template.Child()
-    progress_box: Gtk.Box = Gtk.Template.Child()
+    state_stack: Gtk.Stack = Gtk.Template.Child()
+    record_button: Gtk.Button = Gtk.Template.Child()
+    record_content: Adw.ButtonContent = Gtk.Template.Child()
+    elapsed_label: Gtk.Label = Gtk.Template.Child()
+    recording_dot: Gtk.Image = Gtk.Template.Child()
+    recording_summary: Gtk.Label = Gtk.Template.Child()
+    pause_button: Gtk.Button = Gtk.Template.Child()
+    meter_slot: Adw.Bin = Gtk.Template.Child()
     progress_label: Gtk.Label = Gtk.Template.Child()
     import_button: Gtk.Button = Gtk.Template.Child()
     cancel_button: Gtk.Button = Gtk.Template.Child()
 
     def __init__(self) -> None:
         super().__init__()
+        self._recording_state = CaptureState.STOPPED
+        self.recording_dot.add_tick_callback(self._pulse_dot)
+        self._meter = LevelMeter()
+        self.meter_slot.set_child(self._meter)
         self._repository: ProviderRepository | None = None
         self._choice: ModelChoice | None = None
         self._wanted = RequestedFeatures()
@@ -67,18 +83,44 @@ class BottomBar(Adw.Bin):
 
     def set_progress(self, message: str | None) -> None:
         """Show ``message`` with a spinner and a Cancel button, or the controls when None."""
-        busy = message is not None
         self.progress_label.set_label(message or "")
-        self.progress_box.set_visible(busy)
-        self.cancel_button.set_visible(busy)
-        for widget in (
-            self.model_button,
-            self.timestamps_chip,
-            self.speakers_chip,
-            self.hint_label,
-            self.import_button,
-        ):
-            widget.set_visible(not busy)
+        self.state_stack.set_visible_child_name("progress" if message is not None else "idle")
+
+    def set_note(self, has_recordings: bool) -> None:
+        self.record_content.set_label(_("_Append Recording") if has_recordings else _("_Record"))
+
+    def show_recording(self, summary: str) -> None:
+        self.recording_summary.set_label(summary)
+        self.state_stack.set_visible_child_name("recording")
+
+    def update_recording(self, progress: CaptureProgress) -> None:
+        """Capture measurements arrive on the application's asyncio/GTK thread."""
+        self._recording_state = progress.state
+        paused = progress.state is CaptureState.PAUSED
+        self.elapsed_label.set_label(format_timestamp(progress.elapsed))
+        self._meter.set_level(progress.level)
+        if progress.state is not CaptureState.RECORDING:
+            self._meter.clear()
+        self.recording_dot.set_opacity(0.35 if paused else 1)
+        self.pause_button.set_icon_name(
+            "media-playback-start-symbolic" if paused else "media-playback-pause-symbolic"
+        )
+        self.pause_button.set_action_name(
+            "win.resume-recording" if paused else "win.pause-recording"
+        )
+        self.pause_button.set_tooltip_text(
+            _("Resume Recording") if paused else _("Pause Recording")
+        )
+
+    def _pulse_dot(self, _widget: Gtk.Widget, clock: Gdk.FrameClock) -> bool:
+        if self.state_stack.get_visible_child_name() != "recording":
+            return True
+        if self._recording_state is CaptureState.RECORDING:
+            settings = self.get_settings()
+            animations = bool(settings.get_property("gtk-enable-animations"))
+            opacity = 0.65 + 0.35 * math.cos(clock.get_frame_time() / 1_400_000 * math.tau)
+            self.recording_dot.set_opacity(opacity if animations else 1)
+        return True
 
     def _refresh(self) -> None:
         providers = self._repository.providers if self._repository else ()
@@ -139,7 +181,9 @@ class BottomBar(Adw.Bin):
                 )
         finally:
             self._updating = False
-        self.hint_label.set_label(transcription_hint(model.capabilities))
+        hint = transcription_hint(model.capabilities)
+        self.hint_label.set_label(hint)
+        self.hint_label.set_tooltip_text(hint)
 
     @Gtk.Template.Callback()
     def _on_chip_toggled(self, _chip: Gtk.ToggleButton) -> None:

@@ -7,7 +7,9 @@ optional timestamps and speaker labels, and exports to text, Markdown, SRT, or W
 Built with Python 3.14, GTK 4 and libadwaita. Linux is the primary platform; macOS and
 Windows are planned (see [docs/packaging.md](docs/packaging.md)).
 
-> Status: early skeleton. The window opens; features are not implemented yet.
+> Status: provider management, audio import, microphone recording with pause/resume,
+> batch transcription, audio recovery, and transcript/audio export are implemented.
+> Realtime transcription and Deepgram are planned.
 
 ## Development setup
 
@@ -17,17 +19,18 @@ Requirements on every platform:
 - GTK 4 and libadwaita with GObject introspection data
 - Headers to build PyGObject: `girepository-2.0` (GLib ≥ 2.80) and `cairo`, plus `pkg-config` and a C compiler
 - `ffmpeg` on `PATH` (or set `KIKOE_FFMPEG`)
+- PortAudio for microphone capture (`sounddevice`; no NumPy required)
 - GNU gettext, only when working on translations
 
 Platform packages:
 
 | Platform | Command |
 | --- | --- |
-| openSUSE | `sudo zypper in gtk4 libadwaita-1 typelib-1_0-Adw-1 cairo-devel glib2-devel ffmpeg gettext-tools` |
-| Fedora | `sudo dnf install gtk4 libadwaita cairo-devel gobject-introspection-devel ffmpeg-free gettext` |
-| Debian/Ubuntu | `sudo apt install gir1.2-gtk-4.0 gir1.2-adw-1 libgirepository-2.0-dev libcairo2-dev pkg-config ffmpeg gettext` |
-| macOS (Homebrew) | `brew install gtk4 libadwaita gobject-introspection pkg-config ffmpeg gettext` |
-| Windows | Use the MSYS2 UCRT64 shell: `pacman -S mingw-w64-ucrt-x86_64-{gtk4,libadwaita,gobject-introspection,cairo,pkgconf,gcc,ffmpeg,gettext}` |
+| openSUSE | `sudo zypper in gtk4 libadwaita-1 typelib-1_0-Adw-1 cairo-devel glib2-devel ffmpeg gettext-tools libportaudio2` |
+| Fedora | `sudo dnf install gtk4 libadwaita cairo-devel gobject-introspection-devel ffmpeg-free gettext portaudio` |
+| Debian/Ubuntu | `sudo apt install gir1.2-gtk-4.0 gir1.2-adw-1 libgirepository-2.0-dev libcairo2-dev pkg-config ffmpeg gettext libportaudio2` |
+| macOS (Homebrew) | `brew install gtk4 libadwaita gobject-introspection pkg-config ffmpeg gettext portaudio` |
+| Windows | Use the MSYS2 UCRT64 shell: `pacman -S mingw-w64-ucrt-x86_64-{gtk4,libadwaita,gobject-introspection,cairo,pkgconf,gcc,ffmpeg,gettext,portaudio}` |
 
 Then:
 

@@ -2,35 +2,127 @@ using Gtk 4.0;
 using Adw 1;
 
 template $KikoeBottomBar: Adw.Bin {
-  child: Box {
-    spacing: 8;
-    margin-top: 8;
-    margin-bottom: 8;
-    margin-start: 12;
-    margin-end: 12;
+  child: Stack state_stack {
+    hhomogeneous: false;
+    vhomogeneous: false;
 
-    MenuButton model_button {
-      tooltip-text: _("Transcription Model");
+    StackPage {
+      name: "idle";
 
-      child: Box {
-        spacing: 8;
+      child: Adw.WrapBox {
+        wrap-policy: minimum;
+        child-spacing: 8;
+        line-spacing: 8;
+        margin-top: 8;
+        margin-bottom: 8;
+        margin-start: 12;
+        margin-end: 12;
 
-        Image {
-          icon-name: "weather-overcast-symbolic";
+        MenuButton model_button {
+          tooltip-text: _("Transcription Model");
+
+          child: Box {
+            spacing: 8;
+
+            Image {
+              icon-name: "weather-overcast-symbolic";
+            }
+
+            Label model_label {
+              ellipsize: end;
+              max-width-chars: 20;
+
+              styles [
+                "heading",
+              ]
+            }
+
+            Label provider_label {
+              ellipsize: end;
+              max-width-chars: 14;
+
+              styles [
+                "caption",
+                "dim-label",
+              ]
+            }
+
+            Image {
+              icon-name: "pan-down-symbolic";
+            }
+          };
+
+          popover: Popover model_popover {
+            child: Box {
+              orientation: vertical;
+              spacing: 6;
+
+              ScrolledWindow {
+                hscrollbar-policy: never;
+                propagate-natural-height: true;
+                max-content-height: 360;
+
+                child: ListBox model_list {
+                  selection-mode: none;
+                  row-activated => $_on_model_list_row_activated();
+
+                  styles [
+                    "navigation-sidebar",
+                  ]
+                };
+              }
+
+              Separator {}
+
+              Button {
+                label: _("_Manage Providers and Models…");
+                use-underline: true;
+                action-name: "app.preferences";
+
+                styles [
+                  "flat",
+                ]
+              }
+            };
+          };
         }
 
-        Label model_label {
-          ellipsize: end;
-          max-width-chars: 20;
+        ToggleButton timestamps_chip {
+          toggled => $_on_chip_toggled();
+
+          child: Adw.ButtonContent {
+            icon-name: "document-open-recent-symbolic";
+            label: _("_Timestamps");
+            use-underline: true;
+            can-shrink: true;
+          };
 
           styles [
-            "heading",
+            "feature-chip",
           ]
         }
 
-        Label provider_label {
+        ToggleButton speakers_chip {
+          toggled => $_on_chip_toggled();
+
+          child: Adw.ButtonContent {
+            icon-name: "system-users-symbolic";
+            label: _("_Speakers");
+            use-underline: true;
+            can-shrink: true;
+          };
+
+          styles [
+            "feature-chip",
+          ]
+        }
+
+        Label hint_label {
+          max-width-chars: 18;
+          margin-start: 4;
+          hexpand: true;
+          xalign: 0;
           ellipsize: end;
-          max-width-chars: 14;
 
           styles [
             "caption",
@@ -38,120 +130,142 @@ template $KikoeBottomBar: Adw.Bin {
           ]
         }
 
-        Image {
-          icon-name: "pan-down-symbolic";
+        Button import_button {
+          action-name: "win.import-audio";
+
+          child: Adw.ButtonContent {
+            icon-name: "folder-open-symbolic";
+            label: _("_Import Audio…");
+            use-underline: true;
+            can-shrink: true;
+          };
+
+          styles [
+            "flat",
+          ]
+        }
+
+        Button record_button {
+          action-name: "win.start-recording";
+
+          styles [
+            "suggested-action",
+            "pill",
+          ]
+
+          child: Adw.ButtonContent record_content {
+            icon-name: "audio-input-microphone-symbolic";
+            label: _("_Record");
+            use-underline: true;
+          };
         }
       };
+    }
 
-      popover: Popover model_popover {
-        child: Box {
-          orientation: vertical;
-          spacing: 6;
+    StackPage {
+      name: "progress";
 
-          ScrolledWindow {
-            hscrollbar-policy: never;
-            propagate-natural-height: true;
-            max-content-height: 360;
+      child: Box {
+        spacing: 9;
+        margin-top: 10;
+        margin-bottom: 10;
+        margin-start: 18;
+        margin-end: 12;
 
-            child: ListBox model_list {
-              selection-mode: none;
-              row-activated => $_on_model_list_row_activated();
+        Adw.Spinner {}
 
-              styles [
-                "navigation-sidebar",
-              ]
-            };
-          }
+        Label progress_label {
+          hexpand: true;
+          xalign: 0;
+          ellipsize: end;
+        }
 
-          Separator {}
+        Button cancel_button {
+          label: _("_Cancel");
+          use-underline: true;
+          action-name: "win.cancel-import";
+        }
+      };
+    }
 
-          Button {
-            label: _("_Manage Providers and Models…");
-            use-underline: true;
-            action-name: "app.preferences";
+    StackPage {
+      name: "recording";
+
+      child: Adw.WrapBox {
+        child-spacing: 14;
+        line-spacing: 8;
+        margin-top: 10;
+        margin-bottom: 10;
+        margin-start: 18;
+        margin-end: 12;
+
+        Box {
+          spacing: 14;
+
+          Image recording_dot {
+            icon-name: "media-record-symbolic";
+            pixel-size: 10;
 
             styles [
-              "flat",
+              "recording-indicator",
             ]
           }
-        };
+
+          Label elapsed_label {
+            label: "00:00";
+
+            styles [
+              "monospace",
+              "numeric",
+              "recording-time",
+            ]
+          }
+        }
+
+        Adw.Bin meter_slot {}
+
+        Label recording_summary {
+          hexpand: true;
+          xalign: 0;
+          wrap: true;
+          max-width-chars: 38;
+
+          styles [
+            "caption",
+            "dim-label",
+          ]
+        }
+
+        Box {
+          spacing: 8;
+
+          Button pause_button {
+            icon-name: "media-playback-pause-symbolic";
+            tooltip-text: _("Pause Recording");
+            action-name: "win.pause-recording";
+
+            styles [
+              "circular",
+            ]
+          }
+
+          Button {
+            action-name: "win.stop-recording";
+
+            styles [
+              "destructive-action",
+              "suggested-action",
+              "pill",
+            ]
+
+            child: Adw.ButtonContent {
+              icon-name: "media-playback-stop-symbolic";
+              label: _("_Stop");
+              use-underline: true;
+            };
+          }
+        }
       };
-    }
-
-    ToggleButton timestamps_chip {
-      toggled => $_on_chip_toggled();
-
-      child: Adw.ButtonContent {
-        icon-name: "document-open-recent-symbolic";
-        label: _("_Timestamps");
-        use-underline: true;
-        can-shrink: true;
-      };
-
-      styles [
-        "feature-chip",
-      ]
-    }
-
-    ToggleButton speakers_chip {
-      toggled => $_on_chip_toggled();
-
-      child: Adw.ButtonContent {
-        icon-name: "system-users-symbolic";
-        label: _("_Speakers");
-        use-underline: true;
-        can-shrink: true;
-      };
-
-      styles [
-        "feature-chip",
-      ]
-    }
-
-    Label hint_label {
-      margin-start: 4;
-      hexpand: true;
-      xalign: 0;
-      ellipsize: end;
-
-      styles [
-        "caption",
-        "dim-label",
-      ]
-    }
-
-    Box progress_box {
-      spacing: 9;
-      hexpand: true;
-      visible: false;
-
-      Adw.Spinner {}
-
-      Label progress_label {
-        ellipsize: end;
-      }
-    }
-
-    Button import_button {
-      action-name: "win.import-audio";
-
-      child: Adw.ButtonContent {
-        icon-name: "folder-open-symbolic";
-        label: _("_Import Audio…");
-        use-underline: true;
-        can-shrink: true;
-      };
-
-      styles [
-        "flat",
-      ]
-    }
-
-    Button cancel_button {
-      label: _("_Cancel");
-      use-underline: true;
-      visible: false;
-      action-name: "win.cancel-import";
     }
   };
 }

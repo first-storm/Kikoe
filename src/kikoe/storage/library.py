@@ -5,6 +5,7 @@ does not matter which worker thread runs it.
 """
 
 import logging
+import os
 import shutil
 import sqlite3
 import uuid
@@ -22,6 +23,7 @@ from kikoe.core.models import (
     RecordingSource,
     Segment,
     Speaker,
+    TranscriptionState,
 )
 from kikoe.i18n import _
 
@@ -67,6 +69,7 @@ _MIGRATIONS: tuple[str, ...] = (
         PRIMARY KEY (recording_id, position)
     );
     """,
+    "ALTER TABLE recordings ADD COLUMN transcription_state TEXT NOT NULL DEFAULT 'ready';",
 )
 """Schema changes in order; entry ``n`` upgrades ``user_version`` from ``n`` to ``n + 1``.
 
@@ -143,6 +146,14 @@ class Library:
         with self._connect() as connection:
             return self._read_note(connection, note_id)
 
+    def find_recording_note(self, recording_id: str) -> Note | None:
+        """Identify a previously committed recovery even if its original note was deleted."""
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT note_id FROM recordings WHERE id = ?", (recording_id,)
+            ).fetchone()
+            return self._read_note(connection, row[0]) if row is not None else None
+
     def create_note(self, title: str, now: datetime) -> Note:
         note = Note(uuid.uuid4().hex, title, now)
         with self._connect() as connection, connection:
@@ -183,6 +194,8 @@ class Library:
         try:
             self._audio_dir.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, destination)
+            with destination.open("rb") as audio:
+                os.fsync(audio.fileno())
         except OSError as error:
             raise LibraryError(
                 _("Could not copy the audio file into the library: {error}").format(error=error)
@@ -222,9 +235,9 @@ class Library:
         connection.execute(
             """
             INSERT INTO recordings (id, note_id, position, created_at, duration_ms, source,
-                provider_name, model_id, audio_file)
+                provider_name, model_id, audio_file, transcription_state)
             VALUES (?, ?, (SELECT COALESCE(MAX(position) + 1, 0) FROM recordings
-                WHERE note_id = ?), ?, ?, ?, ?, ?, ?)
+                WHERE note_id = ?), ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 recording.recording_id,
@@ -236,8 +249,38 @@ class Library:
                 recording.provider_name,
                 recording.model_id,
                 audio_file,
+                recording.transcription_state.value,
             ),
         )
+        self._insert_segments(connection, recording.recording_id, recording.segments)
+
+    def update_transcription(
+        self,
+        note_id: str,
+        recording_id: str,
+        state: TranscriptionState,
+        *,
+        segments: tuple[Segment, ...] = (),
+        provider_name: str | None = None,
+        model_id: str | None = None,
+    ) -> Note:
+        """Commit a retry to the same recording, including a successful empty transcript."""
+        with self._connect() as connection, connection:
+            cursor = connection.execute(
+                "UPDATE recordings SET transcription_state = ?, "
+                "provider_name = COALESCE(?, provider_name), model_id = COALESCE(?, model_id) "
+                "WHERE id = ? AND note_id = ?",
+                (state.value, provider_name, model_id, recording_id, note_id),
+            )
+            _require_found(cursor.rowcount)
+            if state is TranscriptionState.READY:
+                connection.execute("DELETE FROM segments WHERE recording_id = ?", (recording_id,))
+                self._insert_segments(connection, recording_id, segments)
+            return self._read_note(connection, note_id)
+
+    def _insert_segments(
+        self, connection: sqlite3.Connection, recording_id: str, segments: tuple[Segment, ...]
+    ) -> None:
         connection.executemany(
             """
             INSERT INTO segments (recording_id, position, start_ms, end_ms, speaker_id, text)
@@ -245,14 +288,14 @@ class Library:
             """,
             (
                 (
-                    recording.recording_id,
+                    recording_id,
                     position,
                     None if segment.start is None else _to_ms(segment.start),
                     None if segment.end is None else _to_ms(segment.end),
                     segment.speaker_id,
                     segment.text,
                 )
-                for position, segment in enumerate(recording.segments)
+                for position, segment in enumerate(segments)
             ),
         )
 
@@ -298,6 +341,7 @@ class Library:
                 model_id=model_id,
                 segments=tuple(segments.get(recording_id, ())),
                 audio_path=None if audio_file is None else self._audio_dir / audio_file,
+                transcription_state=TranscriptionState(transcription_state),
             )
             for (
                 recording_id,
@@ -307,9 +351,11 @@ class Library:
                 provider_name,
                 model_id,
                 audio_file,
+                transcription_state,
             ) in connection.execute(
                 """
-                SELECT id, created_at, duration_ms, source, provider_name, model_id, audio_file
+                SELECT id, created_at, duration_ms, source, provider_name, model_id, audio_file,
+                    transcription_state
                 FROM recordings WHERE note_id = ? ORDER BY position
                 """,
                 (note_id,),
