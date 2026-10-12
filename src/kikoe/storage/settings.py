@@ -5,12 +5,12 @@ API keys are never written here; they live in the OS keyring (see ``secrets``).
 
 import json
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import cast
 
 from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider
-from kikoe.core.preferences import Preferences, valid_language
+from kikoe.core.preferences import Preferences, WindowState, valid_language, valid_window_state
 from kikoe.i18n import _
 from kikoe.paths import config_dir
 
@@ -25,6 +25,7 @@ class Settings:
 
     providers: tuple[Provider, ...] = ()
     preferences: Preferences = field(default_factory=Preferences)
+    window: WindowState | None = None
 
 
 class SettingsError(Exception):
@@ -58,7 +59,11 @@ class SettingsStore:
         try:
             data = json.loads(text)
             top = _as_dict(data, "the top level")
-            return Settings(_decode(data), _decode_preferences(top.get("preferences", {})))
+            return Settings(
+                _decode(data),
+                _decode_preferences(top.get("preferences", {})),
+                _decode_window(top.get("window")),
+            )
         except (ValueError, KeyError, TypeError) as error:
             raise SettingsError(
                 _("The settings file {detail} is damaged or not understood: {error}").format(
@@ -68,7 +73,7 @@ class SettingsStore:
 
     def save(self, providers: tuple[Provider, ...]) -> None:
         """Write atomically so a crash cannot leave a half-written file."""
-        self.save_state(Settings(providers, self.load_state().preferences))
+        self.save_state(replace(self.load_state(), providers=providers))
 
     def save_state(self, settings: Settings) -> None:
         """Commit the complete snapshot atomically."""
@@ -83,6 +88,7 @@ class SettingsStore:
                 "input_device": settings.preferences.input_device,
                 "output_device": settings.preferences.output_device,
             },
+            "window": _encode_window(settings.window),
         }
         try:
             temporary.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -172,6 +178,24 @@ def _decode_preferences(value: object) -> Preferences:
         input_device=_decode_device(fields.get("input_device")),
         output_device=_decode_device(fields.get("output_device")),
     )
+
+
+def _encode_window(window: WindowState | None) -> dict[str, object] | None:
+    if window is None:
+        return None
+    return {"width": window.width, "height": window.height, "maximized": window.maximized}
+
+
+def _decode_window(value: object) -> WindowState | None:
+    """Window geometry is a convenience, so anything unusable means the default size."""
+    if not isinstance(value, dict):
+        return None
+    fields = cast(dict[str, object], value)
+    width, height, maximized = fields.get("width"), fields.get("height"), fields.get("maximized")
+    if not (isinstance(width, int) and isinstance(height, int) and isinstance(maximized, bool)):
+        return None
+    state = WindowState(width, height, maximized)
+    return state if valid_window_state(state) else None
 
 
 def _decode_device(value: object) -> str | None:

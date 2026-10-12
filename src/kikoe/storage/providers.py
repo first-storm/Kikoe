@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import replace
 
 from kikoe.core.models import ApiKind, ModelSpec, Provider
-from kikoe.core.preferences import Preferences
+from kikoe.core.preferences import Preferences, WindowState
 from kikoe.i18n import _
 from kikoe.storage.secrets import SecretStore
 from kikoe.storage.settings import Settings, SettingsStore
@@ -83,6 +83,18 @@ class ProviderRepository:
             await asyncio.to_thread(self._settings.save_state, state)
             self._state = state
         self._notify_preferences()
+
+    @property
+    def window(self) -> WindowState | None:
+        return self._state.window
+
+    async def update_window(self, window: WindowState) -> None:
+        """Remember the window geometry without notifying preference listeners."""
+        async with self._lock:
+            await self._ensure_loaded()
+            state = replace(self._state, window=window)
+            await asyncio.to_thread(self._settings.save_state, state)
+            self._state = state
 
     def _notify_preferences(self) -> None:
         for listener in tuple(self._preference_listeners):

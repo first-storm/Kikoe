@@ -174,3 +174,23 @@ async def test_edit_cannot_overwrite_damaged_settings_after_failed_startup(
         await repository.add_provider("Cloud", ApiKind.OPENAI, URL, "secret")
     assert path.read_text() == "damaged settings"
     assert secrets.items == {}
+
+
+@run_async
+async def test_window_state_persists_and_keeps_providers_and_defaults(
+    tmp_path: Path, repo: ProviderRepository, secrets: FakeSecrets
+) -> None:
+    from dataclasses import replace
+
+    from kikoe.core.preferences import WindowState
+
+    await repo.add_provider("Cloud", ApiKind.OPENAI, URL, "secret")
+    await repo.update_preferences(lambda p: replace(p, language="zh"))
+
+    await repo.update_window(WindowState(1000, 700, maximized=True))
+
+    reloaded = ProviderRepository(SettingsStore(tmp_path / "settings.json"), secrets)
+    await reloaded.load()
+    assert reloaded.window == WindowState(1000, 700, maximized=True)
+    assert [p.name for p in reloaded.providers] == ["Cloud"]
+    assert reloaded.preferences.language == "zh"

@@ -4,7 +4,8 @@ from pathlib import Path
 import pytest
 
 from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider
-from kikoe.storage.settings import SettingsError, SettingsStore
+from kikoe.core.preferences import WindowState
+from kikoe.storage.settings import Settings, SettingsError, SettingsStore
 
 PROVIDER = Provider(
     "p1",
@@ -152,3 +153,39 @@ def test_malformed_audio_device_is_reported(tmp_path: Path, value: object) -> No
     )
     with pytest.raises(SettingsError):
         SettingsStore(path).load_state()
+
+
+def test_window_state_round_trips_and_survives_provider_saves(tmp_path: Path) -> None:
+    store = SettingsStore(tmp_path / "settings.json")
+    window = WindowState(900, 600, maximized=True)
+    store.save_state(Settings((PROVIDER,), window=window))
+
+    store.save(())
+
+    assert store.load_state().window == window
+
+
+def test_missing_window_state_loads_as_none(tmp_path: Path) -> None:
+    store = SettingsStore(tmp_path / "settings.json")
+    store.save((PROVIDER,))
+    assert store.load_state().window is None
+
+
+@pytest.mark.parametrize(
+    "window",
+    [
+        {"width": 10, "height": 600, "maximized": False},
+        {"width": 900, "height": 10**9, "maximized": False},
+        {"width": "wide", "height": 600, "maximized": False},
+        {"width": 900, "height": 600, "maximized": "yes"},
+        {"width": 900},
+        "big",
+    ],
+)
+def test_unusable_window_state_falls_back_to_the_default_size(
+    tmp_path: Path, window: object
+) -> None:
+    path = tmp_path / "settings.json"
+    path.write_text(json.dumps({"version": 2, "providers": [], "window": window}), encoding="utf-8")
+
+    assert SettingsStore(path).load_state().window is None
