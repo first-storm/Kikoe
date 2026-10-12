@@ -91,3 +91,21 @@ interruption and catch-up, stop during catch-up, and original FLAC export. For D
 verify speaker turns; for Gemini, include a recording longer than ten minutes. A live-only
 model must require an explicit file-model choice for retry. Closing and startup recovery
 must preserve audio and confirmed text without automatically uploading them.
+
+## M6 playback verification
+
+Linux default-output smoke checks completed for a full generated recording and a bounded
+sample, including normal output-stream cleanup. GTK main window and dialogs were inspected
+at 1180×780 and 360 px in light/dark themes; matching Apply and subsequent separation
+were also exercised against an isolated temporary library. No real provider API was used.
+
+Playback reuses the packaged ffmpeg and sounddevice/PortAudio dependencies. The default
+output device must support mono int16 at its advertised native sample rate. Tests use
+fake output devices and retained temporary WAV files; they cover seek bounds, cancellation,
+decoder failure and resource cleanup without accessing real audio hardware.
+
+On each packaged platform, play a retained recording and a timestamped speaker sample,
+switch playback targets, stop, then begin microphone capture. Verify only one output
+stream is active and no decoder remains after closing the dialog/window. Missing output
+devices, missing original audio and audio permission failures must produce a user-readable
+message. macOS/Windows hardware verification remains part of M8.

@@ -1,0 +1,91 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeSpeakerRow: Adw.ActionRow {
+  [prefix]
+  Button play_button {
+    icon-name: "media-playback-start-symbolic";
+    valign: center;
+
+    styles [
+      "flat",
+      "circular",
+    ]
+  }
+
+  [suffix]
+  MenuButton choice_button {
+    valign: center;
+
+    child: Box {
+      spacing: 8;
+
+      Label target_label {
+        ellipsize: end;
+        max-width-chars: 12;
+
+        styles [
+          "heading",
+        ]
+      }
+
+      Image {
+        icon-name: "pan-down-symbolic";
+      }
+    };
+
+    popover: Popover choice_popover {
+      child: Box {
+        orientation: vertical;
+        spacing: 4;
+        margin-top: 6;
+        margin-bottom: 6;
+        margin-start: 6;
+        margin-end: 6;
+
+        Label {
+          label: _("Existing Speakers");
+          xalign: 0;
+          margin-start: 10;
+
+          styles [
+            "caption",
+            "dim-label",
+          ]
+        }
+
+        ListBox choices_list {
+          selection-mode: none;
+
+          styles [
+            "navigation-sidebar",
+          ]
+        }
+
+        Separator {}
+
+        Button keep_button {
+          child: Box {
+            spacing: 10;
+
+            Label {
+              label: _("Keep as New Speaker");
+              hexpand: true;
+              xalign: 0;
+            }
+
+            Image keep_check {
+              icon-name: "object-select-symbolic";
+            }
+          };
+
+          clicked => $_on_keep_button_clicked();
+
+          styles [
+            "flat",
+          ]
+        }
+      };
+    };
+  }
+}

@@ -23,8 +23,10 @@ from kikoe.core.models import (
     RecordingSource,
     Segment,
     Speaker,
+    SpeakerBinding,
     TranscriptionState,
 )
+from kikoe.core.speakers import binding_choices, preserved_identities
 from kikoe.i18n import _
 
 log = logging.getLogger(__name__)
@@ -70,6 +72,32 @@ _MIGRATIONS: tuple[str, ...] = (
     );
     """,
     "ALTER TABLE recordings ADD COLUMN transcription_state TEXT NOT NULL DEFAULT 'ready';",
+    """
+    ALTER TABLE speakers ADD COLUMN ordinal INTEGER NOT NULL DEFAULT 0;
+    INSERT OR IGNORE INTO speakers (note_id, id, name)
+      SELECT r.note_id, s.speaker_id, '' FROM segments s
+      JOIN recordings r ON r.id = s.recording_id
+      WHERE s.speaker_id IS NOT NULL ORDER BY r.position, s.position;
+    UPDATE speakers SET ordinal = (
+      SELECT COUNT(*) FROM speakers other
+      WHERE other.note_id = speakers.note_id AND other.rowid <= speakers.rowid);
+    CREATE TABLE recording_speakers (
+      recording_id TEXT NOT NULL REFERENCES recordings(id) ON DELETE CASCADE,
+      source_id TEXT NOT NULL,
+      speaker_id TEXT NOT NULL,
+      original_id TEXT NOT NULL,
+      confirmed INTEGER NOT NULL,
+      PRIMARY KEY (recording_id, source_id)
+    );
+    INSERT INTO recording_speakers
+      SELECT DISTINCT r.id, s.speaker_id, s.speaker_id, s.speaker_id,
+        CASE WHEN EXISTS (
+          SELECT 1 FROM recordings earlier JOIN segments es ON es.recording_id = earlier.id
+          WHERE earlier.note_id = r.note_id AND earlier.position < r.position
+          AND es.speaker_id IS NOT NULL) THEN 0 ELSE 1 END
+      FROM recordings r JOIN segments s ON s.recording_id = r.id
+      WHERE s.speaker_id IS NOT NULL;
+    """,
 )
 """Schema changes in order; entry ``n`` upgrades ``user_version`` from ``n`` to ``n + 1``.
 
@@ -253,6 +281,7 @@ class Library:
             ),
         )
         self._insert_segments(connection, recording.recording_id, recording.segments)
+        self._replace_bindings(connection, note_id, recording.recording_id, recording.segments)
 
     def update_transcription(
         self,
@@ -274,9 +303,102 @@ class Library:
             )
             _require_found(cursor.rowcount)
             if segments is not None:
+                old = self._read_note(connection, note_id)
+                previous = next(r for r in old.recordings if r.recording_id == recording_id)
+                inherited = preserved_identities(previous, segments)
                 connection.execute("DELETE FROM segments WHERE recording_id = ?", (recording_id,))
                 self._insert_segments(connection, recording_id, segments)
+                self._replace_bindings(
+                    connection,
+                    note_id,
+                    recording_id,
+                    segments,
+                    inherited,
+                    replacing=bool(previous.segments),
+                    confirmed_people={
+                        b.speaker_id for b in previous.speaker_bindings if b.confirmed
+                    },
+                )
             return self._read_note(connection, note_id)
+
+    def rename_speaker(self, note_id: str, speaker_id: str, name: str) -> None:
+        """Rename a person everywhere without changing their recognition labels."""
+        if not name.strip():
+            raise LibraryError(_("Enter a speaker name."))
+        with self._connect() as connection, connection:
+            cursor = connection.execute(
+                "UPDATE speakers SET name = ? WHERE note_id = ? AND id = ?",
+                (name.strip(), note_id, speaker_id),
+            )
+            _require_found(cursor.rowcount)
+
+    def match_speakers(
+        self, note_id: str, recording_id: str, choices: dict[str, str | None]
+    ) -> Note:
+        """Apply a dialog's choices atomically, retaining reversible source identities."""
+        with self._connect() as connection, connection:
+            note = self._read_note(connection, note_id)
+            recording = next((r for r in note.recordings if r.recording_id == recording_id), None)
+            if recording is None:
+                raise LibraryError(_("This recording no longer exists."))
+            sources = {b.source_id for b in recording.speaker_bindings}
+            people = {s.speaker_id for s in note.speakers}
+            if not choices.keys() <= sources or any(
+                p is not None and p not in people for p in choices.values()
+            ):
+                raise LibraryError(_("The speaker selection is no longer available."))
+            for binding in binding_choices(recording, choices):
+                connection.execute(
+                    "UPDATE recording_speakers SET speaker_id = ?, confirmed = ? "
+                    "WHERE recording_id = ? AND source_id = ?",
+                    (binding.speaker_id, binding.confirmed, recording_id, binding.source_id),
+                )
+            return self._read_note(connection, note_id)
+
+    def _replace_bindings(
+        self,
+        connection: sqlite3.Connection,
+        note_id: str,
+        recording_id: str,
+        segments: tuple[Segment, ...],
+        inherited: dict[str, str] | None = None,
+        *,
+        replacing: bool = False,
+        confirmed_people: set[str] | None = None,
+    ) -> None:
+        inherited = inherited or {}
+        has_people = bool(
+            connection.execute(
+                "SELECT 1 FROM recording_speakers b JOIN recordings r ON r.id = b.recording_id "
+                "WHERE r.note_id = ? AND r.id != ? LIMIT 1",
+                (note_id, recording_id),
+            ).fetchone()
+        )
+        connection.execute("DELETE FROM recording_speakers WHERE recording_id = ?", (recording_id,))
+        ordinal = connection.execute(
+            "SELECT COALESCE(MAX(ordinal), 0) FROM speakers WHERE note_id = ?", (note_id,)
+        ).fetchone()[0]
+        sources = dict.fromkeys(s.speaker_id for s in segments if s.speaker_id is not None)
+        for source in sources:
+            original = uuid.uuid4().hex
+            person = inherited.get(source, original)
+            ordinal += 1
+            connection.execute(
+                "INSERT INTO speakers (note_id, id, name, ordinal) VALUES (?, ?, '', ?)",
+                (note_id, original, ordinal),
+            )
+            connection.execute(
+                "INSERT INTO recording_speakers VALUES (?, ?, ?, ?, ?)",
+                (
+                    recording_id,
+                    source,
+                    person,
+                    original,
+                    (person in (confirmed_people or set()))
+                    if source in inherited
+                    else not (has_people or replacing),
+                ),
+            )
 
     def _insert_segments(
         self, connection: sqlite3.Connection, recording_id: str, segments: tuple[Segment, ...]
@@ -308,9 +430,10 @@ class Library:
             raise _note_not_found()
         title, created_at, show_timestamps, show_speakers = row
         speakers = tuple(
-            Speaker(speaker_id, name)
-            for speaker_id, name in connection.execute(
-                "SELECT id, name FROM speakers WHERE note_id = ? ORDER BY rowid", (note_id,)
+            Speaker(speaker_id, name, ordinal)
+            for speaker_id, name, ordinal in connection.execute(
+                "SELECT id, name, ordinal FROM speakers WHERE note_id = ? ORDER BY ordinal",
+                (note_id,),
             )
         )
         segments: dict[str, list[Segment]] = {}
@@ -342,6 +465,14 @@ class Library:
                 segments=tuple(segments.get(recording_id, ())),
                 audio_path=None if audio_file is None else self._audio_dir / audio_file,
                 transcription_state=TranscriptionState(transcription_state),
+                speaker_bindings=tuple(
+                    SpeakerBinding(source, person, original, bool(confirmed))
+                    for source, person, original, confirmed in connection.execute(
+                        "SELECT source_id, speaker_id, original_id, confirmed "
+                        "FROM recording_speakers WHERE recording_id = ? ORDER BY rowid",
+                        (recording_id,),
+                    )
+                ),
             )
             for (
                 recording_id,

@@ -15,7 +15,7 @@ from kikoe.i18n import _
 from kikoe.media import transcode
 from kikoe.media.recorder import Recorder, RecorderError
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions, TranscriptionProvider
-from kikoe.services.importer import ProgressCallback, transcribe_audio
+from kikoe.services.importer import ImportStage, ProgressCallback, transcribe_audio
 from kikoe.storage.captures import CaptureJournal, CaptureStore
 from kikoe.storage.library import NoteNotFoundError
 from kikoe.storage.notes import NoteRepository
@@ -176,6 +176,7 @@ async def transcribe_recording(
     options: TranscriptionOptions,
     on_progress: ProgressCallback,
     work_dir: Path | None = None,
+    preserve_on_failure: bool = False,
 ) -> Note:
     """Update the saved recording; cancellation never removes its original audio."""
     if recording.audio_path is None:
@@ -183,7 +184,10 @@ async def transcribe_recording(
     support = model_support(choice.provider.api, choice.model)
     if not support.file:
         raise TranscriptionError(_("Choose a file transcription model to retry this recording."))
-    await notes.update_transcription(note_id, recording.recording_id, TranscriptionState.PENDING)
+    if not preserve_on_failure:
+        await notes.update_transcription(
+            note_id, recording.recording_id, TranscriptionState.PENDING
+        )
     try:
         _duration, segments = await transcribe_audio(
             recording.audio_path,
@@ -193,14 +197,26 @@ async def transcribe_recording(
             on_progress=on_progress,
             work_dir=work_dir,
         )
-        return await notes.update_transcription(
-            note_id,
-            recording.recording_id,
-            TranscriptionState.READY,
-            segments=scope_speakers(segments, recording.recording_id),
-            provider_name=choice.provider.name,
-            model_id=choice.model.model_id,
+        on_progress(ImportStage.SAVING, 1, 1)
+        commit = asyncio.create_task(
+            notes.update_transcription(
+                note_id,
+                recording.recording_id,
+                TranscriptionState.READY,
+                segments=scope_speakers(segments, recording.recording_id),
+                provider_name=choice.provider.name,
+                model_id=choice.model.model_id,
+            )
         )
+        try:
+            return await asyncio.shield(commit)
+        except asyncio.CancelledError:
+            # A worker-thread transaction cannot be cancelled after it starts. Finish
+            # it before closing, rather than report cancellation while it writes text.
+            return await commit
     except BaseException:
-        await notes.update_transcription(note_id, recording.recording_id, TranscriptionState.FAILED)
+        if not preserve_on_failure:
+            await notes.update_transcription(
+                note_id, recording.recording_id, TranscriptionState.FAILED
+            )
         raise

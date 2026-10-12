@@ -31,6 +31,8 @@ class TranscriptRow(Gtk.Box):
     recording_menu_button: Gtk.MenuButton = Gtk.Template.Child()
     segment_box: Gtk.Box = Gtk.Template.Child()
     meta_box: Gtk.Box = Gtk.Template.Child()
+    play_button: Gtk.Button = Gtk.Template.Child()
+    speaker_button: Gtk.Button = Gtk.Template.Child()
     speaker_label: Gtk.Label = Gtk.Template.Child()
     timestamp_label: Gtk.Label = Gtk.Template.Child()
     text_label: Gtk.Label = Gtk.Template.Child()
@@ -73,6 +75,11 @@ class TranscriptRow(Gtk.Box):
                 item.live_summary or recording_meta(item.recording, datetime.now().astimezone())
             )
             self.recording_menu_button.set_menu_model(_recording_menu(item.recording.recording_id))
+            self.play_button.set_visible(item.live_summary is None)
+            self.play_button.set_action_name(None)
+            self.play_button.set_action_target_value(GLib.Variant("s", item.recording.recording_id))
+            self.play_button.set_action_name("win.play-recording")
+            self.play_button.set_sensitive(item.recording.audio_path is not None)
             state = item.recording.transcription_state
             self.pending_box.set_visible(
                 state is not TranscriptionState.READY and item.live_summary is None
@@ -98,7 +105,15 @@ class TranscriptRow(Gtk.Box):
         self.meta_box.set_size_request(
             _META_WIDTH_WITH_SPEAKERS if show_speakers else _META_WIDTH_TIMES_ONLY, -1
         )
-        self.speaker_label.set_visible(show_speakers and item.speaker_name is not None)
+        self.speaker_button.set_visible(show_speakers and item.speaker_name is not None)
+        self.speaker_button.set_action_name(None)
+        self.speaker_button.set_action_target_value(
+            GLib.Variant("(ss)", (item.recording.recording_id, segment.speaker_id or ""))
+        )
+        self.speaker_button.set_action_name("win.edit-speaker")
+        self.speaker_button.set_sensitive(
+            not item.preview and item.recording.recording_id != "live"
+        )
         self.speaker_label.set_label(item.speaker_name or "")
         self._color_slot = item.color_slot
         self._dark = None
@@ -113,6 +128,15 @@ class TranscriptRow(Gtk.Box):
             self.text_label.add_css_class("dim-label")
         else:
             self.text_label.remove_css_class("dim-label")
+
+    def set_playing(self, playing: bool) -> None:
+        """The header's single button toggles playback rather than overlapping audio."""
+        self.play_button.set_icon_name(
+            "media-playback-stop-symbolic" if playing else "media-playback-start-symbolic"
+        )
+        self.play_button.set_tooltip_text(
+            _("Stop Playback") if playing else _("Play This Recording")
+        )
 
     def _update_speaker_color(self) -> None:
         dark = Adw.StyleManager.get_default().get_dark()
@@ -134,4 +158,14 @@ def _recording_menu(recording_id: str) -> Gio.Menu:
     entry.set_action_and_target_value("win.export-audio", GLib.Variant("s", recording_id))
     menu = Gio.Menu()
     menu.append_item(entry)
+    retranscribe = Gio.MenuItem()
+    retranscribe.set_label(_("Re-transcribe…"))
+    retranscribe.set_action_and_target_value(
+        "win.retranscribe-recording", GLib.Variant("s", recording_id)
+    )
+    menu.prepend_item(retranscribe)
+    match = Gio.MenuItem()
+    match.set_label(_("Match Speakers…"))
+    match.set_action_and_target_value("win.match-speakers", GLib.Variant("s", recording_id))
+    menu.append_item(match)
     return menu

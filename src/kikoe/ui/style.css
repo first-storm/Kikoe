@@ -42,3 +42,26 @@
 }
 
 .recording-status { color: var(--red-4); }
+
+.retranscription-warning {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background-color: color-mix(in srgb, var(--warning-color) 14%, transparent);
+}
+
+.speaker-button {
+  padding: 0;
+  min-height: 0;
+  min-width: 0;
+  background: transparent;
+}
+
+/* Only the matching row title is colored; samples and controls remain neutral. */
+.speaker-title-0 label.title { color: var(--blue-4); font-weight: 700; }
+.speaker-title-0-dark label.title { color: var(--blue-2); font-weight: 700; }
+.speaker-title-1 label.title { color: var(--orange-5); font-weight: 700; }
+.speaker-title-1-dark label.title { color: var(--orange-2); font-weight: 700; }
+.speaker-title-2 label.title { color: var(--green-5); font-weight: 700; }
+.speaker-title-2-dark label.title { color: var(--green-2); font-weight: 700; }
+.speaker-title-3 label.title { color: var(--purple-4); font-weight: 700; }
+.speaker-title-3-dark label.title { color: var(--purple-2); font-weight: 700; }

@@ -313,3 +313,26 @@ def test_output_ends_with_single_newline(fmt: ExportFormat) -> None:
 )
 def test_export_filename_sanitizes_stems(stem: str, extension: str, expected: str) -> None:
     assert export_filename(stem, extension) == expected
+
+
+@pytest.mark.parametrize("fmt", list(ExportFormat))
+def test_export_resolves_matched_speakers_consistently(fmt: ExportFormat) -> None:
+    from datetime import UTC, datetime
+
+    from kikoe.core.models import Note, Recording, RecordingSource, Speaker, SpeakerBinding
+
+    recording = Recording(
+        "r",
+        datetime.now(UTC),
+        timedelta(seconds=5),
+        RecordingSource.IMPORTED,
+        "P",
+        "M",
+        (Segment("Hello", timedelta(), timedelta(seconds=2), "local"),),
+        speaker_bindings=(SpeakerBinding("local", "alice", "new", True),),
+    )
+    note = Note("n", "Meeting", datetime.now(UTC), (recording,), (Speaker("alice", "Alice", 1),))
+    output = export_note(note, fmt, DisplayOptions())
+    assert "Alice" in output
+    assert "Speaker 1" not in output
+    assert "Alice" not in export_note(note, fmt, DisplayOptions(show_speakers=False))

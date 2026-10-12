@@ -10,11 +10,18 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
 from kikoe.core.formatting import SPEAKER_COLOR_COUNT, speaker_order, transcript_features
 from kikoe.core.models import Note, Recording, RecordingSource
+from kikoe.core.speakers import (
+    identity_for,
+    live_speaker_numbers,
+    resolved_note,
+    unresolved_recordings,
+)
 from kikoe.core.transcription import LiveSnapshot, LiveState
 from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.ui.items import TranscriptItem
 from kikoe.ui.recording_view import RecordingView
+from kikoe.ui.speaker_row import speaker_label
 from kikoe.ui.templates import ui_file
 from kikoe.ui.transcript_row import TranscriptRow
 
@@ -23,6 +30,7 @@ from kikoe.ui.transcript_row import TranscriptRow
 class NoteView(Adw.Bin):
     __gtype_name__ = "KikoeNoteView"
 
+    speaker_banner: Adw.Banner = Gtk.Template.Child()
     stack: Gtk.Stack = Gtk.Template.Child()
     recording_slot: Adw.Bin = Gtk.Template.Child()
     transcript_scroll: Gtk.ScrolledWindow = Gtk.Template.Child()
@@ -33,6 +41,7 @@ class NoteView(Adw.Bin):
         self.recording_view = RecordingView()
         self.recording_slot.set_child(self.recording_view)
         self._note: Note | None = None
+        self._playing: str | None = None
         self._has_speakers = False
         self._has_timestamps = False
         self._live: Recording | None = None
@@ -52,6 +61,18 @@ class NoteView(Adw.Bin):
         """Show ``note``; rows are rebuilt only when its recordings changed."""
         previous = self._note
         self._note = note
+        pending = unresolved_recordings(note)
+        self.speaker_banner.set_action_name(None)
+        self.speaker_banner.set_revealed(bool(pending))
+        if pending:
+            recording = pending[0]
+            self.speaker_banner.set_title(
+                _("Recording {number} has speakers that are not yet matched.").format(
+                    number=note.recordings.index(recording) + 1
+                )
+            )
+            self.speaker_banner.set_action_target_value(GLib.Variant("s", recording.recording_id))
+            self.speaker_banner.set_action_name("win.match-speakers")
         self.stack.set_visible_child_name("transcript" if note.recordings else "no-recordings")
         same_note = previous is not None and previous.note_id == note.note_id
         if (
@@ -116,9 +137,10 @@ class NoteView(Adw.Bin):
             LiveState.INCOMPLETE: _("Transcription incomplete"),
             LiveState.PAUSED: _("Paused"),
         }
-        existing = [s for r in self._note.recordings for s in r.segments]
+        existing = [s for r in resolved_note(self._note).recordings for s in r.segments]
         all_segments = (*snapshot.segments, *snapshot.preview)
         order = speaker_order((*existing, *all_segments))
+        numbers = live_speaker_numbers(self._note, all_segments)
         previous_columns = self._has_speakers, self._has_timestamps
         self._has_speakers = bool(order)
         self._has_timestamps = any(s.start is not None for s in (*existing, *all_segments))
@@ -134,11 +156,11 @@ class NoteView(Adw.Bin):
             speaker = segment.speaker_id
             name = (
                 self._note.speaker_name(speaker)
-                or _("Speaker {number}").format(number=order[speaker] + 1)
+                or _("Speaker {number}").format(number=numbers[speaker])
                 if speaker
                 else None
             )
-            color = order[speaker] % SPEAKER_COLOR_COUNT if speaker else None
+            color = (numbers[speaker] - 1) % SPEAKER_COLOR_COUNT if speaker else None
             preview = index >= len(snapshot.segments)
             old = self._live_rows[index + 1] if index + 1 < len(self._live_rows) else None
             if old is not None and (old.segment, old.preview, old.speaker_name, old.color_slot) == (
@@ -195,6 +217,12 @@ class NoteView(Adw.Bin):
         if isinstance(row, TranscriptRow):
             self._bound.pop(row, None)
 
+    def set_playing(self, recording_id: str | None) -> None:
+        """Keep recycled recording headers in sync with the one active player."""
+        self._playing = recording_id
+        for row, item in self._bound.items():
+            row.set_playing(item.segment is None and item.recording.recording_id == recording_id)
+
     def _bind_row(self, row: TranscriptRow, data: TranscriptItem) -> None:
         display = self._note.display if self._note else None
         row.bind(
@@ -204,10 +232,12 @@ class NoteView(Adw.Bin):
             and display.show_timestamps,
             show_speakers=self._has_speakers and display is not None and display.show_speakers,
         )
+        row.set_playing(data.segment is None and data.recording.recording_id == self._playing)
 
 
 def _rows(note: Note) -> list[TranscriptItem]:
-    order = speaker_order(s for r in note.recordings for s in r.segments)
+    order = speaker_order(s for r in resolved_note(note).recordings for s in r.segments)
+    people = {s.speaker_id: s for s in note.speakers}
     rows: list[TranscriptItem] = []
     for number, recording in enumerate(note.recordings, start=1):
         rows.append(TranscriptItem(recording, number))
@@ -216,9 +246,15 @@ def _rows(note: Note) -> list[TranscriptItem]:
             if speaker is None:
                 rows.append(TranscriptItem(recording, number, segment))
                 continue
-            name = note.speaker_name(speaker) or _("Speaker {number}").format(
-                number=order[speaker] + 1
+            identity = identity_for(recording, speaker)
+            person = people.get(identity)
+            name = (
+                speaker_label(note, identity)
+                if person
+                else _("Speaker {number}").format(number=order[identity] + 1)
             )
-            slot = order[speaker] % SPEAKER_COLOR_COUNT
+            slot = (
+                (person.ordinal - 1) if person and person.ordinal else order[identity]
+            ) % SPEAKER_COLOR_COUNT
             rows.append(TranscriptItem(recording, number, segment, name, slot))
     return rows

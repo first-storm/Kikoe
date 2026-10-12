@@ -170,7 +170,7 @@ network work immediately. Incomplete transcripts keep final text and original au
 with manual file-model retry. Successful live recordings never upload the file again.
 
 Speaker IDs are scoped to recording and recognition connection/file part. No matching
-is inferred between independent sessions; M6 will provide the explicit matching UI.
+is inferred between independent sessions; the M6 matching UI provides explicit assignments.
 
 ## Planned dependencies
 
@@ -207,3 +207,35 @@ Added only when the feature using them lands (see AGENTS.md, "Dependencies"):
   so no extra build step is needed for packaging beyond `scripts/build_ui.py`.
 - Icons ship inside the package (`ui/icons/hicolor`) and are added to the icon theme
   search path at startup, so they work on every platform.
+
+## Speaker identities and M6 playback
+
+Recognition labels remain in `Segment.speaker_id`, scoped to a recording/recognition
+connection. `Recording.speaker_bindings` maps each label to a note-wide `Speaker` and
+retains its independent `original_id`, so many labels can be matched to one person and
+later separated again. `Speaker.ordinal` is a persistent one-based number for default
+names and the four theme palette slots. Names are shared throughout a note. Schema
+version 3 adds these assignments and backfills older libraries without changing text.
+`core.speakers` resolves identities for the transcript and all export formats.
+
+The first recording establishes people. Later recordings containing independent labels
+require explicit matching when the note already contains speakers. Applying “Keep as
+New Speaker” counts as a confirmed decision; cancelling a matching dialog writes nothing.
+Named old identities remain available as candidates after their original transcript is
+replaced. Re-transcription uses retained audio and commits the replacement, model metadata
+and bindings together only after every upload part succeeds. Failure/cancellation leaves
+the previous recording, including its transcription state, intact. The final save is shielded
+from cancellation: Cancel is disabled during it, and shutdown waits for its transaction.
+The existing failed recording retry continues to use its pending/failed states.
+
+Identity preservation uses merged valid time intervals, not provider numbers or turn
+order: at least 80% of a new label's timed speech must overlap an old person, with a
+strictly better score at least twice the runner-up. Labels with missing/invalid times
+are left for manual matching. Preserving an unconfirmed identity does not confirm it.
+
+`media.player` uses the existing sounddevice `RawOutputStream` at the default output
+sample rate. `media.ffmpeg.decode_audio` streams mono int16 PCM in bounded blocks,
+draining decoder diagnostics concurrently. Device calls run in worker threads; cancellation
+waits for an in-flight call before closing the stream. The window serializes playback and
+stops it on note changes, dialog/window closure and before capture or transcription.
+No extra playback dependency, external player or Linux-specific audio API is required.

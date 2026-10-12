@@ -1,0 +1,77 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeSpeakerDialog: Adw.Dialog {
+  title: _("Match Speakers");
+  content-width: 520;
+  content-height: 520;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      show-start-title-buttons: false;
+      show-end-title-buttons: false;
+
+      [start]
+      Button {
+        label: _("_Cancel");
+        use-underline: true;
+        clicked => $_on_cancel_button_clicked();
+      }
+
+      [end]
+      Button apply_button {
+        label: _("_Apply");
+        use-underline: true;
+        clicked => $_on_apply_button_clicked();
+
+        styles [
+          "suggested-action",
+        ]
+      }
+    }
+
+    content: ScrolledWindow {
+      hscrollbar-policy: never;
+
+      child: Box {
+        orientation: vertical;
+        spacing: 16;
+        margin-start: 24;
+        margin-end: 24;
+        margin-top: 12;
+        margin-bottom: 24;
+
+        Label intro_label {
+          xalign: 0;
+          wrap: true;
+
+          styles [
+            "dim-label",
+          ]
+        }
+
+        ListBox speaker_list {
+          selection-mode: none;
+
+          styles [
+            "boxed-list",
+          ]
+        }
+
+        Label {
+          label: _(
+            "Two numbers can map to the same person. You can rename or re-match a speaker at any time by clicking their name in the note."
+          );
+          xalign: 0;
+          wrap: true;
+
+          styles [
+            "caption",
+            "dim-label",
+          ]
+        }
+      };
+    };
+  };
+}

@@ -1,7 +1,7 @@
 # UI design specification
 
 This is the reference for Kikoe's user interface. It was transcribed from the HTML
-design draft `Kikoe.html` (Chinese UI; kept next to the repository, not committed, as
+design draft `Kikoe.html` (Chinese UI; available locally, not committed, as
 the visual reference for layout and spacing); strings here are the English source
 strings. Follow the GNOME HIG and use stock libadwaita widgets wherever possible. The
 "Widgets" lines are suggestions, not requirements.
@@ -21,7 +21,8 @@ Layout details from the draft that the implementation follows:
 
 Sample data used throughout: speakers "Kobayashi" (blue `#1c71d8`), "Joe" (orange
 `#b34700`); unmatched speakers get "Speaker 3" (green `#2b7a4b`), "Speaker 4"
-(purple `#813d9c`). Speaker colors come from the GNOME palette.
+(purple `#813d9c`). Speaker colors come from the GNOME palette. Persistent person numbers determine colors;
+renaming and confidently preserving an identity keep its color.
 
 ## Concepts
 
@@ -95,8 +96,10 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   adds to the open note or creates one named after the file, with progress, Cancel and a
   failure toast; Record/Append Recording, pause/resume, Stop, live level meter, batch
   transcription after stopping, retained-audio retry, and startup recovery.
-- Not yet: *Search Notes*, the banner, *Play This Recording*, "Re-transcribe…",
-  "Delete This Recording", and renaming speakers.
+- M6 implemented: unmatched-speaker banner; recording playback/stop; clickable colored
+  speaker names with Rename Speaker and Match Speakers; reversible many-to-one matching
+  with quoted samples and playback; Re-transcribe with an independent model/options picker.
+- Not yet: *Search Notes* and "Delete This Recording".
 
 ## 2. Recording in progress
 
@@ -164,7 +167,19 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   then "Keep as New Speaker".
 - Footnote: "Two numbers can map to the same person. You can rename or re-match a
   speaker at any time by clicking their name in the note."
-- Widgets: `Adw.Dialog` + `Adw.PreferencesGroup` with `Adw.ComboRow`s.
+- Implemented with `Adw.Dialog` and model-bound `Adw.ActionRow`s: playback button on the
+  left, colored bold name and dimmed quoted sample in the middle, and a colored selection
+  menu with check marks on the right, matching the HTML row order. The candidate heading
+  is “Existing Speakers” because more than two recordings and named old identities from
+  re-transcription are supported. Menus include “Keep as New Speaker”.
+- New labels default to “New Speaker”; Apply confirms every choice, including keeping
+  independent identities. Cancel writes nothing. The banner shows the first recording
+  needing a decision and advances when its choices are confirmed.
+- Samples use the first nonempty turn with reliable timing, capped at ten seconds and
+  bounded by the next timestamp or recording end when needed. Without reliable timing,
+  the quote remains visible, playback is disabled, and manual matching is available.
+- Dialogs scroll at narrow widths. Playing a sample stops the previous playback; clicking
+  it again stops. Closing the dialog stops playback.
 
 ## 5. Dialog: Re-transcribe (≈480×520)
 
@@ -175,6 +190,20 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   "Timestamps" and "Speaker Detection" (disabled when unsupported).
 - Warning: "The text of this recording will be replaced, including any manual edits.
   Other recordings in the note are not affected. Speaker names are kept where possible."
+
+M6 implementation behavior:
+- The picker starts with the bottom bar's current model only when it supports files.
+  Live-only models require an explicit file-model choice. Switches initially reflect
+  the current transcript and use the selected model's effective batch capabilities.
+- Only a fully successful transcription replaces this recording. Failed/cancelled work
+  keeps its previous text, identities, original audio and completion state. Progress and
+  Cancel use the existing bottom bar; conflicting recording/import/edit actions are disabled.
+  Cancel is disabled during the final atomic save; closing waits for that save to finish.
+- Names are preserved only with strong time-overlap evidence (80% coverage and twice the
+  runner-up score). Uncertain identities require manual matching. Provider numbering is
+  never treated as evidence of identity, and unmatched people remain unmatched on retry.
+- The warning uses theme colors, the header contains Cancel/Transcribe, and content scrolls
+  so the 480×520 dialog also works at 360 px.
 
 ## 6. Preferences — Providers (≈640×600)
 

@@ -5,20 +5,22 @@ import logging
 import shutil
 from collections.abc import Callable
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 
-from kikoe.core.choice import ModelChoice
+from kikoe.core.choice import ModelChoice, available_models
 from kikoe.core.export import ExportFormat, export_filename, export_note
 from kikoe.core.formatting import transcript_features
 from kikoe.core.models import DisplayOptions, Note, Recording, TranscriptionState
 from kikoe.core.recording import CaptureProgress, CaptureState
+from kikoe.core.speakers import identity_for
 from kikoe.core.transcription import LiveSnapshot, model_support
 from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.media.ffmpeg import find_ffmpeg
+from kikoe.media.player import PlaybackError, play_audio
 from kikoe.media.recorder import SoundDeviceRecorder
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.providers.factory import create_client
@@ -38,6 +40,9 @@ from kikoe.ui.labels import (
     recording_note_title,
 )
 from kikoe.ui.note_view import NoteView
+from kikoe.ui.retranscribe_dialog import RetranscribeDialog
+from kikoe.ui.speaker_dialog import SpeakerDialog
+from kikoe.ui.speaker_editor import SpeakerEditor
 from kikoe.ui.tasks import USER_FACING_ERRORS, run_task, show_error
 from kikoe.ui.templates import ui_file
 
@@ -107,6 +112,7 @@ class Window(Adw.ApplicationWindow):
         self._add_action("import-audio", self._on_import_audio)
         self._add_action("cancel-import", self._on_cancel_import)
         self._import_task: asyncio.Task[None] | None = None
+        self._committing_transcription = False
         self._recording_task: asyncio.Task[None] | None = None
         self._live: RealtimeRecording | None = None
         self._session: RecordingSession | None = None
@@ -121,6 +127,16 @@ class Window(Adw.ApplicationWindow):
         self._add_action("resume-recording", self._on_resume_recording)
         self._add_action("stop-recording", self._on_stop_recording)
         self._add_action("retry-recording", self._on_retry_recording, GLib.VariantType.new("s"))
+        self._playback_task: asyncio.Task[None] | None = None
+        self._playback_lock = asyncio.Lock()
+        self._playback_key: tuple[str, float, float | None] | None = None
+        self._add_action("play-recording", self._on_play_recording, GLib.VariantType.new("s"))
+        self._add_action("play-sample", self._on_play_sample, GLib.VariantType.new("(sdd)"))
+        self._add_action("edit-speaker", self._on_edit_speaker, GLib.VariantType.new("(ss)"))
+        self._add_action("match-speakers", self._on_match_speakers, GLib.VariantType.new("s"))
+        self._add_action(
+            "retranscribe-recording", self._on_retranscribe_recording, GLib.VariantType.new("s")
+        )
         self._set_action_enabled("new-note", False)  # Until providers are loaded.
         self._show_note(None)
         providers.connect_changed(self._on_providers_changed)
@@ -254,6 +270,8 @@ class Window(Adw.ApplicationWindow):
             self._show_note(note)
 
     def _show_note(self, note: Note | None) -> None:
+        if self._note is not None and (note is None or self._note.note_id != note.note_id):
+            self._stop_playback()
         self._note = note
         self.note_menu_button.set_visible(note is not None)
         self.export_button.set_visible(note is not None)
@@ -366,6 +384,191 @@ class Window(Adw.ApplicationWindow):
 
         dialog.connect("response", respond)
         dialog.present(self)
+
+    # Speaker identities and playback
+
+    def _recording_by_id(self, recording_id: str) -> Recording | None:
+        return (
+            next((r for r in self._note.recordings if r.recording_id == recording_id), None)
+            if self._note
+            else None
+        )
+
+    def _on_play_recording(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
+        if param is not None:
+            self._request_playback(param.get_string(), 0, None)
+
+    def _on_play_sample(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
+        if param is not None:
+            recording_id, start, end = param.unpack()
+            self._request_playback(str(recording_id), float(start), float(end))
+
+    def _request_playback(self, recording_id: str, start: float, end: float | None) -> None:
+        recording = self._recording_by_id(recording_id)
+        if recording is None or recording.audio_path is None:
+            self.add_toast(Adw.Toast(title=_("The original audio is not available.")))
+            return
+        key = recording_id, start, end
+        old = self._playback_task
+        same = key == self._playback_key
+        self._stop_playback()
+        if same:
+            return
+        self._playback_key = key
+        self.note_view.set_playing(recording_id if end is None else None)
+        self._playback_task = run_task(self._play(recording.audio_path, key, old), self)
+
+    def _stop_playback(self) -> None:
+        if self._playback_task is not None and not self._playback_task.cancelling():
+            self._playback_task.cancel()
+        self._playback_key = None
+        self.note_view.set_playing(None)
+
+    async def _play(
+        self, path: Path, key: tuple[str, float, float | None], previous: asyncio.Task[None] | None
+    ) -> None:
+        try:
+            if previous is not None:
+                try:
+                    await asyncio.shield(previous)
+                except asyncio.CancelledError:
+                    if not previous.cancelled():
+                        raise
+            async with self._playback_lock:
+                await play_audio(
+                    path,
+                    start=timedelta(seconds=key[1]),
+                    end=timedelta(seconds=key[2]) if key[2] is not None else None,
+                )
+        except PlaybackError as error:
+            log.warning("Playback failed: %s", error)
+            self.add_toast(Adw.Toast(title=str(error)))
+        finally:
+            if self._playback_task is asyncio.current_task():
+                self._playback_key = None
+                self.note_view.set_playing(None)
+
+    async def _finish_playback(self) -> None:
+        """Finish output-device cleanup before capture or transcription begins."""
+        self._stop_playback()
+        previous = self._playback_task
+        if previous is not None:
+            try:
+                await asyncio.shield(previous)
+            except asyncio.CancelledError:
+                if not previous.cancelled():
+                    raise
+        async with self._playback_lock:
+            pass
+
+    def _on_edit_speaker(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
+        if self._note is None or param is None:
+            return
+        recording_id, source_id = param.unpack()
+        recording = self._recording_by_id(str(recording_id))
+        if recording is None:
+            return
+        person = identity_for(recording, str(source_id))
+        if not any(s.speaker_id == person for s in self._note.speakers):
+            return
+        dialog = SpeakerEditor(
+            self._notes, self._note, person, lambda: self._present_matching(str(recording_id))
+        )
+        dialog.connect("closed", self._on_audio_dialog_closed)
+        dialog.present(self)
+
+    def _on_match_speakers(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
+        if param is not None:
+            self._present_matching(param.get_string())
+
+    def _present_matching(self, recording_id: str) -> None:
+        recording = self._recording_by_id(recording_id)
+        if self._note is None or recording is None or not recording.speaker_bindings:
+            self.add_toast(Adw.Toast(title=_("This recording has no detected speakers.")))
+            return
+        dialog = SpeakerDialog(self._notes, self._note, recording)
+        dialog.connect("closed", self._on_audio_dialog_closed)
+        dialog.present(self)
+
+    def _on_audio_dialog_closed(self, _dialog: Adw.Dialog) -> None:
+        self._stop_playback()
+
+    def _on_retranscribe_recording(
+        self, _action: Gio.SimpleAction, param: GLib.Variant | None
+    ) -> None:
+        if self._note is None or param is None:
+            return
+        recording = self._recording_by_id(param.get_string())
+        if recording is None or recording.audio_path is None:
+            self.add_toast(Adw.Toast(title=_("The original audio is not available.")))
+            return
+        note_id = self._note.note_id
+
+        def submit(choice: ModelChoice, options: TranscriptionOptions) -> None:
+            choices = available_models(self._providers.providers)
+            refreshed = next((c for c in choices if c.key == choice.key), None)
+            if refreshed is None or not model_support(refreshed.provider.api, refreshed.model).file:
+                self.add_toast(Adw.Toast(title=_("Choose an available file transcription model.")))
+                return
+            self._stop_playback()
+            self._import_task = run_task(
+                self._retranscribe(note_id, recording, refreshed, options), self
+            )
+            self.bottom_bar.set_progress(_("Transcribing…"))
+            self._update_import_actions()
+
+        dialog = RetranscribeDialog(
+            self._providers,
+            recording,
+            self._note.recordings.index(recording) + 1,
+            self.bottom_bar.choice,
+            submit,
+        )
+        dialog.connect("closed", self._on_audio_dialog_closed)
+        dialog.present(self)
+
+    async def _retranscribe(
+        self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
+    ) -> None:
+        def progress(stage: ImportStage, part: int, parts: int) -> None:
+            self._committing_transcription = stage is ImportStage.SAVING
+            self._set_action_enabled("cancel-import", not self._committing_transcription)
+            self.bottom_bar.set_progress(import_stage_label(stage, part, parts))
+
+        try:
+            await self._finish_playback()
+            key = await self._providers.get_api_key(choice.provider.provider_id)
+            note = await transcribe_recording(
+                note_id,
+                recording,
+                choice,
+                client=create_client(choice.provider, key),
+                notes=self._notes,
+                options=options,
+                on_progress=progress,
+                preserve_on_failure=True,
+            )
+            self._show_note(note)
+        except asyncio.CancelledError:
+            self.add_toast(
+                Adw.Toast(
+                    title=_("Re-transcription cancelled. Your text and audio have been kept.")
+                )
+            )
+        except USER_FACING_ERRORS as error:
+            log.warning("Re-transcription failed: %s", error)
+            self.add_toast(
+                Adw.Toast(
+                    title=_(
+                        "Re-transcription failed. Your text and audio have been kept. {error}"
+                    ).format(error=error)
+                )
+            )
+        finally:
+            self._committing_transcription = False
+            self._import_task = None
+            self.bottom_bar.set_progress(None)
+            self._update_import_actions()
 
     # Export
 
@@ -524,6 +727,16 @@ class Window(Adw.ApplicationWindow):
         busy = (
             self._import_task is not None or self._recording_task is not None or self._recovery_busy
         )
+        if busy:
+            self._stop_playback()
+        for name in (
+            "play-recording",
+            "play-sample",
+            "edit-speaker",
+            "match-speakers",
+            "retranscribe-recording",
+        ):
+            self._set_action_enabled(name, not busy and self._note is not None)
         available = self.bottom_bar.choice is not None and not busy
         choice = self.bottom_bar.choice
         file_available = (
@@ -534,7 +747,9 @@ class Window(Adw.ApplicationWindow):
         self._set_action_enabled("import-audio", file_available)
         self._set_action_enabled("start-recording", available)
         self._set_action_enabled("retry-recording", file_available and self._note is not None)
-        self._set_action_enabled("cancel-import", self._import_task is not None)
+        self._set_action_enabled(
+            "cancel-import", self._import_task is not None and not self._committing_transcription
+        )
         session = self._session
         state = session.state if session is not None else CaptureState.STOPPED
         self._set_action_enabled(
@@ -556,7 +771,7 @@ class Window(Adw.ApplicationWindow):
         run_task(self._pick_and_import(), self)
 
     def _on_cancel_import(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        if self._import_task is not None:
+        if self._import_task is not None and not self._committing_transcription:
             self._import_task.cancel()
 
     async def _pick_and_import(self) -> None:
@@ -629,6 +844,7 @@ class Window(Adw.ApplicationWindow):
             self.bottom_bar.set_progress(import_stage_label(stage, part, parts))
 
         try:
+            await self._finish_playback()
             api_key = await self._providers.get_api_key(choice.provider.provider_id)
             note = await import_audio(
                 path,
@@ -676,6 +892,7 @@ class Window(Adw.ApplicationWindow):
         support = model_support(choice.provider.api, choice.model)
         choice = replace(choice, model=replace(choice.model, capabilities=support.recording))
         try:
+            await self._finish_playback()
             await asyncio.to_thread(find_ffmpeg)
             # Validate the batch backend before opening the microphone.
             client = create_client(
@@ -935,8 +1152,14 @@ class Window(Adw.ApplicationWindow):
     def _on_window_close_request(self, _window: Gtk.Window) -> bool:
         if self._closing:
             return True
+        self._stop_playback()
         recovery_pending = self._recovery_task is not None and not self._recovery_task.done()
-        if self._recording_task is None and self._import_task is None and not recovery_pending:
+        if (
+            self._recording_task is None
+            and self._import_task is None
+            and not recovery_pending
+            and (self._playback_task is None or self._playback_task.done())
+        ):
             return False
         self._closing = True
         run_task(self._save_and_close(), self)
@@ -944,11 +1167,13 @@ class Window(Adw.ApplicationWindow):
 
     async def _save_and_close(self) -> None:
         try:
+            await self._finish_playback()
             task = self._recording_task
             if self._session is not None:
                 await self._session.stop()
-            if self._import_task is not None:
-                self._import_task.cancel()
+            importing = self._import_task
+            if importing is not None:
+                importing.cancel()
             recovery = self._recovery_task
             if recovery is not None and not recovery.done():
                 if not self._recovery_busy:
@@ -960,6 +1185,12 @@ class Window(Adw.ApplicationWindow):
                         raise
             if task is not None:
                 await task
+            elif importing is not None:
+                try:
+                    await importing
+                except asyncio.CancelledError:
+                    if not importing.cancelled():
+                        raise
             self.destroy()
         except USER_FACING_ERRORS:
             self._closing = False

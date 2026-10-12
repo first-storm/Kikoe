@@ -72,3 +72,25 @@ def test_streaming_resampler_drains_all_audio(output_rate: int) -> None:
     except ffmpeg.FFmpegNotFoundError:
         pytest.skip("ffmpeg not installed")
     asyncio.run(run())
+
+
+def test_playback_decoder_seeks_and_bounds_pcm(tmp_path: Path) -> None:
+    import asyncio
+    import wave
+    from contextlib import aclosing
+
+    source = tmp_path / "source.wav"
+    with wave.open(str(source), "wb") as audio:
+        audio.setparams((1, 2, 16000, 0, "NONE", "not compressed"))
+        audio.writeframes(bytes(16000 * 2 * 2))
+
+    async def run() -> None:
+        async with aclosing(ffmpeg.decode_audio(source, 24000, 0.5, 1.0)) as chunks:
+            data = b"".join([chunk async for chunk in chunks])
+        assert len(data) == 24000
+
+    try:
+        ffmpeg.find_ffmpeg()
+    except ffmpeg.FFmpegNotFoundError:
+        pytest.skip("ffmpeg not installed")
+    asyncio.run(run())

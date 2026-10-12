@@ -208,3 +208,148 @@ def test_incomplete_transcript_survives_retry_failure_and_successful_empty_resul
     assert changed.recordings[0].segments == (Segment("More confirmed"),)
     empty = library.update_transcription(note.note_id, id, TranscriptionState.READY, segments=())
     assert empty.recordings[0].segments == ()
+
+
+def test_speakers_can_merge_and_separate_after_reopening(library: Library, tmp_path: Path) -> None:
+    from kikoe.core.speakers import resolved_note, unresolved_recordings
+
+    first = recording(segments=(Segment("Alice", speaker_id="first:0"),))
+    note = library.add_recording(None, "Meeting", first)
+    alice = note.speakers[0]
+    library.rename_speaker(note.note_id, alice.speaker_id, "Alice")
+    second = recording(
+        segments=(
+            Segment("Again", speaker_id="second:0"),
+            Segment("Also Alice", speaker_id="second:1"),
+        )
+    )
+    note = library.add_recording(note.note_id, "ignored", second)
+    assert unresolved_recordings(note) == (note.recordings[1],)
+    originals = tuple(b.original_id for b in note.recordings[1].speaker_bindings)
+    note = library.match_speakers(
+        note.note_id,
+        second.recording_id,
+        {"second:0": alice.speaker_id, "second:1": alice.speaker_id},
+    )
+    assert not unresolved_recordings(note)
+    assert {s.speaker_id for s in resolved_note(note).recordings[1].segments} == {alice.speaker_id}
+    reopened = Library(tmp_path / "library.sqlite3", tmp_path / "audio")
+    reopened.migrate()
+    assert reopened.get_note(note.note_id) == note
+    note = reopened.match_speakers(note.note_id, second.recording_id, {"second:1": None})
+    assert resolved_note(note).recordings[1].segments[1].speaker_id == originals[1]
+    assert note.speakers[0].name == "Alice"
+    assert note.speakers[0].ordinal == alice.ordinal
+
+
+def test_invalid_matching_rolls_back_all_choices(library: Library) -> None:
+    note = library.add_recording(
+        None, "Meeting", recording(segments=(Segment("Hi", speaker_id="0"),))
+    )
+    before = library.get_note(note.note_id)
+    with pytest.raises(LibraryError):
+        library.match_speakers(
+            note.note_id,
+            note.recordings[0].recording_id,
+            {"0": note.speakers[0].speaker_id, "missing": None},
+        )
+    assert library.get_note(note.note_id) == before
+    with pytest.raises(LibraryError):
+        library.rename_speaker(note.note_id, note.speakers[0].speaker_id, "   ")
+
+
+def test_replacement_keeps_named_identity_and_other_recording(library: Library) -> None:
+    from kikoe.core.models import TranscriptionState
+    from kikoe.core.speakers import resolved_note
+
+    first = recording(segments=(Segment("Old", timedelta(), timedelta(seconds=5), "0"),))
+    note = library.add_recording(None, "Meeting", first)
+    person = note.speakers[0]
+    library.rename_speaker(note.note_id, person.speaker_id, "Alice")
+    note = library.add_recording(note.note_id, "ignored", recording(segments=(Segment("Other"),)))
+    other = note.recordings[1]
+    updated = library.update_transcription(
+        note.note_id,
+        first.recording_id,
+        TranscriptionState.READY,
+        segments=(Segment("New", timedelta(), timedelta(seconds=5), "99"),),
+    )
+    assert resolved_note(updated).recordings[0].segments[0].speaker_id == person.speaker_id
+    assert updated.speakers[0].name == "Alice"
+    assert updated.speakers[0].ordinal == person.ordinal
+    assert updated.recordings[1] == other
+
+
+def test_v2_library_migrates_existing_speaker_names(tmp_path: Path) -> None:
+    from kikoe.storage.library import _MIGRATIONS
+
+    database = tmp_path / "old.sqlite3"
+    with sqlite3.connect(database) as connection:
+        for migration in _MIGRATIONS[:2]:
+            connection.executescript(migration)
+        connection.execute("PRAGMA user_version = 2")
+        connection.execute(
+            "INSERT INTO notes VALUES ('note', 'Meeting', ?, 1, 1)", (WHEN.isoformat(),)
+        )
+        connection.execute("INSERT INTO speakers VALUES ('note', 'local', 'Alice')")
+        connection.execute(
+            "INSERT INTO recordings VALUES ('r', 'note', 0, ?, 5000, "
+            "'imported', 'P', 'M', NULL, 'ready')",
+            (WHEN.isoformat(),),
+        )
+        connection.execute("INSERT INTO segments VALUES ('r', 0, 0, 5000, 'local', 'Old text')")
+    old = Library(database, tmp_path / "audio")
+    old.migrate()
+    note = old.get_note("note")
+    assert note.speakers[0].name == "Alice"
+    assert note.speakers[0].ordinal == 1
+    assert note.recordings[0].speaker_bindings[0].speaker_id == "local"
+
+
+def test_retranscription_does_not_confirm_an_unmatched_person(library: Library) -> None:
+    from kikoe.core.models import TranscriptionState
+    from kikoe.core.speakers import unresolved_recordings
+
+    note = library.add_recording(
+        None, "Meeting", recording(segments=(Segment("First", speaker_id="first"),))
+    )
+    second = recording(segments=(Segment("Second", timedelta(), timedelta(seconds=4), "second"),))
+    note = library.add_recording(note.note_id, "", second)
+    updated = library.update_transcription(
+        note.note_id,
+        second.recording_id,
+        TranscriptionState.READY,
+        segments=(Segment("Updated", timedelta(), timedelta(seconds=4), "renumbered"),),
+    )
+    assert unresolved_recordings(updated) == (updated.recordings[1],)
+    assert (
+        updated.recordings[1].speaker_bindings[0].speaker_id
+        == note.recordings[1].speaker_bindings[0].speaker_id
+    )
+
+
+def test_replacement_transaction_rolls_back_after_deleting_old_text(
+    library: Library, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from kikoe.core.models import TranscriptionState
+
+    note = library.add_recording(
+        None, "Meeting", recording(segments=(Segment("Old", speaker_id="0"),))
+    )
+    library.rename_speaker(note.note_id, note.speakers[0].speaker_id, "Alice")
+    before = library.get_note(note.note_id)
+
+    def fail_insert(*_args: object) -> None:
+        raise LibraryError("Disk full")
+
+    monkeypatch.setattr(library, "_insert_segments", fail_insert)
+    with pytest.raises(LibraryError, match="Disk full"):
+        library.update_transcription(
+            note.note_id,
+            note.recordings[0].recording_id,
+            TranscriptionState.READY,
+            segments=(Segment("New"),),
+            provider_name="New provider",
+            model_id="new model",
+        )
+    assert library.get_note(note.note_id) == before

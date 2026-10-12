@@ -31,7 +31,14 @@ and replays unconfirmed audio from disk. If transcription remains incomplete at 
 the confirmed text and FLAC are kept. Select a file model and use Retry Transcription;
 failed or cancelled retries preserve the existing text. Recovery never uploads audio
 automatically. Speaker IDs from independent recordings/connections are kept separate;
-matching people between them remains part of M6.
+use Match Speakers to assign them to the same person, or keep them as new speakers.
+Click a speaker name to rename the person or review assignments. Matching includes
+quoted audio samples when reliable timestamps are available, and can be changed later.
+
+The recording header plays retained audio. Its menu offers Re-transcribe with a file
+model and independent timestamp/speaker options. Only a successful result replaces that
+recording; names are preserved when time-overlap evidence is clear. Failure or cancellation
+before the final save keeps the previous text and audio. Other recordings are unaffected.
 
 ## Development setup
 
@@ -41,7 +48,7 @@ Requirements on every platform:
 - GTK 4 and libadwaita with GObject introspection data
 - Headers to build PyGObject: `girepository-2.0` (GLib ≥ 2.80) and `cairo`, plus `pkg-config` and a C compiler
 - `ffmpeg` on `PATH` (or set `KIKOE_FFMPEG`)
-- PortAudio for microphone capture (`sounddevice`; no NumPy required)
+- PortAudio for microphone capture and playback (`sounddevice`; no NumPy required)
 - GNU gettext, only when working on translations
 
 Platform packages:

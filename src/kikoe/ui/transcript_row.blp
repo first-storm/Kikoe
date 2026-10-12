@@ -33,6 +33,17 @@ template $KikoeTranscriptRow: Box {
         ]
       }
 
+      Button play_button {
+        icon-name: "media-playback-start-symbolic";
+        tooltip-text: _("Play This Recording");
+        valign: center;
+
+        styles [
+          "flat",
+          "circular",
+        ]
+      }
+
       MenuButton recording_menu_button {
         icon-name: "view-more-symbolic";
         tooltip-text: _("Recording Menu");
@@ -74,13 +85,23 @@ template $KikoeTranscriptRow: Box {
       spacing: 1;
       margin-top: 3;
 
-      Label speaker_label {
-        xalign: 0;
-        ellipsize: end;
+      Button speaker_button {
+        halign: start;
+        tooltip-text: _("Rename or Match Speaker");
 
         styles [
-          "heading",
+          "flat",
+          "speaker-button",
         ]
+
+        child: Label speaker_label {
+          xalign: 0;
+          ellipsize: end;
+
+          styles [
+            "heading",
+          ]
+        };
       }
 
       Label timestamp_label {

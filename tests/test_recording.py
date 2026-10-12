@@ -426,3 +426,215 @@ def test_damaged_live_checkpoint_keeps_pcm_for_recovery(store: CaptureStore) -> 
     with pytest.raises(CaptureStoreError, match="audio has been kept"):
         store.transcript(entry)
     assert store.pcm_path(entry).read_bytes() == bytes(32000)
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+@run_async
+async def test_retranscription_failure_keeps_complete_existing_recording(
+    notes: NoteRepository, tmp_path: Path, cancel: bool
+) -> None:
+    from kikoe.core.models import Recording, RecordingSource
+
+    await notes.load()
+    source = tmp_path / "original.flac"
+    source.write_bytes(b"audio")
+    audio = await notes.store_audio(source, "retained")
+    original = Recording(
+        "retained",
+        datetime.now(UTC),
+        timedelta(seconds=5),
+        RecordingSource.IMPORTED,
+        "Old provider",
+        "old model",
+        (Segment("Edited text", timedelta(), timedelta(seconds=5), "local"),),
+        audio,
+    )
+    note = await notes.add_recording(None, "Meeting", original)
+    await notes.rename_speaker(note.note_id, note.speakers[0].speaker_id, "Alice")
+    before = await notes.get_note(note.note_id)
+    client = FakeClient(fail=not cancel, hang=cancel)
+    task = asyncio.create_task(
+        transcribe_recording(
+            note.note_id,
+            before.recordings[0],
+            CHOICE,
+            client=client,
+            notes=notes,
+            options=TranscriptionOptions(),
+            on_progress=lambda _s, _p, _n: None,
+            work_dir=tmp_path / "work",
+            preserve_on_failure=True,
+        )
+    )
+    await client.started.wait()
+    if cancel:
+        task.cancel()
+    with pytest.raises(asyncio.CancelledError if cancel else TranscriptionError):
+        await task
+    assert await notes.get_note(note.note_id) == before
+    assert audio.read_bytes() == b"audio"
+    assert list((tmp_path / "work").iterdir()) == []
+
+
+@run_async
+async def test_successful_empty_retranscription_replaces_only_target(
+    notes: NoteRepository, tmp_path: Path
+) -> None:
+    from kikoe.core.models import Recording, RecordingSource
+
+    await notes.load()
+    source = tmp_path / "original.flac"
+    source.write_bytes(b"audio")
+    audio = await notes.store_audio(source, "first")
+    first = Recording(
+        "first",
+        datetime.now(UTC),
+        timedelta(seconds=5),
+        RecordingSource.IMPORTED,
+        "P",
+        "M",
+        (Segment("Old"),),
+        audio,
+    )
+    note = await notes.add_recording(None, "Meeting", first)
+    second = replace(first, recording_id="second", audio_path=None, segments=(Segment("Other"),))
+    note = await notes.add_recording(note.note_id, "ignored", second)
+    updated = await transcribe_recording(
+        note.note_id,
+        first,
+        CHOICE,
+        client=FakeClient(empty=True),
+        notes=notes,
+        options=TranscriptionOptions(),
+        on_progress=lambda _s, _p, _n: None,
+        work_dir=tmp_path / "work",
+        preserve_on_failure=True,
+    )
+    assert updated.recordings[0].segments == ()
+    assert updated.recordings[0].audio_path == audio
+    assert updated.recordings[1] == second
+
+
+@run_async
+async def test_later_upload_part_failure_does_not_replace_existing_text(
+    notes: NoteRepository, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from kikoe.core.models import Recording, RecordingSource
+
+    await notes.load()
+    source = tmp_path / "audio.flac"
+    source.write_bytes(b"original")
+    audio = await notes.store_audio(source, "split")
+    original = Recording(
+        "split",
+        datetime.now(UTC),
+        timedelta(seconds=2),
+        RecordingSource.IMPORTED,
+        "Old",
+        "old",
+        (Segment("Keep this"),),
+        audio,
+    )
+    note = await notes.add_recording(None, "Meeting", original)
+
+    async def silences(_source: Path) -> tuple[timedelta, ...]:
+        return ()
+
+    monkeypatch.setattr(transcode, "find_silences", silences)
+
+    class PartClient(FakeClient):
+        max_upload_bytes = 4
+        calls = 0
+
+        async def transcribe_file(
+            self, audio: Path, model: ModelSpec, options: TranscriptionOptions
+        ) -> tuple[Segment, ...]:
+            self.calls += 1
+            if self.calls == 2:
+                raise TranscriptionError("Second part failed")
+            return (Segment("New first part"),)
+
+    client = PartClient()
+    with pytest.raises(TranscriptionError, match="Second part"):
+        await transcribe_recording(
+            note.note_id,
+            original,
+            CHOICE,
+            client=client,
+            notes=notes,
+            options=TranscriptionOptions(),
+            on_progress=lambda _s, _p, _n: None,
+            work_dir=tmp_path / "work",
+            preserve_on_failure=True,
+        )
+    assert client.calls == 2
+    assert await notes.get_note(note.note_id) == note
+    assert audio.read_bytes() == b"original"
+    assert list((tmp_path / "work").iterdir()) == []
+
+
+@run_async
+async def test_shutdown_waits_for_an_already_started_replacement_commit(
+    notes: NoteRepository, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from kikoe.core.models import Note, Recording, RecordingSource
+
+    await notes.load()
+    source = tmp_path / "original.flac"
+    source.write_bytes(b"audio")
+    audio = await notes.store_audio(source, "commit")
+    original = Recording(
+        "commit",
+        datetime.now(UTC),
+        timedelta(seconds=5),
+        RecordingSource.IMPORTED,
+        "P",
+        "M",
+        (Segment("Old"),),
+        audio,
+    )
+    note = await notes.add_recording(None, "Meeting", original)
+    started = asyncio.Event()
+    proceed = asyncio.Event()
+    update = notes.update_transcription
+
+    async def delayed_commit(
+        note_id: str,
+        recording_id: str,
+        state: TranscriptionState,
+        *,
+        segments: tuple[Segment, ...] | None = None,
+        provider_name: str | None = None,
+        model_id: str | None = None,
+    ) -> Note:
+        started.set()
+        await proceed.wait()
+        return await update(
+            note_id,
+            recording_id,
+            state,
+            segments=segments,
+            provider_name=provider_name,
+            model_id=model_id,
+        )
+
+    monkeypatch.setattr(notes, "update_transcription", delayed_commit)
+    task = asyncio.create_task(
+        transcribe_recording(
+            note.note_id,
+            original,
+            CHOICE,
+            client=FakeClient(),
+            notes=notes,
+            options=TranscriptionOptions(),
+            on_progress=lambda _s, _p, _n: None,
+            work_dir=tmp_path / "work",
+            preserve_on_failure=True,
+        )
+    )
+    await started.wait()
+    task.cancel()
+    proceed.set()
+    result = await task
+    assert result.recordings[0].segments[0].text == "Hello"
+    assert await notes.get_note(note.note_id) == result

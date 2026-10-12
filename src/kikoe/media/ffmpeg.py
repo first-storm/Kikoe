@@ -9,7 +9,7 @@ import logging
 import os
 import shutil
 import sys
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -164,3 +164,54 @@ class PCMStream:
         while chunk := await stderr.read(4096):
             tail = (tail + chunk)[-4096:]
         return tail.decode(errors="replace")
+
+
+async def decode_audio(
+    source: Path, sample_rate: int, start: float = 0, end: float | None = None
+) -> AsyncGenerator[bytes]:
+    """Stream bounded playback buffers rather than loading a whole recording."""
+    executable = await asyncio.to_thread(find_ffmpeg)
+    args = [
+        str(executable),
+        "-hide_banner",
+        "-nostdin",
+        "-loglevel",
+        "error",
+        "-ss",
+        str(start),
+        "-i",
+        str(source),
+    ]
+    if end is not None:
+        args.extend(["-t", str(end - start)])
+    args.extend(["-vn", "-ar", str(sample_rate), "-ac", "1", "-f", "s16le", "pipe:1"])
+    process = await asyncio.create_subprocess_exec(
+        *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+
+    async def read_errors() -> bytes:
+        tail = b""
+        if process.stderr is not None:
+            while chunk := await process.stderr.read(4096):
+                tail = (tail + chunk)[-8192:]
+        return tail
+
+    errors = asyncio.create_task(read_errors())
+    try:
+        assert process.stdout is not None
+        while True:
+            try:
+                yield await process.stdout.readexactly(max(2, sample_rate // 20 * 2))
+            except asyncio.IncompleteReadError as error:
+                if error.partial:
+                    yield error.partial
+                break
+        code = await process.wait()
+        detail = (await errors).decode(errors="replace")
+        if code:
+            raise FFmpegError(f"Could not decode the audio: {detail}")
+    finally:
+        if process.returncode is None:
+            process.kill()
+        await process.wait()
+        await errors

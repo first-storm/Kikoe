@@ -6,6 +6,7 @@ from enum import StrEnum
 
 from kikoe.core.formatting import format_timestamp, speaker_order
 from kikoe.core.models import DisplayOptions, Note, Segment
+from kikoe.core.speakers import resolved_note
 
 
 class ExportFormat(StrEnum):
@@ -46,6 +47,7 @@ def export_note(note: Note, fmt: ExportFormat, options: DisplayOptions) -> str:
     and only follow the speaker setting. The result ends with a single newline,
     except SRT with no cues, which is empty.
     """
+    note = resolved_note(note)
     match fmt:
         case ExportFormat.TEXT:
             return _render_prose(note, options, markdown=False)
@@ -74,8 +76,10 @@ def export_filename(stem: str, extension: str) -> str:
 def _speaker_labels(note: Note) -> dict[str, str]:
     """Display name per speaker id, numbered note-wide like the note view."""
     order = speaker_order(s for r in note.recordings for s in r.segments)
+    ordinals = {s.speaker_id: s.ordinal for s in note.speakers}
     return {
-        speaker_id: note.speaker_name(speaker_id) or f"Speaker {number + 1}"
+        speaker_id: note.speaker_name(speaker_id)
+        or f"Speaker {ordinals.get(speaker_id) or number + 1}"
         for speaker_id, number in order.items()
     }
 

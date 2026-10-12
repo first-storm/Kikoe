@@ -52,8 +52,22 @@ class Provider:
 
 @dataclass(frozen=True, slots=True)
 class Speaker:
+    """A note-wide person with a stable display number and theme color slot."""
+
     speaker_id: str
     name: str
+    ordinal: int = 0
+    """Stable one-based number; zero is a legacy in-memory speaker."""
+
+
+@dataclass(frozen=True, slots=True)
+class SpeakerBinding:
+    """A recognition label and its reversible, note-wide identity assignment."""
+
+    source_id: str
+    speaker_id: str
+    original_id: str
+    confirmed: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -94,6 +108,7 @@ class Recording:
     audio_path: Path | None = None
     """Retained original audio, used for re-transcription and raw export."""
     transcription_state: TranscriptionState = TranscriptionState.READY
+    speaker_bindings: tuple[SpeakerBinding, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

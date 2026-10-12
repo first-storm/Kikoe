@@ -60,6 +60,19 @@ class NoteRepository:
         await asyncio.to_thread(self._library.set_display_options, note_id, options)
         await self._refresh(note_id)
 
+    async def rename_speaker(self, note_id: str, speaker_id: str, name: str) -> None:
+        """Persist a shared person name and refresh all consumers."""
+        await asyncio.to_thread(self._library.rename_speaker, note_id, speaker_id, name)
+        await self._refresh(note_id)
+
+    async def match_speakers(
+        self, note_id: str, recording_id: str, choices: dict[str, str | None]
+    ) -> Note:
+        """Persist only confirmed dialog choices."""
+        note = await asyncio.to_thread(self._library.match_speakers, note_id, recording_id, choices)
+        await self._refresh(note_id)
+        return note
+
     async def delete_note(self, note_id: str) -> None:
         await asyncio.to_thread(self._library.delete_note, note_id)
         await self._refresh(note_id)

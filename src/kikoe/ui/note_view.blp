@@ -5,6 +5,11 @@ template $KikoeNoteView: Adw.Bin {
   child: Box {
     orientation: vertical;
 
+    Adw.Banner speaker_banner {
+      revealed: false;
+      button-label: _("Match Speakers…");
+    }
+
     Stack stack {
       hhomogeneous: false;
       vhomogeneous: false;
