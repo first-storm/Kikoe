@@ -14,8 +14,10 @@ datas += [(str(root / "LICENSE"), "licenses/kikoe")]
 datas += [(str(root / "build/build-info.json"), ".")]
 binaries = [(str(ffmpeg), ".")]
 
-for library in ("libportaudio.so.2", "libportaudio.dylib", "libportaudio-2.dll"):
-    resolved = resolve_library_path(library)
+for library in ("libportaudio.so.2", "libportaudio.dylib", "libportaudio-2.dll", "libportaudio.dll"):
+    direct = next((folder / library for folder in (prefix / "bin", prefix / "lib")
+                   if (folder / library).is_file()), None)
+    resolved = str(direct) if direct else resolve_library_path(library)
     if resolved:
         binaries.append((resolved, "."))
         break
