@@ -26,10 +26,11 @@ fetch() {
     local url=$1 sha=$2 out
     out="$work/$(basename "$url")"
     curl --fail --location --retry 4 --silent --show-error --output "$out" "$url"
-    if command -v sha256sum >/dev/null; then
-        echo "$sha  $out" | sha256sum --check --quiet
-    else
-        echo "$sha  $out" | shasum -a 256 --check --quiet
+    # macOS's sha256sum lacks GNU options, and shasum is missing from slim Linux images.
+    actual=$({ sha256sum "$out" 2>/dev/null || shasum -a 256 "$out"; } | cut -d' ' -f1)
+    if [[ "$actual" != "$sha" ]]; then
+        echo "Checksum mismatch for $url: expected $sha, got $actual" >&2
+        exit 1
     fi
     tar -xf "$out" -C "$work"
 }

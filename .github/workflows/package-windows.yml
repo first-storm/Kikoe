@@ -50,7 +50,7 @@ jobs:
           install: make diffutils curl tar xz
           pacboy: >-
             toolchain:p python:p python-pip:p python-setuptools:p
-            python-meson-python:p meson:p ninja:p pkgconf:p rust:p
+            meson:p ninja:p pkgconf:p rust:p
             gtk4:p libadwaita:p adwaita-icon-theme:p gobject-introspection:p
             python-cairo:p python-cffi:p python-cryptography:p python-pydantic:p
             python-pillow:p portaudio:p librsvg:p
@@ -58,10 +58,14 @@ jobs:
       - name: Install optional MSYS2 packages
         run: |
           # Prebuilt where MSYS2 has them; otherwise pip builds them from source.
-          for package in pyinstaller pyinstaller-hooks-contrib python-maturin python-jiter nasm; do
+          for package in pyinstaller pyinstaller-hooks-contrib python-maturin python-jiter \
+              python-meson-python meson-python nasm; do
             pacman -S --needed --noconfirm "${MINGW_PACKAGE_PREFIX}-$package" \
               || echo "MSYS2 has no $package for $MSYSTEM"
           done
+          # Pure-Python fallbacks from PyPI (sources are built without isolation).
+          python -c "import mesonpy" 2>/dev/null \
+            || python -m pip install --break-system-packages meson-python
           python -c "import PyInstaller" 2>/dev/null \
             || python -m pip install --break-system-packages pyinstaller==6.22.3
 
