@@ -1,57 +1,58 @@
+<p align="center">
+  <img src="src/kikoe/ui/icons/hicolor/scalable/apps/io.github.first_storm.Kikoe.svg" width="96" height="96" alt="Kikoe app icon">
+</p>
+
 # Kikoe
 
-Kikoe turns speech into text notes. It records or imports audio and transcribes it with
-cloud speech-to-text services (Deepgram, OpenAI, OpenRouter, Gemini AI Studio, or an
-OpenAI-compatible API), with
-optional timestamps and speaker labels, and exports to text, Markdown, SRT, or WebVTT.
+**Your conversations, turned into useful notes.**
 
-Built with Python 3.14, GTK 4 and libadwaita 1.8 or newer. Linux is the primary platform; macOS and
-Windows are planned (see [docs/packaging.md](docs/packaging.md)).
+Record a meeting, import an interview, or capture a voice memo. Kikoe turns audio
+into searchable, editable notes with cloud speech-to-text services.
 
-> Status: provider management, audio import, microphone recording with pause/resume,
-> batch and realtime transcription, audio/text recovery, and transcript/audio export
-> are implemented. All four hosted providers use their official Python SDKs.
-> Real provider accounts and macOS/Windows realtime capture are not yet verified.
+[Get started](#-get-started) · [Transcription tips](#transcription-tips) · [Contribute](#-development)
 
-## Transcription
+![Current Kikoe interface showing an editable release-planning transcript with named speakers, timestamps, and Undo/Redo controls](data/screenshots/readme-main.png)
 
-Choose an API type and add a model in Preferences. Capabilities can be declared for
-custom models; known API restrictions override unsupported options. Deepgram Nova-3
-supports file and live transcription with timestamps and speaker detection. OpenRouter
-supports file STT. OpenAI and Gemini also offer live transcription, with timestamps and
-speaker options disabled where the live endpoint cannot supply them.
+## ✨ Capture, refine, share
 
-`gpt-live-transcribe` and `gemini-3.5-transcribe-live` are microphone-only models.
-Select a file model (for example `whisper-1`, `gpt-4o-transcribe-diarize`, or
-`gemini-3.5-transcribe`) to import audio or retry an incomplete recording. Live success
-is saved directly without a second file upload.
+- 🎙️ **Record or import** — microphone capture with pause/resume, plus existing audio files.
+- ☁️ **Choose your service** — Deepgram, OpenAI, OpenRouter, Gemini AI Studio, or an OpenAI-compatible API.
+- 👥 **Follow each voice** — optional timestamps, speaker labels, and matching across recordings.
+- ✏️ **Polish your notes** — edit text and timestamps in place, with Undo/Redo; search titles and transcripts.
+- 📤 **Take them anywhere** — export text, Markdown, SRT, WebVTT, or original audio. Subtitles need timestamps.
 
-Recording always saves audio locally. After a network interruption Kikoe reconnects
-and replays unconfirmed audio from disk. If transcription remains incomplete at stop,
-the confirmed text and FLAC are kept. Select a file model and use Retry Transcription;
-failed or cancelled retries preserve the existing text. Recovery never uploads audio
-automatically. Speaker IDs from independent recordings/connections are kept separate;
-use Match Speakers to assign them to the same person, or keep them as new speakers.
-Click a speaker name to rename the person or review assignments. Matching includes
-quoted audio samples when reliable timestamps are available, and can be changed later.
+Built with Python 3.14, GTK 4, and libadwaita ≥ 1.8, with adaptive layouts,
+light/dark themes, and Simplified Chinese.
 
-The recording header plays retained audio. Its menu offers Re-transcribe with a file
-model and independent timestamp/speaker options. Only a successful result replaces that
-recording; names are preserved when time-overlap evidence is clear. Failure or cancellation
-before the final save keeps the previous text and audio. Other recordings are unaffected.
+> **Linux first; still in development.** macOS and Windows packaging is planned.
+> Cloud transcription requires a provider API key. Real provider accounts and
+> macOS/Windows realtime capture are not yet verified.
 
-## Development setup
+## 📸 A closer look
 
-Requirements on every platform:
+<table>
+  <tr>
+    <td width="50%"><img src="data/screenshots/readme-timestamps.png" alt="Current timestamp editor with start and end fields beside the transcript" width="590"></td>
+    <td width="50%"><img src="data/screenshots/readme-dark.png" alt="Current Kikoe note view in dark mode" width="590"></td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Fine-tune the timing</strong><br>Edit segment timestamps beside the text.</td>
+    <td align="center"><strong>Settle into dark mode</strong><br>The same notes, in your preferred theme.</td>
+  </tr>
+</table>
 
-- [uv](https://docs.astral.sh/uv/) (it installs Python 3.14 if needed)
-- GTK 4 and libadwaita with GObject introspection data
-- Headers to build PyGObject: `girepository-2.0` (GLib ≥ 2.80) and `cairo`, plus `pkg-config` and a C compiler
-- `ffmpeg` on `PATH` (or set `KIKOE_FFMPEG`)
-- PortAudio for microphone capture and playback (`sounddevice`; no NumPy required)
-- GNU gettext, only when working on translations
+Fresh Linux captures of the current app, using synthetic notes and speaker names.
 
-Platform packages:
+## 🚀 Get started
+
+Install [uv](https://docs.astral.sh/uv/), GTK 4, libadwaita ≥ 1.8, ffmpeg, and PortAudio.
+Building PyGObject needs `girepository-2.0` (GLib ≥ 2.80), Cairo headers,
+`pkg-config`, and a C compiler. uv installs Python 3.14 if needed.
+
+<details>
+<summary>System packages by platform</summary>
+
+Choose a release with the required library versions. GNU gettext is needed for translations.
 
 | Platform | Command |
 | --- | --- |
@@ -59,56 +60,54 @@ Platform packages:
 | Fedora | `sudo dnf install gtk4 libadwaita cairo-devel gobject-introspection-devel ffmpeg-free gettext portaudio` |
 | Debian/Ubuntu | `sudo apt install gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-girepository-3.0 libgirepository-2.0-dev libcairo2-dev pkg-config ffmpeg gettext libportaudio2` |
 | macOS (Homebrew) | `brew install gtk4 libadwaita gobject-introspection pkg-config ffmpeg gettext portaudio` |
-| Windows | Use the MSYS2 UCRT64 shell: `pacman -S mingw-w64-ucrt-x86_64-{gtk4,libadwaita,gobject-introspection,cairo,pkgconf,gcc,ffmpeg,gettext,portaudio}` |
+| Windows (MSYS2 UCRT64) | `pacman -S mingw-w64-ucrt-x86_64-{gtk4,libadwaita,gobject-introspection,cairo,pkgconf,gcc,ffmpeg,gettext,portaudio}` |
 
-Then:
+</details>
 
-```sh
-uv sync                        # create .venv with runtime + dev dependencies
-uv run scripts/build_ui.py     # compile Blueprint (.blp) files to .ui
-uv run kikoe                   # start the app
-```
-
-Re-run `scripts/build_ui.py` whenever a `.blp` file changes.
-Set `KIKOE_LOG_LEVEL=DEBUG` for verbose local diagnostics. Logs rotate at 2 MiB
-with three backups; dynamic text and credentials are redacted, and nothing is uploaded.
-Preferences → General opens the log directory when you want to report a problem.
-
-## Checks
+From the repository directory:
 
 ```sh
-uv run ruff check              # lint
-uv run ruff format             # format
-uv run scripts/build_ui.py --check   # Blueprint formatting + lint
-uv run pyright                 # type check (strict)
-uv run pytest                  # tests
+uv sync
+uv run scripts/build_ui.py
+uv run kikoe
 ```
 
-CI runs all of these on every push.
+1. **Connect a provider.** Add your API key and a model in Preferences.
+2. **Start a note.** Record your microphone or import audio with a file model.
+3. **Make it useful.** Review the text, name speakers, and export from the note menu.
 
-## Documentation
+**Shortcuts:** Ctrl+N creates a note · Ctrl+O imports audio · Ctrl+F searches · F2 renames.
+Preferences → General sets a default model and language hint; leave the hint empty for automatic detection.
 
-- [AGENTS.md](AGENTS.md): coding rules for humans and AI assistants. Read before contributing.
-- [docs/architecture.md](docs/architecture.md): layers, data flow, async model.
-- [docs/design.md](docs/design.md): UI specification for every screen.
-- [docs/packaging.md](docs/packaging.md): distribution plan per platform.
-- [po/README.md](po/README.md): translations.
+### Transcription tips
 
+<details>
+<summary>Models, recovery, and re-transcription</summary>
 
-## Defaults, search and language
+- **Model support varies.** Deepgram Nova-3 supports file/live transcription, timestamps, and speakers. OpenRouter supports file transcription; OpenAI and Gemini also offer live models, with unsupported options disabled.
+- **Live-only models need a file alternative.** `gpt-live-transcribe` and `gemini-3.5-transcribe-live` are microphone-only; choose a file model for imports or retries.
+- **Audio stays available.** Recordings are saved locally. Interruptions retain audio and confirmed text; recovery never uploads automatically. Use **Retry Transcription** with a file model.
+- **Keep speakers consistent.** Click names to rename them; **Match Speakers** links people across recordings, with audio samples when timing allows.
+- **Try another model.** The recording menu offers playback and **Re-transcribe**. A successful result replaces that recording’s text, including manual edits; failure or cancellation keeps the previous text and audio.
 
-Search Notes (Ctrl+F) finds note titles and transcript text. Escape closes search.
-Ctrl+N creates a note, Ctrl+O imports audio, and F2 renames the current note. The main
-menu offers the full shortcut list and Import Audio even without a selected note.
+</details>
 
-Preferences → General sets a default model and a transcription language hint (`zh`,
-`en`, `ja`, or another common language tag); leave language empty for automatic detection.
-The most recently chosen model is remembered across restarts. The data directory row
-shows and opens the current library location; it does not move your notes.
+## 🛠️ Development
 
-The interface follows your system language and includes Simplified Chinese. For a local
-preview, compile translations and run `LANGUAGE=zh_CN uv run kikoe`.
+Read [AGENTS.md](AGENTS.md) before contributing. Rebuild templates after changing `.blp` files.
+Run the required checks:
+
+```sh
+uv run ruff format --check && uv run ruff check && uv run scripts/build_ui.py --check \
+  && uv run scripts/build_ui.py && uv run pyright && uv run pytest
+```
+
+Use `KIKOE_LOG_LEVEL=DEBUG` for local diagnostics; Preferences → General opens the logs.
+Logs rotate at 2 MiB with three backups and redact dynamic text and credentials.
+Set `KIKOE_FFMPEG` if ffmpeg is outside `PATH`.
+
+[Architecture](docs/architecture.md) · [UI design](docs/design.md) · [Packaging](docs/packaging.md) · [Translations](po/README.md)
 
 ## License
 
-Kikoe is licensed under [GPL-3.0-or-later](LICENSE).
+[GPL-3.0-or-later](LICENSE).
