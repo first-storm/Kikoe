@@ -12,6 +12,14 @@ os.environ["GSETTINGS_SCHEMA_DIR"] = str(share / "glib-2.0" / "schemas")
 os.environ["GIO_MODULE_DIR"] = str(root / "gio_modules")
 if sys.platform != "darwin":
     os.environ["FONTCONFIG_PATH"] = str(root / "etc" / "fonts")
+if sys.platform == "linux":
+    if os.environ.get("FLATPAK_ID"):
+        os.environ["ALSA_CONFIG_PATH"] = str(share / "alsa/alsa-flatpak.conf")
+        os.environ["ALSA_PLUGIN_DIR"] = str(root / "alsa_modules")
+    elif not Path("/usr/share/alsa/alsa.conf").is_file():
+        os.environ.setdefault("ALSA_CONFIG_PATH", str(share / "alsa/alsa.conf"))
+        os.environ.setdefault("ALSA_CONFIG_DIR", str(share / "alsa"))
+        os.environ.setdefault("ALSA_PLUGIN_DIR", str(root / "alsa_modules"))
 
 # sounddevice uses ctypes to discover PortAudio, which otherwise consults the host's
 # ldconfig/Homebrew/MSYS2 installation instead of the libraries in the bundle.

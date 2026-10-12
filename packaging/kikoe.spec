@@ -28,7 +28,13 @@ for folder in prefix.glob("lib/**/gio/modules"):
         if module.suffix in (".so", ".dll", ".dylib"):
             binaries.append((str(module), "gio_modules"))
 
-for relative in ("share/glib-2.0/schemas", "etc/fonts", "share/fontconfig", "share/licenses"):
+if sys.platform == "linux":
+    for folder in prefix.glob("lib/**/alsa-lib"):
+        for module in folder.glob("*.so"):
+            binaries.append((str(module), "alsa_modules"))
+    datas.append((str(root / "packaging/linux/alsa-flatpak.conf"), "share/alsa"))
+
+for relative in ("share/glib-2.0/schemas", "etc/fonts", "share/fontconfig", "share/licenses", "share/alsa"):
     folder = prefix / relative
     if folder.is_dir():
         datas.append((str(folder), relative))

@@ -23,7 +23,7 @@ and Windows 11 on ARM64; the ARM package contains native ARM binaries.
 
 Install the platform's GTK ≥ 4, libadwaita ≥ 1.8, introspection data, ffmpeg,
 PortAudio, gettext, a compiler and pkg-config first. On Linux also install binutils,
-patchelf, Xvfb, dbus, Flatpak and flatpak-builder. Then:
+patchelf, ALSA data/plugins, Xvfb, dbus, Flatpak and flatpak-builder. Then:
 
 ```sh
 uv sync --locked --group packaging
@@ -84,6 +84,8 @@ Permissions are Wayland, fallback X11, IPC, DRI, PulseAudio (microphone), networ
 grant. Import/export uses the file chooser portal. The host must provide a working
 Secret Service keyring and a portal/audio service; sandbox microphone verification
 remains a hardware acceptance step. ffmpeg and PortAudio are bundled directly.
+The bundle includes ALSA data/plugins. Flatpak explicitly routes the ALSA backend
+through its PulseAudio socket; an AppImage retains the host ALSA configuration.
 
 ## macOS — PyInstaller `.app`
 
@@ -108,11 +110,14 @@ remains a hardware acceptance step. ffmpeg and PortAudio are bundled directly.
 - Build in MSYS2 UCRT64 for x64 and CLANGARM64 on a Windows ARM64 runner. GTK,
   libadwaita, Python 3.14, PyGObject, Cairo, CFFI, cryptography, PyInstaller, ffmpeg
   and PortAudio come from the matching native pacman prefix.
-- `packaging/windows/build.sh` creates a uv environment with system packages, exports
-  locked runtime dependencies and installs them with `uv pip`. It keeps the native
-  GI/Cairo/CFFI/cryptography packages, and builds jiter/pydantic-core for MinGW using
-  Rust/maturin. MSVC Python extension wheels cannot be mixed with the MinGW interpreter.
-  `build-info.json` records the actual pacman/Python versions for review.
+- `packaging/windows/build.sh` runs `scripts/package_windows.py` with a uv-managed
+  official CPython driver. uv currently rejects MinGW Python's platform tag, so the
+  driver installs SHA-256-verified **universal** wheels from `uv.lock` into an isolated
+  build directory. GI/Cairo/CFFI/cryptography remain native pacman packages.
+  jiter/pydantic-core are built from hashed, locked sources with Rust/maturin for the
+  native interpreter. Blueprint and PyInstaller run with that same target SDK
+  interpreter; the uv driver's interpreter is not shipped. MSVC extension wheels
+  cannot enter the MinGW payload. `build-info.json` records pacman/Python versions.
 - Bundle ffmpeg, PortAudio and their DLLs inside `_internal`. Verify Windows microphone
   privacy settings on real hardware.
 - Python gettext translates `.ui` templates into the user cache before GTK loads them,

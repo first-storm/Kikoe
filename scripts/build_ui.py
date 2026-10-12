@@ -7,6 +7,7 @@ Usage:
 """
 
 import argparse
+import os
 import shutil
 import subprocess
 import sys
@@ -20,11 +21,19 @@ def blueprints() -> list[Path]:
     return sorted(SRC.rglob("*.blp"))
 
 
-def compiler() -> str:
+def compiler() -> list[str]:
+    # A packaging driver can select the target SDK's interpreter. This keeps
+    # Blueprint's introspection ABI aligned with the GTK libraries being frozen.
+    if interpreter := os.environ.get("KIKOE_NATIVE_PYTHON"):
+        return [
+            interpreter,
+            "-c",
+            "from blueprintcompiler.main import main; raise SystemExit(main())",
+        ]
     exe = shutil.which("blueprint-compiler")
     if exe is None:
         sys.exit("blueprint-compiler not found. Run `uv sync` and use `uv run`.")
-    return exe
+    return [exe]
 
 
 def main() -> int:
@@ -37,15 +46,15 @@ def main() -> int:
     exe = compiler()
     files = [str(p) for p in blueprints()]
     if args.fix:
-        return subprocess.run([exe, "format", "--fix", *files], check=False).returncode
+        return subprocess.run([*exe, "format", "--fix", *files], check=False).returncode
     if args.check:
-        fmt = subprocess.run([exe, "format", *files], check=False).returncode
-        lint = subprocess.run([exe, "lint", "--no-suggestions", *files], check=False).returncode
+        fmt = subprocess.run([*exe, "format", *files], check=False).returncode
+        lint = subprocess.run([*exe, "lint", "--no-suggestions", *files], check=False).returncode
         return fmt or lint
 
     for blp in blueprints():
         ui = blp.with_suffix(".ui")
-        result = subprocess.run([exe, "compile", "--output", str(ui), str(blp)], check=False)
+        result = subprocess.run([*exe, "compile", "--output", str(ui), str(blp)], check=False)
         if result.returncode != 0:
             return result.returncode
         print(f"compiled {ui.relative_to(ROOT)}")

@@ -169,10 +169,9 @@ def freeze() -> None:
         json.dumps(information, indent=2) + "\n", encoding="utf-8"
     )
     # Include provenance before signing: adding files to a signed .app breaks its seal.
+    packager = [env.get("KIKOE_NATIVE_PYTHON", sys.executable), "-m", "PyInstaller"]
     run(
-        sys.executable,
-        "-m",
-        "PyInstaller",
+        *packager,
         "--noconfirm",
         "--clean",
         "packaging/kikoe.spec",
@@ -348,35 +347,6 @@ def dmg() -> None:
     checksum(output)
 
 
-def windows_requirements() -> None:
-    """Export locked Python dependencies while retaining the native MSYS2 GI stack."""
-    BUILD.mkdir(exist_ok=True)
-    result = subprocess.run(
-        [
-            "uv",
-            "export",
-            "--frozen",
-            "--no-dev",
-            "--no-emit-project",
-            "--no-hashes",
-            "--no-header",
-            "--no-emit-package",
-            "pygobject",
-            "--no-emit-package",
-            "pycairo",
-            "--no-emit-package",
-            "cffi",
-            "--no-emit-package",
-            "cryptography",
-        ],
-        cwd=ROOT,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    (BUILD / "windows-requirements.txt").write_text(result.stdout, encoding="utf-8")
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     commands = {
@@ -385,7 +355,6 @@ def main() -> None:
         "appimage": appimage,
         "flatpak": flatpak,
         "dmg": dmg,
-        "windows-requirements": windows_requirements,
         "checksums": checksums,
     }
     parser.add_argument("command", choices=commands)
