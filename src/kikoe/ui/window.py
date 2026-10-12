@@ -13,7 +13,7 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 from kikoe.core.choice import ModelChoice, available_models
 from kikoe.core.export import ExportFormat, export_filename, export_note
 from kikoe.core.formatting import transcript_features
-from kikoe.core.models import DisplayOptions, Note, Recording, TranscriptionState
+from kikoe.core.models import DisplayOptions, Note, NoteSummary, Recording, TranscriptionState
 from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.core.speakers import identity_for
 from kikoe.core.transcription import LiveSnapshot, model_support
@@ -81,6 +81,11 @@ class Window(Adw.ApplicationWindow):
     note_view_slot: Adw.Bin = Gtk.Template.Child()
     bottom_bar_slot: Adw.Bin = Gtk.Template.Child()
 
+    compact_breakpoint: Adw.Breakpoint = Gtk.Template.Child()
+    search_bar: Gtk.SearchBar = Gtk.Template.Child()
+    search_entry: Gtk.SearchEntry = Gtk.Template.Child()
+    notes_placeholder: Gtk.Label = Gtk.Template.Child()
+
     def __init__(
         self, application: Gtk.Application, providers: ProviderRepository, notes: NoteRepository
     ) -> None:
@@ -90,6 +95,20 @@ class Window(Adw.ApplicationWindow):
         self.note_view_slot.set_child(self.note_view)
         self.bottom_bar = BottomBar()
         self.bottom_bar_slot.set_child(self.bottom_bar)
+        # These children are in a dynamic template slot; the breakpoint lives in Blueprint.
+        self.compact_breakpoint.add_setter(self.bottom_bar.provider_label, "visible", False)
+        self.compact_breakpoint.add_setter(self.bottom_bar.hint_label, "visible", False)
+        self._search_generation = 0
+        self._search_task: asyncio.Task[None] | None = None
+        self.search_bar.connect_entry(self.search_entry)
+        self._add_action("search-notes", self._on_search_notes)
+        for action, keys in (
+            ("new-note", ["<primary>n"]),
+            ("search-notes", ["<primary>f"]),
+            ("import-audio", ["<primary>o"]),
+            ("rename-note", ["F2"]),
+        ):
+            application.set_accels_for_action(f"win.{action}", keys)
         self._providers = providers
         self._notes = notes
         self._note: Note | None = None
@@ -154,6 +173,9 @@ class Window(Adw.ApplicationWindow):
 
     def select_note(self, note_id: str) -> None:
         """Select ``note_id`` in the sidebar and show it."""
+        self.search_bar.set_search_mode(False)
+        self.search_entry.set_text("")
+        self._refresh_note_list(self._notes.notes)
         if self._select_row(note_id):
             run_task(self._open_note(note_id), self)
             self.split_view.set_show_content(True)
@@ -169,6 +191,55 @@ class Window(Adw.ApplicationWindow):
         self.add_action(action)
 
     # Sidebar
+
+    def _on_search_notes(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        self.split_view.set_show_content(False)
+        self.search_bar.set_search_mode(True)
+        self.search_entry.grab_focus()
+
+    @Gtk.Template.Callback()
+    def _on_search_entry_stop_search(self, _entry: Gtk.SearchEntry) -> None:
+        self.search_bar.set_search_mode(False)
+
+    @Gtk.Template.Callback()
+    def _on_search_bar_notify_search_mode_enabled(
+        self, _bar: Gtk.SearchBar, _spec: GObject.ParamSpec
+    ) -> None:
+        if not self.search_bar.get_search_mode():
+            self.search_entry.set_text("")
+            self._start_search()
+
+    @Gtk.Template.Callback()
+    def _on_search_entry_search_changed(self, _entry: Gtk.SearchEntry) -> None:
+        self._start_search()
+
+    def _start_search(self) -> None:
+        self._search_generation += 1
+        if self._search_task is not None:
+            self._search_task.cancel()
+        query = self.search_entry.get_text().strip()
+        if not query:
+            self._refresh_note_list(self._notes.notes)
+            return
+        self._search_task = run_task(self._search_notes(query, self._search_generation), self)
+
+    async def _search_notes(self, query: str, generation: int) -> None:
+        matches = await self._notes.search(query)
+        if generation == self._search_generation and query == self.search_entry.get_text().strip():
+            self._refresh_note_list(matches)
+
+    def _refresh_note_list(self, notes: tuple[NoteSummary, ...]) -> None:
+        self._selecting = True
+        try:
+            self._note_items.splice(0, self._note_items.get_n_items(), [NoteItem(s) for s in notes])
+            self.notes_placeholder.set_label(
+                _("No Matching Notes")
+                if self.search_entry.get_text().strip()
+                else _("No Notes Yet")
+            )
+        finally:
+            self._selecting = False
+        self._select_row(self._note.note_id if self._note else None)
 
     def _create_note_row(self, item: GObject.Object) -> Gtk.Widget:
         assert isinstance(item, NoteItem)
@@ -236,14 +307,12 @@ class Window(Adw.ApplicationWindow):
         if not self._recovery_checked:
             self._recovery_checked = True
             self._recovery_task = run_task(self._offer_recovery(), self)
-        self._note_items.splice(
-            0, self._note_items.get_n_items(), [NoteItem(s) for s in self._notes.notes]
-        )
+        self._start_search()
         current = self._note.note_id if self._note else None
         if current is None:
             self._update_content()
             return
-        if not self._select_row(current):  # The shown note was deleted.
+        if not any(s.note_id == current for s in self._notes.notes):
             self._show_note(None)
             self.split_view.set_show_content(False)
         elif note_id == current:
@@ -762,8 +831,10 @@ class Window(Adw.ApplicationWindow):
             "stop-recording", state is not CaptureState.STOPPED and not self._closing
         )
         self.notes_list.set_can_target(not busy)
+        self._set_action_enabled("search-notes", not busy)
         self._set_action_enabled("new-note", not busy and bool(self._providers.providers))
         self._set_action_enabled("delete-note", not busy and self._note is not None)
+        self._set_action_enabled("rename-note", not busy and self._note is not None)
         self.export_button.set_sensitive(not busy)
         self._set_action_enabled("export-audio", not busy and self._note is not None)
 
@@ -787,12 +858,15 @@ class Window(Adw.ApplicationWindow):
         note_id = self._note.note_id if self._note else None
         features = self.bottom_bar.file_features
         options = TranscriptionOptions(
-            timestamps=features.timestamps, diarization=features.diarization
+            timestamps=features.timestamps,
+            diarization=features.diarization,
+            language=self._providers.preferences.language,
         )
         task = asyncio.ensure_future(self._import(path, note_id, choice, options))
         self._import_task = task
         self._update_import_actions()
         self.bottom_bar.set_progress(import_stage_label(ImportStage.CONVERTING, 1, 1))
+        self.split_view.set_show_content(True)
         try:
             await task
         except asyncio.CancelledError:
@@ -879,7 +953,9 @@ class Window(Adw.ApplicationWindow):
             return
         features = self.bottom_bar.requested_features
         options = TranscriptionOptions(
-            timestamps=features.timestamps, diarization=features.diarization
+            timestamps=features.timestamps,
+            diarization=features.diarization,
+            language=self._providers.preferences.language,
         )
         note_id = self._note.note_id if self._note else None
         self._recording_task = run_task(self._record(note_id, choice, options), self)
@@ -990,9 +1066,7 @@ class Window(Adw.ApplicationWindow):
             self._show_note(self._note)
 
     def _refresh_recording_sidebar(self) -> None:
-        self._note_items.splice(
-            0, self._note_items.get_n_items(), [NoteItem(s) for s in self._notes.notes]
-        )
+        self._start_search()
         self._select_row(self._note.note_id if self._note else None)
 
     def _on_live_update(self, snapshot: LiveSnapshot) -> None:
@@ -1043,7 +1117,9 @@ class Window(Adw.ApplicationWindow):
             return
         features = self.bottom_bar.file_features
         options = TranscriptionOptions(
-            timestamps=features.timestamps, diarization=features.diarization
+            timestamps=features.timestamps,
+            diarization=features.diarization,
+            language=self._providers.preferences.language,
         )
         self._recording_task = run_task(
             self._retry_recording(note.note_id, recording, choice, options), self
@@ -1153,6 +1229,9 @@ class Window(Adw.ApplicationWindow):
         if self._closing:
             return True
         self._stop_playback()
+        if self._search_task is not None:
+            self._search_generation += 1
+            self._search_task.cancel()
         recovery_pending = self._recovery_task is not None and not self._recovery_task.done()
         if (
             self._recording_task is None

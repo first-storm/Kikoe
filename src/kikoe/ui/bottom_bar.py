@@ -13,6 +13,7 @@ from kikoe.core.choice import (
 )
 from kikoe.core.formatting import format_timestamp
 from kikoe.core.models import ModelSpec
+from kikoe.core.preferences import preferred_model
 from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.core.transcription import model_support
 from kikoe.core.validation import Capability
@@ -21,6 +22,7 @@ from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.items import ModelChoiceItem
 from kikoe.ui.labels import capability_summary, chip_tooltip, transcription_hint
 from kikoe.ui.level_meter import LevelMeter
+from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
 
 
@@ -59,6 +61,7 @@ class BottomBar(Adw.Bin):
         self._wanted = RequestedFeatures()
         """What the user asked for, kept while a model that lacks a feature is chosen."""
         self._updating = False
+        self._defaults_pending = False
         self._models: Gio.ListStore[ModelChoiceItem] = Gio.ListStore(item_type=ModelChoiceItem)
         self.model_list.bind_model(self._models, self._create_model_row)
         self.model_list.set_header_func(self._update_header)
@@ -92,12 +95,24 @@ class BottomBar(Adw.Bin):
     def bind_providers(self, repository: ProviderRepository) -> None:
         self._repository = repository
         repository.connect_changed(self._refresh)
+        repository.connect_preferences_changed(self._on_preferences_changed)
         self._refresh()
+
+    def _on_preferences_changed(self) -> None:
+        if self.state_stack.get_visible_child_name() != "idle":
+            self._defaults_pending = True
+            return
+        if self._repository is not None:
+            self._choice = preferred_model(self._repository.providers, self._repository.preferences)
+            self._refresh()
 
     def set_progress(self, message: str | None) -> None:
         """Show ``message`` with a spinner and a Cancel button, or the controls when None."""
         self.progress_label.set_label(message or "")
         self.state_stack.set_visible_child_name("progress" if message is not None else "idle")
+        if message is None and self._defaults_pending:
+            self._defaults_pending = False
+            self._on_preferences_changed()
 
     def set_note(self, has_recordings: bool) -> None:
         self.record_content.set_label(_("_Append Recording") if has_recordings else _("_Record"))
@@ -121,9 +136,9 @@ class BottomBar(Adw.Bin):
         self.pause_button.set_action_name(
             "win.resume-recording" if paused else "win.pause-recording"
         )
-        self.pause_button.set_tooltip_text(
-            _("Resume Recording") if paused else _("Pause Recording")
-        )
+        label = _("Resume Recording") if paused else _("Pause Recording")
+        self.pause_button.set_tooltip_text(label)
+        self.pause_button.update_property([Gtk.AccessibleProperty.LABEL], [label])
 
     def _pulse_dot(self, _widget: Gtk.Widget, clock: Gdk.FrameClock) -> bool:
         if self.state_stack.get_visible_child_name() != "recording":
@@ -138,7 +153,14 @@ class BottomBar(Adw.Bin):
     def _refresh(self) -> None:
         providers = self._repository.providers if self._repository else ()
         wanted = self._choice.key if self._choice else None
-        self._choice = resolve_choice(providers, wanted)
+        choices = available_models(providers)
+        self._choice = (
+            resolve_choice(providers, wanted)
+            if any(c.key == wanted for c in choices)
+            else preferred_model(providers, self._repository.preferences)
+            if self._repository
+            else None
+        )
         self._models.splice(
             0,
             self._models.get_n_items(),
@@ -152,9 +174,19 @@ class BottomBar(Adw.Bin):
             self.model_label.set_label(_("No Model"))
             self.provider_label.set_label("")
             self.import_button.set_tooltip_text(_("Add a model in Preferences first"))
+            self.model_button.set_tooltip_text(_("Transcription Model"))
         else:
             self.model_label.set_label(choice.model.display_name)
             self.provider_label.set_label(choice.provider.name)
+            self.model_button.set_tooltip_text(
+                _("{model} · {provider}\n{hint}").format(
+                    model=choice.model.display_name,
+                    provider=choice.provider.name,
+                    hint=transcription_hint(
+                        model_support(choice.provider.api, choice.model).recording
+                    ),
+                )
+            )
             self.import_button.set_tooltip_text(
                 None
                 if model_support(choice.provider.api, choice.model).file
@@ -173,8 +205,9 @@ class BottomBar(Adw.Bin):
     def _show_chips(self, model: ModelSpec | None) -> None:
         self.timestamps_chip.set_visible(model is not None)
         self.speakers_chip.set_visible(model is not None)
-        self.hint_label.set_visible(model is not None)
         if model is None:
+            self.hint_label.set_label("")
+            self.hint_label.set_tooltip_text(None)
             return
         allowed = self._wanted.allowed_by(model.capabilities)
         chips = (
@@ -274,5 +307,10 @@ class BottomBar(Adw.Bin):
         if item is None:
             return
         self._choice = item.choice
+        if self._repository is not None:
+            key = item.choice.key
+            run_task(
+                self._repository.update_preferences(lambda p: replace(p, recent_model=key)), self
+            )
         # Rebuild the rows so the check mark moves.
         self._refresh()

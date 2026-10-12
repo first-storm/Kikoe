@@ -13,6 +13,8 @@ from collections.abc import AsyncGenerator, AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 
+from kikoe.i18n import _
+
 log = logging.getLogger(__name__)
 
 _EXE_NAME = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
@@ -32,7 +34,7 @@ def find_ffmpeg() -> Path:
         path = Path(override)
         if path.is_file():
             return path
-        msg = f"KIKOE_FFMPEG points to a missing file: {path}"
+        msg = _("KIKOE_FFMPEG points to a missing file: {path}").format(path=path)
         raise FFmpegNotFoundError(msg)
 
     if getattr(sys, "frozen", False):
@@ -43,7 +45,7 @@ def find_ffmpeg() -> Path:
     if found := shutil.which("ffmpeg"):
         return Path(found)
 
-    msg = "ffmpeg was not found. Install it or set KIKOE_FFMPEG."
+    msg = _("ffmpeg was not found. Install it or set KIKOE_FFMPEG.")
     raise FFmpegNotFoundError(msg)
 
 
@@ -72,7 +74,9 @@ async def run(*args: str, loglevel: str = "error") -> FFmpegOutput:
         raise
     output = FFmpegOutput(stdout.decode(errors="replace"), stderr.decode(errors="replace"))
     if proc.returncode != 0:
-        msg = f"ffmpeg exited with status {proc.returncode}: {output.stderr.strip()}"
+        msg = _("ffmpeg exited with status {status}: {error}").format(
+            status=proc.returncode, error=output.stderr.strip()
+        )
         raise FFmpegError(msg)
     return output
 
@@ -123,12 +127,12 @@ class PCMStream:
     async def feed(self, pcm: bytes) -> None:
         stdin = self._process.stdin
         if stdin is None:
-            raise FFmpegError("The audio converter has no input stream.")
+            raise FFmpegError(_("The audio converter has no input stream."))
         try:
             stdin.write(pcm)
             await stdin.drain()
         except (BrokenPipeError, ConnectionResetError) as error:
-            raise FFmpegError("The audio converter stopped unexpectedly.") from error
+            raise FFmpegError(_("The audio converter stopped unexpectedly.")) from error
 
     async def finish(self) -> None:
         if self._process.stdin is not None:
@@ -137,7 +141,7 @@ class PCMStream:
     async def chunks(self) -> AsyncIterator[bytes]:
         stdout = self._process.stdout
         if stdout is None:
-            raise FFmpegError("The audio converter has no output stream.")
+            raise FFmpegError(_("The audio converter has no output stream."))
         while True:
             try:
                 yield await stdout.readexactly(self._rate // 10 * 2)
@@ -148,7 +152,7 @@ class PCMStream:
         code = await self._process.wait()
         detail = await self._errors
         if code:
-            raise FFmpegError(f"The audio converter failed: {detail}")
+            raise FFmpegError(_("The audio converter failed: {detail}").format(detail=detail))
 
     async def close(self) -> None:
         if self._process.returncode is None:
@@ -209,7 +213,7 @@ async def decode_audio(
         code = await process.wait()
         detail = (await errors).decode(errors="replace")
         if code:
-            raise FFmpegError(f"Could not decode the audio: {detail}")
+            raise FFmpegError(_("Could not decode the audio: {detail}").format(detail=detail))
     finally:
         if process.returncode is None:
             process.kill()

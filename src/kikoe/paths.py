@@ -24,6 +24,11 @@ def data_dir() -> Path:
     return _ensure(_dirs.user_data_path)
 
 
+def log_dir() -> Path:
+    """Local diagnostic files, never uploaded automatically."""
+    return _ensure(_dirs.user_log_path)
+
+
 def cache_dir() -> Path:
     """Disposable files such as transcoded upload copies."""
     return _ensure(_dirs.user_cache_path)

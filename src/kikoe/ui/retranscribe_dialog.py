@@ -127,6 +127,7 @@ class RetranscribeDialog(Adw.Dialog):
                 TranscriptionOptions(
                     timestamps=self.timestamps_row.get_active(),
                     diarization=self.speakers_row.get_active(),
+                    language=self._providers.preferences.language,
                 ),
             )
             self.close()

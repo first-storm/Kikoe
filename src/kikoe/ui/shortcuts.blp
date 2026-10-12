@@ -1,0 +1,99 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeShortcutsDialog: Adw.Dialog {
+  title: _("Keyboard Shortcuts");
+  content-width: 440;
+  content-height: 520;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {}
+
+    content: ScrolledWindow {
+      hscrollbar-policy: never;
+
+      child: Adw.PreferencesPage {
+        Adw.PreferencesGroup {
+          title: _("Notes");
+
+          Adw.ActionRow {
+            title: _("New Note");
+
+            [suffix]
+            Adw.ShortcutLabel {
+              accelerator: "<Primary>n";
+            }
+          }
+
+          Adw.ActionRow {
+            title: _("Search Notes");
+
+            [suffix]
+            Adw.ShortcutLabel {
+              accelerator: "<Primary>f";
+            }
+          }
+
+          Adw.ActionRow {
+            title: _("Import Audio…");
+
+            [suffix]
+            Adw.ShortcutLabel {
+              accelerator: "<Primary>o";
+            }
+          }
+
+          Adw.ActionRow {
+            title: _("Rename Note…");
+
+            [suffix]
+            Adw.ShortcutLabel {
+              accelerator: "F2";
+            }
+          }
+
+          Adw.ActionRow {
+            title: _("Close Search");
+
+            [suffix]
+            Adw.ShortcutLabel {
+              accelerator: "Escape";
+            }
+          }
+        }
+
+        Adw.PreferencesGroup {
+          title: _("Application");
+
+          Adw.ActionRow {
+            title: _("Preferences");
+
+            [suffix]
+            Adw.ShortcutLabel {
+              accelerator: "<Primary>comma";
+            }
+          }
+
+          Adw.ActionRow {
+            title: _("Keyboard Shortcuts");
+
+            [suffix]
+            Adw.ShortcutLabel {
+              accelerator: "<Primary>question";
+            }
+          }
+
+          Adw.ActionRow {
+            title: _("Quit");
+
+            [suffix]
+            Adw.ShortcutLabel {
+              accelerator: "<Primary>q";
+            }
+          }
+        }
+      };
+    };
+  };
+}

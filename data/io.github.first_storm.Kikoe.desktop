@@ -1,11 +1,13 @@
 [Desktop Entry]
 Name=Kikoe
 Comment=Turn speech into text notes
+Comment[zh_CN]=将语音转为文字笔记
 Exec=kikoe
 Icon=io.github.first_storm.Kikoe
 Terminal=false
 Type=Application
 Categories=AudioVideo;Audio;Utility;
 Keywords=transcription;speech;voice;notes;subtitles;
+Keywords[zh_CN]=转录;语音;录音;笔记;字幕;
 StartupNotify=true
 DBusActivatable=false

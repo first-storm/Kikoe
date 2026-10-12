@@ -2,6 +2,7 @@ using Gtk 4.0;
 using Adw 1;
 
 template $KikoePreferencesDialog: Adw.PreferencesDialog {
+  title: _("Preferences");
   content-width: 640;
   content-height: 600;
   closed => $_on_dialog_closed();
@@ -12,7 +13,70 @@ template $KikoePreferencesDialog: Adw.PreferencesDialog {
     icon-name: "preferences-system-symbolic";
 
     Adw.PreferencesGroup {
-      title: _("General");
+      title: _("Transcription");
+      description: _("Defaults for the next transcription. Language is detected automatically when left empty.");
+
+      Adw.ComboRow default_model_row {
+        title: _("Default Model");
+        use-markup: false;
+        notify::selected => $_on_default_model_row_notify_selected();
+      }
+
+      Adw.EntryRow language_row {
+        title: _("Transcription Language");
+        show-apply-button: true;
+        tooltip-text: _("Leave empty for automatic detection, or enter a language code such as zh, en, or ja.");
+        apply => $_on_language_row_apply();
+      }
+
+      Label language_error {
+        label: _("Enter a language code such as zh, en, or ja.");
+        wrap: true;
+        xalign: 0;
+        margin-top: 6;
+        visible: false;
+
+        styles [
+          "error",
+        ]
+      }
+    }
+
+    Adw.PreferencesGroup {
+      title: _("Storage");
+
+      Adw.ActionRow data_row {
+        title: _("Data Directory");
+        subtitle-lines: 2;
+        use-markup: false;
+        activatable: true;
+        action-name: "app.open-data-folder";
+
+        [suffix]
+        Image {
+          icon-name: "folder-open-symbolic";
+        }
+      }
+    }
+
+    Adw.PreferencesGroup {
+      title: _("Troubleshooting");
+      description: _(
+        "Logs stay on this device. Nothing is uploaded automatically. You can attach a log when reporting a problem."
+      );
+
+      Adw.ActionRow log_row {
+        title: _("Log Directory");
+        subtitle-lines: 2;
+        use-markup: false;
+        activatable: true;
+        action-name: "app.open-log-folder";
+
+        [suffix]
+        Image {
+          icon-name: "folder-open-symbolic";
+        }
+      }
     }
   }
 

@@ -32,6 +32,7 @@ jobs:
       - name: Type check
         run: |
           uv run scripts/build_ui.py
+          uv run scripts/i18n.py compile
           uv run pyright
 
       - name: Test

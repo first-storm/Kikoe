@@ -5,15 +5,26 @@ API keys are never written here; they live in the OS keyring (see ``secrets``).
 
 import json
 import logging
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
 
 from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider
+from kikoe.core.preferences import Preferences, valid_language
+from kikoe.i18n import _
 from kikoe.paths import config_dir
 
 log = logging.getLogger(__name__)
 
-SETTINGS_VERSION = 1
+SETTINGS_VERSION = 2
+
+
+@dataclass(frozen=True, slots=True)
+class Settings:
+    """One snapshot prevents provider edits from overwriting general preferences."""
+
+    providers: tuple[Provider, ...] = ()
+    preferences: Preferences = field(default_factory=Preferences)
 
 
 class SettingsError(Exception):
@@ -32,29 +43,53 @@ class SettingsStore:
 
     def load(self) -> tuple[Provider, ...]:
         """Return the saved providers; a missing file means a first run."""
+        return self.load_state().providers
+
+    def load_state(self) -> Settings:
+        """Upgrade version-one provider files with default general preferences."""
         try:
             text = self._path.read_text(encoding="utf-8")
         except FileNotFoundError:
-            return ()
+            return Settings()
         except OSError as error:
-            raise SettingsError(f"Could not read the settings file: {error}") from error
+            raise SettingsError(
+                _("Could not read the settings file: {error}").format(error=error)
+            ) from error
         try:
-            return _decode(json.loads(text))
+            data = json.loads(text)
+            top = _as_dict(data, "the top level")
+            return Settings(_decode(data), _decode_preferences(top.get("preferences", {})))
         except (ValueError, KeyError, TypeError) as error:
             raise SettingsError(
-                f"The settings file {self._path} is damaged or not understood: {error}"
+                _("The settings file {detail} is damaged or not understood: {error}").format(
+                    detail=self._path, error=error
+                )
             ) from error
 
     def save(self, providers: tuple[Provider, ...]) -> None:
         """Write atomically so a crash cannot leave a half-written file."""
+        self.save_state(Settings(providers, self.load_state().preferences))
+
+    def save_state(self, settings: Settings) -> None:
+        """Commit the complete snapshot atomically."""
         temporary = self._path.with_name(self._path.name + ".tmp")
-        data = {"version": SETTINGS_VERSION, "providers": [_encode(p) for p in providers]}
+        data = {
+            "version": SETTINGS_VERSION,
+            "providers": [_encode(p) for p in settings.providers],
+            "preferences": {
+                "default_model": settings.preferences.default_model,
+                "recent_model": settings.preferences.recent_model,
+                "language": settings.preferences.language,
+            },
+        }
         try:
             temporary.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
             temporary.replace(self._path)
         except OSError as error:
-            raise SettingsError(f"Could not save the settings file: {error}") from error
-        log.info("Saved %d providers to %s", len(providers), self._path)
+            raise SettingsError(
+                _("Could not save the settings file: {error}").format(error=error)
+            ) from error
+        log.info("Saved %d providers to %s", len(settings.providers), self._path)
 
 
 def _encode(provider: Provider) -> dict[str, object]:
@@ -91,7 +126,7 @@ def _as_list(value: object, what: str) -> list[object]:
 def _decode(data: object) -> tuple[Provider, ...]:
     top = _as_dict(data, "the top level")
     version = top.get("version")
-    if not isinstance(version, int) or version > SETTINGS_VERSION:
+    if type(version) is not int or not 1 <= version <= SETTINGS_VERSION:
         raise ValueError(f"unsupported settings version {version!r}")
     return tuple(
         _decode_provider(entry) for entry in _as_list(top.get("providers", []), "providers")
@@ -121,3 +156,24 @@ def _decode_model(entry: object) -> ModelSpec:
             diarization=bool(fields.get("diarization", False)),
         ),
     )
+
+
+def _decode_preferences(value: object) -> Preferences:
+    fields = _as_dict(value, "preferences")
+    language = fields.get("language")
+    if language is not None and (not isinstance(language, str) or not valid_language(language)):
+        raise ValueError("invalid transcription language")
+    return Preferences(
+        default_model=_decode_model_key(fields.get("default_model")),
+        recent_model=_decode_model_key(fields.get("recent_model")),
+        language=language,
+    )
+
+
+def _decode_model_key(value: object) -> tuple[str, str] | None:
+    if value is None:
+        return None
+    parts = _as_list(value, "a model identity")
+    if len(parts) != 2 or not all(isinstance(part, str) and part for part in parts):
+        raise ValueError("a model identity must contain a provider ID and model ID")
+    return cast(tuple[str, str], tuple(parts))

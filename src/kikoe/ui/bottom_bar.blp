@@ -10,7 +10,7 @@ template $KikoeBottomBar: Adw.Bin {
       name: "idle";
 
       child: Adw.WrapBox {
-        wrap-policy: minimum;
+        wrap-policy: natural;
         child-spacing: 8;
         line-spacing: 8;
         margin-top: 8;
@@ -19,7 +19,12 @@ template $KikoeBottomBar: Adw.Bin {
         margin-end: 12;
 
         MenuButton model_button {
+          can-shrink: true;
           tooltip-text: _("Transcription Model");
+
+          accessibility {
+            label: _("Transcription Model");
+          }
 
           child: Box {
             spacing: 8;
@@ -242,6 +247,11 @@ template $KikoeBottomBar: Adw.Bin {
           Button pause_button {
             icon-name: "media-playback-pause-symbolic";
             tooltip-text: _("Pause Recording");
+
+            accessibility {
+              label: _("Pause Recording");
+            }
+
             action-name: "win.pause-recording";
 
             styles [

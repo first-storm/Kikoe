@@ -36,6 +36,11 @@ template $KikoeTranscriptRow: Box {
       Button play_button {
         icon-name: "media-playback-start-symbolic";
         tooltip-text: _("Play This Recording");
+
+        accessibility {
+          label: _("Play This Recording");
+        }
+
         valign: center;
 
         styles [
@@ -47,6 +52,11 @@ template $KikoeTranscriptRow: Box {
       MenuButton recording_menu_button {
         icon-name: "view-more-symbolic";
         tooltip-text: _("Recording Menu");
+
+        accessibility {
+          label: _("Recording Menu");
+        }
+
         valign: center;
         visible: false;
       }
@@ -88,6 +98,10 @@ template $KikoeTranscriptRow: Box {
       Button speaker_button {
         halign: start;
         tooltip-text: _("Rename or Match Speaker");
+
+        accessibility {
+          label: _("Rename or Match Speaker");
+        }
 
         styles [
           "flat",

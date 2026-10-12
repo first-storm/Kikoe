@@ -16,3 +16,16 @@ Kikoe uses GNU gettext. Source strings are English.
 - Leave a `# Translators:` comment above a Python string that needs explanation.
 - Do not build sentences by concatenating translated fragments; use one string with
   `{placeholders}` and `str.format`.
+
+
+## Included language and template translation
+
+`zh_CN` covers all current source messages, including plural counts and error text.
+Compile catalogs before running or packaging; `.mo` files are generated and not committed.
+Use `LANGUAGE=zh_CN uv run kikoe` to inspect the Chinese interface; transcription language
+is an independent preference and defaults to automatic detection.
+
+`kikoe.i18n.translated_ui` uses Python gettext for marked XML properties and contexts,
+caches the translated template by content, and removes GTK translation markers. Python
+and Blueprint therefore share the same catalog even without native gettext bindings.
+New locales and rebuilt templates get separate cache entries; originals stay unchanged.

@@ -1,7 +1,6 @@
 """Entry point: configure process-wide state, then hand over to the application."""
 
 import asyncio
-import logging
 import os
 import sys
 
@@ -14,23 +13,13 @@ gi.require_version("Adw", "1")
 from gi.events import GLibEventLoopPolicy  # noqa: E402
 
 from kikoe import i18n  # noqa: E402 - gi versions must be pinned before any gi import
+from kikoe.diagnostics import configure_logging  # noqa: E402
 
 
 def main() -> int:
     """Run Kikoe and return the process exit status."""
     level = os.environ.get("KIKOE_LOG_LEVEL", "INFO").upper()
-    logging.basicConfig(level=level, format="%(levelname)s %(name)s: %(message)s")
-    # SDK debug traces may contain authentication headers and signed request URLs.
-    for name in (
-        "openai",
-        "openrouter",
-        "deepgram",
-        "google.genai",
-        "httpx",
-        "httpx2",
-        "websockets",
-    ):
-        logging.getLogger(name).setLevel(logging.WARNING)
+    configure_logging(level)
     i18n.setup()
 
     # Imported late so that every gi.repository import sees the versions pinned above.

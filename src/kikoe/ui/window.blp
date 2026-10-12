@@ -17,7 +17,7 @@ template $KikoeWindow: Adw.ApplicationWindow {
     }
   }
 
-  Adw.Breakpoint {
+  Adw.Breakpoint compact_breakpoint {
     condition ("max-width: 480sp")
 
     setters {
@@ -28,6 +28,9 @@ template $KikoeWindow: Adw.ApplicationWindow {
 
   content: Adw.ToastOverlay toast_overlay {
     child: Adw.NavigationSplitView split_view {
+      min-sidebar-width: 220;
+      max-sidebar-width: 260;
+
       sidebar: Adw.NavigationPage {
         title: _("Kikoe");
 
@@ -38,6 +41,11 @@ template $KikoeWindow: Adw.ApplicationWindow {
             Button {
               icon-name: "list-add-symbolic";
               tooltip-text: _("New Note");
+
+              accessibility {
+                label: _("New Note");
+              }
+
               action-name: "win.new-note";
             }
 
@@ -46,8 +54,39 @@ template $KikoeWindow: Adw.ApplicationWindow {
               primary: true;
               icon-name: "open-menu-symbolic";
               tooltip-text: _("Main Menu");
+
+              accessibility {
+                label: _("Main Menu");
+              }
+
               menu-model: primary_menu;
             }
+
+            [end]
+            Button {
+              icon-name: "system-search-symbolic";
+              tooltip-text: _("Search Notes");
+
+              accessibility {
+                label: _("Search Notes");
+              }
+
+              action-name: "win.search-notes";
+            }
+          }
+
+          [top]
+          SearchBar search_bar {
+            show-close-button: true;
+            notify::search-mode-enabled => $_on_search_bar_notify_search_mode_enabled();
+
+            child: SearchEntry search_entry {
+              placeholder-text: _("Search Notes");
+              hexpand: true;
+              search-delay: 200;
+              search-changed => $_on_search_entry_search_changed();
+              stop-search => $_on_search_entry_stop_search();
+            };
           }
 
           content: ScrolledWindow {
@@ -62,7 +101,7 @@ template $KikoeWindow: Adw.ApplicationWindow {
               ]
 
               [placeholder]
-              Label {
+              Label notes_placeholder {
                 label: _("No Notes Yet");
                 valign: center;
 
@@ -95,6 +134,11 @@ template $KikoeWindow: Adw.ApplicationWindow {
             MenuButton note_menu_button {
               icon-name: "view-more-symbolic";
               tooltip-text: _("Note Menu");
+
+              accessibility {
+                label: _("Note Menu");
+              }
+
               menu-model: note_menu;
               visible: false;
             }
@@ -103,6 +147,11 @@ template $KikoeWindow: Adw.ApplicationWindow {
             MenuButton export_button {
               icon-name: "document-send-symbolic";
               tooltip-text: _("Export");
+
+              accessibility {
+                label: _("Export");
+              }
+
               visible: false;
 
               popover: Popover export_popover {
@@ -194,6 +243,11 @@ template $KikoeWindow: Adw.ApplicationWindow {
               icon-name: "view-reveal-symbolic";
               always-show-arrow: true;
               tooltip-text: _("Display Options");
+
+              accessibility {
+                label: _("Display Options");
+              }
+
               visible: false;
 
               popover: Popover {
@@ -304,8 +358,20 @@ template $KikoeWindow: Adw.ApplicationWindow {
 menu primary_menu {
   section {
     item {
+      label: _("_Import Audio…");
+      action: "win.import-audio";
+    }
+  }
+
+  section {
+    item {
       label: _("_Preferences");
       action: "app.preferences";
+    }
+
+    item {
+      label: _("_Keyboard Shortcuts");
+      action: "app.shortcuts";
     }
 
     item {

@@ -1,18 +1,21 @@
 """The Adw.Application: app-wide actions, styling and window management."""
 
+import asyncio
 import logging
 from collections.abc import Callable
 
-from gi.repository import Adw, Gdk, Gio, GLib, Gtk
+from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
 from kikoe.constants import APP_ID, APP_NAME, ISSUE_URL, VERSION, WEBSITE
 from kikoe.i18n import _
+from kikoe.paths import data_dir, log_dir
 from kikoe.storage.library import Library, audio_dir, database_path
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.storage.secrets import KeyringSecretStore
 from kikoe.storage.settings import SettingsStore, default_settings_path
 from kikoe.ui.preferences import PreferencesDialog
+from kikoe.ui.shortcuts import ShortcutsDialog
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import UI_DIR
 from kikoe.ui.window import Window
@@ -36,6 +39,9 @@ class Application(Adw.Application):
         self._add_action("preferences", self._on_preferences, ["<primary>comma"])
         self._add_action("add-provider", self._on_add_provider)
         self._add_action("about", self._on_about)
+        self._add_action("shortcuts", self._on_shortcuts, ["<primary>question"])
+        self._add_action("open-data-folder", self._on_open_data_folder)
+        self._add_action("open-log-folder", self._on_open_log_folder)
 
     def do_startup(self) -> None:
         Adw.Application.do_startup(self)
@@ -89,11 +95,51 @@ class Application(Adw.Application):
         dialog.present(self.get_active_window())
         dialog.start_add_provider()
 
+    def _on_shortcuts(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        ShortcutsDialog().present(self.get_active_window())
+
+    def _on_open_data_folder(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        window = self.get_active_window()
+        if window is not None:
+            run_task(self._open_folder(logs=False), window)
+
+    def _on_open_log_folder(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        window = self.get_active_window()
+        if window is not None:
+            run_task(self._open_folder(logs=True), window)
+
+    async def _open_folder(self, *, logs: bool) -> None:
+        path = await asyncio.to_thread(log_dir if logs else data_dir)
+        launcher = Gtk.FileLauncher.new(Gio.File.new_for_path(str(path)))
+        future: asyncio.Future[None] = asyncio.get_running_loop().create_future()
+
+        def finished(_source: GObject.Object | None, result: Gio.AsyncResult) -> None:
+            try:
+                launcher.launch_finish(result)
+            except GLib.Error:
+                if not future.done():
+                    future.set_exception(OSError(_("Could not open the directory.")))
+            else:
+                if not future.done():
+                    future.set_result(None)
+
+        launcher.launch(self.get_active_window(), None, finished)
+        try:
+            await future
+        except OSError as error:
+            from kikoe.ui.tasks import show_error
+
+            window = self.get_active_window()
+            if window is not None:
+                show_error(window, str(error))
+
     def _on_about(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         about = Adw.AboutDialog(
             application_name=APP_NAME,
             application_icon=APP_ID,
             version=VERSION,
+            license_type=Gtk.License.GPL_3_0,
+            copyright="© 2026 first-storm",
             website=WEBSITE,
             issue_url=ISSUE_URL,
             developer_name="first-storm",

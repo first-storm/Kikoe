@@ -3,8 +3,9 @@
   <id>io.github.first_storm.Kikoe</id>
   <name>Kikoe</name>
   <summary>Turn speech into text notes</summary>
+  <summary xml:lang="zh_CN">将语音转为文字笔记</summary>
   <metadata_license>CC0-1.0</metadata_license>
-  <!-- TODO: choose a license and set project_license (SPDX), e.g. GPL-3.0-or-later. -->
+  <project_license>GPL-3.0-or-later</project_license>
   <developer id="io.github.first_storm">
     <name>first-storm</name>
   </developer>
@@ -19,6 +20,20 @@
   <launchable type="desktop-id">io.github.first_storm.Kikoe.desktop</launchable>
   <url type="homepage">https://github.com/first-storm/Kikoe</url>
   <url type="bugtracker">https://github.com/first-storm/Kikoe/issues</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Notes with timestamps and speaker labels</caption>
+      <image width="1180" height="780">https://raw.githubusercontent.com/first-storm/Kikoe/main/data/screenshots/main-en.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Recording audio for transcription</caption>
+      <image width="1180" height="780">https://raw.githubusercontent.com/first-storm/Kikoe/main/data/screenshots/recording-en.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Default model, language and local storage preferences</caption>
+      <image width="1180" height="780">https://raw.githubusercontent.com/first-storm/Kikoe/main/data/screenshots/preferences-en.png</image>
+    </screenshot>
+  </screenshots>
   <content_rating type="oars-1.1"/>
   <requires>
     <display_length compare="ge">360</display_length>
@@ -30,7 +45,14 @@
   </supports>
   <releases>
     <release version="0.1.0" date="2026-10-12">
-      <description><p>Project skeleton.</p></description>
+      <description>
+        <p>Record or import audio, transcribe with cloud services, and export notes or subtitles.</p>
+        <ul>
+          <li>Batch and realtime transcription with timestamps and speaker matching.</li>
+          <li>Search note titles and transcripts, with an adaptive keyboard-accessible interface.</li>
+          <li>Persistent model and language defaults, Simplified Chinese translation, and local diagnostics.</li>
+        </ul>
+      </description>
     </release>
   </releases>
 </component>

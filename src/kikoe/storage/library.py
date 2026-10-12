@@ -170,6 +170,22 @@ class Library:
             for note_id, title, created_at, count, duration_ms, source in rows
         )
 
+    def search_notes(self, query: str) -> tuple[NoteSummary, ...]:
+        """Match titles or segment text without loading entire note objects."""
+        query = query.strip().casefold()
+        if not query:
+            return self.list_notes()
+        with self._connect() as connection:
+            connection.create_function("casefold", 1, str.casefold, deterministic=True)
+            rows = connection.execute(
+                """SELECT n.id FROM notes n WHERE instr(casefold(n.title), ?) > 0
+                OR EXISTS (SELECT 1 FROM recordings r JOIN segments s ON s.recording_id = r.id
+                           WHERE r.note_id = n.id AND instr(casefold(s.text), ?) > 0)""",
+                (query, query),
+            ).fetchall()
+        matches = {row[0] for row in rows}
+        return tuple(note for note in self.list_notes() if note.note_id in matches)
+
     def get_note(self, note_id: str) -> Note:
         with self._connect() as connection:
             return self._read_note(connection, note_id)

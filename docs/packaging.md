@@ -44,8 +44,9 @@ Microphone capture uses sounddevice/CFFI; NumPy and libsndfile are not required.
   freeze with PyInstaller; or use gvsbuild for an MSVC toolchain.
 - Bundle `ffmpeg.exe` next to `kikoe.exe` and sounddevice's PortAudio DLL (or the MSYS2
   PortAudio library when building there). Verify Windows microphone privacy settings.
-- Translations of `.ui` strings need a fallback because Python lacks
-  `locale.bindtextdomain` on Windows (see `kikoe/i18n.py`).
+- Python gettext translates `.ui` templates into the user cache before GTK loads them,
+  including on systems without `locale.bindtextdomain`. Bundle the compiled `zh_CN`
+  catalog and verify both template and Python labels in the packaged app.
 - Installer: Inno Setup or MSIX.
 
 ## Cross-platform pitfalls to avoid in code
@@ -109,3 +110,34 @@ switch playback targets, stop, then begin microphone capture. Verify only one ou
 stream is active and no decoder remains after closing the dialog/window. Missing output
 devices, missing original audio and audio permission failures must produce a user-readable
 message. macOS/Windows hardware verification remains part of M8.
+
+
+## M7 release preparation and verification
+
+The application is licensed under GPL-3.0-or-later; AppStream metadata remains CC0-1.0.
+Ship LICENSE and the full-color and symbolic icons. The UI now requires libadwaita 1.8
+(for Adw.ShortcutLabel). Build templates and catalogs before building a wheel:
+
+```sh
+uv run scripts/build_ui.py
+uv run scripts/i18n.py compile
+uv build
+appstreamcli validate --no-net data/io.github.first_storm.Kikoe.metainfo.xml
+```
+
+Release screenshots under `data/screenshots/` use only synthetic content. AppStream image
+URLs point at these files on the repository's main branch; after pushing the release,
+verify those URLs resolve before submitting metadata to a distributor. Local `--no-net`
+validation cannot establish remote availability.
+
+Linux GTK checks cover 1180×780 and 360 px, English and Simplified Chinese, light/dark
+mode, search/empty results/clear, persistent defaults, language validation, shortcut
+registration and retranscription language propagation. Existing speaker and retranscription
+dialogs are also inspected at 360 px. No provider accounts or actual microphone are
+used for M7. Unit tests simulate missing native gettext bindings; real macOS/Windows
+packaged startup remains an M8 requirement.
+
+Logs are local and bounded (2 MiB plus three backups). Opening a data/log directory
+uses Gtk.FileLauncher, allowing the platform's launcher/portal to handle it. A write
+failure in the log directory leaves terminal diagnostics available. Changing/migrating
+the data directory and automatic error uploads are not implemented.

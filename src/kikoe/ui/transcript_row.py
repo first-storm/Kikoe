@@ -134,9 +134,9 @@ class TranscriptRow(Gtk.Box):
         self.play_button.set_icon_name(
             "media-playback-stop-symbolic" if playing else "media-playback-start-symbolic"
         )
-        self.play_button.set_tooltip_text(
-            _("Stop Playback") if playing else _("Play This Recording")
-        )
+        label = _("Stop Playback") if playing else _("Play This Recording")
+        self.play_button.set_tooltip_text(label)
+        self.play_button.update_property([Gtk.AccessibleProperty.LABEL], [label])
 
     def _update_speaker_color(self) -> None:
         dark = Adw.StyleManager.get_default().get_dark()

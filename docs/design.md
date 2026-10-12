@@ -99,7 +99,14 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 - M6 implemented: unmatched-speaker banner; recording playback/stop; clickable colored
   speaker names with Rename Speaker and Match Speakers; reversible many-to-one matching
   with quoted samples and playback; Re-transcribe with an independent model/options picker.
-- Not yet: *Search Notes* and "Delete This Recording".
+- M7 implemented: Search Notes opens a sidebar search bar; title and transcript matches
+  are case-insensitive literal substrings. Empty queries restore all notes; no matches
+  show "No Matching Notes". Filtering preserves the open note. Escape closes search.
+  The sidebar is approximately 260 px at desktop sizes; search precedes the main menu.
+- At 360 px, idle controls wrap at their natural widths so action labels remain legible.
+  The provider suffix and mode hint hide below 480 sp; model and feature tooltips retain
+  their explanations. Import Audio is also available in the main menu without a selected note.
+- Not yet: "Delete This Recording" (outside M7).
 
 ## 2. Recording in progress
 
@@ -207,14 +214,14 @@ M6 implementation behavior:
 
 ## 6. Preferences — Providers (≈640×600)
 
-- `Adw.PreferencesDialog` with pages "General" and "Providers". (General has no
-  content in the design yet.)
+- `Adw.PreferencesDialog` with pages "General" and "Providers". General follows the
+  same standard grouped-row styling; the HTML reference does not specify its contents.
 - Providers page: group "Providers", description "Transcription happens in the cloud.
   A provider can offer several models.", header button "Add Provider".
 - Rows (navigate to detail): avatar initial + name + subtitle "<API type> API · N
   model(s)", e.g. "Deepgram — Deepgram API · 1 model", "OpenAI — OpenAI API · 2
   models", "Groq — OpenAI-compatible API · 1 model".
-- **Implemented** (`ui/preferences.blp`); General is still empty.
+- **Implemented** (`ui/preferences.blp`), including the General page below.
 
 ## 7. Preferences — Provider detail (≈640×780)
 
@@ -254,3 +261,32 @@ Pushed as a subpage (back button) titled with the provider name.
 - Accent blue `#1c71d8`, destructive red: use libadwaita's accent/destructive colors,
   not literal values.
 - All popovers and dialogs close on Escape and on outside click (stock behavior).
+
+
+## 9. Preferences — General (M7)
+
+- "Transcription" group: Default Model combo (provider and model name), then Transcription
+  Language entry with an apply button. Empty means automatic detection; the tooltip gives
+  `zh`, `en` and `ja` examples. Invalid codes show an error state and are not saved.
+- "Storage" group: Data Directory row showing the current path; activating opens the
+  directory. This release does not move the library or change its location.
+- "Troubleshooting" group: Log Directory row opening local diagnostics. The description
+  states that logs stay on this device and users can attach them when reporting problems.
+- Most recently selected model takes priority on restart, followed by the default model,
+  then the first configured model. Missing models fall back in that order. Changing the
+  default selects it when idle; running tasks keep the model/language captured at start.
+- Interface language follows the system; English and Simplified Chinese (`zh_CN`) are
+  included. This is separate from the transcription language hint.
+
+## 10. Keyboard and accessibility (M7)
+
+The main menu offers Keyboard Shortcuts. New Note uses Ctrl+N, Search Notes Ctrl+F,
+Import Audio Ctrl+O, Rename Note F2, Preferences Ctrl+comma, shortcut help Ctrl+?, and
+Quit Ctrl+Q (Command replaces Ctrl on macOS). Escape closes search; it never stops a
+recording. Shortcuts share action availability with buttons, including busy-state guards.
+Search is disabled while capturing/transcribing so it cannot hide narrow-window Stop
+controls. Import from the sidebar opens the content pane to show progress and Cancel.
+
+Icon-only application controls have translated accessibility labels; pause/resume and
+play/stop labels change with their actions. Dialogs remain keyboard navigable and
+scroll at 360 px. Visible error states have explanatory text in addition to color.

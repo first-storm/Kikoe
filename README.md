@@ -5,7 +5,7 @@ cloud speech-to-text services (Deepgram, OpenAI, OpenRouter, Gemini AI Studio, o
 OpenAI-compatible API), with
 optional timestamps and speaker labels, and exports to text, Markdown, SRT, or WebVTT.
 
-Built with Python 3.14, GTK 4 and libadwaita. Linux is the primary platform; macOS and
+Built with Python 3.14, GTK 4 and libadwaita 1.8 or newer. Linux is the primary platform; macOS and
 Windows are planned (see [docs/packaging.md](docs/packaging.md)).
 
 > Status: provider management, audio import, microphone recording with pause/resume,
@@ -70,7 +70,9 @@ uv run kikoe                   # start the app
 ```
 
 Re-run `scripts/build_ui.py` whenever a `.blp` file changes.
-Set `KIKOE_LOG_LEVEL=DEBUG` for verbose logs.
+Set `KIKOE_LOG_LEVEL=DEBUG` for verbose local diagnostics. Logs rotate at 2 MiB
+with three backups; dynamic text and credentials are redacted, and nothing is uploaded.
+Preferences → General opens the log directory when you want to report a problem.
 
 ## Checks
 
@@ -91,3 +93,22 @@ CI runs all of these on every push.
 - [docs/design.md](docs/design.md): UI specification for every screen.
 - [docs/packaging.md](docs/packaging.md): distribution plan per platform.
 - [po/README.md](po/README.md): translations.
+
+
+## Defaults, search and language
+
+Search Notes (Ctrl+F) finds note titles and transcript text. Escape closes search.
+Ctrl+N creates a note, Ctrl+O imports audio, and F2 renames the current note. The main
+menu offers the full shortcut list and Import Audio even without a selected note.
+
+Preferences → General sets a default model and a transcription language hint (`zh`,
+`en`, `ja`, or another common language tag); leave language empty for automatic detection.
+The most recently chosen model is remembered across restarts. The data directory row
+shows and opens the current library location; it does not move your notes.
+
+The interface follows your system language and includes Simplified Chinese. For a local
+preview, compile translations and run `LANGUAGE=zh_CN uv run kikoe`.
+
+## License
+
+Kikoe is licensed under [GPL-3.0-or-later](LICENSE).

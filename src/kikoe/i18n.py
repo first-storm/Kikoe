@@ -6,11 +6,15 @@ and every string in Blueprint with ``_("...")``. Adding a language only needs a
 """
 
 import gettext
+import hashlib
 import locale
 import logging
+import os
+import xml.etree.ElementTree as ET
+from pathlib import Path
 
 from kikoe.constants import GETTEXT_DOMAIN
-from kikoe.paths import PACKAGE_DIR
+from kikoe.paths import PACKAGE_DIR, cache_dir
 
 log = logging.getLogger(__name__)
 
@@ -27,13 +31,21 @@ def setup() -> None:
     except locale.Error:
         log.warning("Unsupported locale; falling back to the C locale")
 
-    _translation = gettext.translation(GETTEXT_DOMAIN, LOCALE_DIR, fallback=True)
+    languages: list[str] | None = None
+    if not any(os.environ.get(name) for name in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG")):
+        try:
+            language = locale.getlocale()[0]
+        except ValueError:
+            language = None
+        if language:
+            languages = [language]
+    _translation = gettext.translation(
+        GETTEXT_DOMAIN, LOCALE_DIR, languages=languages, fallback=True
+    )
 
-    # GtkBuilder translates .ui strings through the C library's gettext, which Python
-    # only exposes on glibc-like platforms. On Windows/macOS this is missing and .ui
-    # strings stay English until we add a fallback (translate in Python after loading).
-    if hasattr(locale, "bindtextdomain"):
-        locale.bindtextdomain(GETTEXT_DOMAIN, LOCALE_DIR)
+    # Python also translates template XML, so GTK uses the same catalog on every OS.
+    if hasattr(locale, "bindtextdomain") and hasattr(locale, "textdomain"):
+        locale.bindtextdomain(GETTEXT_DOMAIN, str(LOCALE_DIR))
         locale.textdomain(GETTEXT_DOMAIN)
 
 
@@ -45,3 +57,33 @@ def _(message: str) -> str:
 def ngettext(singular: str, plural: str, n: int) -> str:
     """Translate a message that depends on a count."""
     return _translation.ngettext(singular, plural, n)
+
+
+def translated_ui(path: Path) -> Path:
+    """Cache translated templates without depending on a platform's C gettext."""
+    source = path.read_bytes()
+    root = ET.fromstring(source)
+    root.attrib.pop("domain", None)
+    for element in root.iter():
+        if element.get("translatable", "").lower() not in {"yes", "true", "1"}:
+            continue
+        message = element.text or ""
+        context = element.get("context")
+        element.text = _translation.pgettext(context, message) if context else _(message)
+        element.attrib.pop("translatable", None)
+        element.attrib.pop("context", None)
+        element.attrib.pop("comments", None)
+    translated = ET.tostring(root, encoding="utf-8", xml_declaration=True)
+    digest = hashlib.sha256(translated).hexdigest()
+    try:
+        directory = cache_dir() / "ui" / digest
+        directory.mkdir(parents=True, exist_ok=True)
+        cached = directory / path.name
+        if not cached.is_file():
+            temporary = cached.with_suffix(".tmp")
+            temporary.write_bytes(translated)
+            temporary.replace(cached)
+        return cached
+    except OSError:
+        log.warning("Translated template cache unavailable; using native GTK translation")
+        return path

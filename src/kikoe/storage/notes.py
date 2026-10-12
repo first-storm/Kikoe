@@ -41,6 +41,10 @@ class NoteRepository:
         await asyncio.to_thread(self._library.migrate)
         await self._refresh(None)
 
+    async def search(self, query: str) -> tuple[NoteSummary, ...]:
+        """Run title and transcript queries away from the GTK thread."""
+        return await asyncio.to_thread(self._library.search_notes, query)
+
     async def get_note(self, note_id: str) -> Note:
         return await asyncio.to_thread(self._library.get_note, note_id)
 

@@ -111,3 +111,66 @@ async def test_listeners_are_told_about_changes(repo: ProviderRepository) -> Non
     await repo.add_provider("Groq", ApiKind.OPENAI_COMPATIBLE, URL, "")
 
     assert calls == [1]
+
+
+@run_async
+async def test_concurrent_defaults_and_provider_edits_both_survive(
+    repo: ProviderRepository, tmp_path: Path, secrets: FakeSecrets
+) -> None:
+    import asyncio
+    from dataclasses import replace
+
+    provider = await repo.add_provider("Cloud", ApiKind.DEEPGRAM, URL, "")
+    await asyncio.gather(
+        repo.update_preferences(lambda p: replace(p, language="zh")),
+        repo.save_model(provider.provider_id, ModelSpec("a", "A", Capabilities())),
+        repo.save_model(provider.provider_id, ModelSpec("b", "B", Capabilities())),
+        repo.update_preferences(lambda p: replace(p, default_model=(provider.provider_id, "b"))),
+    )
+    restarted = ProviderRepository(SettingsStore(tmp_path / "settings.json"), secrets)
+    await restarted.load()
+    assert restarted.preferences.language == "zh"
+    assert restarted.preferences.default_model == (provider.provider_id, "b")
+    assert [m.model_id for m in restarted.get(provider.provider_id).models] == ["a", "b"]
+
+
+@run_async
+async def test_failed_defaults_save_does_not_notify_or_change_memory(
+    repo: ProviderRepository, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from dataclasses import replace
+
+    from kikoe.storage.settings import Settings, SettingsError
+
+    calls: list[str] = []
+    repo.connect_preferences_changed(lambda: calls.append("changed"))
+
+    def fail_save(self: SettingsStore, state: Settings) -> None:
+        raise SettingsError("Cannot save")
+
+    monkeypatch.setattr(SettingsStore, "save_state", fail_save)
+    with pytest.raises(SettingsError):
+        await repo.update_preferences(lambda p: replace(p, language="zh"))
+    assert repo.preferences.language is None
+    assert calls == []
+
+
+@run_async
+async def test_edit_cannot_overwrite_damaged_settings_after_failed_startup(
+    tmp_path: Path, secrets: FakeSecrets
+) -> None:
+    from dataclasses import replace
+
+    from kikoe.storage.settings import SettingsError
+
+    path = tmp_path / "settings.json"
+    path.write_text("damaged settings")
+    repository = ProviderRepository(SettingsStore(path), secrets)
+    with pytest.raises(SettingsError):
+        await repository.load()
+    with pytest.raises(SettingsError):
+        await repository.update_preferences(lambda p: replace(p, language="zh"))
+    with pytest.raises(SettingsError):
+        await repository.add_provider("Cloud", ApiKind.OPENAI, URL, "secret")
+    assert path.read_text() == "damaged settings"
+    assert secrets.items == {}

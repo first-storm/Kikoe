@@ -56,3 +56,7 @@ async def _report_errors[T](coroutine: Coroutine[None, None, T], parent: Gtk.Wid
         log.warning("Background task failed: %s", error)
         show_error(parent, str(error))
         return None
+    except Exception:
+        log.exception("Unexpected background failure")
+        show_error(parent, _("An unexpected error occurred. See the local log for details."))
+        return None

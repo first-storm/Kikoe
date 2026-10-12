@@ -6,6 +6,8 @@ it to ``foo.ui``, which is what GTK loads. Generated ``.ui`` files are not commi
 
 from pathlib import Path
 
+from kikoe.i18n import translated_ui
+
 UI_DIR = Path(__file__).resolve().parent
 
 
@@ -15,4 +17,4 @@ def ui_file(name: str) -> str:
     if not path.is_file():
         msg = f"{path.name} not found. Compile the Blueprints first: uv run scripts/build_ui.py"
         raise FileNotFoundError(msg)
-    return str(path)
+    return str(translated_ui(path))

@@ -64,10 +64,16 @@ Top-level helpers (`constants`, `paths`, `i18n`) are importable from any layer.
 - `storage.notes.NoteRepository` is the async front of the library: it keeps sidebar
   summaries in memory and tells listeners which note changed.
 - Settings: `paths.config_dir()/settings.json`, written atomically by
-  `storage.settings.SettingsStore`. Shape: `{"version": 1, "providers": [{"id", "name",
-  "api", "base_url", "models": [{"id", "name", "realtime", "timestamps",
-  "diarization"}]}]}`. A file with a newer `version` or damaged content is reported to the
-  user, not overwritten silently. GSettings is avoided because it needs compiled schemas on
+  `storage.settings.SettingsStore`. Version 2 stores `providers` plus `preferences`:
+  `default_model` and `recent_model` are `[provider_id, model_id]` pairs or null;
+  `language` is a common BCP 47 tag or null for automatic detection. Version-one files
+  retain their providers and gain empty defaults. The frozen `Settings` and core
+  `Preferences` types describe one snapshot; `ProviderRepository` owns both kinds of
+  settings and serializes writes with an asyncio lock. Field changes merge against
+  the latest snapshot; failed writes do not publish state or notify listeners. Mutations
+  require a successful settings read, so a failed startup cannot overwrite a damaged file. A file with
+  a newer `version` or damaged content is reported to the user, not overwritten silently.
+  GSettings is avoided because it needs compiled schemas on
   every platform.
 - Secrets (API keys): the OS credential store via `keyring` (service = app ID, username =
   provider ID), wrapped by `storage.secrets.KeyringSecretStore`. Never in settings files or
@@ -239,3 +245,33 @@ draining decoder diagnostics concurrently. Device calls run in worker threads; c
 waits for an in-flight call before closing the stream. The window serializes playback and
 stops it on note changes, dialog/window closure and before capture or transcription.
 No extra playback dependency, external player or Linux-specific audio API is required.
+
+
+## M7 search, localization and diagnostics
+
+`Library.search_notes` searches note titles and recording segments using parameterized
+SQLite `instr` expressions and a Python `casefold` SQL function. Wildcards are literal,
+Unicode matching is consistent, and no schema change is required. `NoteRepository.search`
+runs this off the GTK thread. The sidebar debounces input by 200 ms, cancels old tasks
+and rejects outdated results; matching summaries retain the existing newest-first order.
+This personal-project implementation scans text rather than maintaining an FTS index.
+
+`core.preferences.preferred_model` resolves recent, default, first available, then none.
+The bottom bar persists explicit model selection through the shared settings writer.
+Every import, recording, retry and retranscription captures `TranscriptionOptions.language`
+at request start. Default changes during a busy session apply when the controls return idle.
+
+Python gettext translates both Python strings and marked GtkBuilder XML properties,
+including translation contexts. `ui_file` resolves a content-addressed translated template
+under `paths.cache_dir()/ui`; translation markers/domain are removed to prevent C gettext
+from translating twice. Original compiled files remain untouched. This also works without
+`locale.bindtextdomain` on Windows/macOS. Cache failure is logged and falls back to the
+original template/native GTK translation. Catalogs and templates must be built before
+packaging. There is no application-level interface language override.
+
+`diagnostics.configure_logging` writes terminal diagnostics and `paths.log_dir()/kikoe.log`.
+Files rotate at 2 MiB, with three backups. The formatter keeps numeric arguments and
+exception types, redacts other dynamic values and omits third-party message bodies.
+Tracebacks keep module filenames/line numbers/functions without source text, exception
+messages or locals. Unexpected background and uncaught errors are recorded locally.
+No report is uploaded; users open the log directory and choose what to attach themselves.

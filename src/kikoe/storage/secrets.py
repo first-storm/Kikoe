@@ -7,6 +7,7 @@ import keyring
 from keyring.errors import KeyringError, PasswordDeleteError
 
 from kikoe.constants import APP_ID
+from kikoe.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -52,6 +53,8 @@ class KeyringSecretStore:
 
 def _unavailable(error: KeyringError) -> SecretStoreError:
     return SecretStoreError(
-        "API keys could not be saved because no secure credential store is available. "
-        f"Details: {error}"
+        _(
+            "API keys could not be saved because no secure credential store is available. "
+            "Details: {error}"
+        ).format(error=error)
     )
