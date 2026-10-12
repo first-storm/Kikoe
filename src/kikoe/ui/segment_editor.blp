@@ -51,6 +51,10 @@ template $KikoeSegmentEditor: Adw.Dialog {
             propagate-natural-height: true;
 
             child: Gtk.TextView text_view {
+              accessibility {
+                label: _("Text");
+              }
+
               wrap-mode: word;
               top-margin: 8;
               bottom-margin: 8;

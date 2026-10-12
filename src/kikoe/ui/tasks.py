@@ -3,6 +3,7 @@
 import asyncio
 import logging
 from collections.abc import Coroutine
+from typing import Protocol, runtime_checkable
 
 from gi.repository import Adw, Gio, Gtk
 
@@ -32,10 +33,27 @@ USER_FACING_ERRORS = (
 """Exceptions whose message is written for the user and can be shown as is."""
 
 
-def show_error(parent: Gtk.Widget, message: str) -> None:
-    dialog = Adw.AlertDialog(heading=_("Something Went Wrong"), body=message)
+def show_error(parent: Gtk.Widget, message: str, heading: str | None = None) -> None:
+    """Block on a failure the user must read; use ``show_notice`` for small, self-evident ones."""
+    dialog = Adw.AlertDialog(heading=heading or _("Something Went Wrong"), body=message)
     dialog.add_response("close", _("_Close"))
     dialog.present(parent)
+
+
+@runtime_checkable
+class ToastHost(Protocol):
+    """A window that can show toasts; ``Window`` satisfies it without importing it here."""
+
+    def add_toast(self, toast: Adw.Toast) -> None: ...
+
+
+def show_notice(parent: Gtk.Widget, message: str) -> None:
+    """Report a minor, self-explanatory problem in a toast instead of a modal dialog."""
+    window = parent.get_root()
+    if isinstance(window, ToastHost):
+        window.add_toast(Adw.Toast(title=message))
+    else:
+        show_error(parent, message)
 
 
 def run_task[T](coroutine: Coroutine[None, None, T], parent: Gtk.Widget) -> asyncio.Task[T | None]:

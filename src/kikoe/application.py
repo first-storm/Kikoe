@@ -7,16 +7,17 @@ from collections.abc import Callable
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
 from kikoe.constants import APP_ID, APP_NAME, ISSUE_URL, VERSION, WEBSITE
+from kikoe.core.preferences import WindowState
 from kikoe.i18n import _
 from kikoe.paths import data_dir, log_dir
 from kikoe.storage.library import Library, audio_dir, database_path
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.storage.secrets import KeyringSecretStore
-from kikoe.storage.settings import SettingsStore, default_settings_path
+from kikoe.storage.settings import SettingsError, SettingsStore, default_settings_path
 from kikoe.ui.preferences import PreferencesDialog
-from kikoe.ui.shortcuts import ShortcutsDialog
-from kikoe.ui.tasks import run_task
+from kikoe.ui.shortcuts import create_shortcuts_dialog
+from kikoe.ui.tasks import run_task, show_notice
 from kikoe.ui.templates import UI_DIR
 from kikoe.ui.window import Window
 
@@ -31,15 +32,15 @@ class Application(Adw.Application):
             application_id=APP_ID,
             flags=Gio.ApplicationFlags.DEFAULT_FLAGS,
         )
-        self.providers = ProviderRepository(
-            SettingsStore(default_settings_path()), KeyringSecretStore()
-        )
+        self._settings = SettingsStore(default_settings_path())
+        self.providers = ProviderRepository(self._settings, KeyringSecretStore())
         self.notes = NoteRepository(Library(database_path(), audio_dir()))
         self._add_action("quit", self._on_quit, ["<primary>q"])
         self._add_action("preferences", self._on_preferences, ["<primary>comma"])
         self._add_action("add-provider", self._on_add_provider)
         self._add_action("about", self._on_about)
         self._add_action("shortcuts", self._on_shortcuts, ["<primary>question"])
+        self.set_accels_for_action("window.close", ["<primary>w"])
         self._add_action("open-data-folder", self._on_open_data_folder)
         self._add_action("open-log-folder", self._on_open_log_folder)
 
@@ -50,10 +51,18 @@ class Application(Adw.Application):
     def do_activate(self) -> None:
         window = self.get_active_window()
         if window is None:
-            window = Window(self, self.providers, self.notes)
+            window = Window(self, self.providers, self.notes, self._saved_window_state())
             run_task(self.providers.load(), window)
             run_task(self.notes.load(), window)
         window.present()
+
+    def _saved_window_state(self) -> WindowState | None:
+        """Read synchronously: the size must be known before the first frame is shown."""
+        try:
+            return self._settings.load_state().window
+        except SettingsError as error:
+            log.warning("Starting with the default window size: %s", error)
+            return None
 
     def _add_action(
         self,
@@ -96,7 +105,7 @@ class Application(Adw.Application):
         dialog.start_add_provider()
 
     def _on_shortcuts(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        ShortcutsDialog().present(self.get_active_window())
+        create_shortcuts_dialog().present(self.get_active_window())
 
     def _on_open_data_folder(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         window = self.get_active_window()
@@ -118,7 +127,7 @@ class Application(Adw.Application):
                 launcher.launch_finish(result)
             except GLib.Error:
                 if not future.done():
-                    future.set_exception(OSError(_("Could not open the directory.")))
+                    future.set_exception(OSError(_("Could not open the folder.")))
             else:
                 if not future.done():
                     future.set_result(None)
@@ -127,11 +136,9 @@ class Application(Adw.Application):
         try:
             await future
         except OSError as error:
-            from kikoe.ui.tasks import show_error
-
             window = self.get_active_window()
             if window is not None:
-                show_error(window, str(error))
+                show_notice(window, str(error))
 
     def _on_about(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         about = Adw.AboutDialog(

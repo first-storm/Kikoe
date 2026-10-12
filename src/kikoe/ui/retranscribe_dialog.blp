@@ -26,120 +26,47 @@ template $KikoeRetranscribeDialog: Adw.Dialog {
         clicked => $_on_transcribe_button_clicked();
 
         styles [
-          "suggested-action",
+          "destructive-action",
         ]
       }
     }
 
-    content: ScrolledWindow {
-      hscrollbar-policy: never;
-
-      child: Box {
-        orientation: vertical;
-        spacing: 16;
-        margin-top: 12;
-        margin-start: 24;
-        margin-end: 24;
-        margin-bottom: 24;
-
-        Label intro_label {
-          xalign: 0;
-          wrap: true;
-
-          styles [
-            "dim-label",
-          ]
+    content: Adw.PreferencesPage {
+      Adw.PreferencesGroup intro_group {
+        Adw.ComboRow model_row {
+          title: _("Model");
+          use-markup: false;
+          notify::selected => $_on_model_row_notify_selected();
         }
 
-        ListBox {
-          selection-mode: none;
-
-          styles [
-            "boxed-list",
-          ]
-
-          Adw.ActionRow {
-            title: _("Model");
-
-            [suffix]
-            MenuButton model_button {
-              valign: center;
-
-              child: Box {
-                spacing: 8;
-
-                Label model_label {
-                  ellipsize: end;
-                  max-width-chars: 20;
-
-                  styles [
-                    "dim-label",
-                  ]
-                }
-
-                Image {
-                  icon-name: "pan-down-symbolic";
-                }
-              };
-
-              popover: Popover model_popover {
-                child: ScrolledWindow {
-                  hscrollbar-policy: never;
-                  max-content-height: 280;
-                  propagate-natural-height: true;
-
-                  child: ListBox models_list {
-                    selection-mode: none;
-
-                    styles [
-                      "navigation-sidebar",
-                    ]
-                  };
-                };
-              };
-            }
-          }
-
-          Adw.SwitchRow timestamps_row {
-            title: _("Timestamps");
-          }
-
-          Adw.SwitchRow speakers_row {
-            title: _("Speaker Detection");
-          }
+        Adw.SwitchRow timestamps_row {
+          title: _("Timestamps");
         }
 
-        Box {
-          spacing: 10;
-          margin-top: 4;
+        Adw.SwitchRow speakers_row {
+          title: _("Speaker Detection");
+        }
+      }
 
-          styles [
-            "retranscription-warning",
-          ]
+      Adw.PreferencesGroup {
+        Adw.ActionRow {
+          title: _("Existing Text Is Replaced");
+          subtitle: _(
+            "The text of this recording will be replaced, including any manual edits. Other recordings in the note are not affected. Speaker names are kept where possible."
+          );
+          subtitle-lines: 0;
 
+          [prefix]
           Image {
             icon-name: "dialog-warning-symbolic";
-            valign: start;
+            valign: center;
 
             styles [
               "warning",
             ]
           }
-
-          Label {
-            label: _(
-              "The text of this recording will be replaced, including any manual edits. Other recordings in the note are not affected. Speaker names are kept where possible."
-            );
-            xalign: 0;
-            wrap: true;
-            hexpand: true;
-
-            styles [
-              "caption",
-            ]
-          }
         }
-      };
+      }
     };
   };
 }

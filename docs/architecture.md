@@ -67,7 +67,8 @@ Top-level helpers (`constants`, `paths`, `i18n`) are importable from any layer.
   `storage.settings.SettingsStore`. Version 2 stores `providers` plus `preferences`:
   `default_model` and `recent_model` are `[provider_id, model_id]` pairs or null;
   `language` is a common BCP 47 tag or null for automatic detection. Version-one files
-  retain their providers and gain empty defaults. The frozen `Settings` and core
+  retain their providers and gain empty defaults. An optional `window` object (`width`, `height`, `maximized`; core `WindowState`)
+  restores the main window's size; unusable values are ignored, not reported. The frozen `Settings` and core
   `Preferences` types describe one snapshot; `ProviderRepository` owns both kinds of
   settings and serializes writes with an asyncio lock. Field changes merge against
   the latest snapshot; failed writes do not publish state or notify listeners. Mutations
@@ -279,4 +280,4 @@ Files rotate at 2 MiB, with three backups. The formatter keeps numeric arguments
 exception types, redacts other dynamic values and omits third-party message bodies.
 Tracebacks keep module filenames/line numbers/functions without source text, exception
 messages or locals. Unexpected background and uncaught errors are recorded locally.
-No report is uploaded; users open the log directory and choose what to attach themselves.
+No report is uploaded; users open the log folder and choose what to attach themselves.

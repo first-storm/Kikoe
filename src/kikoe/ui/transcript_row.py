@@ -180,7 +180,7 @@ def _recording_menu(recording_id: str) -> Gio.Menu:
     match.set_action_and_target_value("win.match-speakers", GLib.Variant("s", recording_id))
     menu.append_item(match)
     delete = Gio.MenuItem()
-    delete.set_label(_("Delete Recording…"))
+    delete.set_label(_("Delete Recording"))
     delete.set_action_and_target_value("win.delete-recording", GLib.Variant("s", recording_id))
     menu.append_item(delete)
     return menu

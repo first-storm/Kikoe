@@ -7,6 +7,7 @@ from kikoe.core.transcription import model_support
 from kikoe.core.validation import validate_model
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
+from kikoe.ui.dialogs import confirm_discard
 from kikoe.ui.labels import model_error_message
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
@@ -34,6 +35,7 @@ class ModelDialog(Adw.Dialog):
         self._model = model
         if model is None:
             self._update_capabilities()
+            self._guard_unsaved_input()
             return
         self.set_title(_("Edit Model"))
         self.confirm_button.set_label(_("_Save"))
@@ -44,6 +46,20 @@ class ModelDialog(Adw.Dialog):
         self.timestamps_check.set_active(model.capabilities.timestamps)
         self.diarization_check.set_active(model.capabilities.diarization)
         self._update_capabilities()
+        self._guard_unsaved_input()
+
+    def _fields(self) -> tuple[str, str, bool, bool, bool]:
+        return (
+            self.model_id_row.get_text(),
+            self.display_name_row.get_text(),
+            self.realtime_check.get_active(),
+            self.timestamps_check.get_active(),
+            self.diarization_check.get_active(),
+        )
+
+    def _guard_unsaved_input(self) -> None:
+        initial = self._fields()
+        confirm_discard(self, lambda: self._fields() != initial)
 
     @Gtk.Template.Callback()
     def _on_model_id_row_changed(self, _row: Adw.EntryRow) -> None:
@@ -73,13 +89,13 @@ class ModelDialog(Adw.Dialog):
 
     @Gtk.Template.Callback()
     def _on_cancel_button_clicked(self, _button: Gtk.Button) -> None:
-        self.close()
+        self.force_close()
 
     @Gtk.Template.Callback()
     def _on_confirm_button_clicked(self, _button: Gtk.Button) -> None:
         provider = self._repository.find(self._provider_id)
         if provider is None:
-            self.close()
+            self.force_close()
             return
         model_id = self.model_id_row.get_text().strip()
         editing_id = self._model.model_id if self._model else None
@@ -108,8 +124,8 @@ class ModelDialog(Adw.Dialog):
 
     async def _save(self, spec: ModelSpec, replacing_id: str | None) -> None:
         await self._repository.save_model(self._provider_id, spec, replacing_id)
-        self.close()
+        self.force_close()
 
     async def _remove(self, model_id: str) -> None:
         await self._repository.remove_model(self._provider_id, model_id)
-        self.close()
+        self.force_close()

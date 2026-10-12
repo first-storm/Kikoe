@@ -14,7 +14,9 @@ template $KikoePreferencesDialog: Adw.PreferencesDialog {
 
     Adw.PreferencesGroup {
       title: _("Transcription");
-      description: _("Defaults for the next transcription. Language is detected automatically when left empty.");
+      description: _(
+        "Defaults for the next transcription. Language is detected automatically when left empty. To set it, enter a language code such as zh, en, or ja."
+      );
 
       Adw.ComboRow default_model_row {
         title: _("Default Model");
@@ -25,7 +27,6 @@ template $KikoePreferencesDialog: Adw.PreferencesDialog {
       Adw.EntryRow language_row {
         title: _("Transcription Language");
         show-apply-button: true;
-        tooltip-text: _("Leave empty for automatic detection, or enter a language code such as zh, en, or ja.");
         apply => $_on_language_row_apply();
       }
 
@@ -53,7 +54,7 @@ template $KikoePreferencesDialog: Adw.PreferencesDialog {
       }
 
       Adw.ComboRow output_device_row {
-        title: _("Speaker");
+        title: _("Audio Output");
         subtitle: _("Used for playback");
         use-markup: false;
         notify::selected => $_on_output_device_row_notify_selected();
@@ -64,7 +65,7 @@ template $KikoePreferencesDialog: Adw.PreferencesDialog {
       title: _("Storage");
 
       Adw.ActionRow data_row {
-        title: _("Data Directory");
+        title: _("Data Folder");
         subtitle-lines: 2;
         use-markup: false;
         activatable: true;
@@ -84,7 +85,7 @@ template $KikoePreferencesDialog: Adw.PreferencesDialog {
       );
 
       Adw.ActionRow log_row {
-        title: _("Log Directory");
+        title: _("Log Folder");
         subtitle-lines: 2;
         use-markup: false;
         activatable: true;
@@ -101,7 +102,7 @@ template $KikoePreferencesDialog: Adw.PreferencesDialog {
   Adw.PreferencesPage {
     name: "providers";
     title: _("Providers");
-    icon-name: "weather-overcast-symbolic";
+    icon-name: "network-server-symbolic";
 
     Adw.PreferencesGroup providers_group {
       title: _("Providers");

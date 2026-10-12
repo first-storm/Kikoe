@@ -5,9 +5,13 @@ template $KikoeLevelMeter: DrawingArea {
   content-height: 28;
   valign: center;
   can-target: false;
+  accessible-role: meter;
 
   accessibility {
     label: _("Microphone Level");
+    value-min: 0;
+    value-max: 100;
+    value-now: 0;
   }
 
   styles [

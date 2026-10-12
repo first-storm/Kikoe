@@ -8,12 +8,13 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
+from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango
 
 from kikoe.core.choice import ModelChoice, available_models
 from kikoe.core.export import ExportFormat, export_filename, export_note
 from kikoe.core.formatting import transcript_features
 from kikoe.core.models import DisplayOptions, Note, NoteSummary, Recording, TranscriptionState
+from kikoe.core.preferences import WindowState, valid_window_state
 from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.core.speakers import identity_for
 from kikoe.core.transcription import LiveSnapshot, model_support
@@ -30,6 +31,7 @@ from kikoe.services.recording import RecordingSession, recover_recording, transc
 from kikoe.storage.captures import CaptureStore, capture_dir
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
+from kikoe.storage.settings import SettingsError
 from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.items import NoteItem
 from kikoe.ui.labels import (
@@ -44,7 +46,7 @@ from kikoe.ui.retranscribe_dialog import RetranscribeDialog
 from kikoe.ui.segment_editor import SegmentEditor
 from kikoe.ui.speaker_dialog import SpeakerDialog
 from kikoe.ui.speaker_editor import SpeakerEditor
-from kikoe.ui.tasks import USER_FACING_ERRORS, run_task, show_error
+from kikoe.ui.tasks import USER_FACING_ERRORS, run_task, show_error, show_notice
 from kikoe.ui.templates import ui_file
 
 log = logging.getLogger(__name__)
@@ -72,9 +74,10 @@ class Window(Adw.ApplicationWindow):
     window_title: Adw.WindowTitle = Gtk.Template.Child()
     note_menu_button: Gtk.MenuButton = Gtk.Template.Child()
     export_button: Gtk.MenuButton = Gtk.Template.Child()
-    export_popover: Gtk.Popover = Gtk.Template.Child()
-    export_srt_button: Gtk.Button = Gtk.Template.Child()
-    export_vtt_button: Gtk.Button = Gtk.Template.Child()
+    export_popover: Gtk.PopoverMenu = Gtk.Template.Child()
+    export_menu: Gio.Menu = Gtk.Template.Child()
+    export_footnote: Gtk.Box = Gtk.Template.Child()
+    export_unavailable_label: Gtk.Label = Gtk.Template.Child()
     display_options_button: Gtk.MenuButton = Gtk.Template.Child()
     timestamps_row: Adw.SwitchRow = Gtk.Template.Child()
     speakers_row: Adw.SwitchRow = Gtk.Template.Child()
@@ -83,13 +86,28 @@ class Window(Adw.ApplicationWindow):
     bottom_bar_slot: Adw.Bin = Gtk.Template.Child()
 
     search_bar: Gtk.SearchBar = Gtk.Template.Child()
+    search_button: Gtk.ToggleButton = Gtk.Template.Child()
     search_entry: Gtk.SearchEntry = Gtk.Template.Child()
-    notes_placeholder: Gtk.Label = Gtk.Template.Child()
+    notes_placeholder: Adw.StatusPage = Gtk.Template.Child()
 
     def __init__(
-        self, application: Gtk.Application, providers: ProviderRepository, notes: NoteRepository
+        self,
+        application: Gtk.Application,
+        providers: ProviderRepository,
+        notes: NoteRepository,
+        window_state: WindowState | None = None,
     ) -> None:
         super().__init__(application=application)
+        # A custom child can only be added after the menu model that refers to it is set.
+        self.export_popover.set_menu_model(self.export_menu)
+        self.export_popover.add_child(self.export_footnote, "export-notes")
+        self._geometry_timeout = 0
+        if window_state is not None:
+            self.set_default_size(window_state.width, window_state.height)
+            if window_state.maximized:
+                self.maximize()
+        for prop in ("default-width", "default-height", "maximized"):
+            self.connect(f"notify::{prop}", self._on_geometry_changed)
         # Custom widgets are added from code: Blueprint's linter cannot inspect their types.
         self.note_view = NoteView()
         self.note_view_slot.set_child(self.note_view)
@@ -98,6 +116,7 @@ class Window(Adw.ApplicationWindow):
         self._search_generation = 0
         self._search_task: asyncio.Task[None] | None = None
         self.search_bar.connect_entry(self.search_entry)
+        self.search_bar.set_key_capture_widget(self.notes_list)
         self._add_action("search-notes", self._on_search_notes)
         for action, keys in (
             ("new-note", ["<primary>n"]),
@@ -120,6 +139,8 @@ class Window(Adw.ApplicationWindow):
         self._add_action("rename-note", self._on_rename_note)
         self._add_action("copy-all-text", self._on_copy_all_text)
         self._add_action("delete-note", self._on_delete_note)
+        self._add_action("rename-note-row", self._on_rename_note_row, GLib.VariantType.new("s"))
+        self._add_action("delete-note-row", self._on_delete_note_row, GLib.VariantType.new("s"))
         self._add_action("export-txt", self._on_export_txt)
         self._add_action("export-md", self._on_export_md)
         self._add_action("export-srt", self._on_export_srt)
@@ -166,6 +187,27 @@ class Window(Adw.ApplicationWindow):
     def note(self) -> Note | None:
         """The note shown in the content pane."""
         return self._note
+
+    def _on_geometry_changed(self, _window: Gtk.Window, _spec: GObject.ParamSpec) -> None:
+        """Save the size shortly after the user stops resizing, not on every frame."""
+        if self._geometry_timeout:
+            GLib.source_remove(self._geometry_timeout)
+        self._geometry_timeout = GLib.timeout_add(1000, self._start_geometry_save)
+
+    def _start_geometry_save(self) -> bool:
+        self._geometry_timeout = 0
+        run_task(self._save_geometry(), self)
+        return GLib.SOURCE_REMOVE
+
+    async def _save_geometry(self) -> None:
+        width, height = self.get_default_size()
+        state = WindowState(width, height, self.is_maximized())
+        if not valid_window_state(state):
+            return
+        try:
+            await self._providers.update_window(state)
+        except SettingsError as error:
+            log.warning("Could not remember the window size: %s", error)
 
     def add_toast(self, toast: Adw.Toast) -> None:
         self.toast_overlay.add_toast(toast)
@@ -231,10 +273,12 @@ class Window(Adw.ApplicationWindow):
         self._selecting = True
         try:
             self._note_items.splice(0, self._note_items.get_n_items(), [NoteItem(s) for s in notes])
-            self.notes_placeholder.set_label(
-                _("No Matching Notes")
-                if self.search_entry.get_text().strip()
-                else _("No Notes Yet")
+            searching = bool(self.search_entry.get_text().strip())
+            self.notes_placeholder.set_title(
+                _("No Matching Notes") if searching else _("No Notes Yet")
+            )
+            self.notes_placeholder.set_icon_name(
+                "edit-find-symbolic" if searching else "document-edit-symbolic"
             )
         finally:
             self._selecting = False
@@ -271,7 +315,52 @@ class Window(Adw.ApplicationWindow):
             box.append(status)
         else:
             box.append(subtitle)
+        # Secondary click and long press offer Rename and Delete without opening the note.
+        secondary = Gtk.GestureClick(button=Gdk.BUTTON_SECONDARY)
+        secondary.connect("pressed", self._on_note_row_menu_requested, box, summary.note_id)
+        long_press = Gtk.GestureLongPress()
+        long_press.connect("pressed", self._on_note_row_menu_requested_at, box, summary.note_id)
+        box.add_controller(secondary)
+        box.add_controller(long_press)
         return box
+
+    def _on_note_row_menu_requested(
+        self, _gesture: Gtk.GestureClick, _n_press: int, x: float, y: float, *data: object
+    ) -> None:
+        box, note_id = data
+        assert isinstance(box, Gtk.Widget) and isinstance(note_id, str)
+        self._popup_note_row_menu(box, note_id, x, y)
+
+    def _on_note_row_menu_requested_at(
+        self, _gesture: Gtk.GestureLongPress, x: float, y: float, *data: object
+    ) -> None:
+        box, note_id = data
+        assert isinstance(box, Gtk.Widget) and isinstance(note_id, str)
+        self._popup_note_row_menu(box, note_id, x, y)
+
+    def _popup_note_row_menu(self, box: Gtk.Widget, note_id: str, x: float, y: float) -> None:
+        rename = Gio.MenuItem()
+        rename.set_label(_("_Rename…"))
+        rename.set_action_and_target_value("win.rename-note-row", GLib.Variant("s", note_id))
+        delete = Gio.MenuItem()
+        delete.set_label(_("_Delete Note"))
+        delete.set_action_and_target_value("win.delete-note-row", GLib.Variant("s", note_id))
+        menu = Gio.Menu()
+        menu.append_item(rename)
+        menu.append_item(delete)
+        popover = Gtk.PopoverMenu.new_from_model(menu)
+        popover.set_parent(box)
+        popover.set_has_arrow(False)
+        popover.set_halign(Gtk.Align.START)
+        rect = Gdk.Rectangle()
+        rect.x, rect.y, rect.width, rect.height = round(x), round(y), 1, 1
+        popover.set_pointing_to(rect)
+
+        def release(_popover: Gtk.Popover) -> None:
+            GLib.idle_add(popover.unparent)
+
+        popover.connect("closed", release)
+        popover.popup()
 
     def _select_row(self, note_id: str | None) -> bool:
         """Select the row of ``note_id`` without reopening it; False if it is not listed."""
@@ -361,7 +450,7 @@ class Window(Adw.ApplicationWindow):
             finally:
                 self._showing = False
             self.note_view.show_note(note)
-            self._update_subtitle_buttons(note)
+            self._update_subtitle_actions(note)
             self.bottom_bar.set_note(bool(note.recordings))
             if self._session is not None and self._session.state is not CaptureState.STOPPED:
                 self.note_view.show_recording(
@@ -408,10 +497,20 @@ class Window(Adw.ApplicationWindow):
         self.select_note(note.note_id)
 
     def _on_rename_note(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        note = self._note
-        if note is None:
-            return
-        entry = Gtk.Entry(text=note.title, activates_default=True)
+        if self._note is not None:
+            self._rename_note(self._note.note_id, self._note.title)
+
+    def _on_rename_note_row(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
+        summary = self._summary(param.get_string()) if param is not None else None
+        if summary is not None:
+            self._rename_note(summary.note_id, summary.title)
+
+    def _summary(self, note_id: str) -> NoteSummary | None:
+        return next((s for s in self._notes.notes if s.note_id == note_id), None)
+
+    def _rename_note(self, note_id: str, current_title: str) -> None:
+        entry = Gtk.Entry(text=current_title, activates_default=True)
+        entry.update_property([Gtk.AccessibleProperty.LABEL], [_("Note Title")])
         dialog = Adw.AlertDialog(heading=_("Rename Note"), extra_child=entry)
         dialog.add_response("cancel", _("_Cancel"))
         dialog.add_response("rename", _("_Rename"))
@@ -424,8 +523,8 @@ class Window(Adw.ApplicationWindow):
 
         def respond(_dialog: Adw.AlertDialog, response: str) -> None:
             title = entry.get_text().strip()
-            if response == "rename" and title and title != note.title:
-                run_task(self._notes.rename_note(note.note_id, title), self)
+            if response == "rename" and title and title != current_title:
+                run_task(self._notes.rename_note(note_id, title), self)
 
         entry.connect("changed", update_enabled)
         dialog.connect("response", respond)
@@ -433,11 +532,17 @@ class Window(Adw.ApplicationWindow):
         entry.grab_focus()
 
     def _on_delete_note(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        note = self._note
-        if note is None:
-            return
+        if self._note is not None:
+            self._delete_note(self._note.note_id, self._note.title)
+
+    def _on_delete_note_row(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
+        summary = self._summary(param.get_string()) if param is not None else None
+        if summary is not None:
+            self._delete_note(summary.note_id, summary.title)
+
+    def _delete_note(self, note_id: str, title: str) -> None:
         dialog = Adw.AlertDialog(
-            heading=_("Delete “{title}”?").format(title=note.title),
+            heading=_("Delete “{title}”?").format(title=title),
             body=_("Its transcript and original audio will be deleted. This cannot be undone."),
         )
         dialog.add_response("cancel", _("_Cancel"))
@@ -448,7 +553,7 @@ class Window(Adw.ApplicationWindow):
 
         def respond(_dialog: Adw.AlertDialog, response: str) -> None:
             if response == "delete":
-                run_task(self._notes.delete_note(note.note_id), self)
+                run_task(self._notes.delete_note(note_id), self)
 
         dialog.connect("response", respond)
         dialog.present(self)
@@ -669,19 +774,13 @@ class Window(Adw.ApplicationWindow):
             )
             self._show_note(note)
         except asyncio.CancelledError:
-            self.add_toast(
-                Adw.Toast(
-                    title=_("Re-transcription cancelled. Your text and audio have been kept.")
-                )
-            )
+            self.add_toast(Adw.Toast(title=_("Re-transcription cancelled")))
         except USER_FACING_ERRORS as error:
             log.warning("Re-transcription failed: %s", error)
-            self.add_toast(
-                Adw.Toast(
-                    title=_(
-                        "Re-transcription failed. Your text and audio have been kept. {error}"
-                    ).format(error=error)
-                )
+            show_error(
+                self,
+                _("{error}\n\nYour text and audio have been kept.").format(error=error),
+                _("Re-transcription Failed"),
             )
         finally:
             self._committing_transcription = False
@@ -691,23 +790,14 @@ class Window(Adw.ApplicationWindow):
 
     # Export
 
-    def _update_subtitle_buttons(self, note: Note) -> None:
-        """Subtitle buttons need timestamps; explain when they are unavailable."""
+    def _update_subtitle_actions(self, note: Note) -> None:
+        """Subtitle exports need timestamps; say so in the menu when they are unavailable."""
         has_times = any(
             Capability.TIMESTAMPS in transcript_features(r.segments) for r in note.recordings
         )
-        for button, fmt in (
-            (self.export_srt_button, ExportFormat.SRT),
-            (self.export_vtt_button, ExportFormat.WEBVTT),
-        ):
-            button.set_sensitive(has_times)
-            if has_times:
-                label = export_format_label(fmt)
-                button.set_tooltip_text(_("Export this note as {format}.").format(format=label))
-            else:
-                button.set_tooltip_text(
-                    _("This note has no timestamps, so subtitles are unavailable.")
-                )
+        for name in ("export-srt", "export-vtt"):
+            self._set_action_enabled(name, has_times)
+        self.export_unavailable_label.set_visible(not has_times)
 
     def _on_copy_all_text(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         note = self._note
@@ -793,7 +883,7 @@ class Window(Adw.ApplicationWindow):
             log.warning(
                 "Original audio for recording %s is missing: %s", recording.recording_id, source
             )
-            show_error(self, _("The original audio for this recording is not available."))
+            show_notice(self, _("The original audio is not available."))
             return
         except OSError as error:
             log.warning("Audio export of recording %s failed: %s", recording.recording_id, error)
@@ -833,7 +923,7 @@ class Window(Adw.ApplicationWindow):
             return None
         path = file.get_path()
         if path is None:
-            show_error(self, _("Only locations on this computer can be used."))
+            show_notice(self, _("Only locations on this computer can be used."))
             return None
         return Path(path)
 
@@ -884,8 +974,13 @@ class Window(Adw.ApplicationWindow):
         )
         self.notes_list.set_can_target(not busy)
         self._set_action_enabled("search-notes", not busy)
+        self.search_button.set_sensitive(not busy)
+        # Typing in the list starts a search, which must not hide the Stop controls.
+        self.search_bar.set_key_capture_widget(None if busy else self.notes_list)
         self._set_action_enabled("new-note", not busy and bool(self._providers.providers))
         self._set_action_enabled("delete-note", not busy and self._note is not None)
+        self._set_action_enabled("rename-note-row", not busy)
+        self._set_action_enabled("delete-note-row", not busy)
         self._set_action_enabled("rename-note", not busy and self._note is not None)
         self.export_button.set_sensitive(not busy)
         self._set_action_enabled("export-audio", not busy and self._note is not None)
@@ -955,7 +1050,7 @@ class Window(Adw.ApplicationWindow):
             return None
         path = file.get_path()
         if path is None:
-            show_error(self, _("Only files on this computer can be imported."))
+            show_notice(self, _("Only files on this computer can be imported."))
             return None
         return Path(path)
 
@@ -989,13 +1084,7 @@ class Window(Adw.ApplicationWindow):
         self.select_note(note.note_id)
 
     def _show_import_failure(self, message: str) -> None:
-        toast = Adw.Toast(title=_("Transcription failed"), button_label=_("_Details"), timeout=10)
-
-        def show_details(_toast: Adw.Toast) -> None:
-            show_error(self, message)
-
-        toast.connect("button-clicked", show_details)
-        self.add_toast(toast)
+        show_error(self, message, _("Transcription Failed"))
 
     # Recording
 
@@ -1205,7 +1294,7 @@ class Window(Adw.ApplicationWindow):
         try:
             await self._import_task
         except asyncio.CancelledError:
-            self.add_toast(Adw.Toast(title=_("Transcription cancelled. Your audio has been kept.")))
+            self.add_toast(Adw.Toast(title=_("Transcription cancelled")))
         finally:
             self._import_task = None
 

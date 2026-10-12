@@ -13,6 +13,7 @@ from kikoe.core.models import Segment
 from kikoe.core.validation import SegmentEditError, validate_segment_edit
 from kikoe.i18n import _
 from kikoe.storage.notes import NoteRepository
+from kikoe.ui.dialogs import confirm_discard
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
 
@@ -48,6 +49,8 @@ class SegmentEditor(Adw.Dialog):
         if segment.end is not None:
             self.end_row.set_text(format_timestamp_input(segment.end))
         self._validate()
+        initial = self._fields()
+        confirm_discard(self, lambda: self._fields() != initial)
 
     @Gtk.Template.Callback()
     def _on_start_row_changed(self, _row: Adw.EntryRow) -> None:
@@ -62,7 +65,7 @@ class SegmentEditor(Adw.Dialog):
 
     @Gtk.Template.Callback()
     def _on_cancel_button_clicked(self, _button: Gtk.Button) -> None:
-        self.close()
+        self.force_close()
 
     @Gtk.Template.Callback()
     def _on_save_button_clicked(self, _button: Gtk.Button) -> None:
@@ -83,9 +86,12 @@ class SegmentEditor(Adw.Dialog):
                 start_ms=_to_ms(start),
                 end_ms=_to_ms(end),
             )
-            self.close()
+            self.force_close()
         finally:
             self._validate()
+
+    def _fields(self) -> tuple[str, str, str]:
+        return self._text(), self.start_row.get_text(), self.end_row.get_text()
 
     def _text(self) -> str:
         buffer = self.text_view.get_buffer()

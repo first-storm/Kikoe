@@ -41,6 +41,17 @@ template $KikoeModelDialog: Adw.Dialog {
         Adw.EntryRow display_name_row {
           title: _("Display Name");
         }
+
+        Label error_label {
+          visible: false;
+          wrap: true;
+          xalign: 0;
+          margin-top: 6;
+
+          styles [
+            "error",
+          ]
+        }
       }
 
       Adw.PreferencesGroup {
@@ -80,18 +91,6 @@ template $KikoeModelDialog: Adw.Dialog {
           CheckButton diarization_check {
             valign: center;
           }
-        }
-      }
-
-      Adw.PreferencesGroup {
-        Label error_label {
-          visible: false;
-          wrap: true;
-          xalign: 0;
-
-          styles [
-            "error",
-          ]
         }
       }
 

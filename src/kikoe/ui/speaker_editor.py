@@ -6,6 +6,7 @@ from gi.repository import Adw, Gtk
 
 from kikoe.core.models import Note
 from kikoe.storage.notes import NoteRepository
+from kikoe.ui.dialogs import confirm_discard
 from kikoe.ui.speaker_row import speaker_label
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
@@ -25,6 +26,8 @@ class SpeakerEditor(Adw.Dialog):
         super().__init__()
         self._notes, self._note, self._person, self._match = notes, note, person, match
         self.name_row.set_text(speaker_label(note, person))
+        initial = self.name_row.get_text()
+        confirm_discard(self, lambda: self.name_row.get_text() != initial)
 
     @Gtk.Template.Callback()
     def _on_name_row_changed(self, _row: Adw.EntryRow) -> None:
@@ -32,7 +35,7 @@ class SpeakerEditor(Adw.Dialog):
 
     @Gtk.Template.Callback()
     def _on_cancel_button_clicked(self, _button: Gtk.Button) -> None:
-        self.close()
+        self.force_close()
 
     @Gtk.Template.Callback()
     def _on_save_button_clicked(self, _button: Gtk.Button) -> None:
@@ -44,11 +47,11 @@ class SpeakerEditor(Adw.Dialog):
             await self._notes.rename_speaker(
                 self._note.note_id, self._person, self.name_row.get_text()
             )
-            self.close()
+            self.force_close()
         finally:
             self.save_button.set_sensitive(bool(self.name_row.get_text().strip()))
 
     @Gtk.Template.Callback()
     def _on_match_row_activated(self, _row: Adw.ButtonRow) -> None:
-        self.close()
+        self.force_close()
         self._match()

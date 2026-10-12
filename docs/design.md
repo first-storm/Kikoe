@@ -11,7 +11,7 @@ Layout details from the draft that the implementation follows:
 - Transcript column at most 760 px wide. Recording header on one line: bold
   "Recording N", then the dimmed meta line, then (later) the recording buttons, with a
   separator below. Each segment has a left column with the speaker name (bold, colored)
-  above the timestamp (small monospace, dimmed), and the text on the right in slightly
+  above the timestamp (small tabular digits, dimmed), and the text on the right in slightly
   larger type. The left column disappears when both timestamps and speakers are hidden.
 - Bottom bar (below the content pane only, libadwaita `toolbar` style, flat buttons):
   model button with a cloud icon, the model name in bold and the provider dimmed; then
@@ -68,9 +68,9 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 - Header: "Recording 1" + meta line "Today 14:30 · 0:58 · Deepgram nova-3 ·
   Timestamps, Speakers"; appended ones say "Today 15:12 appended · 0:41 · …".
 - Header buttons: *Play This Recording*, *Recording Menu*: "Re-transcribe…",
-  "Export Original Audio…", "Delete This Recording" (destructive).
+  "Export Original Audio…", "Delete Recording" (destructive).
 - Segments: speaker name (colored, clickable → "Rename Speaker"), timestamp
-  (`00:09`, monospace), text. Speaker/timestamp columns hide per display options.
+  (`00:09`, tabular digits), text. Speaker/timestamp columns hide per display options.
 
 **Bottom bar** (recording controls):
 - *Transcription Model* picker button showing "nova-3 · Deepgram". Popover lists models
@@ -99,7 +99,7 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   with "Export Original Audio…"; the bottom bar's model picker with its Timestamps/Speakers
   options (they set what the next transcription requests) and hint text, and "Import Audio…", which
   adds to the open note or creates one named after the file, with progress, Cancel and a
-  failure toast; Record/Append Recording, pause/resume, Stop, live level meter, batch
+  failure dialog; Record/Append Recording, pause/resume, Stop, live level meter, batch
   transcription after stopping, retained-audio retry, and startup recovery.
 - M6 implemented: unmatched-speaker banner; recording playback/stop; clickable colored
   speaker names with Rename Speaker and Match Speakers; reversible many-to-one matching
@@ -130,7 +130,7 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   appended recording section. Models without effective realtime support use this branch.
   Deepgram, OpenAI and Gemini native live endpoints use the realtime branch.
 - Bottom bar follows the HTML's order: 10 px red recording indicator, elapsed time
-  `00:31` (monospace/tabular digits), 28 live level bars (3 px wide, up to 28 px high),
+  `00:31` (tabular digits), 28 live level bars (3 px wide, up to 28 px high),
   model/options summary, round icon-only "Pause Recording" button, and a
   `suggested-action` "Stop" button with stop icon (Stop saves, so it is not styled
   destructive). The normal model/import/record controls are replaced.
@@ -163,7 +163,8 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 
 ## 3. First run (no providers, no notes)
 
-- Sidebar empty state: "No Notes Yet".
+- Sidebar empty state: compact status page "No Notes Yet" (icon `document-edit-symbolic`;
+  "No Matching Notes" with `edit-find-symbolic` while searching).
 - Content: status page with app icon, title "Welcome to Kikoe", description "Kikoe
   turns speech into text using cloud services. Add a provider and a model first, then
   record or import audio.", suggested pill button "Add Provider".
@@ -171,7 +172,8 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 
 ## 3b. No note selected (providers exist)
 
-- Content: status page with app icon, title "No Note Selected", description "Create
+- Content: status page with the symbolic `document-edit-symbolic` icon (the app icon is
+  reserved for the welcome page), title "No Note Selected", description "Create
   a note, then record or import audio into it.", suggested pill button "New Note"
   (creates a blank note, same as the sidebar button and `Ctrl+N`).
 - The bottom bar is hidden in this state; it appears once a note is opened.
@@ -270,7 +272,7 @@ Pushed as a subpage (back button) titled with the provider name.
 ## Visual notes
 
 - Fonts in the mock: Cantarell for UI, Source Code Pro for timestamps. In GTK, use the
-  system font and the `monospace`/`numeric` style classes instead of hardcoding fonts.
+  system font and the `numeric` style class (tabular digits) instead of hardcoding fonts.
 - Accent blue `#1c71d8`, destructive red: use libadwaita's accent/destructive colors,
   not literal values.
 - All popovers and dialogs close on Escape and on outside click (stock behavior).
@@ -279,16 +281,16 @@ Pushed as a subpage (back button) titled with the provider name.
 ## 9. Preferences — General (M7)
 
 - "Transcription" group: Default Model combo (provider and model name), then Transcription
-  Language entry with an apply button. Empty means automatic detection; the tooltip gives
-  `zh`, `en` and `ja` examples. Invalid codes show an error state and are not saved.
-- "Audio" group: Microphone (used for new recordings) and Speaker (used for playback)
+  Language entry with an apply button. Empty means automatic detection; the group description gives
+  `zh`, `en` and `ja` examples (not a tooltip, so touch users see it). Invalid codes show an error state and are not saved.
+- "Audio" group: Microphone (used for new recordings) and Audio Output (used for playback)
   combo rows. The first item is "System Default", which is also the initial choice. The
   choice is saved by device name; a saved device that is unplugged stays listed as
   "<name> (Unavailable)" and the system default is used until it returns. A running
   recording keeps the device it started with.
-- "Storage" group: Data Directory row showing the current path; activating opens the
-  directory. This release does not move the library or change its location.
-- "Troubleshooting" group: Log Directory row opening local diagnostics. The description
+- "Storage" group: Data Folder row showing the current path; activating opens the
+  folder. This release does not move the library or change its location.
+- "Troubleshooting" group: Log Folder row opening local diagnostics. The description
   states that logs stay on this device and users can attach them when reporting problems.
 - Most recently selected model takes priority on restart, followed by the default model,
   then the first configured model. Missing models fall back in that order. Changing the
@@ -308,3 +310,20 @@ controls. Import from the sidebar opens the content pane to show progress and Ca
 Icon-only application controls have translated accessibility labels; pause/resume and
 play/stop labels change with their actions. Dialogs remain keyboard navigable and
 scroll at 360 px. Visible error states have explanatory text in addition to color.
+
+HIG audit follow-ups:
+- Search Notes is a toggle button bound to the search bar (no separate close button), and
+  typing in the notes list starts a search unless a capture or import is running.
+- Export is a menu of four items that open a save dialog (hence the ellipsis), with the
+  footnote as a custom menu child; subtitle items are disabled, with an explanation in
+  that footnote, when the note has no timestamps.
+- Keyboard Shortcuts is an `Adw.ShortcutsDialog`; Ctrl+W closes the window (the same
+  save-then-close path as Quit).
+- Secondary click or long press on a sidebar note offers Rename… and Delete Note without
+  opening the note.
+- Edit Segment, Rename Speaker and Add/Edit Model ask “Discard Changes?” when closed with
+  Escape or a click outside while they hold unsaved input; Cancel discards immediately.
+- Failures the user must read (transcription, re-transcription, capture) use a dialog;
+  small self-explanatory ones (a missing folder or file, playback problems) use a toast.
+  Toast text stays short; details go in dialogs.
+- The window size and maximized state are remembered between launches.

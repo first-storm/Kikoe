@@ -17,7 +17,7 @@ template $KikoeTranscriptRow: Box {
         yalign: 0;
 
         styles [
-          "caption-heading",
+          "heading",
         ]
       }
 
@@ -93,7 +93,6 @@ template $KikoeTranscriptRow: Box {
     Box meta_box {
       orientation: vertical;
       spacing: 1;
-      margin-top: 3;
 
       Button speaker_button {
         halign: start;
@@ -124,7 +123,6 @@ template $KikoeTranscriptRow: Box {
 
         styles [
           "caption",
-          "monospace",
           "numeric",
           "dim-label",
         ]
@@ -137,6 +135,7 @@ template $KikoeTranscriptRow: Box {
       hexpand: true;
       wrap: true;
       wrap-mode: word_char;
+      selectable: true;
 
       styles [
         "transcript-text",

@@ -1,99 +1,62 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $KikoeShortcutsDialog: Adw.Dialog {
-  title: _("Keyboard Shortcuts");
-  content-width: 440;
-  content-height: 520;
+Adw.ShortcutsDialog shortcuts_dialog {
+  Adw.ShortcutsSection {
+    title: _("Notes");
 
-  child: Adw.ToolbarView {
-    [top]
-    Adw.HeaderBar {}
+    Adw.ShortcutsItem {
+      title: _("New Note");
+      accelerator: "<Primary>n";
+    }
 
-    content: ScrolledWindow {
-      hscrollbar-policy: never;
+    Adw.ShortcutsItem {
+      title: _("Search Notes");
+      accelerator: "<Primary>f";
+    }
 
-      child: Adw.PreferencesPage {
-        Adw.PreferencesGroup {
-          title: _("Notes");
+    Adw.ShortcutsItem {
+      title: _("Import Audio…");
+      accelerator: "<Primary>o";
+    }
 
-          Adw.ActionRow {
-            title: _("New Note");
+    Adw.ShortcutsItem {
+      title: _("Rename Note…");
+      accelerator: "F2";
+    }
 
-            [suffix]
-            Adw.ShortcutLabel {
-              accelerator: "<Primary>n";
-            }
-          }
+    Adw.ShortcutsItem {
+      title: _("Close Search");
+      accelerator: "Escape";
+    }
+  }
 
-          Adw.ActionRow {
-            title: _("Search Notes");
+  Adw.ShortcutsSection {
+    title: _("General");
 
-            [suffix]
-            Adw.ShortcutLabel {
-              accelerator: "<Primary>f";
-            }
-          }
+    Adw.ShortcutsItem {
+      title: _("Main Menu");
+      accelerator: "F10";
+    }
 
-          Adw.ActionRow {
-            title: _("Import Audio…");
+    Adw.ShortcutsItem {
+      title: _("Preferences");
+      accelerator: "<Primary>comma";
+    }
 
-            [suffix]
-            Adw.ShortcutLabel {
-              accelerator: "<Primary>o";
-            }
-          }
+    Adw.ShortcutsItem {
+      title: _("Keyboard Shortcuts");
+      accelerator: "<Primary>question";
+    }
 
-          Adw.ActionRow {
-            title: _("Rename Note…");
+    Adw.ShortcutsItem {
+      title: _("Close Window");
+      accelerator: "<Primary>w";
+    }
 
-            [suffix]
-            Adw.ShortcutLabel {
-              accelerator: "F2";
-            }
-          }
-
-          Adw.ActionRow {
-            title: _("Close Search");
-
-            [suffix]
-            Adw.ShortcutLabel {
-              accelerator: "Escape";
-            }
-          }
-        }
-
-        Adw.PreferencesGroup {
-          title: _("Application");
-
-          Adw.ActionRow {
-            title: _("Preferences");
-
-            [suffix]
-            Adw.ShortcutLabel {
-              accelerator: "<Primary>comma";
-            }
-          }
-
-          Adw.ActionRow {
-            title: _("Keyboard Shortcuts");
-
-            [suffix]
-            Adw.ShortcutLabel {
-              accelerator: "<Primary>question";
-            }
-          }
-
-          Adw.ActionRow {
-            title: _("Quit");
-
-            [suffix]
-            Adw.ShortcutLabel {
-              accelerator: "<Primary>q";
-            }
-          }
-        }
-      };
-    };
-  };
+    Adw.ShortcutsItem {
+      title: _("Quit");
+      accelerator: "<Primary>q";
+    }
+  }
 }

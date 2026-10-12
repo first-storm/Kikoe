@@ -23,6 +23,7 @@ template $KikoeProviderPage: Adw.NavigationPage {
     content: Adw.PreferencesPage {
       Adw.PreferencesGroup {
         title: _("Connection");
+        description: _("The API type decides the request format. Most providers offer an “OpenAI-compatible” API.");
 
         Adw.EntryRow name_row {
           title: _("Name");
@@ -53,20 +54,6 @@ template $KikoeProviderPage: Adw.NavigationPage {
         Adw.PasswordEntryRow api_key_row {
           title: _("API Key");
           apply => $_on_row_apply();
-        }
-
-        Label {
-          label: _("The API type decides the request format. Most providers offer an “OpenAI-compatible” API.");
-          wrap: true;
-          xalign: 0;
-          margin-top: 12;
-          margin-start: 6;
-          margin-end: 6;
-
-          styles [
-            "caption",
-            "dim-label",
-          ]
         }
 
         Label error_label {

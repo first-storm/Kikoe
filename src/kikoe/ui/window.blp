@@ -17,6 +17,8 @@ template $KikoeWindow: Adw.ApplicationWindow {
     }
   }
 
+  // Not redundant with the breakpoint above: libadwaita checks each breakpoint on its own
+  // when computing the minimum width, so this one must collapse the split view as well.
   Adw.Breakpoint {
     condition ("max-width: 480sp")
 
@@ -63,21 +65,19 @@ template $KikoeWindow: Adw.ApplicationWindow {
             }
 
             [end]
-            Button {
+            ToggleButton search_button {
               icon-name: "system-search-symbolic";
               tooltip-text: _("Search Notes");
+              active: bind search_bar.search-mode-enabled bidirectional;
 
               accessibility {
                 label: _("Search Notes");
               }
-
-              action-name: "win.search-notes";
             }
           }
 
           [top]
           SearchBar search_bar {
-            show-close-button: true;
             notify::search-mode-enabled => $_on_search_bar_notify_search_mode_enabled();
 
             child: SearchEntry search_entry {
@@ -101,12 +101,13 @@ template $KikoeWindow: Adw.ApplicationWindow {
               ]
 
               [placeholder]
-              Label notes_placeholder {
-                label: _("No Notes Yet");
+              Adw.StatusPage notes_placeholder {
+                icon-name: "document-edit-symbolic";
+                title: _("No Notes Yet");
                 valign: center;
 
                 styles [
-                  "dim-label",
+                  "compact",
                 ]
               }
             };
@@ -154,88 +155,7 @@ template $KikoeWindow: Adw.ApplicationWindow {
 
               visible: false;
 
-              popover: Popover export_popover {
-                child: Box {
-                  orientation: vertical;
-                  spacing: 2;
-                  width-request: 280;
-
-                  Button {
-                    action-name: "win.export-txt";
-
-                    styles [
-                      "flat",
-                    ]
-
-                    child: Label {
-                      label: _("Plain Text (.txt)");
-                      xalign: 0;
-                      hexpand: true;
-                    };
-                  }
-
-                  Button {
-                    action-name: "win.export-md";
-
-                    styles [
-                      "flat",
-                    ]
-
-                    child: Label {
-                      label: _("Markdown (.md)");
-                      xalign: 0;
-                      hexpand: true;
-                    };
-                  }
-
-                  Button export_srt_button {
-                    action-name: "win.export-srt";
-
-                    styles [
-                      "flat",
-                    ]
-
-                    child: Label {
-                      label: _("SRT Subtitles (.srt)");
-                      xalign: 0;
-                      hexpand: true;
-                    };
-                  }
-
-                  Button export_vtt_button {
-                    action-name: "win.export-vtt";
-
-                    styles [
-                      "flat",
-                    ]
-
-                    child: Label {
-                      label: _("WebVTT Subtitles (.vtt)");
-                      xalign: 0;
-                      hexpand: true;
-                    };
-                  }
-
-                  Separator {}
-
-                  Label {
-                    label: _(
-                      "Speaker labels follow the current display settings. Subtitle formats always include timestamps."
-                    );
-                    wrap: true;
-                    max-width-chars: 36;
-                    xalign: 0;
-                    margin-start: 12;
-                    margin-end: 12;
-                    margin-bottom: 6;
-
-                    styles [
-                      "caption",
-                      "dim-label",
-                    ]
-                  }
-                };
-              };
+              popover: PopoverMenu export_popover {};
             }
 
             [end]
@@ -308,7 +228,7 @@ template $KikoeWindow: Adw.ApplicationWindow {
               name: "empty";
 
               child: Adw.StatusPage {
-                icon-name: "io.github.first_storm.Kikoe";
+                icon-name: "document-edit-symbolic";
                 title: _("No Note Selected");
                 description: _("Create a note, then record or import audio into it.");
 
@@ -367,6 +287,41 @@ template $KikoeWindow: Adw.ApplicationWindow {
   };
 }
 
+/* Added to export_popover from code once its menu model is set. */
+Box export_footnote {
+  orientation: vertical;
+  spacing: 6;
+  margin-start: 12;
+  margin-end: 12;
+  margin-top: 6;
+  margin-bottom: 6;
+  width-request: 260;
+
+  Label {
+    label: _("Speaker labels follow the current display settings. Subtitle formats always include timestamps.");
+    wrap: true;
+    max-width-chars: 36;
+    xalign: 0;
+
+    styles [
+      "caption",
+      "dim-label",
+    ]
+  }
+
+  Label export_unavailable_label {
+    label: _("Subtitles are unavailable because this note has no timestamps.");
+    wrap: true;
+    max-width-chars: 36;
+    xalign: 0;
+    visible: false;
+
+    styles [
+      "caption",
+    ]
+  }
+}
+
 menu primary_menu {
   section {
     item {
@@ -389,6 +344,36 @@ menu primary_menu {
     item {
       label: _("_About Kikoe");
       action: "app.about";
+    }
+  }
+}
+
+menu export_menu {
+  section {
+    item {
+      label: _("_Plain Text (.txt)…");
+      action: "win.export-txt";
+    }
+
+    item {
+      label: _("_Markdown (.md)…");
+      action: "win.export-md";
+    }
+
+    item {
+      label: _("_SRT Subtitles (.srt)…");
+      action: "win.export-srt";
+    }
+
+    item {
+      label: _("_WebVTT Subtitles (.vtt)…");
+      action: "win.export-vtt";
+    }
+  }
+
+  section {
+    item {
+      custom: "export-notes";
     }
   }
 }

@@ -116,7 +116,7 @@ message. macOS/Windows hardware verification remains part of M8.
 
 The application is licensed under GPL-3.0-or-later; AppStream metadata remains CC0-1.0.
 Ship LICENSE and the full-color and symbolic icons. The UI now requires libadwaita 1.8
-(for Adw.ShortcutLabel). Build templates and catalogs before building a wheel:
+(for Adw.ShortcutsDialog). Build templates and catalogs before building a wheel:
 
 ```sh
 uv run scripts/build_ui.py
@@ -137,7 +137,7 @@ dialogs are also inspected at 360 px. No provider accounts or actual microphone 
 used for M7. Unit tests simulate missing native gettext bindings; real macOS/Windows
 packaged startup remains an M8 requirement.
 
-Logs are local and bounded (2 MiB plus three backups). Opening a data/log directory
+Logs are local and bounded (2 MiB plus three backups). Opening a data/log folder
 uses Gtk.FileLauncher, allowing the platform's launcher/portal to handle it. A write
 failure in the log directory leaves terminal diagnostics available. Changing/migrating
-the data directory and automatic error uploads are not implemented.
+the data folder and automatic error uploads are not implemented.

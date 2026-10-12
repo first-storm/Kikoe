@@ -5,6 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kikoe 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
+"POT-Creation-Date: 2026-10-13 00:19+1100\n"
 "PO-Revision-Date: 2026-10-12 00:00+0000\n"
 "Last-Translator: first-storm\n"
 "Language-Team: Simplified Chinese\n"
@@ -14,12 +15,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: src/kikoe/application.py:121
-msgid "Could not open the directory."
-msgstr "无法打开目录。"
+#: src/kikoe/application.py:130
+msgid "Could not open the folder."
+msgstr "无法打开文件夹。"
 
 #. Translators: replace with your name(s), one per line.
-#: src/kikoe/application.py:148
+#: src/kikoe/application.py:155
 msgid "translator-credits"
 msgstr "first-storm"
 
@@ -59,45 +60,45 @@ msgstr "音频转换失败：{detail}"
 msgid "Could not decode the audio: {detail}"
 msgstr "无法解码音频：{detail}"
 
-#: src/kikoe/media/player.py:68
+#: src/kikoe/media/player.py:73
 msgid "No default audio output device is available."
 msgstr "没有可用的默认音频输出设备。"
 
-#: src/kikoe/media/player.py:101
+#: src/kikoe/media/player.py:110
 #, python-brace-format
 msgid "Could not play the audio. Check your output device. ({detail})"
 msgstr "无法播放音频，请检查输出设备。（{detail}）"
 
-#: src/kikoe/media/player.py:112
+#: src/kikoe/media/player.py:121
 #, python-brace-format
 msgid "Could not close the audio output device. ({detail})"
 msgstr "无法关闭音频输出设备。（{detail}）"
 
-#: src/kikoe/media/recorder.py:102
+#: src/kikoe/media/recorder.py:107
 #, python-brace-format
 msgid ""
 "Could not open the microphone. Check your input device and microphone "
 "permissions. ({detail})"
 msgstr "无法打开麦克风，请检查输入设备和麦克风权限。（{detail}）"
 
-#: src/kikoe/media/recorder.py:112
+#: src/kikoe/media/recorder.py:117
 msgid "The microphone lost audio. The captured audio has been kept."
 msgstr "麦克风出现音频丢失，已保留录下的音频。"
 
-#: src/kikoe/media/recorder.py:124
+#: src/kikoe/media/recorder.py:129
 msgid "Audio could not be saved fast enough. The captured audio has been kept."
 msgstr "音频保存速度不足，已保留录下的音频。"
 
-#: src/kikoe/media/recorder.py:147
+#: src/kikoe/media/recorder.py:152
 msgid "The microphone disconnected. The captured audio has been kept."
 msgstr "麦克风已断开，已保留录下的音频。"
 
-#: src/kikoe/media/recorder.py:172
+#: src/kikoe/media/recorder.py:177
 #, python-brace-format
 msgid "The microphone stopped responding. ({detail})"
 msgstr "麦克风停止响应。（{detail}）"
 
-#: src/kikoe/media/recorder.py:191
+#: src/kikoe/media/recorder.py:196
 #, python-brace-format
 msgid "Could not close the microphone. ({detail})"
 msgstr "无法关闭麦克风。（{detail}）"
@@ -181,7 +182,7 @@ msgstr "实时转录失败，已保留音频。"
 msgid "OpenRouter supports file transcription only."
 msgstr "OpenRouter 仅支持文件转录。"
 
-#: src/kikoe/services/importer.py:66 src/kikoe/ui/bottom_bar.py:193
+#: src/kikoe/services/importer.py:66 src/kikoe/ui/bottom_bar.py:194
 msgid "Choose a file transcription model to import audio."
 msgstr "请选择文件转录模型来导入音频。"
 
@@ -209,29 +210,38 @@ msgid ""
 "open it."
 msgstr "笔记库由较新版本的 Kikoe 创建，请更新 Kikoe 后再打开。"
 
-#: src/kikoe/storage/library.py:245
+#: src/kikoe/storage/library.py:247 src/kikoe/storage/library.py:381
+#: src/kikoe/storage/library.py:403
+msgid "This recording no longer exists."
+msgstr "这段录音已不存在。"
+
+#: src/kikoe/storage/library.py:263
 #, python-brace-format
 msgid "Could not copy the audio file into the library: {error}"
 msgstr "无法将音频文件复制到笔记库：{error}"
 
-#: src/kikoe/storage/library.py:343
+#: src/kikoe/storage/library.py:370 src/kikoe/ui/segment_editor.py:126
+msgid "Enter transcript text."
+msgstr "请输入转录文字。"
+
+#: src/kikoe/storage/library.py:372 src/kikoe/ui/segment_editor.py:128
+msgid "The end time must be after the start time."
+msgstr "结束时间必须晚于开始时间。"
+
+#: src/kikoe/storage/library.py:387
 msgid "Enter a speaker name."
 msgstr "请输入说话人姓名。"
 
-#: src/kikoe/storage/library.py:359
-msgid "This recording no longer exists."
-msgstr "这段录音已不存在。"
-
-#: src/kikoe/storage/library.py:365
+#: src/kikoe/storage/library.py:409
 msgid "The speaker selection is no longer available."
 msgstr "所选说话人已不可用。"
 
-#: src/kikoe/storage/library.py:528
+#: src/kikoe/storage/library.py:572
 #, python-brace-format
 msgid "The note library could not be read or saved: {error}"
 msgstr "无法读取或保存笔记库：{error}"
 
-#: src/kikoe/storage/library.py:554
+#: src/kikoe/storage/library.py:598
 msgid "This note no longer exists."
 msgstr "这篇笔记已不存在。"
 
@@ -240,7 +250,7 @@ msgstr "这篇笔记已不存在。"
 msgid "Provider {provider_id} no longer exists."
 msgstr "服务商 {provider_id} 已不存在。(_I)"
 
-#: src/kikoe/storage/providers.py:141
+#: src/kikoe/storage/providers.py:153
 #, python-brace-format
 msgid "Model {replacing_id} no longer exists."
 msgstr "模型 {replacing_id} 已不存在。(_I)"
@@ -252,102 +262,134 @@ msgid ""
 "Details: {error}"
 msgstr "没有可用的安全凭据存储，无法保存 API 密钥。详情：{error}"
 
-#: src/kikoe/storage/settings.py:56
+#: src/kikoe/storage/settings.py:57
 #, python-brace-format
 msgid "Could not read the settings file: {error}"
 msgstr "无法读取设置文件：{error}"
 
-#: src/kikoe/storage/settings.py:64
+#: src/kikoe/storage/settings.py:69
 #, python-brace-format
 msgid "The settings file {detail} is damaged or not understood: {error}"
 msgstr "设置文件 {detail} 已损坏或无法解析：{error}"
 
-#: src/kikoe/storage/settings.py:90
+#: src/kikoe/storage/settings.py:98
 #, python-brace-format
 msgid "Could not save the settings file: {error}"
 msgstr "无法保存设置文件：{error}"
 
-#: src/kikoe/ui/bottom_bar.py:118
+#: src/kikoe/ui/bottom_bar.py:119
 msgid "_Append Recording"
 msgstr "追加录音(_A)"
 
-#: src/kikoe/ui/bottom_bar.py:118 src/kikoe/ui/bottom_bar.ui:179
+#: src/kikoe/ui/bottom_bar.py:119 src/kikoe/ui/bottom_bar.ui:216
 msgid "_Record"
 msgstr "录音(_R)"
 
-#: src/kikoe/ui/bottom_bar.py:139 src/kikoe/ui/bottom_bar.ui:276
-#: src/kikoe/ui/bottom_bar.ui:278
+#: src/kikoe/ui/bottom_bar.py:140 src/kikoe/ui/bottom_bar.ui:315
+#: src/kikoe/ui/bottom_bar.ui:318
 msgid "Pause Recording"
 msgstr "暂停录音"
 
-#: src/kikoe/ui/bottom_bar.py:139
+#: src/kikoe/ui/bottom_bar.py:140
 msgid "Resume Recording"
 msgstr "继续录音"
 
-#: src/kikoe/ui/bottom_bar.py:174
+#: src/kikoe/ui/bottom_bar.py:175
 msgid "No Model"
 msgstr "未选择模型"
 
-#: src/kikoe/ui/bottom_bar.py:176
+#: src/kikoe/ui/bottom_bar.py:177
 msgid "Add a model in Preferences first"
 msgstr "请先在偏好设置中添加模型"
 
-#: src/kikoe/ui/bottom_bar.py:177 src/kikoe/ui/bottom_bar.ui:29
-#: src/kikoe/ui/bottom_bar.ui:31
+#: src/kikoe/ui/bottom_bar.py:178 src/kikoe/ui/bottom_bar.ui:43
+#: src/kikoe/ui/bottom_bar.ui:45
 msgid "Transcription Model"
 msgstr "转录模型"
 
-#: src/kikoe/ui/bottom_bar.py:182
+#: src/kikoe/ui/bottom_bar.py:183
 #, python-brace-format
 msgid ""
 "{model} · {provider}\n"
 "{hint}"
-msgstr "{model} · {provider}\n{hint}"
+msgstr ""
+"{model} · {provider}\n"
+"{hint}"
 
-#: src/kikoe/ui/bottom_bar.ui:94
-msgid "_Manage Providers and Models…"
-msgstr "管理服务商和模型…(_M)"
+#: src/kikoe/ui/bottom_bar.py:192 src/kikoe/ui/bottom_bar.ui:181
+#: src/kikoe/ui/shortcuts.ui:27
+msgid "Import Audio…"
+msgstr "导入音频…"
 
-#: src/kikoe/ui/bottom_bar.ui:114
+#: src/kikoe/ui/bottom_bar.ui:115
+msgid "Options"
+msgstr "选项"
+
+#: src/kikoe/ui/bottom_bar.ui:127
 msgid "_Timestamps"
 msgstr "时间戳(_T)"
 
-#: src/kikoe/ui/bottom_bar.ui:130
+#: src/kikoe/ui/bottom_bar.ui:134
 msgid "_Speakers"
 msgstr "说话人(_S)"
 
-#: src/kikoe/ui/bottom_bar.ui:159 src/kikoe/ui/window.ui:378
+#: src/kikoe/ui/bottom_bar.ui:159
+msgid "_Manage Providers and Models…"
+msgstr "管理服务商和模型…(_M)"
+
+#: src/kikoe/ui/bottom_bar.ui:183 src/kikoe/ui/window.py:1035
+msgid "Import Audio"
+msgstr "导入音频"
+
+#: src/kikoe/ui/bottom_bar.ui:195 src/kikoe/ui/window.ui:337
 msgid "_Import Audio…"
 msgstr "导入音频…(_I)"
 
-#: src/kikoe/ui/bottom_bar.ui:211 src/kikoe/ui/model_dialog.ui:21
+#: src/kikoe/ui/bottom_bar.ui:249 src/kikoe/ui/model_dialog.ui:21
 #: src/kikoe/ui/provider_page.py:185 src/kikoe/ui/retranscribe_dialog.ui:21
-#: src/kikoe/ui/speaker_dialog.ui:21 src/kikoe/ui/speaker_editor.ui:20
-#: src/kikoe/ui/window.py:417 src/kikoe/ui/window.py:444
+#: src/kikoe/ui/segment_editor.ui:20 src/kikoe/ui/speaker_dialog.ui:21
+#: src/kikoe/ui/speaker_editor.ui:20 src/kikoe/ui/window.py:515
+#: src/kikoe/ui/window.py:548 src/kikoe/ui/window.py:576
 msgid "_Cancel"
 msgstr "取消(_C)"
 
-#: src/kikoe/ui/bottom_bar.ui:297
+#: src/kikoe/ui/bottom_bar.ui:334
 msgid "_Stop"
 msgstr "停止(_S)"
 
-#: src/kikoe/ui/labels.py:31 src/kikoe/ui/provider_page.ui:46
+#: src/kikoe/ui/dialogs.py:23
+msgid "Discard Changes?"
+msgstr "放弃更改？"
+
+#: src/kikoe/ui/dialogs.py:24
+msgid "Your changes have not been saved and will be lost."
+msgstr "更改尚未保存，放弃后将会丢失。"
+
+#: src/kikoe/ui/dialogs.py:26
+msgid "_Keep Editing"
+msgstr "继续编辑(_K)"
+
+#: src/kikoe/ui/dialogs.py:27
+msgid "_Discard"
+msgstr "放弃(_D)"
+
+#: src/kikoe/ui/labels.py:31 src/kikoe/ui/provider_page.ui:47
 msgid "Deepgram"
 msgstr "Deepgram"
 
-#: src/kikoe/ui/labels.py:33 src/kikoe/ui/provider_page.ui:47
+#: src/kikoe/ui/labels.py:33 src/kikoe/ui/provider_page.ui:48
 msgid "OpenAI"
 msgstr "OpenAI"
 
-#: src/kikoe/ui/labels.py:35 src/kikoe/ui/provider_page.ui:49
+#: src/kikoe/ui/labels.py:35 src/kikoe/ui/provider_page.ui:50
 msgid "OpenRouter"
 msgstr "OpenRouter"
 
-#: src/kikoe/ui/labels.py:37 src/kikoe/ui/provider_page.ui:50
+#: src/kikoe/ui/labels.py:37 src/kikoe/ui/provider_page.ui:51
 msgid "Gemini AI Studio"
 msgstr "Gemini AI Studio"
 
-#: src/kikoe/ui/labels.py:39 src/kikoe/ui/provider_page.ui:48
+#: src/kikoe/ui/labels.py:39 src/kikoe/ui/provider_page.ui:49
 msgid "OpenAI-compatible"
 msgstr "OpenAI 兼容"
 
@@ -355,32 +397,33 @@ msgstr "OpenAI 兼容"
 msgid "Realtime"
 msgstr "实时"
 
-#: src/kikoe/ui/labels.py:47 src/kikoe/ui/model_dialog.ui:73
-#: src/kikoe/ui/retranscribe_dialog.ui:114 src/kikoe/ui/window.py:989
+#: src/kikoe/ui/labels.py:47 src/kikoe/ui/model_dialog.ui:84
+#: src/kikoe/ui/retranscribe_dialog.ui:51 src/kikoe/ui/segment_editor.ui:77
+#: src/kikoe/ui/window.py:1134
 msgid "Timestamps"
 msgstr "时间戳"
 
-#: src/kikoe/ui/labels.py:49 src/kikoe/ui/window.py:991
+#: src/kikoe/ui/labels.py:49 src/kikoe/ui/window.py:1136
 msgid "Speakers"
 msgstr "说话人"
 
-#: src/kikoe/ui/labels.py:55 src/kikoe/ui/window.py:995
+#: src/kikoe/ui/labels.py:55 src/kikoe/ui/window.py:1140
 msgid "Text only"
 msgstr "仅文字"
 
-#: src/kikoe/ui/labels.py:61 src/kikoe/ui/window.ui:167
+#: src/kikoe/ui/labels.py:61
 msgid "Plain Text (.txt)"
 msgstr "纯文本（.txt）"
 
-#: src/kikoe/ui/labels.py:63 src/kikoe/ui/window.ui:182
+#: src/kikoe/ui/labels.py:63
 msgid "Markdown (.md)"
 msgstr "Markdown（.md）"
 
-#: src/kikoe/ui/labels.py:65 src/kikoe/ui/window.ui:197
+#: src/kikoe/ui/labels.py:65
 msgid "SRT Subtitles (.srt)"
 msgstr "SRT 字幕（.srt）"
 
-#: src/kikoe/ui/labels.py:67 src/kikoe/ui/window.ui:212
+#: src/kikoe/ui/labels.py:67
 msgid "WebVTT Subtitles (.vtt)"
 msgstr "WebVTT 字幕（.vtt）"
 
@@ -466,8 +509,8 @@ msgstr "正在转换音频…"
 msgid "Transcribing part {part} of {parts}…"
 msgstr "正在转录第 {part}/{parts} 部分…"
 
-#: src/kikoe/ui/labels.py:170 src/kikoe/ui/window.py:586
-#: src/kikoe/ui/window.py:1147
+#: src/kikoe/ui/labels.py:170 src/kikoe/ui/window.py:741
+#: src/kikoe/ui/window.py:1292
 msgid "Transcribing…"
 msgstr "正在转录…"
 
@@ -485,61 +528,46 @@ msgstr "{model} 不支持时间戳"
 msgid "{model} does not support speaker detection"
 msgstr "{model} 不支持说话人识别"
 
-#: src/kikoe/ui/labels.py:183
-msgid "Generate timestamps while transcribing (click to turn off)"
-msgstr "转录时生成时间戳（点击关闭）"
-
-#: src/kikoe/ui/labels.py:185
-msgid "Generate timestamps while transcribing (click to turn on)"
-msgstr "转录时生成时间戳（点击开启）"
-
-#: src/kikoe/ui/labels.py:187
-msgid "Detect speakers while transcribing (click to turn off)"
-msgstr "转录时区分说话人（点击关闭）"
-
-#: src/kikoe/ui/labels.py:189
-msgid "Detect speakers while transcribing (click to turn on)"
-msgstr "转录时区分说话人（点击开启）"
-
-#: src/kikoe/ui/labels.py:196
+#: src/kikoe/ui/labels.py:188
 msgid "Transcribes while recording"
 msgstr "边录边转录"
 
-#: src/kikoe/ui/labels.py:198
+#: src/kikoe/ui/labels.py:190
 msgid "Transcribes after recording"
 msgstr "录音结束后转录"
 
-#: src/kikoe/ui/labels.py:201
+#: src/kikoe/ui/labels.py:193
 #, python-brace-format
 msgid "{mode} · This model does not support {features}"
 msgstr "{mode} · 此模型不支持{features}"
 
-#: src/kikoe/ui/labels.py:211
+#: src/kikoe/ui/labels.py:203
 msgid "realtime transcription"
 msgstr "实时转录"
 
-#: src/kikoe/ui/labels.py:213
+#: src/kikoe/ui/labels.py:205
 msgid "timestamps"
 msgstr "时间戳"
 
-#: src/kikoe/ui/labels.py:215
+#: src/kikoe/ui/labels.py:207
 msgid "speaker detection"
 msgstr "说话人识别"
 
-#: src/kikoe/ui/level_meter.ui:15
+#: src/kikoe/ui/level_meter.ui:16
 msgid "Microphone Level"
 msgstr "麦克风电平"
 
-#: src/kikoe/ui/model_dialog.py:38 src/kikoe/ui/provider_page.py:98
+#: src/kikoe/ui/model_dialog.py:40 src/kikoe/ui/provider_page.py:98
 #: src/kikoe/ui/provider_page.py:102
 msgid "Edit Model"
 msgstr "编辑模型"
 
-#: src/kikoe/ui/model_dialog.py:39 src/kikoe/ui/speaker_editor.ui:27
+#: src/kikoe/ui/model_dialog.py:41 src/kikoe/ui/segment_editor.ui:27
+#: src/kikoe/ui/speaker_editor.ui:27
 msgid "_Save"
 msgstr "保存(_S)"
 
-#: src/kikoe/ui/model_dialog.py:66 src/kikoe/ui/retranscribe_dialog.py:115
+#: src/kikoe/ui/model_dialog.py:82 src/kikoe/ui/retranscribe_dialog.py:105
 msgid "This model does not support this option."
 msgstr "此模型不支持该选项。"
 
@@ -559,39 +587,41 @@ msgstr "模型 ID"
 msgid "Display Name"
 msgstr "显示名称"
 
-#: src/kikoe/ui/model_dialog.ui:57
+#: src/kikoe/ui/model_dialog.ui:68
 msgid "This Model Supports"
 msgstr "此模型支持"
 
-#: src/kikoe/ui/model_dialog.ui:58
+#: src/kikoe/ui/model_dialog.ui:69
 msgid ""
 "Different models from the same provider can differ. Check the provider’s "
 "documentation. Unchecked options are shown as unavailable when recording."
-msgstr "同一服务商的不同模型能力可能不同，请查阅服务商文档。未勾选的选项在录音时显示为不可用。"
+msgstr ""
+"同一服务商的不同模型能力可能不同，请查阅服务商文档。未勾选的选项在录音时显示"
+"为不可用。"
 
-#: src/kikoe/ui/model_dialog.ui:61
+#: src/kikoe/ui/model_dialog.ui:72
 msgid "Realtime Transcription"
 msgstr "实时转录"
 
-#: src/kikoe/ui/model_dialog.ui:62
+#: src/kikoe/ui/model_dialog.ui:73
 msgid ""
 "Text appears while recording. If unchecked, the whole recording is uploaded "
 "after it stops."
 msgstr "录音时即可显示文字。未勾选时，整段录音将在停止后上传。"
 
-#: src/kikoe/ui/model_dialog.ui:74
+#: src/kikoe/ui/model_dialog.ui:85
 msgid "Each segment carries a time. Needed for subtitle export."
 msgstr "每个片段包含时间，导出字幕时需要。"
 
-#: src/kikoe/ui/model_dialog.ui:85 src/kikoe/ui/retranscribe_dialog.ui:119
+#: src/kikoe/ui/model_dialog.ui:96 src/kikoe/ui/retranscribe_dialog.ui:56
 msgid "Speaker Detection"
 msgstr "说话人识别"
 
-#: src/kikoe/ui/model_dialog.ui:86
+#: src/kikoe/ui/model_dialog.ui:97
 msgid "Tells different people apart and labels them."
 msgstr "区分不同的人并标注说话人。"
 
-#: src/kikoe/ui/model_dialog.ui:116
+#: src/kikoe/ui/model_dialog.ui:113
 msgid "_Remove Model"
 msgstr "移除模型(_R)"
 
@@ -600,45 +630,45 @@ msgstr "移除模型(_R)"
 msgid "Recording {number} has speakers that are not yet matched."
 msgstr "录音 {number} 的说话人尚未完成对应。"
 
-#: src/kikoe/ui/note_view.py:133
+#: src/kikoe/ui/note_view.py:135
 msgid "Connecting…"
 msgstr "正在连接…"
 
-#: src/kikoe/ui/note_view.py:134
+#: src/kikoe/ui/note_view.py:136
 msgid "In progress"
 msgstr "进行中"
 
-#: src/kikoe/ui/note_view.py:135
+#: src/kikoe/ui/note_view.py:137
 msgid "Reconnecting… Audio is saved locally"
 msgstr "正在重新连接…音频已保存在本地"
 
-#: src/kikoe/ui/note_view.py:136
+#: src/kikoe/ui/note_view.py:138
 msgid "Catching up…"
 msgstr "正在补录转录内容…"
 
-#: src/kikoe/ui/note_view.py:137
+#: src/kikoe/ui/note_view.py:139
 msgid "Transcription incomplete"
 msgstr "转录未完成"
 
-#: src/kikoe/ui/note_view.py:138 src/kikoe/ui/recording_view.py:33
-#: src/kikoe/ui/window.py:251 src/kikoe/ui/window.py:375
-#: src/kikoe/ui/window.py:1080
+#: src/kikoe/ui/note_view.py:140 src/kikoe/ui/recording_view.py:33
+#: src/kikoe/ui/window.py:294 src/kikoe/ui/window.py:463
+#: src/kikoe/ui/window.py:1225
 msgid "Paused"
 msgstr "已暂停"
 
-#: src/kikoe/ui/note_view.py:151
+#: src/kikoe/ui/note_view.py:155
 #, python-brace-format
 msgid "{status} · {summary}"
 msgstr "{status} · {summary}"
 
-#: src/kikoe/ui/note_view.py:159 src/kikoe/ui/note_view.py:254
+#: src/kikoe/ui/note_view.py:163 src/kikoe/ui/note_view.py:258
 #: src/kikoe/ui/speaker_row.py:14
 #, python-brace-format
 msgid "Speaker {number}"
 msgstr "说话人 {number}"
 
 #: src/kikoe/ui/note_view.ui:16 src/kikoe/ui/speaker_editor.ui:49
-#: src/kikoe/ui/transcript_row.py:168
+#: src/kikoe/ui/transcript_row.py:179
 msgid "Match Speakers…"
 msgstr "对应说话人…"
 
@@ -650,31 +680,39 @@ msgstr "暂无录音"
 msgid "Record or import audio to add a transcript to this note."
 msgstr "录制或导入音频，为这篇笔记添加转录文本。"
 
-#: src/kikoe/ui/preferences.py:57
+#: src/kikoe/ui/preferences.py:92
+#, python-brace-format
+msgid "{device} (Unavailable)"
+msgstr "{device}（不可用）"
+
+#: src/kikoe/ui/preferences.py:96
+msgid "System Default"
+msgstr "系统默认"
+
+#: src/kikoe/ui/preferences.py:135
 msgid "No Default Model"
 msgstr "未设置默认模型"
 
-#: src/kikoe/ui/preferences.py:59 src/kikoe/ui/retranscribe_dialog.py:71
-#: src/kikoe/ui/retranscribe_dialog.py:92
+#: src/kikoe/ui/preferences.py:137 src/kikoe/ui/retranscribe_dialog.py:59
 #, python-brace-format
 msgid "{provider} · {model}"
 msgstr "{provider} · {model}"
 
-#: src/kikoe/ui/preferences.py:113 src/kikoe/ui/preferences.ui:40
+#: src/kikoe/ui/preferences.py:192 src/kikoe/ui/preferences.ui:39
 msgid "Enter a language code such as zh, en, or ja."
 msgstr "请输入语言代码，例如 zh、en 或 ja。"
 
-#: src/kikoe/ui/preferences.py:163
+#: src/kikoe/ui/preferences.py:242
 #, python-brace-format
 msgid "{api} API · {count} model"
 msgid_plural "{api} API · {count} models"
 msgstr[0] "{api} API · {count} 个模型"
 
-#: src/kikoe/ui/preferences.ui:10 src/kikoe/ui/shortcuts.ui:83
+#: src/kikoe/ui/preferences.ui:10 src/kikoe/ui/shortcuts.ui:56
 msgid "Preferences"
 msgstr "偏好设置"
 
-#: src/kikoe/ui/preferences.ui:17
+#: src/kikoe/ui/preferences.ui:17 src/kikoe/ui/shortcuts.ui:47
 msgid "General"
 msgstr "常规"
 
@@ -685,8 +723,10 @@ msgstr "转录"
 #: src/kikoe/ui/preferences.ui:22
 msgid ""
 "Defaults for the next transcription. Language is detected automatically when "
-"left empty."
-msgstr "以下设置用于下一次转录。语言留空时自动检测。"
+"left empty. To set it, enter a language code such as zh, en, or ja."
+msgstr ""
+"以下设置用于下一次转录。语言留空时自动检测；如需指定，请输入 zh、en、ja 等语"
+"言代码。"
 
 #: src/kikoe/ui/preferences.ui:25
 msgid "Default Model"
@@ -696,48 +736,62 @@ msgstr "默认模型"
 msgid "Transcription Language"
 msgstr "转录语言"
 
-#: src/kikoe/ui/preferences.ui:34
-msgid ""
-"Leave empty for automatic detection, or enter a language code such as zh, "
-"en, or ja."
-msgstr "留空以自动检测，或输入语言代码，例如 zh、en 或 ja。"
+#: src/kikoe/ui/preferences.ui:53
+msgid "Audio"
+msgstr "音频"
 
-#: src/kikoe/ui/preferences.ui:54
+#: src/kikoe/ui/preferences.ui:56
+msgid "Microphone"
+msgstr "麦克风"
+
+#: src/kikoe/ui/preferences.ui:57
+msgid "Used for new recordings"
+msgstr "用于新的录音"
+
+#: src/kikoe/ui/preferences.ui:64
+msgid "Audio Output"
+msgstr "音频输出"
+
+#: src/kikoe/ui/preferences.ui:65
+msgid "Used for playback"
+msgstr "用于播放"
+
+#: src/kikoe/ui/preferences.ui:74
 msgid "Storage"
 msgstr "存储"
 
-#: src/kikoe/ui/preferences.ui:57
-msgid "Data Directory"
-msgstr "数据目录"
+#: src/kikoe/ui/preferences.ui:77
+msgid "Data Folder"
+msgstr "数据文件夹"
 
-#: src/kikoe/ui/preferences.ui:73
+#: src/kikoe/ui/preferences.ui:93
 msgid "Troubleshooting"
 msgstr "故障排查"
 
-#: src/kikoe/ui/preferences.ui:74
+#: src/kikoe/ui/preferences.ui:94
 msgid ""
 "Logs stay on this device. Nothing is uploaded automatically. You can attach "
 "a log when reporting a problem."
 msgstr "日志仅保存在此设备上，不会自动上传。报告问题时可以自行附上日志。"
 
-#: src/kikoe/ui/preferences.ui:77
-msgid "Log Directory"
-msgstr "日志目录"
+#: src/kikoe/ui/preferences.ui:97
+msgid "Log Folder"
+msgstr "日志文件夹"
 
-#: src/kikoe/ui/preferences.ui:96 src/kikoe/ui/preferences.ui:100
+#: src/kikoe/ui/preferences.ui:116 src/kikoe/ui/preferences.ui:120
 msgid "Providers"
 msgstr "服务商"
 
-#: src/kikoe/ui/preferences.ui:101
+#: src/kikoe/ui/preferences.ui:121
 msgid ""
 "Transcription happens in the cloud. A provider can offer several models."
 msgstr "转录在云端进行，一个服务商可以提供多个模型。"
 
-#: src/kikoe/ui/preferences.ui:109 src/kikoe/ui/window.ui:337
+#: src/kikoe/ui/preferences.ui:129 src/kikoe/ui/window.ui:263
 msgid "_Add Provider"
 msgstr "添加服务商(_A)"
 
-#: src/kikoe/ui/preferences.ui:123
+#: src/kikoe/ui/preferences.ui:143
 msgid "No Providers Yet"
 msgstr "暂无服务商"
 
@@ -762,49 +816,49 @@ msgstr "添加服务商"
 msgid "Connection"
 msgstr "连接"
 
-#: src/kikoe/ui/provider_page.ui:35 src/kikoe/ui/speaker_editor.ui:43
-msgid "Name"
-msgstr "名称"
-
-#: src/kikoe/ui/provider_page.ui:41
-msgid "API Type"
-msgstr "接口类型"
-
-#: src/kikoe/ui/provider_page.ui:58
-msgid "Base URL"
-msgstr "Base URL"
-
-#: src/kikoe/ui/provider_page.ui:65
-msgid "API Key"
-msgstr "API 密钥"
-
-#: src/kikoe/ui/provider_page.ui:71
+#: src/kikoe/ui/provider_page.ui:33
 msgid ""
 "The API type decides the request format. Most providers offer an “OpenAI-"
 "compatible” API."
 msgstr "接口类型决定请求格式。大多数服务商提供“OpenAI 兼容”API。"
 
-#: src/kikoe/ui/provider_page.ui:100
+#: src/kikoe/ui/provider_page.ui:36 src/kikoe/ui/speaker_editor.ui:43
+msgid "Name"
+msgstr "名称"
+
+#: src/kikoe/ui/provider_page.ui:42
+msgid "API Type"
+msgstr "接口类型"
+
+#: src/kikoe/ui/provider_page.ui:59
+msgid "Base URL"
+msgstr "Base URL"
+
+#: src/kikoe/ui/provider_page.ui:66
+msgid "API Key"
+msgstr "API 密钥"
+
+#: src/kikoe/ui/provider_page.ui:87
 msgid "Models"
 msgstr "模型"
 
-#: src/kikoe/ui/provider_page.ui:101
+#: src/kikoe/ui/provider_page.ui:88
 msgid "What each model can do is set when you add it."
 msgstr "每个模型的能力在添加时设置。"
 
-#: src/kikoe/ui/provider_page.ui:110
+#: src/kikoe/ui/provider_page.ui:97
 msgid "Add _Model"
 msgstr "添加模型(_M)"
 
-#: src/kikoe/ui/provider_page.ui:124
+#: src/kikoe/ui/provider_page.ui:111
 msgid "No Models Yet"
 msgstr "暂无模型"
 
-#: src/kikoe/ui/provider_page.ui:141
+#: src/kikoe/ui/provider_page.ui:128
 msgid "_Remove Provider"
 msgstr "移除服务商(_R)"
 
-#: src/kikoe/ui/recording_view.py:22 src/kikoe/ui/transcript_row.py:73
+#: src/kikoe/ui/recording_view.py:22 src/kikoe/ui/transcript_row.py:74
 #, python-brace-format
 msgid "Recording {number}"
 msgstr "录音 {number}"
@@ -815,8 +869,8 @@ msgid "In progress · {summary}"
 msgstr "进行中 · {summary}"
 
 #: src/kikoe/ui/recording_view.py:24 src/kikoe/ui/recording_view.py:33
-#: src/kikoe/ui/recording_view.ui:69 src/kikoe/ui/window.py:253
-#: src/kikoe/ui/window.py:375 src/kikoe/ui/window.py:1080
+#: src/kikoe/ui/recording_view.ui:69 src/kikoe/ui/window.py:296
+#: src/kikoe/ui/window.py:463 src/kikoe/ui/window.py:1225
 msgid "Recording"
 msgstr "录音中"
 
@@ -825,17 +879,20 @@ msgstr "录音中"
 msgid ""
 "Kikoe will upload the audio to {model} and transcribe it automatically after "
 "you stop. The text will appear here."
-msgstr "停止录音后，Kikoe 会将音频上传到 {model} 并自动转录。文字将显示在这里。"
+msgstr ""
+"停止录音后，Kikoe 会将音频上传到 {model} 并自动转录。文字将显示在这里。"
 
-#: src/kikoe/ui/retranscribe_dialog.py:49
+#: src/kikoe/ui/retranscribe_dialog.py:46
 #, python-brace-format
 msgid ""
 "Re-transcribe “Recording {number}” ({duration}) from the kept original "
 "audio. Timestamps or speaker detection that were off during transcription "
 "can be added this way."
-msgstr "使用保留的原始音频重新转录“录音 {number}”（{duration}）。可补上原先未启用的时间戳或说话人识别。"
+msgstr ""
+"使用保留的原始音频重新转录“录音 {number}”（{duration}）。可补上原先未启用的时"
+"间戳或说话人识别。"
 
-#: src/kikoe/ui/retranscribe_dialog.py:96
+#: src/kikoe/ui/retranscribe_dialog.py:63
 msgid "Choose a File Model…"
 msgstr "选择文件转录模型…"
 
@@ -847,52 +904,87 @@ msgstr "重新转录"
 msgid "_Transcribe"
 msgstr "转录(_T)"
 
-#: src/kikoe/ui/retranscribe_dialog.ui:66
+#: src/kikoe/ui/retranscribe_dialog.ui:44
 msgid "Model"
 msgstr "模型"
 
-#: src/kikoe/ui/retranscribe_dialog.ui:142
+#: src/kikoe/ui/retranscribe_dialog.ui:65
+msgid "Existing Text Is Replaced"
+msgstr "现有文字将被替换"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:66
 msgid ""
 "The text of this recording will be replaced, including any manual edits. "
 "Other recordings in the note are not affected. Speaker names are kept where "
 "possible."
-msgstr "这段录音的文字将被替换，包括手动编辑的内容。笔记中的其他录音不受影响，并尽可能保留说话人姓名。"
+msgstr ""
+"这段录音的文字将被替换，包括手动编辑的内容。笔记中的其他录音不受影响，并尽可"
+"能保留说话人姓名。"
 
-#: src/kikoe/ui/shortcuts.ui:10 src/kikoe/ui/shortcuts.ui:93
-msgid "Keyboard Shortcuts"
-msgstr "键盘快捷键"
+#: src/kikoe/ui/segment_editor.py:118
+msgid "Enter a valid start time, or leave it empty."
+msgstr "请输入有效的开始时间，或留空。"
 
-#: src/kikoe/ui/shortcuts.ui:25
+#: src/kikoe/ui/segment_editor.py:120
+msgid "Enter a valid end time, or leave it empty."
+msgstr "请输入有效的结束时间，或留空。"
+
+#: src/kikoe/ui/segment_editor.ui:10
+msgid "Edit Segment"
+msgstr "编辑段落"
+
+#: src/kikoe/ui/segment_editor.ui:47 src/kikoe/ui/segment_editor.ui:60
+msgid "Text"
+msgstr "文字"
+
+#: src/kikoe/ui/segment_editor.ui:78
+msgid "Empty clears the timestamp. Use MM:SS or H:MM:SS."
+msgstr "留空表示清除时间戳。格式为 MM:SS 或 H:MM:SS。"
+
+#: src/kikoe/ui/segment_editor.ui:81
+msgid "Start"
+msgstr "开始"
+
+#: src/kikoe/ui/segment_editor.ui:87
+msgid "End"
+msgstr "结束"
+
+#: src/kikoe/ui/shortcuts.ui:12
 msgid "Notes"
 msgstr "笔记"
 
-#: src/kikoe/ui/shortcuts.ui:28 src/kikoe/ui/window.py:408
+#: src/kikoe/ui/shortcuts.ui:15 src/kikoe/ui/window.py:496
 #: src/kikoe/ui/window.ui:45 src/kikoe/ui/window.ui:47
 msgid "New Note"
 msgstr "新建笔记"
 
-#: src/kikoe/ui/shortcuts.ui:38 src/kikoe/ui/window.ui:66
-#: src/kikoe/ui/window.ui:68 src/kikoe/ui/window.ui:81
+#: src/kikoe/ui/shortcuts.ui:21 src/kikoe/ui/window.ui:66
+#: src/kikoe/ui/window.ui:69 src/kikoe/ui/window.ui:80
 msgid "Search Notes"
 msgstr "搜索笔记"
 
-#: src/kikoe/ui/shortcuts.ui:48
-msgid "Import Audio…"
-msgstr "导入音频…"
-
-#: src/kikoe/ui/shortcuts.ui:58
+#: src/kikoe/ui/shortcuts.ui:33
 msgid "Rename Note…"
 msgstr "重命名笔记…"
 
-#: src/kikoe/ui/shortcuts.ui:68
+#: src/kikoe/ui/shortcuts.ui:39
 msgid "Close Search"
 msgstr "关闭搜索"
 
-#: src/kikoe/ui/shortcuts.ui:80
-msgid "Application"
-msgstr "应用"
+#: src/kikoe/ui/shortcuts.ui:50 src/kikoe/ui/window.ui:56
+#: src/kikoe/ui/window.ui:58
+msgid "Main Menu"
+msgstr "主菜单"
 
-#: src/kikoe/ui/shortcuts.ui:103
+#: src/kikoe/ui/shortcuts.ui:62
+msgid "Keyboard Shortcuts"
+msgstr "键盘快捷键"
+
+#: src/kikoe/ui/shortcuts.ui:68
+msgid "Close Window"
+msgstr "关闭窗口"
+
+#: src/kikoe/ui/shortcuts.ui:74
 msgid "Quit"
 msgstr "退出"
 
@@ -915,7 +1007,8 @@ msgstr "应用(_A)"
 msgid ""
 "Two numbers can map to the same person. You can rename or re-match a speaker "
 "at any time by clicking their name in the note."
-msgstr "两个编号可以对应同一个人。随时点击笔记中的说话人姓名，即可重命名或重新对应。"
+msgstr ""
+"两个编号可以对应同一个人。随时点击笔记中的说话人姓名，即可重命名或重新对应。"
 
 #: src/kikoe/ui/speaker_editor.ui:10
 msgid "Rename Speaker"
@@ -956,46 +1049,50 @@ msgstr "已有说话人"
 msgid "Keep as New Speaker"
 msgstr "保留为新说话人"
 
-#: src/kikoe/ui/tasks.py:36
+#: src/kikoe/ui/tasks.py:38
 msgid "Something Went Wrong"
 msgstr "出现错误"
 
-#: src/kikoe/ui/tasks.py:37
+#: src/kikoe/ui/tasks.py:39
 msgid "_Close"
 msgstr "关闭(_C)"
 
-#: src/kikoe/ui/tasks.py:61
+#: src/kikoe/ui/tasks.py:79
 msgid "An unexpected error occurred. See the local log for details."
 msgstr "发生意外错误，请查看本地日志了解详情。"
 
-#: src/kikoe/ui/transcript_row.py:89
+#: src/kikoe/ui/transcript_row.py:90
 msgid "Transcription incomplete. Your text and audio have been kept."
 msgstr "转录未完成，已保留文字和音频。"
 
-#: src/kikoe/ui/transcript_row.py:91
+#: src/kikoe/ui/transcript_row.py:92
 msgid "Transcription failed. Your audio has been kept."
 msgstr "转录失败，已保留音频。"
 
-#: src/kikoe/ui/transcript_row.py:94
+#: src/kikoe/ui/transcript_row.py:95
 msgid "Audio saved. Transcription is pending."
 msgstr "音频已保存，等待转录。"
 
-#: src/kikoe/ui/transcript_row.py:137 src/kikoe/ui/transcript_row.ui:44
+#: src/kikoe/ui/transcript_row.py:148 src/kikoe/ui/transcript_row.ui:44
 #: src/kikoe/ui/transcript_row.ui:46
 msgid "Play This Recording"
 msgstr "播放这段录音"
 
-#: src/kikoe/ui/transcript_row.py:137
+#: src/kikoe/ui/transcript_row.py:148
 msgid "Stop Playback"
 msgstr "停止播放"
 
-#: src/kikoe/ui/transcript_row.py:157
+#: src/kikoe/ui/transcript_row.py:168
 msgid "Export Original Audio…"
 msgstr "导出原始音频…"
 
-#: src/kikoe/ui/transcript_row.py:162
+#: src/kikoe/ui/transcript_row.py:173
 msgid "Re-transcribe…"
 msgstr "重新转录…"
+
+#: src/kikoe/ui/transcript_row.py:183
+msgid "Delete Recording"
+msgstr "删除录音"
 
 #: src/kikoe/ui/transcript_row.ui:58 src/kikoe/ui/transcript_row.ui:60
 msgid "Recording Menu"
@@ -1005,184 +1102,191 @@ msgstr "录音菜单"
 msgid "_Retry Transcription"
 msgstr "重试转录(_R)"
 
-#: src/kikoe/ui/transcript_row.ui:108 src/kikoe/ui/transcript_row.ui:110
+#: src/kikoe/ui/transcript_row.ui:107 src/kikoe/ui/transcript_row.ui:109
 msgid "Rename or Match Speaker"
 msgstr "重命名或对应说话人"
 
-#: src/kikoe/ui/window.py:236
+#: src/kikoe/ui/transcript_row.ui:155 src/kikoe/ui/transcript_row.ui:158
+msgid "Edit Segment…"
+msgstr "编辑段落…"
+
+#: src/kikoe/ui/window.py:278
 msgid "No Matching Notes"
 msgstr "没有匹配的笔记"
 
-#: src/kikoe/ui/window.py:238 src/kikoe/ui/window.ui:102
+#: src/kikoe/ui/window.py:278 src/kikoe/ui/window.ui:102
 msgid "No Notes Yet"
 msgstr "暂无笔记"
 
-#: src/kikoe/ui/window.py:351 src/kikoe/ui/window.ui:10
+#: src/kikoe/ui/window.py:343 src/kikoe/ui/window.ui:384
+msgid "_Rename…"
+msgstr "重命名…(_R)"
+
+#: src/kikoe/ui/window.py:346 src/kikoe/ui/window.ui:394
+msgid "_Delete Note"
+msgstr "删除笔记(_D)"
+
+#: src/kikoe/ui/window.py:439 src/kikoe/ui/window.ui:10
 #: src/kikoe/ui/window.ui:37 src/kikoe/ui/window.ui:119
 #: src/kikoe/ui/window.ui:130
 msgid "Kikoe"
 msgstr "Kikoe"
 
-#: src/kikoe/ui/window.py:416
+#: src/kikoe/ui/window.py:513
+msgid "Note Title"
+msgstr "笔记标题"
+
+#: src/kikoe/ui/window.py:514
 msgid "Rename Note"
 msgstr "重命名笔记"
 
-#: src/kikoe/ui/window.py:418
+#: src/kikoe/ui/window.py:516
 msgid "_Rename"
 msgstr "重命名(_R)"
 
-#: src/kikoe/ui/window.py:441
+#: src/kikoe/ui/window.py:545
 #, python-brace-format
 msgid "Delete “{title}”?"
 msgstr "删除“{title}”？"
 
-#: src/kikoe/ui/window.py:442
+#: src/kikoe/ui/window.py:546 src/kikoe/ui/window.py:574
 msgid ""
 "Its transcript and original audio will be deleted. This cannot be undone."
 msgstr "转录文本和原始音频将被删除，此操作无法撤销。"
 
-#: src/kikoe/ui/window.py:445
+#: src/kikoe/ui/window.py:549 src/kikoe/ui/window.py:577
 msgid "_Delete"
 msgstr "删除(_D)"
 
-#: src/kikoe/ui/window.py:478 src/kikoe/ui/window.py:572
+#: src/kikoe/ui/window.py:568 src/kikoe/ui/window.py:861
+msgid "This recording is no longer available."
+msgstr "这段录音已不可用。"
+
+#: src/kikoe/ui/window.py:573
+#, python-brace-format
+msgid "Delete Recording {number}?"
+msgstr "删除录音 {number}？"
+
+#: src/kikoe/ui/window.py:614 src/kikoe/ui/window.py:727
+#: src/kikoe/ui/window.py:886
 msgid "The original audio is not available."
 msgstr "原始音频不可用。"
 
-#: src/kikoe/ui/window.py:556
+#: src/kikoe/ui/window.py:711
 msgid "This recording has no detected speakers."
 msgstr "这段录音没有识别到说话人。"
 
-#: src/kikoe/ui/window.py:580
+#: src/kikoe/ui/window.py:735
 msgid "Choose an available file transcription model."
 msgstr "请选择可用的文件转录模型。"
 
-#: src/kikoe/ui/window.py:624
-msgid "Re-transcription cancelled. Your text and audio have been kept."
-msgstr "已取消重新转录，已保留文字和音频。"
+#: src/kikoe/ui/window.py:777
+msgid "Re-transcription cancelled"
+msgstr "已取消重新转录"
 
-#: src/kikoe/ui/window.py:632
+#: src/kikoe/ui/window.py:782
 #, python-brace-format
-msgid "Re-transcription failed. Your text and audio have been kept. {error}"
-msgstr "重新转录失败，已保留文字和音频。{error}"
+msgid ""
+"{error}\n"
+"\n"
+"Your text and audio have been kept."
+msgstr ""
+"{error}\n"
+"\n"
+"已保留文字和音频。"
 
-#: src/kikoe/ui/window.py:656
-#, python-brace-format
-msgid "Export this note as {format}."
-msgstr "将这篇笔记导出为{format}。"
+#: src/kikoe/ui/window.py:783
+msgid "Re-transcription Failed"
+msgstr "重新转录失败"
 
-#: src/kikoe/ui/window.py:659
-msgid "This note has no timestamps, so subtitles are unavailable."
-msgstr "这篇笔记没有时间戳，无法导出字幕。"
-
-#: src/kikoe/ui/window.py:667
+#: src/kikoe/ui/window.py:807
 msgid "Copied to clipboard"
 msgstr "已复制到剪贴板"
 
-#: src/kikoe/ui/window.py:691
+#: src/kikoe/ui/window.py:831
 msgid "Export Note"
 msgstr "导出笔记"
 
-#: src/kikoe/ui/window.py:702 src/kikoe/ui/window.py:750
+#: src/kikoe/ui/window.py:842 src/kikoe/ui/window.py:890
 #, python-brace-format
 msgid "Could not save “{name}”: {error}"
 msgstr "无法保存“{name}”：{error}"
 
-#: src/kikoe/ui/window.py:705 src/kikoe/ui/window.py:753
+#: src/kikoe/ui/window.py:845 src/kikoe/ui/window.py:893
 #, python-brace-format
 msgid "Exported “{name}”"
 msgstr "已导出“{name}”"
 
-#: src/kikoe/ui/window.py:721
-msgid "This recording is no longer available."
-msgstr "这段录音已不可用。"
-
-#: src/kikoe/ui/window.py:733
+#: src/kikoe/ui/window.py:873
 msgid "Export Original Audio"
 msgstr "导出原始音频"
 
-#: src/kikoe/ui/window.py:735
+#: src/kikoe/ui/window.py:875
 msgid "Audio Files"
 msgstr "音频文件"
 
-#: src/kikoe/ui/window.py:746
-msgid "The original audio for this recording is not available."
-msgstr "这段录音的原始音频不可用。"
-
-#: src/kikoe/ui/window.py:761
+#: src/kikoe/ui/window.py:901
 msgid "All Files"
 msgstr "所有文件"
 
-#: src/kikoe/ui/window.py:786
+#: src/kikoe/ui/window.py:926
 msgid "Only locations on this computer can be used."
 msgstr "只能使用此计算机上的位置。"
 
-#: src/kikoe/ui/window.py:875
+#: src/kikoe/ui/window.py:1022
 msgid "Import cancelled"
 msgstr "已取消导入"
 
-#: src/kikoe/ui/window.py:883
+#: src/kikoe/ui/window.py:1030
 msgid "Audio and Video"
 msgstr "音频和视频"
 
-#: src/kikoe/ui/window.py:888
-msgid "Import Audio"
-msgstr "导入音频"
-
-#: src/kikoe/ui/window.py:906
+#: src/kikoe/ui/window.py:1053
 msgid "Only files on this computer can be imported."
 msgstr "只能导入此计算机上的文件。"
 
-#: src/kikoe/ui/window.py:940
-msgid "Transcription failed"
+#: src/kikoe/ui/window.py:1087
+msgid "Transcription Failed"
 msgstr "转录失败"
 
-#: src/kikoe/ui/window.py:940
-msgid "_Details"
-msgstr "详情(_D)"
-
-#: src/kikoe/ui/window.py:992
+#: src/kikoe/ui/window.py:1137
 #, python-brace-format
 msgid "{provider} {model} · {options}"
 msgstr "{provider} {model} · {options}"
 
-#: src/kikoe/ui/window.py:1022
+#: src/kikoe/ui/window.py:1167
 msgid "Saving recording…"
 msgstr "正在保存录音…"
 
-#: src/kikoe/ui/window.py:1049
+#: src/kikoe/ui/window.py:1194
 msgid "No audio was recorded"
 msgstr "未录到音频"
 
-#: src/kikoe/ui/window.py:1152
-msgid "Transcription cancelled. Your audio has been kept."
-msgstr "已取消转录，已保留音频。"
+#: src/kikoe/ui/window.py:1297
+msgid "Transcription cancelled"
+msgstr "已取消转录"
 
-#: src/kikoe/ui/window.py:1187
+#: src/kikoe/ui/window.py:1332
 msgid "Recover Recordings?"
 msgstr "恢复录音？"
 
-#: src/kikoe/ui/window.py:1189
+#: src/kikoe/ui/window.py:1334
 msgid ""
 "Kikoe found unfinished recordings. Recover their audio now, then choose a "
 "model to transcribe them."
 msgstr "Kikoe 找到了未完成的录音。现在恢复音频后，即可选择模型进行转录。"
 
-#: src/kikoe/ui/window.py:1193
+#: src/kikoe/ui/window.py:1338
 msgid "_Later"
 msgstr "稍后(_L)"
 
-#: src/kikoe/ui/window.py:1194
+#: src/kikoe/ui/window.py:1339
 msgid "_Recover"
 msgstr "恢复(_R)"
 
-#: src/kikoe/ui/window.py:1213
+#: src/kikoe/ui/window.py:1358
 msgid "Recovering recordings…"
 msgstr "正在恢复录音…"
-
-#: src/kikoe/ui/window.ui:56 src/kikoe/ui/window.ui:58
-msgid "Main Menu"
-msgstr "主菜单"
 
 #: src/kikoe/ui/window.ui:136 src/kikoe/ui/window.ui:138
 msgid "Note Menu"
@@ -1192,68 +1296,134 @@ msgstr "笔记菜单"
 msgid "Export"
 msgstr "导出"
 
-#: src/kikoe/ui/window.ui:224
-msgid ""
-"Speaker labels follow the current display settings. Subtitle formats always "
-"include timestamps."
-msgstr "说话人标签遵循当前显示设置，字幕格式始终包含时间戳。"
-
-#: src/kikoe/ui/window.ui:247 src/kikoe/ui/window.ui:249
+#: src/kikoe/ui/window.ui:161 src/kikoe/ui/window.ui:163
 msgid "Display Options"
 msgstr "显示选项"
 
-#: src/kikoe/ui/window.ui:267
+#: src/kikoe/ui/window.ui:181
 msgid "Show _Timestamps"
 msgstr "显示时间戳(_T)"
 
-#: src/kikoe/ui/window.ui:274
+#: src/kikoe/ui/window.ui:188
 msgid "Show _Speakers"
 msgstr "显示说话人(_S)"
 
-#: src/kikoe/ui/window.ui:283
+#: src/kikoe/ui/window.ui:197
 msgid ""
 "Only changes how this note is shown and exported. The transcript is not "
 "modified."
 msgstr "仅改变这篇笔记的显示和导出方式，不会修改转录文本。"
 
-#: src/kikoe/ui/window.ui:321
+#: src/kikoe/ui/window.ui:235
 msgid "No Note Selected"
 msgstr "未选择笔记"
 
-#: src/kikoe/ui/window.ui:322
-msgid "Record or import audio to create a note."
-msgstr "录制或导入音频以创建笔记。"
+#: src/kikoe/ui/window.ui:236
+msgid "Create a note, then record or import audio into it."
+msgstr "新建一条笔记，然后录制或导入音频。"
 
-#: src/kikoe/ui/window.ui:333
+#: src/kikoe/ui/window.ui:239
+msgid "_New Note"
+msgstr "新建笔记(_N)"
+
+#: src/kikoe/ui/window.ui:259
 msgid "Welcome to Kikoe"
 msgstr "欢迎使用 Kikoe"
 
-#: src/kikoe/ui/window.ui:334
+#: src/kikoe/ui/window.ui:260
 msgid ""
 "Kikoe turns speech into text using cloud services. Add a provider and a "
 "model first, then record or import audio."
-msgstr "Kikoe 使用云端服务将语音转为文字。请先添加服务商和模型，再录制或导入音频。"
+msgstr ""
+"Kikoe 使用云端服务将语音转为文字。请先添加服务商和模型，再录制或导入音频。"
 
-#: src/kikoe/ui/window.ui:384
+#: src/kikoe/ui/window.ui:311
+msgid ""
+"Speaker labels follow the current display settings. Subtitle formats always "
+"include timestamps."
+msgstr "说话人标签遵循当前显示设置，字幕格式始终包含时间戳。"
+
+#: src/kikoe/ui/window.ui:323
+msgid "Subtitles are unavailable because this note has no timestamps."
+msgstr "此笔记没有时间戳，无法导出字幕。"
+
+#: src/kikoe/ui/window.ui:343
 msgid "_Preferences"
 msgstr "偏好设置(_P)"
 
-#: src/kikoe/ui/window.ui:388
+#: src/kikoe/ui/window.ui:347
 msgid "_Keyboard Shortcuts"
 msgstr "键盘快捷键(_K)"
 
-#: src/kikoe/ui/window.ui:392
+#: src/kikoe/ui/window.ui:351
 msgid "_About Kikoe"
 msgstr "关于 Kikoe(_A)"
 
-#: src/kikoe/ui/window.ui:400
-msgid "_Rename…"
-msgstr "重命名…(_R)"
+#: src/kikoe/ui/window.ui:359
+msgid "_Plain Text (.txt)…"
+msgstr "纯文本（.txt）…(_P)"
 
-#: src/kikoe/ui/window.ui:404
+#: src/kikoe/ui/window.ui:363
+msgid "_Markdown (.md)…"
+msgstr "Markdown（.md）…(_M)"
+
+#: src/kikoe/ui/window.ui:367
+msgid "_SRT Subtitles (.srt)…"
+msgstr "SRT 字幕（.srt）…(_S)"
+
+#: src/kikoe/ui/window.ui:371
+msgid "_WebVTT Subtitles (.vtt)…"
+msgstr "WebVTT 字幕（.vtt）…(_W)"
+
+#: src/kikoe/ui/window.ui:388
 msgid "_Copy All Text"
 msgstr "复制全部文字(_C)"
 
-#: src/kikoe/ui/window.ui:410
-msgid "_Delete Note"
-msgstr "删除笔记(_D)"
+#~ msgid "Generate timestamps while transcribing (click to turn off)"
+#~ msgstr "转录时生成时间戳（点击关闭）"
+
+#~ msgid "Generate timestamps while transcribing (click to turn on)"
+#~ msgstr "转录时生成时间戳（点击开启）"
+
+#~ msgid "Detect speakers while transcribing (click to turn off)"
+#~ msgstr "转录时区分说话人（点击关闭）"
+
+#~ msgid "Detect speakers while transcribing (click to turn on)"
+#~ msgstr "转录时区分说话人（点击开启）"
+
+#~ msgid ""
+#~ "Leave empty for automatic detection, or enter a language code such as zh, "
+#~ "en, or ja."
+#~ msgstr "留空以自动检测，或输入语言代码，例如 zh、en 或 ja。"
+
+#~ msgid "Data Directory"
+#~ msgstr "数据目录"
+
+#~ msgid "Log Directory"
+#~ msgstr "日志目录"
+
+#~ msgid "Application"
+#~ msgstr "应用"
+
+#, python-brace-format
+#~ msgid "Re-transcription failed. Your text and audio have been kept. {error}"
+#~ msgstr "重新转录失败，已保留文字和音频。{error}"
+
+#, python-brace-format
+#~ msgid "Export this note as {format}."
+#~ msgstr "将这篇笔记导出为{format}。"
+
+#~ msgid "This note has no timestamps, so subtitles are unavailable."
+#~ msgstr "这篇笔记没有时间戳，无法导出字幕。"
+
+#~ msgid "The original audio for this recording is not available."
+#~ msgstr "这段录音的原始音频不可用。"
+
+#~ msgid "_Details"
+#~ msgstr "详情(_D)"
+
+#~ msgid "Transcription cancelled. Your audio has been kept."
+#~ msgstr "已取消转录，已保留音频。"
+
+#~ msgid "Record or import audio to create a note."
+#~ msgstr "录制或导入音频以创建笔记。"

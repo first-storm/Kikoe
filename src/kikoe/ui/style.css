@@ -7,11 +7,12 @@
   line-height: 1.6;
 }
 
+/* Palette green-5 is only ~3.2:1 on the white view; speaker 2 darkens it for text. */
 /* Speaker colors from the GNOME palette, in order of first appearance (see
    kikoe.core.formatting.speaker_order). Lighter shades keep contrast in dark mode. */
 .speaker-0 { color: var(--blue-4); }
 .speaker-1 { color: var(--orange-5); }
-.speaker-2 { color: var(--green-5); }
+.speaker-2 { color: color-mix(in srgb, var(--green-5), black 25%); }
 .speaker-3 { color: var(--purple-4); }
 
 /* Match the application’s Adw.StyleManager, including forced dark mode. */
@@ -20,7 +21,7 @@
 .speaker-2-dark { color: var(--green-2); }
 .speaker-3-dark { color: var(--purple-2); }
 
-.recording-indicator { color: var(--red-3); }
+.recording-indicator { color: var(--error-color); }
 .recording-time { font-size: 1.2em; }
 .recording-microphone {
   min-width: 88px;
@@ -30,18 +31,11 @@
   color: var(--error-color);
 }
 
-.recording-status { color: var(--red-4); }
-
-.retranscription-warning {
-  padding: 12px 14px;
-  border-radius: 12px;
-  background-color: color-mix(in srgb, var(--warning-color) 14%, transparent);
-}
+.recording-status { color: var(--error-color); }
 
 .speaker-button {
   padding: 0;
-  min-height: 0;
-  min-width: 0;
+  min-height: 28px;
   background: transparent;
 }
 
@@ -50,7 +44,7 @@
 .speaker-title-0-dark label.title { color: var(--blue-2); font-weight: 700; }
 .speaker-title-1 label.title { color: var(--orange-5); font-weight: 700; }
 .speaker-title-1-dark label.title { color: var(--orange-2); font-weight: 700; }
-.speaker-title-2 label.title { color: var(--green-5); font-weight: 700; }
+.speaker-title-2 label.title { color: color-mix(in srgb, var(--green-5), black 25%); font-weight: 700; }
 .speaker-title-2-dark label.title { color: var(--green-2); font-weight: 700; }
 .speaker-title-3 label.title { color: var(--purple-4); font-weight: 700; }
 .speaker-title-3-dark label.title { color: var(--purple-2); font-weight: 700; }
