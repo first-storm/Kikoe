@@ -27,7 +27,9 @@ version=$(basename "$wheel" | cut -d- -f2)
 # it packages them, through the system site-packages; the rest is installed from the
 # lock file, and PyGObject and jiter are built from source.
 python -m venv --clear --system-site-packages "$build/venv"
-venv_python=$(ls "$build"/venv/{bin,Scripts}/python.exe 2>/dev/null | head -n 1)
+# MSYS2's venv layout uses bin/ (CPython on Windows would use Scripts/).
+venv_python="$build/venv/bin/python.exe"
+[[ -x "$venv_python" ]] || venv_python="$build/venv/Scripts/python.exe"
 "$venv_python" packaging/windows/missing_requirements.py dist/requirements.txt \
     >"$build/requirements.txt"
 "$venv_python" -m pip install --no-build-isolation --requirement "$build/requirements.txt"
