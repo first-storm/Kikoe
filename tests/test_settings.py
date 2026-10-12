@@ -75,10 +75,10 @@ def test_version_one_upgrades_without_losing_providers(tmp_path: Path) -> None:
 
     path = tmp_path / "settings.json"
     SettingsStore(path).save((PROVIDER,))
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     data["version"] = 1
     data.pop("preferences")
-    path.write_text(json.dumps(data))
+    path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
     state = SettingsStore(path).load_state()
     assert state.providers == (PROVIDER,)
     assert state.preferences == Preferences()
@@ -122,6 +122,9 @@ def test_failed_atomic_replace_keeps_previous_settings(
 )
 def test_malformed_defaults_are_reported(tmp_path: Path, preferences: dict[str, object]) -> None:
     path = tmp_path / "settings.json"
-    path.write_text(json.dumps({"version": 2, "providers": [], "preferences": preferences}))
+    path.write_text(
+        json.dumps({"version": 2, "providers": [], "preferences": preferences}),
+        encoding="utf-8",
+    )
     with pytest.raises(SettingsError):
         SettingsStore(path).load_state()
