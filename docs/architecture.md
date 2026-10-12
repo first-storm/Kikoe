@@ -52,8 +52,17 @@ Top-level helpers (`constants`, `paths`, `i18n`) are importable from any layer.
 
 - Domain objects in `kikoe.core.models` are frozen dataclasses; change them with
   `dataclasses.replace`.
-- Library: SQLite at `paths.data_dir()/library.sqlite3`; retained original audio under
-  `paths.data_dir()/audio/`. (Not implemented yet.)
+- Library: SQLite at `paths.data_dir()/library.sqlite3` (`storage.library.Library`), with
+  tables `notes`, `speakers`, `recordings` and `segments`; times are ISO 8601 UTC,
+  durations milliseconds. The schema version is `PRAGMA user_version`; `_MIGRATIONS` holds
+  one script per version, applied in order at startup, and released entries are never
+  edited. A database from a newer Kikoe is refused, not modified. Every call opens its
+  own connection, so it can run in any `asyncio.to_thread` worker.
+- Retained original audio: copied to `paths.data_dir()/audio/<recording id><ext>` on
+  import; the database stores the name relative to that directory. Deleting a note
+  deletes its files.
+- `storage.notes.NoteRepository` is the async front of the library: it keeps sidebar
+  summaries in memory and tells listeners which note changed.
 - Settings: `paths.config_dir()/settings.json`, written atomically by
   `storage.settings.SettingsStore`. Shape: `{"version": 1, "providers": [{"id", "name",
   "api", "base_url", "models": [{"id", "name", "realtime", "timestamps",
@@ -68,32 +77,53 @@ Top-level helpers (`constants`, `paths`, `i18n`) are importable from any layer.
 - `storage.providers.ProviderRepository` combines both, keeps the provider list in memory and
   notifies listeners (window, preferences) after each persisted change.
 
-## Audio pipeline (planned)
+## Audio pipeline
 
-1. **Capture**: `kikoe.media.recorder.Recorder` yields PCM chunks. Planned backend:
-   `sounddevice` (PortAudio; ships binaries for macOS/Windows wheels).
-2. **Store**: write the original to the data dir (e.g. FLAC/Opus via ffmpeg).
-3. **Transcode** for upload with ffmpeg (`kikoe.media.ffmpeg.run`) when a provider
-   needs a specific format or size.
-4. **Transcribe**: realtime models stream PCM over WebSocket while recording; others
-   upload the finished file. Both go through `kikoe.providers.base.TranscriptionProvider`.
+Importing (`services.importer.import_audio`) is implemented; recording is planned.
+
+1. **Capture** (planned): `kikoe.media.recorder.Recorder` yields PCM chunks. Planned
+   backend: `sounddevice` (PortAudio; ships binaries for macOS/Windows wheels).
+2. **Store**: copy the original into the library's audio directory, unchanged, so it can
+   be re-transcribed or exported later.
+3. **Transcode** for upload (`media.transcode.to_upload`): Ogg Opus, 16 kHz mono,
+   32 kbit/s, which fits about 1¾ hours in 25 MB and is accepted by OpenAI, Groq and most
+   compatible servers. ffmpeg's `-progress` output gives the length, so ffprobe is not
+   needed.
+4. **Split if still too large**: when the file exceeds the client's `max_upload_bytes`
+   (25 MB for OpenAI-style APIs), `media.transcode.find_silences` runs ffmpeg's
+   `silencedetect` (an energy-based voice activity check, no extra dependency), and
+   `core.chunking.plan_chunks` cuts in the middle of the last pause before each part's
+   limit (90 % of the size budget, since the bitrate varies). Each part is converted from
+   the original and transcribed in turn; `offset_segments` shifts its timestamps.
+5. **Transcribe**: realtime models (planned) stream PCM over WebSocket while recording;
+   others upload the finished file. Both go through
+   `kikoe.providers.base.TranscriptionProvider`; `providers.factory.create_client` picks
+   the client for a provider's API type. `providers.openai.OpenAIClient` asks for
+   `verbose_json` segments only when the model has the timestamps capability.
+6. **Save**: the recording and its segments are written in one transaction. If any step
+   fails or is cancelled, the copied original and temporary files are removed.
 
 ## Planned dependencies
 
 Added only when the feature using them lands (see AGENTS.md, "Dependencies"):
 
-| Need | Package |
-| --- | --- |
-| HTTP for batch transcription | `httpx` |
-| Realtime streaming | `websockets` |
-| API key storage | `keyring` |
-| Microphone capture | `sounddevice` |
+| Need | Package | Status |
+| --- | --- | --- |
+| HTTP for batch transcription | `httpx` | added (M2) |
+| Realtime streaming | `websockets` | planned |
+| API key storage | `keyring` | added (M1) |
+| Microphone capture | `sounddevice` | planned |
 
 ## UI structure
 
 - `ui/window.py` + `window.blp`: `Adw.NavigationSplitView` (sidebar: notes list;
-  content: a `Gtk.Stack` with the welcome page now, note view later). Collapses below
-  640 sp.
+  content: a `Gtk.Stack` with the welcome page, the empty state and the note view, with
+  the bottom bar below). Collapses below 640 sp.
+- `ui/note_view.py`: a `Gtk.ListView` over a flat list of recording headers and segments
+  (`ui/transcript_row.py`), so only visible rows get widgets.
+- `ui/bottom_bar.py`: model picker, Import Audio and import progress.
+- Custom widgets inside other templates are added from Python into an `Adw.Bin` slot,
+  because Blueprint's linter cannot inspect custom types.
 - `ui/preferences.py` + `preferences.blp`: `Adw.PreferencesDialog` (General, Providers).
 - Future screens from [design.md](design.md) each get their own `name.py` + `name.blp`.
 - Templates load compiled `.ui` files from disk (`ui/templates.py`), not GResources,

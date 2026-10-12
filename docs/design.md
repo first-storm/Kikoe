@@ -70,6 +70,15 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 - Buttons: "Import Audio…" and the primary "Append Recording" (on an empty note,
   "Record").
 
+**Implementation status**:
+- Implemented: sidebar list with *New Note*; content header with title and subtitle;
+  *Display Options*; *Note Menu* with "Rename…" and "Delete Note"; recordings and
+  segments; the bottom bar's model picker and "Import Audio…", which adds to the open
+  note or creates one named after the file, with progress, Cancel and a failure toast.
+- Not yet: *Search Notes*, *Export*, "Copy All Text", the banner, recording header
+  buttons, speaker colors and renaming, the Timestamps/Speakers chips and hint text,
+  "Append Recording"/"Record".
+
 ## 2. Recording in progress
 
 - New note appears at top of the sidebar as "Oct 12 15:40 Recording" with subtitle
@@ -91,7 +100,7 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 - Content: status page with app icon, title "Welcome to Kikoe", description "Kikoe
   turns speech into text using cloud services. Add a provider and a model first, then
   record or import audio.", suggested pill button "Add Provider".
-- **Implemented in the skeleton** (`ui/window.blp`).
+- **Implemented** (`ui/window.blp`).
 
 ## 4. Dialog: Match Speakers (≈520×520)
 
@@ -125,7 +134,7 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 - Rows (navigate to detail): avatar initial + name + subtitle "<API type> API · N
   model(s)", e.g. "Deepgram — Deepgram API · 1 model", "OpenAI — OpenAI API · 2
   models", "Groq — OpenAI-compatible API · 1 model".
-- **Skeleton**: both pages exist, the Providers group is empty (`ui/preferences.blp`).
+- **Implemented** (`ui/preferences.blp`); General is still empty.
 
 ## 7. Preferences — Provider detail (≈640×780)
 
