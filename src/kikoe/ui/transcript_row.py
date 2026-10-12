@@ -136,9 +136,9 @@ class TranscriptRow(Gtk.Box):
         self._preview_text = segment.text if item.preview else None
         self._caret_visible = None
         if item.preview:
-            self.text_label.add_css_class("dim-label")
+            self.text_label.add_css_class("dimmed")
         else:
-            self.text_label.remove_css_class("dim-label")
+            self.text_label.remove_css_class("dimmed")
 
     def set_playing(self, playing: bool) -> None:
         """The header's single button toggles playback rather than overlapping audio."""

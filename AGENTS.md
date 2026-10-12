@@ -115,7 +115,7 @@ po/            translations
   unless they are dynamic (list rows from a model).
 - Lists: `Gio.ListStore` + `Gtk.ListView`/`Gtk.ListBox.bind_model`, not manual row juggling.
 - Use stock libadwaita widgets and style classes (`suggested-action`, `destructive-action`,
-  `pill`, `dim-label`, `monospace`, `numeric`, `boxed-list`, …) before writing CSS. Never
+  `pill`, `dimmed`, `monospace`, `numeric`, `boxed-list`, …) before writing CSS. Never
   hardcode colors or fonts; use libadwaita CSS variables in `ui/style.css` if needed.
 - Follow the GNOME HIG: title-case button labels and headings, sentence-case descriptions,
   mnemonics (`_Save`) on buttons, ellipsis (`…`) on items that open a dialog, adaptive
