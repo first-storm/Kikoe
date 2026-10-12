@@ -69,6 +69,13 @@ if sys.platform.startswith("linux"):
     # plugins (PipeWire, PulseAudio) or configuration.
     a.binaries = [entry for entry in a.binaries if not entry[0].startswith("libasound.so")]
 
+# Without PortAudio the app starts fine but cannot record or play, which the CI
+# start-up check would not notice.
+portaudio = [entry[0] for entry in a.binaries if Path(entry[0]).name.startswith("libportaudio")]
+if not portaudio:
+    raise SystemExit("PortAudio is missing from the bundle; recording would not work.")
+print(f"Bundled PortAudio: {', '.join(portaudio)}")  # noqa: T201 - build log output
+
 pyz = PYZ(a.pure)
 # Linux libraries (libpython in particular) carry debug symbols. macOS binaries are
 # left alone because stripping invalidates their signatures.
