@@ -146,6 +146,7 @@ class Window(Adw.ApplicationWindow):
         self._add_action("export-srt", self._on_export_srt)
         self._add_action("export-vtt", self._on_export_vtt)
         self._add_action("export-audio", self._on_export_audio, GLib.VariantType.new("s"))
+        self._add_action("choose-model", self._on_choose_model)
         self._add_action("import-audio", self._on_import_audio)
         self._add_action("cancel-import", self._on_cancel_import)
         self._import_task: asyncio.Task[None] | None = None
@@ -298,14 +299,14 @@ class Window(Adw.ApplicationWindow):
             else note_subtitle(summary, datetime.now().astimezone()),
             xalign=0,
             ellipsize=Pango.EllipsizeMode.END,
-            css_classes=["caption", "dim-label"],
+            css_classes=["caption", "dimmed"],
         )
         box = Gtk.Box(
             orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=6, margin_bottom=6
         )
         box.append(title)
         if active and session is not None and session.state is not CaptureState.STOPPED:
-            subtitle.remove_css_class("dim-label")
+            subtitle.remove_css_class("dimmed")
             subtitle.add_css_class("recording-status")
             indicator = Gtk.Image(icon_name="media-record-symbolic", pixel_size=7)
             indicator.add_css_class("recording-indicator")
@@ -984,6 +985,9 @@ class Window(Adw.ApplicationWindow):
         self._set_action_enabled("rename-note", not busy and self._note is not None)
         self.export_button.set_sensitive(not busy)
         self._set_action_enabled("export-audio", not busy and self._note is not None)
+
+    def _on_choose_model(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        self.bottom_bar.present_transcription_dialog()
 
     def _on_import_audio(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         run_task(self._pick_and_import(), self)

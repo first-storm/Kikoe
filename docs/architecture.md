@@ -205,8 +205,10 @@ Added only when the feature using them lands (see AGENTS.md, "Dependencies"):
   the bottom bar below). Collapses below 640 sp.
 - `ui/note_view.py`: a `Gtk.ListView` over a flat list of recording headers and segments
   (`ui/transcript_row.py`), so only visible rows get widgets.
-- `ui/bottom_bar.py`: model picker, Import Audio, Record/Append Recording, upload progress
+- `ui/bottom_bar.py`: model button, Import Audio, Record/Append Recording, upload progress
   and the recording controls. `Adw.WrapBox` keeps controls usable at 360 px.
+- `ui/transcription_dialog.py`: the bottom bar's model and options dialog; the bar
+  keeps the state and the dialog reports each change back.
 - `ui/recording_view.py`: the batch-transcription placeholder. Realtime headers and
   rows join the note's existing ListView; the last row is a temporary preview.
 - `ui/level_meter.py`: 28 bars drawn in the inherited theme color from actual PCM RMS;

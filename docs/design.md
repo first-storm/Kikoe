@@ -73,15 +73,20 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   (`00:09`, tabular digits), text. Speaker/timestamp columns hide per display options.
 
 **Bottom bar** (recording controls):
-- *Transcription Model* picker button showing "nova-3 · Deepgram". Popover lists models
-  grouped by provider; each row shows name + capability summary ("Realtime ·
-  Timestamps · Speakers", or "Text only"), check mark on the current one. Below the
-  list, an "Options" section with check boxes "Timestamps" and "Speakers" (whether the
-  next recording requests them) and the hint text: "Transcribes while recording" or
-  "Transcribes after recording", plus "· This model does not support <list>" when
-  relevant. If the model lacks a capability, its check box is disabled with tooltip
-  "<model> does not support <capability>". Footer item "Manage Providers and Models…"
-  → Preferences. The button's tooltip repeats the model, provider and hint.
+- *Transcription Model* button showing "nova-3 · Deepgram" (`win.choose-model`) opens
+  the *Transcription Model* dialog (`Adw.Dialog`, 440 px wide, changes apply at once):
+  - One group per provider, titled with its name: one radio row per model, title = model
+    name, subtitle = capability summary ("Realtime · Timestamps · Speakers", or "Text
+    only"). Initial focus is on the current model.
+  - Group "Options", description "Transcribes while recording" or "Transcribes after
+    recording": switch rows "Timestamps" and "Speakers" (whether the next recording
+    requests them). For OpenRouter models, while Timestamps is on, a combo row
+    "Timestamp Detail" offers "Segments", "Words", "Segments and Words". If the model
+    lacks a capability, its switch is disabled with the subtitle "Not supported by
+    this model"; the earlier choice comes back with a model that supports it.
+  - Button row "Manage Providers and Models…" closes the dialog and opens Preferences.
+  The button's tooltip repeats the model, provider and the hint, including "· This
+  model does not support <list>" when relevant.
 - Buttons: "Import Audio…" and the primary "Append Recording" (on an empty note,
   "Record").
 - The bar is always a single line and keeps the same height whenever it is shown.
@@ -96,7 +101,7 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   "Copy All Text" and "Delete Note"; *Export* with all four formats, a save dialog, and
   subtitle buttons disabled when the note has no timestamps; recordings and segments
   with speaker colors (unnamed speakers show as "Speaker N"); recording header menu
-  with "Export Original Audio…"; the bottom bar's model picker with its Timestamps/Speakers
+  with "Export Original Audio…"; the bottom bar’s model dialog with its Timestamps/Speakers
   options (they set what the next transcription requests) and hint text, and "Import Audio…", which
   adds to the open note or creates one named after the file, with progress, Cancel and a
   failure dialog; Record/Append Recording, pause/resume, Stop, live level meter, batch

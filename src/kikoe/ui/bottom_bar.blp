@@ -35,9 +35,10 @@ template $KikoeBottomBar: Adw.Bin {
         name: "idle";
 
         child: Box {
-          MenuButton model_button {
+          Button model_button {
+            action-name: "win.choose-model";
             can-shrink: true;
-            tooltip-text: _("Transcription Model");
+            tooltip-text: _("Transcription Model…");
 
             accessibility {
               label: _("Transcription Model");
@@ -65,114 +66,14 @@ template $KikoeBottomBar: Adw.Bin {
 
                 styles [
                   "caption",
-                  "dim-label",
+                  "dimmed",
                 ]
-              }
-
-              Image {
-                icon-name: "pan-down-symbolic";
               }
             };
 
             styles [
               "flat",
             ]
-
-            popover: Popover model_popover {
-              child: Box {
-                orientation: vertical;
-                spacing: 6;
-
-                ScrolledWindow {
-                  hscrollbar-policy: never;
-                  propagate-natural-height: true;
-                  max-content-height: 360;
-
-                  child: ListBox model_list {
-                    selection-mode: none;
-                    row-activated => $_on_model_list_row_activated();
-
-                    styles [
-                      "navigation-sidebar",
-                    ]
-                  };
-                }
-
-                Box options_box {
-                  orientation: vertical;
-                  spacing: 6;
-
-                  Separator {}
-
-                  Label {
-                    label: _("Options");
-                    xalign: 0;
-                    margin-start: 6;
-                    margin-top: 6;
-
-                    styles [
-                      "heading",
-                      "dim-label",
-                    ]
-                  }
-
-                  CheckButton timestamps_check {
-                    label: _("_Timestamps");
-                    use-underline: true;
-                    toggled => $_on_feature_check_toggled();
-                  }
-
-                  Box granularity_box {
-                    orientation: vertical;
-                    spacing: 6;
-                    margin-start: 24;
-
-                    CheckButton segment_check {
-                      label: _("_Segment");
-                      use-underline: true;
-                      toggled => $_on_granularity_toggled();
-                    }
-
-                    CheckButton word_check {
-                      label: _("_Word");
-                      use-underline: true;
-                      toggled => $_on_granularity_toggled();
-                    }
-                  }
-
-                  CheckButton speakers_check {
-                    label: _("_Speakers");
-                    use-underline: true;
-                    toggled => $_on_feature_check_toggled();
-                  }
-
-                  Label hint_label {
-                    xalign: 0;
-                    wrap: true;
-                    max-width-chars: 32;
-                    margin-start: 6;
-                    margin-end: 6;
-
-                    styles [
-                      "caption",
-                      "dim-label",
-                    ]
-                  }
-                }
-
-                Separator {}
-
-                Button {
-                  label: _("_Manage Providers and Models…");
-                  use-underline: true;
-                  action-name: "app.preferences";
-
-                  styles [
-                    "flat",
-                  ]
-                }
-              };
-            };
           }
 
           Box {
@@ -293,7 +194,7 @@ template $KikoeBottomBar: Adw.Bin {
 
             styles [
               "caption",
-              "dim-label",
+              "dimmed",
             ]
           }
 

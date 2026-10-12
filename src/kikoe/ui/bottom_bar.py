@@ -1,48 +1,31 @@
-"""Bar below the note: model picker with its options, Import Audio, Record and progress."""
+"""Bar below the note: model button, Import Audio, Record and progress."""
 
 import math
 from dataclasses import replace
 
-from gi.repository import Adw, Gdk, Gio, GObject, Gtk, Pango
+from gi.repository import Adw, Gdk, GObject, Gtk
 
-from kikoe.core.choice import (
-    ModelChoice,
-    RequestedFeatures,
-    available_models,
-    normalize_granularities,
-    resolve_choice,
-)
+from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models, resolve_choice
 from kikoe.core.formatting import format_timestamp
-from kikoe.core.models import ApiKind, ModelSpec, TimestampGranularity
 from kikoe.core.preferences import preferred_model
 from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.core.transcription import model_support
-from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
-from kikoe.ui.items import ModelChoiceItem
-from kikoe.ui.labels import capability_summary, transcription_hint, unsupported_feature_tooltip
+from kikoe.ui.labels import transcription_hint
 from kikoe.ui.level_meter import LevelMeter
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
+from kikoe.ui.transcription_dialog import TranscriptionDialog
 
 
 @Gtk.Template(filename=ui_file("bottom_bar"))
 class BottomBar(Adw.Bin):
     __gtype_name__ = "KikoeBottomBar"
 
-    model_button: Gtk.MenuButton = Gtk.Template.Child()
+    model_button: Gtk.Button = Gtk.Template.Child()
     model_label: Gtk.Label = Gtk.Template.Child()
     provider_label: Gtk.Label = Gtk.Template.Child()
-    options_box: Gtk.Box = Gtk.Template.Child()
-    timestamps_check: Gtk.CheckButton = Gtk.Template.Child()
-    granularity_box: Gtk.Box = Gtk.Template.Child()
-    segment_check: Gtk.CheckButton = Gtk.Template.Child()
-    word_check: Gtk.CheckButton = Gtk.Template.Child()
-    speakers_check: Gtk.CheckButton = Gtk.Template.Child()
-    hint_label: Gtk.Label = Gtk.Template.Child()
-    model_popover: Gtk.Popover = Gtk.Template.Child()
-    model_list: Gtk.ListBox = Gtk.Template.Child()
     state_stack: Gtk.Stack = Gtk.Template.Child()
     record_button: Gtk.Button = Gtk.Template.Child()
     record_content: Adw.ButtonContent = Gtk.Template.Child()
@@ -65,11 +48,7 @@ class BottomBar(Adw.Bin):
         self._choice: ModelChoice | None = None
         self._wanted = RequestedFeatures()
         """What the user asked for, kept while a model that lacks a feature is chosen."""
-        self._updating = False
         self._defaults_pending = False
-        self._models: Gio.ListStore[ModelChoiceItem] = Gio.ListStore(item_type=ModelChoiceItem)
-        self.model_list.bind_model(self._models, self._create_model_row)
-        self.model_list.set_header_func(self._update_header)
 
     @GObject.Signal
     def choice_changed(self) -> None:
@@ -166,11 +145,6 @@ class BottomBar(Adw.Bin):
             if self._repository
             else None
         )
-        self._models.splice(
-            0,
-            self._models.get_n_items(),
-            [ModelChoiceItem(choice) for choice in available_models(providers)],
-        )
         self._show_choice()
 
     def _show_choice(self) -> None:
@@ -179,7 +153,7 @@ class BottomBar(Adw.Bin):
             self.model_label.set_label(_("No Model"))
             self.provider_label.set_label("")
             self.import_button.set_tooltip_text(_("Add a model in Preferences first"))
-            self.model_button.set_tooltip_text(_("Transcription Model"))
+            self.model_button.set_tooltip_text(_("Transcription Model…"))
         else:
             self.model_label.set_label(choice.model.display_name)
             self.provider_label.set_label(choice.provider.name)
@@ -197,159 +171,23 @@ class BottomBar(Adw.Bin):
                 if model_support(choice.provider.api, choice.model).file
                 else _("Choose a file transcription model to import audio.")
             )
-        self._show_options(
-            replace(
-                choice.model,
-                capabilities=model_support(choice.provider.api, choice.model).recording,
-            )
-            if choice
-            else None
-        )
         self.emit("choice-changed")
 
-    def _show_options(self, model: ModelSpec | None) -> None:
-        self.options_box.set_visible(model is not None)
-        if model is None:
-            self.granularity_box.set_visible(False)
-            self.hint_label.set_label("")
-            self.hint_label.set_tooltip_text(None)
-            return
-        allowed = self._wanted.allowed_by(model.capabilities)
-        checks = (
-            (
-                self.timestamps_check,
-                Capability.TIMESTAMPS,
-                model.capabilities.timestamps,
-                allowed.timestamps,
-            ),
-            (
-                self.speakers_check,
-                Capability.DIARIZATION,
-                model.capabilities.diarization,
-                allowed.diarization,
-            ),
-        )
-        self._updating = True
-        try:
-            for check, capability, supported, active in checks:
-                check.set_sensitive(supported)
-                check.set_active(active)
-                check.set_tooltip_text(
-                    None
-                    if supported
-                    else unsupported_feature_tooltip(capability, model.display_name)
-                )
-            granular = (
-                self._choice is not None
-                and self._choice.provider.api is ApiKind.OPENROUTER
-                and model.capabilities.timestamps
-            )
-            self.granularity_box.set_visible(granular)
-            if granular:
-                self.segment_check.set_active(
-                    TimestampGranularity.SEGMENT in self._wanted.timestamp_granularities
-                )
-                self.word_check.set_active(
-                    TimestampGranularity.WORD in self._wanted.timestamp_granularities
-                )
-        finally:
-            self._updating = False
-        hint = transcription_hint(model.capabilities)
-        self.hint_label.set_label(hint)
-        self.hint_label.set_tooltip_text(hint)
+    def present_transcription_dialog(self) -> None:
+        """Let the user pick the model and options for the next transcription."""
+        providers = self._repository.providers if self._repository else ()
+        TranscriptionDialog(
+            available_models(providers), self._choice, self._wanted, self._on_dialog_changed
+        ).present(self)
 
-    @Gtk.Template.Callback()
-    def _on_feature_check_toggled(self, _check: Gtk.CheckButton) -> None:
-        if self._updating or self._choice is None:
+    def _on_dialog_changed(self, choice: ModelChoice, wanted: RequestedFeatures) -> None:
+        self._wanted = wanted
+        if self._choice is not None and choice.key == self._choice.key:
             return
-        caps = model_support(self._choice.provider.api, self._choice.model).recording
-        self._wanted = RequestedFeatures(
-            timestamps=self.timestamps_check.get_active()
-            if caps.timestamps
-            else self._wanted.timestamps,
-            diarization=self.speakers_check.get_active()
-            if caps.diarization
-            else self._wanted.diarization,
-        )
-        self._show_options(replace(self._choice.model, capabilities=caps))
-
-    @Gtk.Template.Callback()
-    def _on_granularity_toggled(self, check: Gtk.CheckButton) -> None:
-        if self._updating or self._choice is None:
-            return
-        if not (self.segment_check.get_active() or self.word_check.get_active()):
-            self._updating = True
-            try:
-                check.set_active(True)
-            finally:
-                self._updating = False
-            return
-        self._wanted = replace(
-            self._wanted,
-            timestamp_granularities=normalize_granularities(
-                granularity
-                for granularity, box in (
-                    (TimestampGranularity.SEGMENT, self.segment_check),
-                    (TimestampGranularity.WORD, self.word_check),
-                )
-                if box.get_active()
-            ),
-        )
-
-    def _create_model_row(self, item: GObject.Object) -> Gtk.Widget:
-        assert isinstance(item, ModelChoiceItem)
-        choice = item.choice
-        title = Gtk.Label(
-            label=choice.model.display_name, xalign=0, ellipsize=Pango.EllipsizeMode.END
-        )
-        subtitle = Gtk.Label(
-            label=capability_summary(model_support(choice.provider.api, choice.model).recording),
-            xalign=0,
-            css_classes=["caption", "dim-label"],
-        )
-        labels = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True)
-        labels.append(title)
-        labels.append(subtitle)
-        check = Gtk.Image(
-            icon_name="object-select-symbolic",
-            opacity=1 if self._choice is not None and choice.key == self._choice.key else 0,
-        )
-        row = Gtk.Box(spacing=12, margin_top=3, margin_bottom=3)
-        row.append(labels)
-        row.append(check)
-        return row
-
-    def _update_header(self, row: Gtk.ListBoxRow, before: Gtk.ListBoxRow | None) -> None:
-        """Group models under their provider's name."""
-        current = self._models.get_item(row.get_index())
-        previous = self._models.get_item(before.get_index()) if before is not None else None
-        if current is None or (
-            previous is not None
-            and previous.choice.provider.provider_id == current.choice.provider.provider_id
-        ):
-            row.set_header(None)
-            return
-        row.set_header(
-            Gtk.Label(
-                label=current.choice.provider.name,
-                xalign=0,
-                margin_start=6,
-                margin_top=6 if before is not None else 0,
-                css_classes=["heading", "dim-label"],
-            )
-        )
-
-    @Gtk.Template.Callback()
-    def _on_model_list_row_activated(self, _list: Gtk.ListBox, row: Gtk.ListBoxRow) -> None:
-        item = self._models.get_item(row.get_index())
-        self.model_popover.popdown()
-        if item is None:
-            return
-        self._choice = item.choice
+        self._choice = choice
         if self._repository is not None:
-            key = item.choice.key
+            key = choice.key
             run_task(
                 self._repository.update_preferences(lambda p: replace(p, recent_model=key)), self
             )
-        # Rebuild the rows so the check mark moves.
-        self._refresh()
+        self._show_choice()

@@ -172,23 +172,22 @@ def import_stage_label(stage: ImportStage, part: int, parts: int) -> str:
             return _("Saving…")
 
 
-def unsupported_feature_tooltip(capability: Capability, model: str) -> str:
-    """Why a Timestamps/Speakers option in the model popover is disabled."""
-    match capability:
-        case Capability.TIMESTAMPS:
-            return _("{model} does not support timestamps").format(model=model)
-        case _:
-            return _("{model} does not support speaker detection").format(model=model)
+def unsupported_option_subtitle() -> str:
+    """Shown under a Timestamps/Speakers switch the chosen model cannot honor."""
+    return _("Not supported by this model")
+
+
+def transcription_mode(capabilities: Capabilities) -> str:
+    """“Transcribes while recording” or “Transcribes after recording”."""
+    if capabilities.realtime:
+        return _("Transcribes while recording")
+    return _("Transcribes after recording")
 
 
 def transcription_hint(capabilities: Capabilities) -> str:
     """E.g. “Transcribes after recording · This model does not support timestamps”."""
     missing = ", ".join(_feature_name(c) for c in unsupported_features(capabilities))
-    mode = (
-        _("Transcribes while recording")
-        if capabilities.realtime
-        else _("Transcribes after recording")
-    )
+    mode = transcription_mode(capabilities)
     if missing:
         return _("{mode} · This model does not support {features}").format(
             mode=mode, features=missing

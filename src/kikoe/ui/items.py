@@ -2,7 +2,6 @@
 
 from gi.repository import GObject
 
-from kikoe.core.choice import ModelChoice
 from kikoe.core.models import ModelSpec, NoteSummary, Provider, Recording, Segment
 
 
@@ -49,9 +48,3 @@ class TranscriptItem(GObject.Object):
         self.live_summary = live_summary
         self.position = position
         """Index of ``segment`` in its recording; None for headers and live rows."""
-
-
-class ModelChoiceItem(GObject.Object):
-    def __init__(self, choice: ModelChoice) -> None:
-        super().__init__()
-        self.choice = choice
