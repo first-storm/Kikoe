@@ -167,6 +167,22 @@ def freeze() -> None:
         "python": platform.python_version(),
         "packages": packages,
     }
+    if target_python := env.get("KIKOE_NATIVE_PYTHON"):
+        # Windows uses a driver interpreter; provenance must describe the payload.
+        target_result = subprocess.run(
+            [
+                target_python,
+                "-c",
+                "import json, platform; from importlib.metadata import distributions; "
+                "print(json.dumps({'python': platform.python_version(), 'packages': "
+                "{d.metadata['Name']: d.version for d in distributions()}}))",
+            ],
+            env=env,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        information.update(json.loads(target_result.stdout))
     if sys.platform == "win32":
         native_command = ["pacman", "-Q"]
     elif sys.platform == "darwin":
@@ -259,9 +275,11 @@ def flatpak_manifest() -> dict[str, object]:
     return {
         "app-id": APP_ID,
         "runtime": "org.gnome.Platform",
-        "runtime-version": "50",
+        "runtime-version": "51",
         "sdk": "org.gnome.Sdk",
         "command": "kikoe",
+        # Preserve the embedded PyInstaller archive and already-frozen libraries.
+        "build-options": {"strip": False, "no-debuginfo": True},
         "finish-args": [
             "--socket=wayland",
             "--socket=fallback-x11",

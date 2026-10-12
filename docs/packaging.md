@@ -15,7 +15,7 @@ from the **Desktop packages** workflow. These are review builds, not signed rele
 
 Here x86 means 64-bit x86, and ARM means ARM64 (`aarch64`). 32-bit x86 and ARMv7
 are not supported. AppImages and portable Linux archives require a host compatible
-with Ubuntu 26.04's glibc; Flatpak uses the GNOME 50 runtime for a consistent base.
+with Ubuntu 26.04's glibc; Flatpak uses the GNOME 51 runtime for a consistent base.
 macOS builds target macOS 14 or newer. Windows builds target Windows 10/11 on x64
 and Windows 11 on ARM64; the ARM package contains native ARM binaries.
 
@@ -78,8 +78,10 @@ FUSE. On hosts without FUSE, use `./Kikoe-*.AppImage --appimage-extract-and-run`
 The Flatpak manifest is generated under `build/` from the app constants and the frozen
 directory. It reuses the same Python/native payload as AppImage, so it does not need
 network access during the module build or rely on the runtime's Python version.
-`org.gnome.Platform`/`org.gnome.Sdk` version 50 supplies the sandbox base. The generated
+`org.gnome.Platform`/`org.gnome.Sdk` version 51 supplies the sandbox base. GNOME 51's
+Freedesktop 26.08 base meets the frozen Ubuntu libraries' glibc requirement. The generated
 manifest installs the launcher, desktop file, metainfo and icon under `/app`.
+It preserves the frozen executable without stripping or splitting its debug data.
 
 Permissions are Wayland, fallback X11, IPC, DRI, PulseAudio (microphone), network and
 `org.freedesktop.secrets` for keyring. There is no general filesystem or session-bus
