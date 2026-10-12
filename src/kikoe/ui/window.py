@@ -12,13 +12,11 @@ from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango
 
 from kikoe.core.choice import ModelChoice, available_models
 from kikoe.core.export import ExportFormat, export_filename, export_note
-from kikoe.core.formatting import transcript_features
 from kikoe.core.models import DisplayOptions, Note, NoteSummary, Recording, TranscriptionState
 from kikoe.core.preferences import WindowState, valid_window_state
 from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.core.speakers import identity_for
 from kikoe.core.transcription import LiveSnapshot, model_support
-from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.media.ffmpeg import find_ffmpeg
 from kikoe.media.player import PlaybackError, play_audio
@@ -33,6 +31,7 @@ from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.storage.settings import SettingsError
 from kikoe.ui.bottom_bar import BottomBar
+from kikoe.ui.export_dialog import ExportDialog
 from kikoe.ui.items import NoteItem
 from kikoe.ui.labels import (
     export_format_label,
@@ -55,10 +54,7 @@ _NOTE_ACTIONS = (
     "rename-note",
     "copy-all-text",
     "delete-note",
-    "export-txt",
-    "export-md",
-    "export-srt",
-    "export-vtt",
+    "export",
 )
 """Window actions that act on the shown note and are disabled without one."""
 
@@ -73,11 +69,7 @@ class Window(Adw.ApplicationWindow):
     content_page: Adw.NavigationPage = Gtk.Template.Child()
     window_title: Adw.WindowTitle = Gtk.Template.Child()
     note_menu_button: Gtk.MenuButton = Gtk.Template.Child()
-    export_button: Gtk.MenuButton = Gtk.Template.Child()
-    export_popover: Gtk.PopoverMenu = Gtk.Template.Child()
-    export_menu: Gio.Menu = Gtk.Template.Child()
-    export_footnote: Gtk.Box = Gtk.Template.Child()
-    export_unavailable_label: Gtk.Label = Gtk.Template.Child()
+    export_button: Gtk.Button = Gtk.Template.Child()
     display_options_button: Gtk.MenuButton = Gtk.Template.Child()
     timestamps_row: Adw.SwitchRow = Gtk.Template.Child()
     speakers_row: Adw.SwitchRow = Gtk.Template.Child()
@@ -98,9 +90,6 @@ class Window(Adw.ApplicationWindow):
         window_state: WindowState | None = None,
     ) -> None:
         super().__init__(application=application)
-        # A custom child can only be added after the menu model that refers to it is set.
-        self.export_popover.set_menu_model(self.export_menu)
-        self.export_popover.add_child(self.export_footnote, "export-notes")
         self._geometry_timeout = 0
         if window_state is not None:
             self.set_default_size(window_state.width, window_state.height)
@@ -123,6 +112,7 @@ class Window(Adw.ApplicationWindow):
             ("search-notes", ["<primary>f"]),
             ("import-audio", ["<primary>o"]),
             ("rename-note", ["F2"]),
+            ("export", ["<primary><shift>e"]),
         ):
             application.set_accels_for_action(f"win.{action}", keys)
         self._providers = providers
@@ -141,10 +131,7 @@ class Window(Adw.ApplicationWindow):
         self._add_action("delete-note", self._on_delete_note)
         self._add_action("rename-note-row", self._on_rename_note_row, GLib.VariantType.new("s"))
         self._add_action("delete-note-row", self._on_delete_note_row, GLib.VariantType.new("s"))
-        self._add_action("export-txt", self._on_export_txt)
-        self._add_action("export-md", self._on_export_md)
-        self._add_action("export-srt", self._on_export_srt)
-        self._add_action("export-vtt", self._on_export_vtt)
+        self._add_action("export", self._on_export)
         self._add_action("export-audio", self._on_export_audio, GLib.VariantType.new("s"))
         self._add_action("choose-model", self._on_choose_model)
         self._add_action("import-audio", self._on_import_audio)
@@ -451,7 +438,6 @@ class Window(Adw.ApplicationWindow):
             finally:
                 self._showing = False
             self.note_view.show_note(note)
-            self._update_subtitle_actions(note)
             self.bottom_bar.set_note(bool(note.recordings))
             if self._session is not None and self._session.state is not CaptureState.STOPPED:
                 self.note_view.show_recording(
@@ -791,14 +777,14 @@ class Window(Adw.ApplicationWindow):
 
     # Export
 
-    def _update_subtitle_actions(self, note: Note) -> None:
-        """Subtitle exports need timestamps; say so in the menu when they are unavailable."""
-        has_times = any(
-            Capability.TIMESTAMPS in transcript_features(r.segments) for r in note.recordings
-        )
-        for name in ("export-srt", "export-vtt"):
-            self._set_action_enabled(name, has_times)
-        self.export_unavailable_label.set_visible(not has_times)
+    def _on_export(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        note = self._note
+        if note is None:
+            return
+        ExportDialog(note, self._on_export_dialog_submitted).present(self)
+
+    def _on_export_dialog_submitted(self, fmt: ExportFormat, options: DisplayOptions) -> None:
+        run_task(self._export_note(fmt, options), self)
 
     def _on_copy_all_text(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         note = self._note
@@ -807,27 +793,11 @@ class Window(Adw.ApplicationWindow):
         self.get_clipboard().set(export_note(note, ExportFormat.TEXT, note.display))
         self.add_toast(Adw.Toast(title=_("Copied to clipboard")))
 
-    def _on_export_txt(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        self._begin_export(ExportFormat.TEXT)
-
-    def _on_export_md(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        self._begin_export(ExportFormat.MARKDOWN)
-
-    def _on_export_srt(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        self._begin_export(ExportFormat.SRT)
-
-    def _on_export_vtt(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        self._begin_export(ExportFormat.WEBVTT)
-
-    def _begin_export(self, fmt: ExportFormat) -> None:
-        self.export_popover.popdown()
-        run_task(self._export_note(fmt), self)
-
-    async def _export_note(self, fmt: ExportFormat) -> None:
+    async def _export_note(self, fmt: ExportFormat, options: DisplayOptions) -> None:
         note = self._note
         if note is None:
             return
-        content = export_note(note, fmt, note.display)
+        content = export_note(note, fmt, options)
         target = await self._pick_save_path(
             _("Export Note"),
             export_filename(note.title, fmt.value),
@@ -983,7 +953,7 @@ class Window(Adw.ApplicationWindow):
         self._set_action_enabled("rename-note-row", not busy)
         self._set_action_enabled("delete-note-row", not busy)
         self._set_action_enabled("rename-note", not busy and self._note is not None)
-        self.export_button.set_sensitive(not busy)
+        self._set_action_enabled("export", not busy and self._note is not None)
         self._set_action_enabled("export-audio", not busy and self._note is not None)
 
     def _on_choose_model(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:

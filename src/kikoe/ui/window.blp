@@ -145,17 +145,16 @@ template $KikoeWindow: Adw.ApplicationWindow {
             }
 
             [end]
-            MenuButton export_button {
-              icon-name: "document-send-symbolic";
-              tooltip-text: _("Export");
+            Button export_button {
+              icon-name: "document-save-as-symbolic";
+              tooltip-text: _("Export…");
 
               accessibility {
-                label: _("Export");
+                label: _("Export…");
               }
 
+              action-name: "win.export";
               visible: false;
-
-              popover: PopoverMenu export_popover {};
             }
 
             [end]
@@ -287,41 +286,6 @@ template $KikoeWindow: Adw.ApplicationWindow {
   };
 }
 
-/* Added to export_popover from code once its menu model is set. */
-Box export_footnote {
-  orientation: vertical;
-  spacing: 6;
-  margin-start: 12;
-  margin-end: 12;
-  margin-top: 6;
-  margin-bottom: 6;
-  width-request: 260;
-
-  Label {
-    label: _("Speaker labels follow the current display settings. Subtitle formats always include timestamps.");
-    wrap: true;
-    max-width-chars: 36;
-    xalign: 0;
-
-    styles [
-      "caption",
-      "dimmed",
-    ]
-  }
-
-  Label export_unavailable_label {
-    label: _("Subtitles are unavailable because this note has no timestamps.");
-    wrap: true;
-    max-width-chars: 36;
-    xalign: 0;
-    visible: false;
-
-    styles [
-      "caption",
-    ]
-  }
-}
-
 menu primary_menu {
   section {
     item {
@@ -344,36 +308,6 @@ menu primary_menu {
     item {
       label: _("_About Kikoe");
       action: "app.about";
-    }
-  }
-}
-
-menu export_menu {
-  section {
-    item {
-      label: _("_Plain Text (.txt)…");
-      action: "win.export-txt";
-    }
-
-    item {
-      label: _("_Markdown (.md)…");
-      action: "win.export-md";
-    }
-
-    item {
-      label: _("_SRT Subtitles (.srt)…");
-      action: "win.export-srt";
-    }
-
-    item {
-      label: _("_WebVTT Subtitles (.vtt)…");
-      action: "win.export-vtt";
-    }
-  }
-
-  section {
-    item {
-      custom: "export-notes";
     }
   }
 }

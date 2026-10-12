@@ -1,0 +1,107 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeExportDialog: Adw.Dialog {
+  title: _("Export Note");
+  content-width: 440;
+  default-widget: export_button;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      show-start-title-buttons: false;
+      show-end-title-buttons: false;
+
+      [start]
+      Button {
+        label: _("_Cancel");
+        use-underline: true;
+        clicked => $_on_cancel_button_clicked();
+      }
+
+      [end]
+      Button export_button {
+        label: _("_Export…");
+        use-underline: true;
+        clicked => $_on_export_button_clicked();
+
+        styles [
+          "suggested-action",
+        ]
+      }
+    }
+
+    content: Adw.PreferencesPage {
+      Adw.PreferencesGroup {
+        title: _("Format");
+
+        Adw.ActionRow text_row {
+          title: _("Plain Text");
+          subtitle: ".txt";
+          activatable-widget: text_radio;
+
+          [prefix]
+          CheckButton text_radio {
+            can-focus: false;
+            active: true;
+            toggled => $_on_format_toggled();
+          }
+        }
+
+        Adw.ActionRow md_row {
+          title: _("Markdown");
+          subtitle: ".md";
+          activatable-widget: md_radio;
+
+          [prefix]
+          CheckButton md_radio {
+            can-focus: false;
+            group: text_radio;
+            toggled => $_on_format_toggled();
+          }
+        }
+
+        Adw.ActionRow srt_row {
+          title: _("SRT Subtitles");
+          subtitle: ".srt";
+          activatable-widget: srt_radio;
+
+          [prefix]
+          CheckButton srt_radio {
+            can-focus: false;
+            group: text_radio;
+            toggled => $_on_format_toggled();
+          }
+        }
+
+        Adw.ActionRow vtt_row {
+          title: _("WebVTT Subtitles");
+          subtitle: ".vtt";
+          activatable-widget: vtt_radio;
+
+          [prefix]
+          CheckButton vtt_radio {
+            can-focus: false;
+            group: text_radio;
+            toggled => $_on_format_toggled();
+          }
+        }
+      }
+
+      Adw.PreferencesGroup {
+        title: _("Options");
+
+        Adw.SwitchRow timestamps_row {
+          title: _("Show _Timestamps");
+          use-underline: true;
+          notify::active => $_on_timestamps_row_notify_active();
+        }
+
+        Adw.SwitchRow speakers_row {
+          title: _("Show _Speakers");
+          use-underline: true;
+        }
+      }
+    };
+  };
+}

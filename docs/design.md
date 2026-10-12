@@ -98,8 +98,9 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 **Implementation status**:
 - Implemented: sidebar list with *New Note* (disabled until a provider exists);
   content header with title and subtitle; *Display Options*; *Note Menu* with "Rename…",
-  "Copy All Text" and "Delete Note"; *Export* with all four formats, a save dialog, and
-  subtitle buttons disabled when the note has no timestamps; recordings and segments
+  "Copy All Text" and "Delete Note"; *Export* with an Adw.Dialog choosing format and
+  options (timestamps, speakers), followed by a save dialog, with subtitle options
+  disabled when the note has no timestamps; recordings and segments
   with speaker colors (unnamed speakers show as "Speaker N"); recording header menu
   with "Export Original Audio…"; the bottom bar’s model dialog with its Timestamps/Speakers
   options (they set what the next transcription requests) and hint text, and "Import Audio…", which
@@ -306,7 +307,7 @@ Pushed as a subpage (back button) titled with the provider name.
 ## 10. Keyboard and accessibility (M7)
 
 The main menu offers Keyboard Shortcuts. New Note uses Ctrl+N, Search Notes Ctrl+F,
-Import Audio Ctrl+O, Rename Note F2, Preferences Ctrl+comma, shortcut help Ctrl+?, and
+Import Audio Ctrl+O, Rename Note F2, Export Note Ctrl+Shift+E, Preferences Ctrl+comma, shortcut help Ctrl+?, and
 Quit Ctrl+Q (Command replaces Ctrl on macOS). Escape closes search; it never stops a
 recording. Shortcuts share action availability with buttons, including busy-state guards.
 Search is disabled while capturing/transcribing so it cannot hide narrow-window Stop
@@ -319,9 +320,9 @@ scroll at 360 px. Visible error states have explanatory text in addition to colo
 HIG audit follow-ups:
 - Search Notes is a toggle button bound to the search bar (no separate close button), and
   typing in the notes list starts a search unless a capture or import is running.
-- Export is a menu of four items that open a save dialog (hence the ellipsis), with the
-  footnote as a custom menu child; subtitle items are disabled, with an explanation in
-  that footnote, when the note has no timestamps.
+- Export is an `Adw.Dialog` choosing from four formats with options for timestamps and
+  speaker labels before opening a save dialog (hence the ellipsis); subtitle formats are
+  disabled when the note has no timestamps.
 - Keyboard Shortcuts is an `Adw.ShortcutsDialog`; Ctrl+W closes the window (the same
   save-then-close path as Quit).
 - Secondary click or long press on a sidebar note offers Rename… and Delete Note without
