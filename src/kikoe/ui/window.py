@@ -539,6 +539,7 @@ class Window(Adw.ApplicationWindow):
                     path,
                     start=timedelta(seconds=key[1]),
                     end=timedelta(seconds=key[2]) if key[2] is not None else None,
+                    device=self._providers.preferences.output_device,
                 )
         except PlaybackError as error:
             log.warning("Playback failed: %s", error)
@@ -1029,7 +1030,11 @@ class Window(Adw.ApplicationWindow):
                 else "",
             )
             directory = await asyncio.to_thread(capture_dir)
-            session = RecordingSession(SoundDeviceRecorder(), CaptureStore(directory), self._notes)
+            session = RecordingSession(
+                SoundDeviceRecorder(self._providers.preferences.input_device),
+                CaptureStore(directory),
+                self._notes,
+            )
             self._session = session
             title = recording_note_title(datetime.now(UTC))
             note = await session.start(note_id, title, choice)

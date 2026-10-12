@@ -1,4 +1,4 @@
-"""Play retained audio on the default output device with bounded memory."""
+"""Play retained audio on the chosen output device with bounded memory."""
 
 import asyncio
 import importlib
@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Protocol, cast
 
 from kikoe.i18n import _
+from kikoe.media.devices import find_device
 from kikoe.media.ffmpeg import decode_audio
 
 
@@ -32,9 +33,9 @@ class OutputStream(Protocol):
 class OutputBackend(Protocol):
     """Typed boundary for PortAudio and a fake test output device."""
 
-    def query_devices(self, *, kind: str) -> dict[str, object]: ...
+    def query_devices(self, device: int | None = None, kind: str | None = None) -> object: ...
     def RawOutputStream(  # noqa: N802  # External API's spelling.
-        self, *, samplerate: int, channels: int, dtype: str
+        self, *, device: int | None, samplerate: int, channels: int, dtype: str
     ) -> OutputStream: ...
 
 
@@ -53,6 +54,7 @@ async def play_audio(
     *,
     start: timedelta = timedelta(),
     end: timedelta | None = None,
+    device: str | None = None,
     backend: OutputBackend | None = None,
 ) -> None:
     """Play one range; cancelling closes both the decoder and the output device."""
@@ -62,13 +64,20 @@ async def play_audio(
         output = backend or cast(
             OutputBackend, await asyncio.to_thread(importlib.import_module, "sounddevice")
         )
-        info = await _device_call(lambda: output.query_devices(kind="output"))
+        index = await _device_call(lambda: find_device("output", device, output))
+        info = cast(
+            dict[str, object], await _device_call(lambda: output.query_devices(index, "output"))
+        )
         rate = info.get("default_samplerate")
         if not isinstance(rate, (int, float)) or rate <= 0:
             raise PlaybackError(_("No default audio output device is available."))
         opening = asyncio.create_task(
             asyncio.to_thread(
-                output.RawOutputStream, samplerate=round(rate), channels=1, dtype="int16"
+                output.RawOutputStream,
+                device=index,
+                samplerate=round(rate),
+                channels=1,
+                dtype="int16",
             )
         )
         try:

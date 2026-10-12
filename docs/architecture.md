@@ -85,12 +85,17 @@ Top-level helpers (`constants`, `paths`, `i18n`) are importable from any layer.
 
 ## Audio pipeline
 
+Input and output devices are saved in `Preferences` by name (`None` = system default).
+`media.devices` lists them and resolves a name to a PortAudio index; "System Default"
+prefers the `pipewire`/`pulse`/`default` ALSA aliases because PortAudio's own default is the
+first hardware device, not the desktop's choice. A missing saved device falls back to that.
+
 File and realtime microphone transcription are implemented. File import and retained
 recording retry share `services.importer.transcribe_audio` for conversion, splitting
 and timestamps. `services.realtime.RealtimeRecording` owns live connections.
 
 1. **Capture**: `media.recorder.SoundDeviceRecorder` implements the async `Recorder`
-   protocol using sounddevice's `RawInputStream`, without NumPy. The default input
+   protocol using sounddevice's `RawInputStream`, without NumPy. The chosen (or default) input
    device supplies mono int16 PCM at its native sample rate; buffers are converted to
    little endian. PortAudio callbacks only copy into a bounded queue. Overflow or device
    loss is reported, and previously accepted blocks are drained. A 200 ms device buffer
@@ -239,8 +244,8 @@ order: at least 80% of a new label's timed speech must overlap an old person, wi
 strictly better score at least twice the runner-up. Labels with missing/invalid times
 are left for manual matching. Preserving an unconfirmed identity does not confirm it.
 
-`media.player` uses the existing sounddevice `RawOutputStream` at the default output
-sample rate. `media.ffmpeg.decode_audio` streams mono int16 PCM in bounded blocks,
+`media.player` uses the existing sounddevice `RawOutputStream` at the chosen output
+device's sample rate. `media.ffmpeg.decode_audio` streams mono int16 PCM in bounded blocks,
 draining decoder diagnostics concurrently. Device calls run in worker threads; cancellation
 waits for an in-flight call before closing the stream. The window serializes playback and
 stops it on note changes, dialog/window closure and before capture or transcription.

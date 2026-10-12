@@ -80,6 +80,8 @@ class SettingsStore:
                 "default_model": settings.preferences.default_model,
                 "recent_model": settings.preferences.recent_model,
                 "language": settings.preferences.language,
+                "input_device": settings.preferences.input_device,
+                "output_device": settings.preferences.output_device,
             },
         }
         try:
@@ -167,7 +169,17 @@ def _decode_preferences(value: object) -> Preferences:
         default_model=_decode_model_key(fields.get("default_model")),
         recent_model=_decode_model_key(fields.get("recent_model")),
         language=language,
+        input_device=_decode_device(fields.get("input_device")),
+        output_device=_decode_device(fields.get("output_device")),
     )
+
+
+def _decode_device(value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value:
+        raise ValueError("an audio device must be a name")
+    return value
 
 
 def _decode_model_key(value: object) -> tuple[str, str] | None:

@@ -281,6 +281,11 @@ Pushed as a subpage (back button) titled with the provider name.
 - "Transcription" group: Default Model combo (provider and model name), then Transcription
   Language entry with an apply button. Empty means automatic detection; the tooltip gives
   `zh`, `en` and `ja` examples. Invalid codes show an error state and are not saved.
+- "Audio" group: Microphone (used for new recordings) and Speaker (used for playback)
+  combo rows. The first item is "System Default", which is also the initial choice. The
+  choice is saved by device name; a saved device that is unplugged stays listed as
+  "<name> (Unavailable)" and the system default is used until it returns. A running
+  recording keeps the device it started with.
 - "Storage" group: Data Directory row showing the current path; activating opens the
   directory. This release does not move the library or change its location.
 - "Troubleshooting" group: Log Directory row opening local diagnostics. The description

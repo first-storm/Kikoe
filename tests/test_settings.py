@@ -128,3 +128,27 @@ def test_malformed_defaults_are_reported(tmp_path: Path, preferences: dict[str, 
     )
     with pytest.raises(SettingsError):
         SettingsStore(path).load_state()
+
+
+def test_audio_devices_round_trip_and_default_to_system(tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    from kikoe.core.preferences import Preferences
+    from kikoe.storage.settings import Settings
+
+    store = SettingsStore(tmp_path / "settings.json")
+    assert store.load_state().preferences == Preferences()
+    preferences = replace(Preferences(), input_device="USB Mic", output_device="Headset")
+    store.save_state(Settings((), preferences))
+    assert store.load_state().preferences == preferences
+
+
+@pytest.mark.parametrize("value", ["", 3, ["x"]])
+def test_malformed_audio_device_is_reported(tmp_path: Path, value: object) -> None:
+    path = tmp_path / "settings.json"
+    path.write_text(
+        json.dumps({"version": 2, "providers": [], "preferences": {"input_device": value}}),
+        encoding="utf-8",
+    )
+    with pytest.raises(SettingsError):
+        SettingsStore(path).load_state()

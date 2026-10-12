@@ -1,4 +1,4 @@
-"""Capture the default microphone without involving GTK or blocking its main loop."""
+"""Capture the chosen microphone without involving GTK or blocking its main loop."""
 
 import asyncio
 import importlib
@@ -10,6 +10,7 @@ from collections.abc import AsyncIterator, Buffer, Callable
 from typing import Protocol, cast
 
 from kikoe.i18n import _
+from kikoe.media.devices import find_device
 
 
 class RecorderError(Exception):
@@ -44,10 +45,11 @@ class _InputStream(Protocol):
 class _Backend(Protocol):
     """Typed boundary around sounddevice's untyped CFFI API."""
 
-    def query_devices(self, *, kind: str) -> dict[str, object]: ...
+    def query_devices(self, device: int | None = None, kind: str | None = None) -> object: ...
     def RawInputStream(  # noqa: N802  # External API's spelling.
         self,
         *,
+        device: int | None,
         samplerate: int,
         channels: int,
         dtype: str,
@@ -60,8 +62,9 @@ class _Backend(Protocol):
 class SoundDeviceRecorder:
     """Keep PortAudio callbacks short and bound the memory used by slow disk writers."""
 
-    def __init__(self, backend: _Backend | None = None) -> None:
+    def __init__(self, device: str | None = None, backend: _Backend | None = None) -> None:
         self.sample_rate = 0
+        self._device = device
         self._backend = backend
         self._stream: _InputStream | None = None
         self._queue: queue.Queue[bytes | None] = queue.Queue(maxsize=64)
@@ -71,19 +74,21 @@ class SoundDeviceRecorder:
         self._lock = asyncio.Lock()
 
     async def start(self) -> None:
-        """Open the default device; report missing libraries and permissions as capture errors."""
+        """Open the chosen or default device; report missing libraries and permissions as errors."""
         async with self._lock:
             await asyncio.to_thread(self._open)
 
     def _open(self) -> None:
         try:
             backend = self._backend or cast(_Backend, importlib.import_module("sounddevice"))
-            info = backend.query_devices(kind="input")
+            device = find_device("input", self._device, backend)
+            info = cast(dict[str, object], backend.query_devices(device, "input"))
             rate = info["default_samplerate"]
             if not isinstance(rate, (int, float)) or rate <= 0:
                 raise ValueError("No default input sample rate")
             self.sample_rate = round(rate)
             self._stream = backend.RawInputStream(
+                device=device,
                 samplerate=self.sample_rate,
                 channels=1,
                 dtype="int16",

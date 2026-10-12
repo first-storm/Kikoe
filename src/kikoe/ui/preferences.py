@@ -1,14 +1,16 @@
 """Preferences dialog. The Providers page lists providers and opens ``ProviderPage``."""
 
 import asyncio
+import logging
 from dataclasses import replace
 
 from gi.repository import Adw, Gio, GObject, Gtk
 
 from kikoe.core.choice import ModelChoice, available_models
 from kikoe.core.models import Provider
-from kikoe.core.preferences import valid_language
+from kikoe.core.preferences import Preferences, valid_language
 from kikoe.i18n import _, ngettext
+from kikoe.media.devices import DeviceKind, list_devices
 from kikoe.paths import data_dir, log_dir
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.items import ProviderItem
@@ -16,6 +18,8 @@ from kikoe.ui.labels import api_label
 from kikoe.ui.provider_page import ProviderPage
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
+
+log = logging.getLogger(__name__)
 
 
 @Gtk.Template(filename=ui_file("preferences"))
@@ -26,6 +30,8 @@ class PreferencesDialog(Adw.PreferencesDialog):
     default_model_row: Adw.ComboRow = Gtk.Template.Child()
     language_row: Adw.EntryRow = Gtk.Template.Child()
     language_error: Gtk.Label = Gtk.Template.Child()
+    input_device_row: Adw.ComboRow = Gtk.Template.Child()
+    output_device_row: Adw.ComboRow = Gtk.Template.Child()
     data_row: Adw.ActionRow = Gtk.Template.Child()
     log_row: Adw.ActionRow = Gtk.Template.Child()
 
@@ -35,10 +41,12 @@ class PreferencesDialog(Adw.PreferencesDialog):
         self._updating = False
         self._shown_language: str | None = None
         self._choices: tuple[ModelChoice, ...] = ()
+        self._device_names: dict[DeviceKind, list[str]] = {"input": [], "output": []}
         self._disconnect_preferences = repository.connect_preferences_changed(
             self._refresh_defaults
         )
         run_task(self._show_paths(), self)
+        run_task(self._load_devices(), self)
         self._providers: Gio.ListStore[ProviderItem] = Gio.ListStore(item_type=ProviderItem)
         self.providers_list.bind_model(self._providers, self._create_provider_row)
         self._disconnect = repository.connect_changed(self._refresh_providers)
@@ -48,6 +56,76 @@ class PreferencesDialog(Adw.PreferencesDialog):
         data, logs = await asyncio.gather(asyncio.to_thread(data_dir), asyncio.to_thread(log_dir))
         self.data_row.set_subtitle(str(data))
         self.log_row.set_subtitle(str(logs))
+
+    async def _load_devices(self) -> None:
+        for kind in ("input", "output"):
+            try:
+                devices = await list_devices(kind)
+            except Exception:  # Missing PortAudio must not block the other preferences.
+                log.exception("Could not list %s audio devices", kind)
+                continue
+            self._device_names[kind] = [device.name for device in devices]
+        self._refresh_devices()
+
+    def _device_row(self, kind: DeviceKind) -> Adw.ComboRow:
+        return self.input_device_row if kind == "input" else self.output_device_row
+
+    def _saved_device(self, kind: DeviceKind) -> str | None:
+        preferences = self._repository.preferences
+        return preferences.input_device if kind == "input" else preferences.output_device
+
+    def _device_entries(self, kind: DeviceKind) -> list[str]:
+        """Names behind the rows after "System Default"; a missing saved device stays listed."""
+        names = list(self._device_names[kind])
+        saved = self._saved_device(kind)
+        if saved is not None and saved not in names:
+            names.append(saved)
+        return names
+
+    def _refresh_devices(self) -> None:
+        self._updating = True
+        try:
+            for kind in ("input", "output"):
+                names = self._device_names[kind]
+                entries = self._device_entries(kind)
+                labels = [
+                    _("{device} (Unavailable)").format(device=name) if name not in names else name
+                    for name in entries
+                ]
+                row = self._device_row(kind)
+                row.set_model(Gtk.StringList.new([_("System Default"), *labels]))
+                saved = self._saved_device(kind)
+                row.set_selected(entries.index(saved) + 1 if saved in entries else 0)
+        finally:
+            self._updating = False
+
+    def _select_device(self, kind: DeviceKind) -> None:
+        if self._updating:
+            return
+        index = self._device_row(kind).get_selected()
+        entries = self._device_entries(kind)
+        if index > len(entries):
+            return
+        name = entries[index - 1] if index else None
+
+        def change(preferences: Preferences) -> Preferences:
+            if kind == "input":
+                return replace(preferences, input_device=name)
+            return replace(preferences, output_device=name)
+
+        run_task(self._repository.update_preferences(change), self)
+
+    @Gtk.Template.Callback()
+    def _on_input_device_row_notify_selected(
+        self, _row: Adw.ComboRow, _spec: GObject.ParamSpec
+    ) -> None:
+        self._select_device("input")
+
+    @Gtk.Template.Callback()
+    def _on_output_device_row_notify_selected(
+        self, _row: Adw.ComboRow, _spec: GObject.ParamSpec
+    ) -> None:
+        self._select_device("output")
 
     def _refresh_defaults(self) -> None:
         self._updating = True
@@ -72,6 +150,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
                 0,
             )
             self.default_model_row.set_selected(selected)
+            self._refresh_devices()
             language = self._repository.preferences.language
             if language != self._shown_language:
                 self.language_row.set_text(language or "")

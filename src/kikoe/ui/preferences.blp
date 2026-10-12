@@ -43,6 +43,24 @@ template $KikoePreferencesDialog: Adw.PreferencesDialog {
     }
 
     Adw.PreferencesGroup {
+      title: _("Audio");
+
+      Adw.ComboRow input_device_row {
+        title: _("Microphone");
+        subtitle: _("Used for new recordings");
+        use-markup: false;
+        notify::selected => $_on_input_device_row_notify_selected();
+      }
+
+      Adw.ComboRow output_device_row {
+        title: _("Speaker");
+        subtitle: _("Used for playback");
+        use-markup: false;
+        notify::selected => $_on_output_device_row_notify_selected();
+      }
+    }
+
+    Adw.PreferencesGroup {
       title: _("Storage");
 
       Adw.ActionRow data_row {

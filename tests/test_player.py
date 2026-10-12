@@ -42,14 +42,21 @@ class FakeStream:
 class FakeOutput:
     def __init__(self) -> None:
         self.stream = FakeStream()
+        self.device: int | None = None
 
-    def query_devices(self, *, kind: str) -> dict[str, object]:
+    def query_devices(self, device: int | None = None, kind: str | None = None) -> object:
+        if kind is None:
+            return [
+                {"name": "HDMI", "max_output_channels": 8},
+                {"name": "Headset", "max_output_channels": 2},
+            ]
         assert kind == "output"
         return {"default_samplerate": 48000}
 
     def RawOutputStream(  # noqa: N802  # Matches the external API.
-        self, *, samplerate: int, channels: int, dtype: str
+        self, *, device: int | None, samplerate: int, channels: int, dtype: str
     ) -> FakeStream:
+        self.device = device
         assert (samplerate, channels, dtype) == (48000, 1, "int16")
         return self.stream
 
@@ -114,11 +121,13 @@ async def test_device_open_cancellation_cannot_leak_a_stream(tmp_path: Path) -> 
 
     class SlowOutput(FakeOutput):
         def RawOutputStream(  # noqa: N802  # Matches the external API.
-            self, *, samplerate: int, channels: int, dtype: str
+            self, *, device: int | None, samplerate: int, channels: int, dtype: str
         ) -> FakeStream:
             entered.set()
             release.wait(timeout=5)
-            return super().RawOutputStream(samplerate=samplerate, channels=channels, dtype=dtype)
+            return super().RawOutputStream(
+                device=device, samplerate=samplerate, channels=channels, dtype=dtype
+            )
 
     device = SlowOutput()
     task = asyncio.create_task(play_audio(tmp_path / "audio.flac", backend=device))
@@ -146,3 +155,19 @@ async def test_decoder_failure_closes_stream_and_reports_playback_error(
     with pytest.raises(PlaybackError, match="Could not play"):
         await play_audio(tmp_path / "missing.flac", backend=device)
     assert device.stream.closed and device.stream.aborted
+
+
+@run_async
+async def test_playback_uses_the_saved_output_device_by_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    device = FakeOutput()
+
+    async def decode(
+        source: Path, rate: int, start: float, end: float | None
+    ) -> AsyncGenerator[bytes]:
+        yield b"\x01\0" * 2400
+
+    monkeypatch.setattr(player, "decode_audio", decode)
+    await play_audio(tmp_path / "audio.flac", device="Headset", backend=device)
+    assert device.device == 1
