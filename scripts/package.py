@@ -6,6 +6,7 @@ import json
 import os
 import platform
 import shutil
+import struct
 import subprocess
 import sys
 from importlib.metadata import distributions
@@ -21,6 +22,11 @@ APPIMAGETOOL_VERSION = "1.9.1"
 APPIMAGETOOL_HASHES = {
     "x86_64": "ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0",
     "aarch64": "f0837e7448a0c1e4e650a93bb3e85802546e60654ef287576f46c71c126a9158",
+}
+APPIMAGE_RUNTIME_VERSION = "20251108"
+APPIMAGE_RUNTIME_HASHES = {
+    "x86_64": "2fca8b443c92510f1483a883f60061ad09b46b978b2631c807cd873a47ec260d",
+    "aarch64": "00cbdfcf917cc6c0ff6d3347d59e0ca1f7f45a6df1a428a0d6d8a78664d87444",
 }
 
 
@@ -51,6 +57,29 @@ def checksum(path: Path) -> None:
     path.with_name(path.name + ".sha256").write_text(f"{digest}  {path.name}\n", encoding="utf-8")
 
 
+def checksums() -> None:
+    """Include installer hashes alongside the archive hashes."""
+    for path in DIST.iterdir():
+        if path.is_file() and path.suffix in (
+            ".exe",
+            ".zip",
+            ".gz",
+            ".dmg",
+            ".flatpak",
+            ".AppImage",
+        ):
+            checksum(path)
+
+
+def download_verified(url: str, destination: Path, expected: str) -> None:
+    """Fail closed if an upstream packaging executable changes."""
+    run("curl", "--fail", "--location", "--retry", "3", url, "--output", str(destination))
+    with destination.open("rb") as source:
+        digest = hashlib.file_digest(source, "sha256").hexdigest()
+    if digest != expected:
+        raise RuntimeError(f"Checksum mismatch for {destination.name}")
+
+
 def native_prefix() -> Path:
     if configured := os.environ.get("KIKOE_NATIVE_PREFIX"):
         return Path(configured).resolve()
@@ -60,6 +89,36 @@ def native_prefix() -> Path:
     if sys.platform == "win32":
         return Path(sys.base_prefix)
     return Path("/usr")
+
+
+def native_icon(env: dict[str, str]) -> None:
+    """Create executable icons from the same SVG that ships inside the app."""
+    if sys.platform not in ("darwin", "win32"):
+        return
+    BUILD.mkdir(exist_ok=True)
+    png = BUILD / "Kikoe.png"
+    run("rsvg-convert", "--width", "1024", "--height", "1024", "--output", str(png), str(ICON))
+    if sys.platform == "win32":
+        # ICO supports a PNG payload on all supported Windows versions.
+        small = BUILD / "Kikoe-256.png"
+        run("rsvg-convert", "--width", "256", "--height", "256", "--output", str(small), str(ICON))
+        payload = small.read_bytes()
+        icon = BUILD / "Kikoe.ico"
+        header = struct.pack("<HHH", 0, 1, 1)
+        entry = struct.pack("<BBBBHHII", 0, 0, 0, 0, 1, 32, len(payload), 22)
+        icon.write_bytes(header + entry + payload)
+        env["KIKOE_WINDOWS_ICON"] = str(icon)
+        return
+    iconset = BUILD / "Kikoe.iconset"
+    iconset.mkdir(exist_ok=True)
+    for size in (16, 32, 128, 256, 512):
+        for scale in (1, 2):
+            suffix = "@2x" if scale == 2 else ""
+            output = iconset / f"icon_{size}x{size}{suffix}.png"
+            run("sips", "-z", str(size * scale), str(size * scale), str(png), "--out", str(output))
+    icon = BUILD / "Kikoe.icns"
+    run("iconutil", "-c", "icns", str(iconset), "-o", str(icon))
+    env["KIKOE_MACOS_ICON"] = str(icon)
 
 
 def freeze() -> None:
@@ -79,6 +138,37 @@ def freeze() -> None:
     )
     if sys.platform == "darwin":
         env["KIKOE_MACOS_ARCH"] = "arm64" if architecture() == "aarch64" else "x86_64"
+    native_icon(env)
+    packages = {dist.metadata["Name"]: dist.version for dist in distributions()}
+    commit = os.environ.get("GITHUB_SHA")
+    if commit is None:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
+        )
+        commit = result.stdout.strip()
+    information: dict[str, object] = {
+        "app_id": APP_ID,
+        "version": VERSION,
+        "commit": commit,
+        "platform": sys.platform,
+        "architecture": architecture(),
+        "python": platform.python_version(),
+        "packages": packages,
+    }
+    if sys.platform == "win32":
+        native_command = ["pacman", "-Q"]
+    elif sys.platform == "darwin":
+        native_command = ["brew", "list", "--versions"]
+    else:
+        native_command = ["dpkg-query", "-W"]
+    if shutil.which(native_command[0]):
+        native_result = subprocess.run(native_command, check=True, capture_output=True, text=True)
+        information["native_packages"] = native_result.stdout.splitlines()
+    BUILD.mkdir(exist_ok=True)
+    (BUILD / "build-info.json").write_text(
+        json.dumps(information, indent=2) + "\n", encoding="utf-8"
+    )
+    # Include provenance before signing: adding files to a signed .app breaks its seal.
     run(
         sys.executable,
         "-m",
@@ -87,23 +177,6 @@ def freeze() -> None:
         "--clean",
         "packaging/kikoe.spec",
         env=env,
-    )
-    bundle = DIST / ("Kikoe.app/Contents/Resources" if sys.platform == "darwin" else "kikoe")
-    packages = {dist.metadata["Name"]: dist.version for dist in distributions()}
-    result = subprocess.run(
-        ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
-    )
-    information = {
-        "app_id": APP_ID,
-        "version": VERSION,
-        "commit": result.stdout.strip(),
-        "platform": sys.platform,
-        "architecture": architecture(),
-        "python": platform.python_version(),
-        "packages": packages,
-    }
-    (bundle / "build-info.json").write_text(
-        json.dumps(information, indent=2) + "\n", encoding="utf-8"
     )
 
 
@@ -150,15 +223,23 @@ def appimage() -> None:
     tools.mkdir(parents=True, exist_ok=True)
     tool = tools / f"appimagetool-{architecture()}.AppImage"
     url = f"https://github.com/AppImage/appimagetool/releases/download/{APPIMAGETOOL_VERSION}/{tool.name}"
-    run("curl", "--fail", "--location", "--retry", "3", url, "--output", str(tool))
-    with tool.open("rb") as source:
-        digest = hashlib.file_digest(source, "sha256").hexdigest()
-    if digest != APPIMAGETOOL_HASHES[architecture()]:
-        raise RuntimeError("appimagetool checksum does not match the pinned release")
+    download_verified(url, tool, APPIMAGETOOL_HASHES[architecture()])
     tool.chmod(0o755)
+    runtime = tools / f"runtime-{architecture()}"
+    runtime_url = "https://github.com/AppImage/type2-runtime/releases/download/"
+    runtime_url += f"{APPIMAGE_RUNTIME_VERSION}/{runtime.name}"
+    download_verified(runtime_url, runtime, APPIMAGE_RUNTIME_HASHES[architecture()])
     output = artifact_name(".AppImage")
     env = dict(os.environ, ARCH=architecture(), APPIMAGE_EXTRACT_AND_RUN="1")
-    run(str(tool), "--no-appstream", str(appdir), str(output), env=env)
+    run(
+        str(tool),
+        "--runtime-file",
+        str(runtime),
+        "--no-appstream",
+        str(appdir),
+        str(output),
+        env=env,
+    )
     checksum(output)
 
 
@@ -305,6 +386,7 @@ def main() -> None:
         "flatpak": flatpak,
         "dmg": dmg,
         "windows-requirements": windows_requirements,
+        "checksums": checksums,
     }
     parser.add_argument("command", choices=commands)
     args = parser.parse_args()

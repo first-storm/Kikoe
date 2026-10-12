@@ -4,7 +4,7 @@ set -euo pipefail
 # Use the MinGW interpreter that matches the native GTK and PyInstaller packages.
 # Upstream CPython wheels are not ABI-compatible with this interpreter.
 export UV_PYTHON_DOWNLOADS=never
-uv venv --python "$(command -v python)" --system-site-packages
+uv venv --python "$(cygpath -w "$MINGW_PREFIX/bin/python.exe")" --system-site-packages
 export PYTHONPATH="$PWD/src"
 uv run --no-sync scripts/package.py windows-requirements
 export _PYTHON_HOST_PLATFORM

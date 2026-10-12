@@ -38,7 +38,7 @@ hook locates data, schemas and PortAudio inside the bundle. ffmpeg lookup unders
 PyInstaller's `_internal` and macOS Frameworks layouts, without needing a host ffmpeg.
 Set `KIKOE_NATIVE_PREFIX` when the native stack lives outside the system prefix.
 
-Each archive/AppImage/DMG/Flatpak has a `.sha256` file. `build-info.json` records the
+Each archive/installer/AppImage/DMG/Flatpak has a `.sha256` file. `build-info.json` records the
 source commit, Python, platform, architecture and installed package versions. The
 bundle includes the application license and available native redistribution notices.
 Do not publish a binary release without supplying the corresponding GPL source and
@@ -68,7 +68,7 @@ uv run --locked --group packaging scripts/package.py flatpak
 flatpak install --user dist/Kikoe-*.flatpak
 ```
 
-AppImage uses appimagetool 1.9.1, checked against committed SHA-256 hashes for both
+AppImage uses appimagetool 1.9.1 and type-2 runtime 20251108, checked against committed SHA-256 hashes for both
 architectures. `AppRun` resolves the frozen directory relative to itself and forwards
 arguments. In CI, `APPIMAGE_EXTRACT_AND_RUN=1` exercises the image without requiring
 FUSE. On hosts without FUSE, use `./Kikoe-*.AppImage --appimage-extract-and-run`.

@@ -1,6 +1,6 @@
 """The single gateway to the ffmpeg executable.
 
-Lookup order: ``$KIKOE_FFMPEG``, a copy bundled next to a frozen (PyInstaller)
+Lookup order: ``$KIKOE_FFMPEG``, a copy inside the frozen bundle or next to its
 executable, then ``PATH``. Always call ffmpeg through :func:`run`.
 """
 

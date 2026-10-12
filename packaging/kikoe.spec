@@ -11,6 +11,7 @@ prefix = Path(os.environ["KIKOE_NATIVE_PREFIX"])
 ffmpeg = Path(os.environ["KIKOE_BUILD_FFMPEG"])
 datas = collect_data_files("kikoe") + copy_metadata("kikoe", recursive=True)
 datas += [(str(root / "LICENSE"), "licenses/kikoe")]
+datas += [(str(root / "build/build-info.json"), ".")]
 binaries = [(str(ffmpeg), ".")]
 
 for library in ("libportaudio.so.2", "libportaudio.dylib", "libportaudio-2.dll"):
@@ -54,6 +55,7 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz, a.scripts, [], exclude_binaries=True, name="kikoe",
     debug=False, strip=False, upx=False, console=sys.platform == "linux",
+    icon=os.environ.get("KIKOE_WINDOWS_ICON"),
     target_arch=os.environ.get("KIKOE_MACOS_ARCH"),
     codesign_identity=os.environ.get("KIKOE_CODESIGN_IDENTITY"),
     entitlements_file=str(root / "packaging/macos/entitlements.plist") if sys.platform == "darwin" else None,

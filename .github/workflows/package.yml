@@ -153,7 +153,7 @@ jobs:
           pacboy: >-
             uv:p python:p python-gobject:p gtk4:p libadwaita:p
             gobject-introspection:p adwaita-icon-theme:p ffmpeg:p gettext:p portaudio:p
-            pyinstaller:p python-hatchling:p python-setuptools:p python-maturin:p
+            pyinstaller:p python-hatchling:p python-setuptools:p python-maturin:p librsvg:p
             python-cffi:p python-cryptography:p rust:p cc:p pkgconf:p
       - name: Build native application
         shell: msys2 {0}
@@ -181,6 +181,9 @@ jobs:
           if ($process.ExitCode -ne 0) { throw 'Installed app self-test failed' }
           $process = Start-Process -FilePath "$installDir/unins000.exe" -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw 'Uninstallation failed' }
+      - name: Hash installers
+        shell: msys2 {0}
+        run: uv run --no-sync scripts/package.py checksums
       - uses: actions/upload-artifact@v4
         with:
           name: Kikoe-windows-${{ matrix.arch }}

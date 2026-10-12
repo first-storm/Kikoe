@@ -15,6 +15,7 @@ OutputBaseFilename=Kikoe-{#AppVersion}-windows-{#AppArch}-setup
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=..\..\build\Kikoe.ico
 UninstallDisplayIcon={app}\kikoe.exe
 LicenseFile=..\..\LICENSE
 
