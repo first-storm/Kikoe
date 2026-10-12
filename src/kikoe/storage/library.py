@@ -232,6 +232,24 @@ class Library:
         for name in files:
             self.discard_audio(self._audio_dir / name)
 
+    def delete_recording(self, note_id: str, recording_id: str) -> Note:
+        """Delete one recording, its transcript and its retained audio file."""
+        with self._connect() as connection, connection:
+            row = connection.execute(
+                "SELECT audio_file FROM recordings WHERE id = ? AND note_id = ?",
+                (recording_id, note_id),
+            ).fetchone()
+            cursor = connection.execute(
+                "DELETE FROM recordings WHERE id = ? AND note_id = ?",
+                (recording_id, note_id),
+            )
+            if cursor.rowcount == 0:
+                raise LibraryError(_("This recording no longer exists."))
+            note = self._read_note(connection, note_id)
+        if row is not None and row[0] is not None:
+            self.discard_audio(self._audio_dir / row[0])
+        return note
+
     def store_audio(self, source: Path, recording_id: str) -> Path:
         """Copy an original into the library so it outlives the file the user picked."""
         destination = self._audio_dir / f"{recording_id}{source.suffix.lower()}"

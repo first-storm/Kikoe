@@ -127,6 +127,52 @@ def test_delete_note_removes_rows_and_audio(tmp_path: Path, library: Library) ->
         library.get_note(note.note_id)
 
 
+def test_delete_recording_removes_audio_segments_and_keeps_note(
+    tmp_path: Path, library: Library
+) -> None:
+    note = library.add_recording(
+        None, "Memo", recording(library, tmp_path, segments=(Segment("first"),))
+    )
+    note = library.add_recording(
+        note.note_id, "", recording(library, tmp_path, segments=(Segment("second"),))
+    )
+    first, second = note.recordings
+    assert first.audio_path is not None and first.audio_path.is_file()
+    assert second.audio_path is not None and second.audio_path.is_file()
+
+    result = library.delete_recording(note.note_id, first.recording_id)
+
+    assert [r.recording_id for r in result.recordings] == [second.recording_id]
+    assert not first.audio_path.exists()
+    assert second.audio_path.is_file()
+    assert library.list_notes()[0].recording_count == 1
+    with sqlite3.connect(tmp_path / "library.sqlite3") as connection:
+        assert connection.execute(
+            "SELECT COUNT(*) FROM segments WHERE recording_id = ?", (first.recording_id,)
+        ).fetchone() == (0,)
+        assert connection.execute(
+            "SELECT COUNT(*) FROM segments WHERE recording_id = ?", (second.recording_id,)
+        ).fetchone() == (1,)
+
+
+def test_delete_recording_last_one_keeps_empty_note(tmp_path: Path, library: Library) -> None:
+    note = library.add_recording(
+        None, "Memo", recording(library, tmp_path, segments=(Segment("x"),))
+    )
+
+    result = library.delete_recording(note.note_id, note.recordings[0].recording_id)
+
+    assert result.recordings == ()
+    assert [s.note_id for s in library.list_notes()] == [note.note_id]
+
+
+def test_delete_missing_recording_raises(library: Library) -> None:
+    note = library.create_note("Memo", WHEN)
+
+    with pytest.raises(LibraryError):
+        library.delete_recording(note.note_id, "missing")
+
+
 def test_newer_database_is_rejected_and_left_alone(tmp_path: Path) -> None:
     database = tmp_path / "library.sqlite3"
     with sqlite3.connect(database) as connection:
@@ -162,6 +208,21 @@ async def test_repository_notifies_with_the_changed_note(tmp_path: Path) -> None
 
     assert changes == [None, note.note_id, note.note_id]
     assert [s.title for s in repository.notes] == ["Final"]
+
+
+@run_async
+async def test_repository_delete_recording_notifies(tmp_path: Path, library: Library) -> None:
+    repository = NoteRepository(library)
+    changes: list[str | None] = []
+    repository.connect_changed(changes.append)
+
+    await repository.load()
+    saved = library.add_recording(None, "Memo", recording(library, tmp_path))
+    note = await repository.delete_recording(saved.note_id, saved.recordings[0].recording_id)
+
+    assert note.recordings == ()
+    assert changes[-1] == saved.note_id
+    assert repository.notes[0].recording_count == 0
 
 
 def test_version_one_library_migrates_without_changing_existing_transcript(tmp_path: Path) -> None:

@@ -104,6 +104,12 @@ class NoteRepository:
         await asyncio.to_thread(self._library.delete_note, note_id)
         await self._refresh(note_id)
 
+    async def delete_recording(self, note_id: str, recording_id: str) -> Note:
+        """Delete one recording and refresh all consumers."""
+        note = await asyncio.to_thread(self._library.delete_recording, note_id, recording_id)
+        await self._refresh(note_id)
+        return note
+
     async def store_audio(self, source: Path, recording_id: str) -> Path:
         return await asyncio.to_thread(self._library.store_audio, source, recording_id)
 

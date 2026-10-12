@@ -154,6 +154,7 @@ class Window(Adw.ApplicationWindow):
         self._add_action(
             "retranscribe-recording", self._on_retranscribe_recording, GLib.VariantType.new("s")
         )
+        self._add_action("delete-recording", self._on_delete_recording, GLib.VariantType.new("s"))
         self._set_action_enabled("new-note", False)  # Until providers are loaded.
         self._show_note(None)
         providers.connect_changed(self._on_providers_changed)
@@ -451,6 +452,38 @@ class Window(Adw.ApplicationWindow):
 
         dialog.connect("response", respond)
         dialog.present(self)
+
+    def _on_delete_recording(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
+        note = self._note
+        if note is None or param is None:
+            return
+        recording_id = param.get_string()
+        recording = self._recording_by_id(recording_id)
+        if recording is None:
+            self.add_toast(Adw.Toast(title=_("This recording is no longer available.")))
+            return
+        number = note.recordings.index(recording) + 1
+        self._stop_playback()
+        dialog = Adw.AlertDialog(
+            heading=_("Delete Recording {number}?").format(number=number),
+            body=_("Its transcript and original audio will be deleted. This cannot be undone."),
+        )
+        dialog.add_response("cancel", _("_Cancel"))
+        dialog.add_response("delete", _("_Delete"))
+        dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_default_response("cancel")
+        dialog.set_close_response("cancel")
+
+        def respond(_dialog: Adw.AlertDialog, response: str) -> None:
+            if response == "delete":
+                run_task(self._delete_recording(note.note_id, recording_id), self)
+
+        dialog.connect("response", respond)
+        dialog.present(self)
+
+    async def _delete_recording(self, note_id: str, recording_id: str) -> None:
+        note = await self._notes.delete_recording(note_id, recording_id)
+        self._show_note(note)
 
     # Speaker identities and playback
 
@@ -821,6 +854,7 @@ class Window(Adw.ApplicationWindow):
             "edit-segment",
             "match-speakers",
             "retranscribe-recording",
+            "delete-recording",
         ):
             self._set_action_enabled(name, not busy and self._note is not None)
         available = self.bottom_bar.choice is not None and not busy
