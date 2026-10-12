@@ -57,6 +57,8 @@ _NOTE_ACTIONS = (
     "copy-all-text",
     "delete-note",
     "export",
+    "show-timestamps",
+    "show-speakers",
 )
 """Window actions that act on the shown note and are disabled without one."""
 
@@ -72,8 +74,6 @@ class Window(Adw.ApplicationWindow):
     window_title: Adw.WindowTitle = Gtk.Template.Child()
     note_menu_button: Gtk.MenuButton = Gtk.Template.Child()
     display_options_button: Gtk.MenuButton = Gtk.Template.Child()
-    timestamps_row: Adw.SwitchRow = Gtk.Template.Child()
-    speakers_row: Adw.SwitchRow = Gtk.Template.Child()
     content_stack: Gtk.Stack = Gtk.Template.Child()
     note_view_slot: Adw.Bin = Gtk.Template.Child()
     bottom_bar_slot: Adw.Bin = Gtk.Template.Child()
@@ -133,8 +133,6 @@ class Window(Adw.ApplicationWindow):
         self._providers_loaded = False
         self._selecting = False
         """True while the sidebar selection is changed from code, not by the user."""
-        self._showing = False
-        """True while widgets are filled from a note, so their signals are not user input."""
         self._note_items: Gio.ListStore[NoteItem] = Gio.ListStore(item_type=NoteItem)
         self.notes_list.bind_model(self._note_items, self._create_note_row)
         self._add_action("new-note", self._on_new_note)
@@ -144,6 +142,8 @@ class Window(Adw.ApplicationWindow):
         self._add_action("rename-note-row", self._on_rename_note_row, GLib.VariantType.new("s"))
         self._add_action("delete-note-row", self._on_delete_note_row, GLib.VariantType.new("s"))
         self._add_action("export", self._on_export)
+        self._add_toggle_action("show-timestamps")
+        self._add_toggle_action("show-speakers")
         self._add_action("export-audio", self._on_export_audio, GLib.VariantType.new("s"))
         self._add_action("choose-model", self._on_choose_model)
         self._add_action("import-audio", self._on_import_audio)
@@ -231,6 +231,35 @@ class Window(Adw.ApplicationWindow):
         action = Gio.SimpleAction.new(name, parameter_type)
         action.connect("activate", callback)
         self.add_action(action)
+
+    def _add_toggle_action(self, name: str) -> None:
+        action = Gio.SimpleAction.new_stateful(name, None, GLib.Variant.new_boolean(False))
+        action.connect("activate", self._on_display_action_activate)
+        self.add_action(action)
+
+    def _display_action_state(self, name: str) -> bool:
+        action = self.lookup_action(name)
+        return action is not None and action.get_state() == GLib.Variant.new_boolean(True)
+
+    def _set_display_action_state(self, name: str, value: bool) -> None:
+        action = self.lookup_action(name)
+        if isinstance(action, Gio.SimpleAction):
+            action.set_state(GLib.Variant.new_boolean(value))
+
+    def _on_display_action_activate(
+        self, action: Gio.SimpleAction, _param: GLib.Variant | None
+    ) -> None:
+        if self._note is None:
+            return
+        action.set_state(
+            GLib.Variant.new_boolean(not self._display_action_state(action.get_name()))
+        )
+        options = DisplayOptions(
+            self._display_action_state("show-timestamps"),
+            self._display_action_state("show-speakers"),
+        )
+        if options != self._note.display:
+            run_task(self._notes.set_display_options(self._note.note_id, options), self)
 
     # Sidebar
 
@@ -451,12 +480,8 @@ class Window(Adw.ApplicationWindow):
             self.content_page.set_title(note.title)
             self.window_title.set_title(note.title)
             self.window_title.set_subtitle(note_title_subtitle(note))
-            self._showing = True
-            try:
-                self.timestamps_row.set_active(note.display.show_timestamps)
-                self.speakers_row.set_active(note.display.show_speakers)
-            finally:
-                self._showing = False
+            self._set_display_action_state("show-timestamps", note.display.show_timestamps)
+            self._set_display_action_state("show-speakers", note.display.show_speakers)
             if self.note_view.show_note(note):
                 self._forget_edits()
             self.bottom_bar.set_note(bool(note.recordings))
@@ -472,16 +497,6 @@ class Window(Adw.ApplicationWindow):
                 )
         self._update_content()
         self._update_import_actions()
-
-    @Gtk.Template.Callback()
-    def _on_display_row_notify_active(
-        self, _row: Adw.SwitchRow, _pspec: GObject.ParamSpec | None
-    ) -> None:
-        if self._showing or self._note is None:
-            return
-        options = DisplayOptions(self.timestamps_row.get_active(), self.speakers_row.get_active())
-        if options != self._note.display:
-            run_task(self._notes.set_display_options(self._note.note_id, options), self)
 
     def _update_content(self) -> None:
         if self._note is not None:

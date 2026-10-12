@@ -179,49 +179,7 @@ template $KikoeWindow: Adw.ApplicationWindow {
               }
 
               visible: false;
-
-              popover: Popover {
-                child: Box {
-                  orientation: vertical;
-                  spacing: 6;
-                  width-request: 280;
-
-                  ListBox {
-                    selection-mode: none;
-
-                    styles [
-                      "navigation-sidebar",
-                    ]
-
-                    Adw.SwitchRow timestamps_row {
-                      title: _("Show _Timestamps");
-                      use-underline: true;
-                      notify::active => $_on_display_row_notify_active();
-                    }
-
-                    Adw.SwitchRow speakers_row {
-                      title: _("Show _Speakers");
-                      use-underline: true;
-                      notify::active => $_on_display_row_notify_active();
-                    }
-                  }
-
-                  Label {
-                    label: _("Only changes how this note is shown and exported. The transcript is not modified.");
-                    wrap: true;
-                    max-width-chars: 36;
-                    xalign: 0;
-                    margin-start: 12;
-                    margin-end: 12;
-                    margin-bottom: 6;
-
-                    styles [
-                      "caption",
-                      "dimmed",
-                    ]
-                  }
-                };
-              };
+              menu-model: display_menu;
             }
           }
 
@@ -319,6 +277,20 @@ menu primary_menu {
     item {
       label: _("_About Kikoe");
       action: "app.about";
+    }
+  }
+}
+
+menu display_menu {
+  section {
+    item {
+      label: _("Show _Timestamps");
+      action: "win.show-timestamps";
+    }
+
+    item {
+      label: _("Show _Speakers");
+      action: "win.show-speakers";
     }
   }
 }
