@@ -22,3 +22,7 @@ src/kikoe/locale/
 .vscode/
 .DS_Store
 Thumbs.db
+
+.claude/
+.agents/
+.codex/
