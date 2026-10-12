@@ -340,6 +340,8 @@ class Window(Adw.ApplicationWindow):
         self._popup_note_row_menu(box, note_id, x, y)
 
     def _popup_note_row_menu(self, box: Gtk.Widget, note_id: str, x: float, y: float) -> None:
+        row = box.get_ancestor(Gtk.ListBoxRow)
+        assert isinstance(row, Gtk.ListBoxRow)
         rename = Gio.MenuItem()
         rename.set_label(_("_Rename…"))
         rename.set_action_and_target_value("win.rename-note-row", GLib.Variant("s", note_id))
@@ -358,9 +360,12 @@ class Window(Adw.ApplicationWindow):
         popover.set_pointing_to(rect)
 
         def release(_popover: Gtk.Popover) -> None:
+            row.remove_css_class("has-open-popup")
             GLib.idle_add(popover.unparent)
 
         popover.connect("closed", release)
+        # Keep the menu's target highlighted independently of pointer hover.
+        row.add_css_class("has-open-popup")
         popover.popup()
 
     def _select_row(self, note_id: str | None) -> bool:

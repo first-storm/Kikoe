@@ -351,7 +351,9 @@ HIG audit follow-ups:
 - Keyboard Shortcuts is an `Adw.ShortcutsDialog`; Ctrl+W closes the window (the same
   save-then-close path as Quit).
 - Secondary click or long press on a sidebar note offers Rename… and Delete Note without
-  opening the note.
+  opening the note. The target row stays highlighted while its context menu is open,
+  regardless of pointer position; closing the menu restores its normal hover/selection
+  appearance without changing the selected note.
 - Rename Speaker and Add/Edit Model ask “Discard Changes?” when closed with
   Escape or a click outside while they hold unsaved input; Cancel discards immediately.
 - Failures the user must read (transcription, re-transcription, capture) use a dialog;
