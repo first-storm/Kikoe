@@ -5,6 +5,7 @@ from datetime import datetime
 from gi.repository import GLib
 
 from kikoe.core.choice import unsupported_features
+from kikoe.core.export import ExportFormat
 from kikoe.core.formatting import (
     RelativeDay,
     format_duration,
@@ -48,6 +49,18 @@ def capability_summary(capabilities: Capabilities) -> str:
     """E.g. “Realtime · Timestamps”, or “Text only” when the model has none."""
     labels = [capability_label(c) for c in capability_list(capabilities)]
     return " · ".join(labels) if labels else _("Text only")
+
+
+def export_format_label(fmt: ExportFormat) -> str:
+    match fmt:
+        case ExportFormat.TEXT:
+            return _("Plain Text (.txt)")
+        case ExportFormat.MARKDOWN:
+            return _("Markdown (.md)")
+        case ExportFormat.SRT:
+            return _("SRT Subtitles (.srt)")
+        case ExportFormat.WEBVTT:
+            return _("WebVTT Subtitles (.vtt)")
 
 
 def provider_error_message(error: ProviderError) -> str:

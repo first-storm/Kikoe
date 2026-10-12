@@ -9,7 +9,10 @@ from pathlib import Path
 from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 
 from kikoe.core.choice import ModelChoice
+from kikoe.core.export import ExportFormat, export_filename, export_note
+from kikoe.core.formatting import transcript_features
 from kikoe.core.models import DisplayOptions, Note
+from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.providers.factory import create_client
@@ -18,14 +21,27 @@ from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.items import NoteItem
-from kikoe.ui.labels import import_stage_label, note_subtitle, note_title_subtitle
+from kikoe.ui.labels import (
+    export_format_label,
+    import_stage_label,
+    note_subtitle,
+    note_title_subtitle,
+)
 from kikoe.ui.note_view import NoteView
 from kikoe.ui.tasks import USER_FACING_ERRORS, run_task, show_error
 from kikoe.ui.templates import ui_file
 
 log = logging.getLogger(__name__)
 
-_NOTE_ACTIONS = ("rename-note", "delete-note")
+_NOTE_ACTIONS = (
+    "rename-note",
+    "copy-all-text",
+    "delete-note",
+    "export-txt",
+    "export-md",
+    "export-srt",
+    "export-vtt",
+)
 """Window actions that act on the shown note and are disabled without one."""
 
 
@@ -39,6 +55,10 @@ class Window(Adw.ApplicationWindow):
     content_page: Adw.NavigationPage = Gtk.Template.Child()
     window_title: Adw.WindowTitle = Gtk.Template.Child()
     note_menu_button: Gtk.MenuButton = Gtk.Template.Child()
+    export_button: Gtk.MenuButton = Gtk.Template.Child()
+    export_popover: Gtk.Popover = Gtk.Template.Child()
+    export_srt_button: Gtk.Button = Gtk.Template.Child()
+    export_vtt_button: Gtk.Button = Gtk.Template.Child()
     display_options_button: Gtk.MenuButton = Gtk.Template.Child()
     timestamps_row: Adw.SwitchRow = Gtk.Template.Child()
     speakers_row: Adw.SwitchRow = Gtk.Template.Child()
@@ -67,7 +87,12 @@ class Window(Adw.ApplicationWindow):
         self.notes_list.bind_model(self._note_items, self._create_note_row)
         self._add_action("new-note", self._on_new_note)
         self._add_action("rename-note", self._on_rename_note)
+        self._add_action("copy-all-text", self._on_copy_all_text)
         self._add_action("delete-note", self._on_delete_note)
+        self._add_action("export-txt", self._on_export_txt)
+        self._add_action("export-md", self._on_export_md)
+        self._add_action("export-srt", self._on_export_srt)
+        self._add_action("export-vtt", self._on_export_vtt)
         self._add_action("import-audio", self._on_import_audio)
         self._add_action("cancel-import", self._on_cancel_import)
         self._import_task: asyncio.Task[None] | None = None
@@ -177,6 +202,7 @@ class Window(Adw.ApplicationWindow):
     def _show_note(self, note: Note | None) -> None:
         self._note = note
         self.note_menu_button.set_visible(note is not None)
+        self.export_button.set_visible(note is not None)
         self.display_options_button.set_visible(note is not None)
         for name in _NOTE_ACTIONS:
             self._set_action_enabled(name, note is not None)
@@ -195,6 +221,7 @@ class Window(Adw.ApplicationWindow):
             finally:
                 self._showing = False
             self.note_view.show_note(note)
+            self._update_subtitle_buttons(note)
         self._update_content()
 
     @Gtk.Template.Callback()
@@ -273,6 +300,106 @@ class Window(Adw.ApplicationWindow):
 
         dialog.connect("response", respond)
         dialog.present(self)
+
+    # Export
+
+    def _update_subtitle_buttons(self, note: Note) -> None:
+        """Subtitle buttons need timestamps; explain when they are unavailable."""
+        has_times = any(
+            Capability.TIMESTAMPS in transcript_features(r.segments) for r in note.recordings
+        )
+        for button, fmt in (
+            (self.export_srt_button, ExportFormat.SRT),
+            (self.export_vtt_button, ExportFormat.WEBVTT),
+        ):
+            button.set_sensitive(has_times)
+            if has_times:
+                label = export_format_label(fmt)
+                button.set_tooltip_text(_("Export this note as {format}.").format(format=label))
+            else:
+                button.set_tooltip_text(
+                    _("This note has no timestamps, so subtitles are unavailable.")
+                )
+
+    def _on_copy_all_text(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        note = self._note
+        if note is None:
+            return
+        self.get_clipboard().set(export_note(note, ExportFormat.TEXT, note.display))
+        self.add_toast(Adw.Toast(title=_("Copied to clipboard")))
+
+    def _on_export_txt(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        self._begin_export(ExportFormat.TEXT)
+
+    def _on_export_md(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        self._begin_export(ExportFormat.MARKDOWN)
+
+    def _on_export_srt(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        self._begin_export(ExportFormat.SRT)
+
+    def _on_export_vtt(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        self._begin_export(ExportFormat.WEBVTT)
+
+    def _begin_export(self, fmt: ExportFormat) -> None:
+        self.export_popover.popdown()
+        run_task(self._export_note(fmt), self)
+
+    async def _export_note(self, fmt: ExportFormat) -> None:
+        note = self._note
+        if note is None:
+            return
+        content = export_note(note, fmt, note.display)
+        target = await self._pick_save_path(
+            _("Export Note"),
+            export_filename(note.title, fmt.value),
+            export_format_label(fmt),
+            f"*.{fmt.value}",
+        )
+        if target is None:
+            return
+        try:
+            await asyncio.to_thread(target.write_text, content, encoding="utf-8")
+        except OSError as error:
+            log.warning("Export of note %s failed: %s", note.note_id, error)
+            message = _("Could not save “{name}”: {error}").format(name=target.name, error=error)
+            show_error(self, message)
+            return
+        self.add_toast(Adw.Toast(title=_("Exported “{name}”").format(name=target.name)))
+
+    async def _pick_save_path(
+        self, title: str, initial_name: str, filter_label: str, pattern: str
+    ) -> Path | None:
+        """Ask where to save; None if the dialog was dismissed."""
+        target = Gtk.FileFilter(name=filter_label)
+        target.add_pattern(pattern)
+        everything = Gtk.FileFilter(name=_("All Files"))
+        everything.add_pattern("*")
+        filters: Gio.ListStore[Gtk.FileFilter] = Gio.ListStore(item_type=Gtk.FileFilter)
+        filters.append(target)
+        filters.append(everything)
+        dialog = Gtk.FileDialog(
+            title=title, filters=filters, default_filter=target, initial_name=initial_name
+        )
+        future: asyncio.Future[Gio.File | None] = asyncio.get_running_loop().create_future()
+
+        def done(_dialog: Gtk.FileDialog, result: Gio.AsyncResult) -> None:
+            try:
+                future.set_result(dialog.save_finish(result))
+            except GLib.Error as error:
+                if error.matches(Gtk.dialog_error_quark(), Gtk.DialogError.DISMISSED):
+                    future.set_result(None)
+                else:
+                    future.set_exception(error)
+
+        dialog.save(self, None, done)
+        file = await future
+        if file is None:
+            return None
+        path = file.get_path()
+        if path is None:
+            show_error(self, _("Only locations on this computer can be used."))
+            return None
+        return Path(path)
 
     # Import
 

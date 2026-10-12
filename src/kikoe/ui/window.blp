@@ -90,6 +90,96 @@ template $KikoeWindow: Adw.ApplicationWindow {
             }
 
             [end]
+            MenuButton export_button {
+              icon-name: "document-send-symbolic";
+              tooltip-text: _("Export");
+              visible: false;
+
+              popover: Popover export_popover {
+                child: Box {
+                  orientation: vertical;
+                  spacing: 2;
+                  width-request: 280;
+
+                  Button {
+                    action-name: "win.export-txt";
+
+                    styles [
+                      "flat",
+                    ]
+
+                    child: Label {
+                      label: _("Plain Text (.txt)");
+                      xalign: 0;
+                      hexpand: true;
+                    };
+                  }
+
+                  Button {
+                    action-name: "win.export-md";
+
+                    styles [
+                      "flat",
+                    ]
+
+                    child: Label {
+                      label: _("Markdown (.md)");
+                      xalign: 0;
+                      hexpand: true;
+                    };
+                  }
+
+                  Button export_srt_button {
+                    action-name: "win.export-srt";
+
+                    styles [
+                      "flat",
+                    ]
+
+                    child: Label {
+                      label: _("SRT Subtitles (.srt)");
+                      xalign: 0;
+                      hexpand: true;
+                    };
+                  }
+
+                  Button export_vtt_button {
+                    action-name: "win.export-vtt";
+
+                    styles [
+                      "flat",
+                    ]
+
+                    child: Label {
+                      label: _("WebVTT Subtitles (.vtt)");
+                      xalign: 0;
+                      hexpand: true;
+                    };
+                  }
+
+                  Separator {}
+
+                  Label {
+                    label: _(
+                      "Speaker labels follow the current display settings. Subtitle formats always include timestamps."
+                    );
+                    wrap: true;
+                    max-width-chars: 36;
+                    xalign: 0;
+                    margin-start: 12;
+                    margin-end: 12;
+                    margin-bottom: 6;
+
+                    styles [
+                      "caption",
+                      "dim-label",
+                    ]
+                  }
+                };
+              };
+            }
+
+            [end]
             MenuButton display_options_button {
               icon-name: "view-reveal-symbolic";
               always-show-arrow: true;
@@ -218,6 +308,11 @@ menu note_menu {
     item {
       label: _("_Rename…");
       action: "win.rename-note";
+    }
+
+    item {
+      label: _("_Copy All Text");
+      action: "win.copy-all-text";
     }
   }
 
