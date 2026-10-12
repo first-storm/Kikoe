@@ -1,0 +1,69 @@
+name: Package (macOS)
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - packaging/macos/**
+      - packaging/pyinstaller/**
+      - packaging/ffmpeg/**
+      - .github/workflows/package-macos.yml
+      - .github/workflows/wheel.yml
+      - pyproject.toml
+      - uv.lock
+
+concurrency:
+  # Not github.workflow: when called from the release workflow it names the caller.
+  group: package-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wheel:
+    uses: ./.github/workflows/wheel.yml
+    with:
+      artifact-name: wheel-macos
+
+  app:
+    needs: wheel
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v6
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: wheel-macos
+          path: dist
+
+      - uses: actions/cache@v4
+        with:
+          path: build/ffmpeg
+          key: ffmpeg-macos-${{ matrix.arch }}-${{ hashFiles('packaging/ffmpeg/*.sh') }}
+
+      - name: Build Kikoe.app and the disk image
+        run: packaging/macos/build.sh
+
+      - name: Start the app
+        run: |
+          KIKOE_LOG_LEVEL=DEBUG build/dist/Kikoe.app/Contents/MacOS/Kikoe &
+          pid=$!
+          sleep 20
+          # Still running after 20 seconds means it started without crashing.
+          kill -0 "$pid"
+          kill "$pid"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kikoe-macos-${{ matrix.arch }}
+          path: out/*.dmg
+          if-no-files-found: error
