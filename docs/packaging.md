@@ -48,6 +48,8 @@ CI runs the frozen app with `--self-test`, then tests AppImage, installed Flatpa
 mounted DMG and the installed Windows application. The test opens GTK, imports all
 providers and keyring, checks compiled UI/catalog/version data and creates synthetic
 FLAC using bundled ffmpeg. It does not contact a provider or access the microphone.
+Linux CI starts a PulseAudio null sink with its monitor as the default source, since
+headless runners have no audio hardware for PortAudio initialization.
 Windows also tests silent install and uninstall, including an installation path with
 spaces. Review these checks separately from the hardware acceptance checklist below.
 

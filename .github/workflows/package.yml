@@ -46,10 +46,19 @@ jobs:
             gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-girepository-3.0 \
             gettext libportaudio2 libasound2-data libasound2-plugins ffmpeg adwaita-icon-theme \
             libglib2.0-bin glib-networking xvfb xauth dbus-x11 \
-            flatpak flatpak-builder desktop-file-utils appstream
+            flatpak flatpak-builder desktop-file-utils appstream pulseaudio pulseaudio-utils
       - uses: actions/checkout@v5
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --locked --group packaging
+      - name: Start a synthetic audio server
+        run: |
+          export XDG_RUNTIME_DIR=/tmp/kikoe-runtime
+          mkdir -m 700 -p "$XDG_RUNTIME_DIR"
+          pulseaudio --daemonize=yes --exit-idle-time=-1 --load='module-null-sink sink_name=kikoe_test'
+          pactl set-default-sink kikoe_test
+          pactl set-default-source kikoe_test.monitor
+          echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
+          echo "ALSA_CONFIG_PATH=$GITHUB_WORKSPACE/packaging/linux/alsa-flatpak.conf" >> "$GITHUB_ENV"
       - name: Validate desktop metadata
         run: |
           desktop-file-validate data/*.desktop

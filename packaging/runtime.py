@@ -29,8 +29,17 @@ original_find_library = ctypes.util.find_library
 def find_library(name: str) -> str | None:
     """Prefer the bundled PortAudio even when the host has no audio development tools."""
     if "portaudio" in name:
-        for pattern in ("libportaudio*.so*", "libportaudio*.dylib", "*portaudio*.dll"):
-            if library := next(root.glob(pattern), None):
+        for filename in (
+            "libportaudio.so.2",
+            "libportaudio.so",
+            "libportaudio.2.dylib",
+            "libportaudio.dylib",
+            "libportaudio-2.dll",
+            "libportaudio.dll",
+            "portaudio.dll",
+        ):
+            library = root / filename
+            if library.is_file():
                 return str(library)
     return original_find_library(name)
 

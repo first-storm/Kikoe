@@ -111,13 +111,24 @@ def native_icon(env: dict[str, str]) -> None:
         return
     iconset = BUILD / "Kikoe.iconset"
     iconset.mkdir(exist_ok=True)
+    system_env = dict(os.environ)
+    system_env.pop("DYLD_LIBRARY_PATH", None)
     for size in (16, 32, 128, 256, 512):
         for scale in (1, 2):
             suffix = "@2x" if scale == 2 else ""
             output = iconset / f"icon_{size}x{size}{suffix}.png"
-            run("sips", "-z", str(size * scale), str(size * scale), str(png), "--out", str(output))
+            run(
+                "rsvg-convert",
+                "--width",
+                str(size * scale),
+                "--height",
+                str(size * scale),
+                "--output",
+                str(output),
+                str(ICON),
+            )
     icon = BUILD / "Kikoe.icns"
-    run("iconutil", "-c", "icns", str(iconset), "-o", str(icon))
+    run("iconutil", "-c", "icns", str(iconset), "-o", str(icon), env=system_env)
     env["KIKOE_MACOS_ICON"] = str(icon)
 
 

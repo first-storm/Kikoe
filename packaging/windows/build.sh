@@ -6,4 +6,5 @@ set -euo pipefail
 export KIKOE_NATIVE_PREFIX
 KIKOE_NATIVE_PREFIX=$(cygpath -w "$MINGW_PREFIX")
 export PYTHONPATH="$PWD/src"
+export PYTHONUTF8=1
 uv run --no-project --python "$KIKOE_UV_PYTHON" --with 'hatchling>=1.27' scripts/package_windows.py

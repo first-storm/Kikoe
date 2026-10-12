@@ -84,7 +84,10 @@ def _self_test() -> int:
             if output.stat().st_size == 0:
                 raise RuntimeError("ffmpeg did not produce audio")
         log.info("Packaging self-test passed")
-    except Exception:
+    except Exception as error:
         log.exception("Packaging self-test failed")
+        for argument in error.args:
+            if isinstance(argument, int):
+                log.error("Native self-test error code: %d", argument)
         return 1
     return 0
