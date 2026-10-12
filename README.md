@@ -57,7 +57,7 @@ Platform packages:
 | --- | --- |
 | openSUSE | `sudo zypper in gtk4 libadwaita-1 typelib-1_0-Adw-1 cairo-devel glib2-devel ffmpeg gettext-tools libportaudio2` |
 | Fedora | `sudo dnf install gtk4 libadwaita cairo-devel gobject-introspection-devel ffmpeg-free gettext portaudio` |
-| Debian/Ubuntu | `sudo apt install gir1.2-gtk-4.0 gir1.2-adw-1 libgirepository-2.0-dev libcairo2-dev pkg-config ffmpeg gettext libportaudio2` |
+| Debian/Ubuntu | `sudo apt install gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-girepository-3.0 libgirepository-2.0-dev libcairo2-dev pkg-config ffmpeg gettext libportaudio2` |
 | macOS (Homebrew) | `brew install gtk4 libadwaita gobject-introspection pkg-config ffmpeg gettext portaudio` |
 | Windows | Use the MSYS2 UCRT64 shell: `pacman -S mingw-w64-ucrt-x86_64-{gtk4,libadwaita,gobject-introspection,cairo,pkgconf,gcc,ffmpeg,gettext,portaudio}` |
 
