@@ -3,7 +3,7 @@ name: Desktop packages
 on:
   pull_request:
   push:
-    branches: [main, 'build/**']
+    branches: [main]
     tags: ['v*']
   workflow_dispatch:
 
@@ -53,10 +53,13 @@ jobs:
       - name: Start a synthetic audio server
         run: |
           export XDG_RUNTIME_DIR=/tmp/kikoe-runtime
-          mkdir -m 700 -p "$XDG_RUNTIME_DIR"
+          export PULSE_SERVER=unix:/var/run/pulse/native
+          mkdir -m 700 -p "$XDG_RUNTIME_DIR" /var/run/pulse
+          chown pulse:pulse /var/run/pulse
           if [ ! -s /etc/machine-id ]; then dbus-uuidgen > /etc/machine-id; fi
-          pulseaudio -n --daemonize=no --exit-idle-time=-1 --log-target=stderr \
-            --load=module-native-protocol-unix --load='module-null-sink sink_name=kikoe_test' \
+          pulseaudio --system -n --daemonize=no --exit-idle-time=-1 --log-target=stderr \
+            --load='module-native-protocol-unix auth-anonymous=1 socket=/var/run/pulse/native' \
+            --load='module-null-sink sink_name=kikoe_test' \
             > "$RUNNER_TEMP/kikoe-pulse.log" 2>&1 &
           for attempt in 1 2 3 4 5 6 7 8 9 10; do
             if pactl info >/dev/null 2>&1; then break; fi
@@ -66,6 +69,7 @@ jobs:
           pactl set-default-sink kikoe_test
           pactl set-default-source kikoe_test.monitor
           echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"
+          echo "PULSE_SERVER=$PULSE_SERVER" >> "$GITHUB_ENV"
           echo "ALSA_CONFIG_PATH=$GITHUB_WORKSPACE/packaging/linux/alsa-flatpak.conf" >> "$GITHUB_ENV"
       - name: Validate desktop metadata
         run: |
