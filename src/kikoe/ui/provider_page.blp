@@ -9,10 +9,10 @@ template $KikoeProviderPage: Adw.NavigationPage {
     [top]
     Adw.HeaderBar {
       [end]
-      Button {
-        label: _("_Save");
+      Button add_button {
+        label: _("_Add");
         use-underline: true;
-        clicked => $_on_save_button_clicked();
+        clicked => $_on_add_button_clicked();
 
         styles [
           "suggested-action",
@@ -23,10 +23,10 @@ template $KikoeProviderPage: Adw.NavigationPage {
     content: Adw.PreferencesPage {
       Adw.PreferencesGroup {
         title: _("Connection");
-        description: _("The API type decides the request format. Most providers offer an “OpenAI-compatible” API.");
 
         Adw.EntryRow name_row {
           title: _("Name");
+          apply => $_on_row_apply();
         }
 
         Adw.ComboRow api_row {
@@ -45,18 +45,35 @@ template $KikoeProviderPage: Adw.NavigationPage {
         Adw.EntryRow base_url_row {
           title: _("Base URL");
           input-purpose: url;
+          apply => $_on_row_apply();
         }
 
         Adw.PasswordEntryRow api_key_row {
           title: _("API Key");
+          apply => $_on_row_apply();
         }
-      }
 
-      Adw.PreferencesGroup {
+        Label {
+          label: _("The API type decides the request format. Most providers offer an “OpenAI-compatible” API.");
+          wrap: true;
+          xalign: 0;
+          margin-top: 12;
+          margin-start: 6;
+          margin-end: 6;
+
+          styles [
+            "caption",
+            "dim-label",
+          ]
+        }
+
         Label error_label {
           visible: false;
           wrap: true;
           xalign: 0;
+          margin-top: 6;
+          margin-start: 6;
+          margin-end: 6;
 
           styles [
             "error",
@@ -70,10 +87,14 @@ template $KikoeProviderPage: Adw.NavigationPage {
         visible: false;
 
         header-suffix: Button {
-          label: _("Add _Model");
-          use-underline: true;
           valign: center;
           clicked => $_on_add_model_button_clicked();
+
+          child: Adw.ButtonContent {
+            icon-name: "list-add-symbolic";
+            label: _("Add _Model");
+            use-underline: true;
+          };
         };
 
         ListBox models_list {
@@ -99,15 +120,13 @@ template $KikoeProviderPage: Adw.NavigationPage {
       Adw.PreferencesGroup remove_group {
         visible: false;
 
-        Button {
-          label: _("_Remove Provider");
+        Adw.ButtonRow {
+          title: _("_Remove Provider");
           use-underline: true;
-          halign: center;
-          clicked => $_on_remove_button_clicked();
+          activated => $_on_remove_row_activated();
 
           styles [
             "destructive-action",
-            "pill",
           ]
         }
       }

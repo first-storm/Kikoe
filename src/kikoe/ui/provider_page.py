@@ -1,4 +1,9 @@
-"""Subpage of the preferences dialog to create a provider or edit one and its models."""
+"""Subpage of the preferences dialog to create a provider or edit one and its models.
+
+A new provider is created with the Add button. An existing one is saved as soon as a
+field is applied (Enter or the row's apply button) or the API type changes, as is usual
+in GNOME preferences.
+"""
 
 from gi.repository import Adw, Gio, GObject, Gtk
 
@@ -20,6 +25,7 @@ _API_ORDER = tuple(ApiKind)
 class ProviderPage(Adw.NavigationPage):
     __gtype_name__ = "KikoeProviderPage"
 
+    add_button: Gtk.Button = Gtk.Template.Child()
     name_row: Adw.EntryRow = Gtk.Template.Child()
     api_row: Adw.ComboRow = Gtk.Template.Child()
     base_url_row: Adw.EntryRow = Gtk.Template.Child()
@@ -39,6 +45,8 @@ class ProviderPage(Adw.NavigationPage):
         self._models: Gio.ListStore[ModelItem] = Gio.ListStore(item_type=ModelItem)
         self.models_list.bind_model(self._models, self._create_model_row)
         self._disconnect = lambda: None
+        self._key_loaded = provider_id is None
+        """Saving waits for the stored key, so an empty field cannot erase it by accident."""
         provider = repository.find(provider_id) if provider_id else None
         if provider is not None:
             self._show_provider(provider)
@@ -54,10 +62,16 @@ class ProviderPage(Adw.NavigationPage):
         self.base_url_row.set_text(provider.base_url)
         self.models_group.set_visible(True)
         self.remove_group.set_visible(True)
+        self.add_button.set_visible(False)
+        for row in (self.name_row, self.base_url_row, self.api_key_row):
+            row.set_show_apply_button(True)
+        self.api_key_row.set_sensitive(False)
         self._refresh_models()
 
     async def _load_api_key(self, provider_id: str) -> None:
         self.api_key_row.set_text(await self._repository.get_api_key(provider_id))
+        self.api_key_row.set_sensitive(True)
+        self._key_loaded = True
 
     def _refresh_models(self) -> None:
         provider = self._repository.find(self._provider_id) if self._provider_id else None
@@ -109,9 +123,28 @@ class ProviderPage(Adw.NavigationPage):
         current = self.base_url_row.get_text().strip()
         if not current or current in DEFAULT_BASE_URLS.values():
             self.base_url_row.set_text(DEFAULT_BASE_URLS.get(api, ""))
+        self._apply_changes()
 
     @Gtk.Template.Callback()
-    def _on_save_button_clicked(self, _button: Gtk.Button) -> None:
+    def _on_row_apply(self, _row: Adw.EntryRow) -> None:
+        self._apply_changes()
+
+    @Gtk.Template.Callback()
+    def _on_add_button_clicked(self, _button: Gtk.Button) -> None:
+        fields = self._valid_fields()
+        if fields is not None:
+            run_task(self._add(*fields), self)
+
+    def _apply_changes(self) -> None:
+        """Save an existing provider right away; a new one waits for the Add button."""
+        if self._provider_id is None or not self._key_loaded:
+            return
+        fields = self._valid_fields()
+        if fields is not None:
+            run_task(self._update(self._provider_id, *fields), self)
+
+    def _valid_fields(self) -> tuple[str, ApiKind, str, str] | None:
+        """The entered connection details, or None after showing why they are invalid."""
         name = self.name_row.get_text()
         api = _API_ORDER[self.api_row.get_selected()]
         base_url = self.base_url_row.get_text()
@@ -119,16 +152,19 @@ class ProviderPage(Adw.NavigationPage):
         self.error_label.set_visible(error is not None)
         if error is not None:
             self.error_label.set_label(provider_error_message(error))
-            return
+            return None
         api_key = self.api_key_row.get_text().strip()
-        run_task(self._save(name, api, effective_base_url(api, base_url), api_key), self)
+        return name, api, effective_base_url(api, base_url), api_key
 
-    async def _save(self, name: str, api: ApiKind, base_url: str, api_key: str) -> None:
-        if self._provider_id is None:
-            await self._repository.add_provider(name, api, base_url, api_key)
-        else:
-            await self._repository.update_provider(self._provider_id, name, api, base_url, api_key)
+    async def _add(self, name: str, api: ApiKind, base_url: str, api_key: str) -> None:
+        await self._repository.add_provider(name, api, base_url, api_key)
         self._pop()
+
+    async def _update(
+        self, provider_id: str, name: str, api: ApiKind, base_url: str, api_key: str
+    ) -> None:
+        await self._repository.update_provider(provider_id, name, api, base_url, api_key)
+        self.set_title(name.strip())
 
     @Gtk.Template.Callback()
     def _on_add_model_button_clicked(self, _button: Gtk.Button) -> None:
@@ -136,7 +172,7 @@ class ProviderPage(Adw.NavigationPage):
             ModelDialog(self._repository, self._provider_id).present(self)
 
     @Gtk.Template.Callback()
-    def _on_remove_button_clicked(self, _button: Gtk.Button) -> None:
+    def _on_remove_row_activated(self, _row: Adw.ButtonRow) -> None:
         dialog = Adw.AlertDialog(
             heading=_("Remove “{name}”?").format(name=self.name_row.get_text()),
             body=_("Its models and API key will be deleted."),

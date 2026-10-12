@@ -1,9 +1,23 @@
 # UI design specification
 
-This is the reference for Kikoe's user interface. It was transcribed from the original
-HTML design draft (Chinese UI, since removed); strings here are the English source
+This is the reference for Kikoe's user interface. It was transcribed from the HTML
+design draft `Kikoe.html` (Chinese UI; kept next to the repository, not committed, as
+the visual reference for layout and spacing); strings here are the English source
 strings. Follow the GNOME HIG and use stock libadwaita widgets wherever possible. The
 "Widgets" lines are suggestions, not requirements.
+
+Layout details from the draft that the implementation follows:
+- Content pane on the view background (white), the sidebar on the sidebar background.
+- Transcript column at most 760 px wide. Recording header on one line: bold
+  "Recording N", then the dimmed meta line, then (later) the recording buttons, with a
+  separator below. Each segment has a left column with the speaker name (bold, colored)
+  above the timestamp (small monospace, dimmed), and the text on the right in slightly
+  larger type. The left column disappears when both timestamps and speakers are hidden.
+- Bottom bar (below the content pane only): model button with a cloud icon, the model
+  name in bold and the provider dimmed; chips; hint; then right-aligned "Import Audio…"
+  (flat, folder icon) and the primary "Append Recording" pill (mic icon).
+- "Add Provider"/"Add Model" header buttons are ordinary buttons with a + icon; removal
+  is a full-width destructive row at the end of the page.
 
 Sample data used throughout: speakers "Kobayashi" (blue `#1c71d8`), "Joe" (orange
 `#b34700`); unmatched speakers get "Speaker 3" (green `#2b7a4b`), "Speaker 4"
@@ -71,13 +85,15 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   "Record").
 
 **Implementation status**:
-- Implemented: sidebar list with *New Note*; content header with title and subtitle;
-  *Display Options*; *Note Menu* with "Rename…" and "Delete Note"; recordings and
-  segments; the bottom bar's model picker and "Import Audio…", which adds to the open
-  note or creates one named after the file, with progress, Cancel and a failure toast.
+- Implemented: sidebar list with *New Note* (disabled until a provider exists);
+  content header with title and subtitle; *Display Options*; *Note Menu* with "Rename…"
+  and "Delete Note"; recordings and segments with speaker colors (unnamed speakers
+  show as "Speaker N"); the bottom bar's model picker, Timestamps/Speakers chips (they
+  set what the next transcription requests), hint text, and "Import Audio…", which adds
+  to the open note or creates one named after the file, with progress, Cancel and a
+  failure toast.
 - Not yet: *Search Notes*, *Export*, "Copy All Text", the banner, recording header
-  buttons, speaker colors and renaming, the Timestamps/Speakers chips and hint text,
-  "Append Recording"/"Record".
+  buttons, renaming speakers, "Append Recording"/"Record".
 
 ## 2. Recording in progress
 
@@ -146,8 +162,11 @@ Pushed as a subpage (back button) titled with the provider name.
 - Group "Models", description "What each model can do is set when you add it.", header
   button "Add Model". Rows: model name + capability tags, *Edit Model* button.
 - Destructive button "Remove Provider" at the bottom.
+- No Save button: changes to an existing provider apply when a field is confirmed
+  (Enter or the row's apply button) or the API type changes. Adding a new provider uses
+  an "Add" button in the header.
 - Widgets: `Adw.NavigationPage` inside the dialog, `Adw.EntryRow`,
-  `Adw.PasswordEntryRow`, `Adw.ComboRow`.
+  `Adw.PasswordEntryRow`, `Adw.ComboRow`, `Adw.ButtonRow`.
 
 ## 8. Dialog: Add Model (≈480×600)
 

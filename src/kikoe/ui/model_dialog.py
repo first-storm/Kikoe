@@ -73,7 +73,7 @@ class ModelDialog(Adw.Dialog):
         run_task(self._save(spec, editing_id), self)
 
     @Gtk.Template.Callback()
-    def _on_remove_button_clicked(self, _button: Gtk.Button) -> None:
+    def _on_remove_row_activated(self, _row: Adw.ButtonRow) -> None:
         if self._model is not None:
             run_task(self._remove(self._model.model_id), self)
 

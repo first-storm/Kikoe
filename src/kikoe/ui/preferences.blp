@@ -19,21 +19,21 @@ template $KikoePreferencesDialog: Adw.PreferencesDialog {
   Adw.PreferencesPage {
     name: "providers";
     title: _("Providers");
-    icon-name: "network-server-symbolic";
+    icon-name: "weather-overcast-symbolic";
 
     Adw.PreferencesGroup providers_group {
       title: _("Providers");
       description: _("Transcription happens in the cloud. A provider can offer several models.");
 
       header-suffix: Button {
-        label: _("_Add Provider");
-        use-underline: true;
         valign: center;
         clicked => $_on_add_provider_button_clicked();
 
-        styles [
-          "suggested-action",
-        ]
+        child: Adw.ButtonContent {
+          icon-name: "list-add-symbolic";
+          label: _("_Add Provider");
+          use-underline: true;
+        };
       };
 
       ListBox providers_list {

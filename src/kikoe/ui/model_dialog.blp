@@ -44,6 +44,9 @@ template $KikoeModelDialog: Adw.Dialog {
 
       Adw.PreferencesGroup {
         title: _("This Model Supports");
+        description: _(
+          "Different models from the same provider can differ. Check the provider’s documentation. Unchecked options are shown as unavailable when recording."
+        );
 
         Adw.ActionRow {
           title: _("Realtime Transcription");
@@ -89,33 +92,18 @@ template $KikoeModelDialog: Adw.Dialog {
             "error",
           ]
         }
-
-        Label {
-          label: _(
-            "Different models from the same provider can differ. Check the provider’s documentation. Unchecked options are shown as unavailable when recording."
-          );
-          wrap: true;
-          xalign: 0;
-
-          styles [
-            "dim-label",
-            "caption",
-          ]
-        }
       }
 
       Adw.PreferencesGroup remove_group {
         visible: false;
 
-        Button {
-          label: _("_Remove Model");
+        Adw.ButtonRow {
+          title: _("_Remove Model");
           use-underline: true;
-          halign: center;
-          clicked => $_on_remove_button_clicked();
+          activated => $_on_remove_row_activated();
 
           styles [
             "destructive-action",
-            "pill",
           ]
         }
       }
