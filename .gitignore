@@ -4,6 +4,10 @@ __pycache__/
 .venv/
 build/
 dist/
+
+# Packaging output (see docs/packaging.md)
+out/
+.flatpak-builder/
 *.egg-info/
 
 # Tool caches

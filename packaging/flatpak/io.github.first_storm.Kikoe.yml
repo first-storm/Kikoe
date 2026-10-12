@@ -1,0 +1,81 @@
+# Flatpak manifest for Kikoe (x86_64 and aarch64).
+#
+# Build from the repository root after building the wheel into dist/ (see
+# docs/packaging.md):
+#   flatpak-builder --user --install-deps-from=flathub --force-clean \
+#       --repo=build/flatpak-repo build/flatpak packaging/flatpak/io.github.first_storm.Kikoe.yml
+id: io.github.first_storm.Kikoe
+runtime: org.gnome.Platform
+# GNOME 51 is the first runtime with Python 3.14 (Freedesktop SDK 26.08).
+runtime-version: '51'
+sdk: org.gnome.Sdk
+command: kikoe
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  # Microphone capture and playback.
+  - --socket=pulseaudio
+  # Cloud transcription services.
+  - --share=network
+  # API keys are stored with the Secret Service through python-keyring.
+  - --talk-name=org.freedesktop.secrets
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - /share/ffmpeg
+  - /share/man
+  - '*.a'
+  - '*.la'
+
+modules:
+  - name: portaudio
+    buildsystem: autotools
+    config-opts:
+      - --disable-static
+      - --without-jack
+      - --without-oss
+    sources:
+      - type: git
+        url: https://github.com/PortAudio/portaudio.git
+        tag: v19.7.0
+
+  - name: ffmpeg
+    buildsystem: simple
+    build-commands:
+      - bash configure.sh --prefix="${FLATPAK_DEST}"
+      - make -j"$(nproc)"
+      - install -Dm755 ffmpeg "${FLATPAK_DEST}/bin/ffmpeg"
+    sources:
+      - type: archive
+        url: https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz
+        sha256: 464beb5e7bf0c311e68b45ae2f04e9cc2af88851abb4082231742a74d97b524c
+      - type: file
+        path: ../ffmpeg/configure.sh
+
+  # Generated from uv.lock by scripts/flatpak_deps.py.
+  - python3-dependencies.json
+
+  - name: kikoe
+    buildsystem: simple
+    build-commands:
+      - pip3 install --no-index --no-deps --prefix="${FLATPAK_DEST}" dist/kikoe-*.whl
+      - install -Dm644 data/${FLATPAK_ID}.desktop -t "${FLATPAK_DEST}/share/applications"
+      - install -Dm644 data/${FLATPAK_ID}.metainfo.xml -t "${FLATPAK_DEST}/share/metainfo"
+      - install -Dm644 icons/${FLATPAK_ID}.svg -t "${FLATPAK_DEST}/share/icons/hicolor/scalable/apps"
+      - install -Dm644 icons/${FLATPAK_ID}-symbolic.svg -t "${FLATPAK_DEST}/share/icons/hicolor/symbolic/apps"
+    sources:
+      # The wheel carries the compiled Blueprint templates and translations.
+      - type: dir
+        path: ../../dist
+        dest: dist
+      - type: file
+        path: ../../data/io.github.first_storm.Kikoe.desktop
+        dest: data
+      - type: file
+        path: ../../data/io.github.first_storm.Kikoe.metainfo.xml
+        dest: data
+      - type: dir
+        path: ../../src/kikoe/ui/icons/hicolor/scalable/apps
+        dest: icons
