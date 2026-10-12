@@ -1,12 +1,19 @@
-"""Bar below the note: the transcription model picker, Import Audio, and import progress."""
+"""Bar below the note: model picker, feature chips, Import Audio, and import progress."""
 
 from gi.repository import Adw, Gio, GObject, Gtk, Pango
 
-from kikoe.core.choice import ModelChoice, available_models, resolve_choice
+from kikoe.core.choice import (
+    ModelChoice,
+    RequestedFeatures,
+    available_models,
+    resolve_choice,
+)
+from kikoe.core.models import ModelSpec
+from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.items import ModelChoiceItem
-from kikoe.ui.labels import capability_summary
+from kikoe.ui.labels import capability_summary, chip_tooltip, transcription_hint
 from kikoe.ui.templates import ui_file
 
 
@@ -16,6 +23,10 @@ class BottomBar(Adw.Bin):
 
     model_button: Gtk.MenuButton = Gtk.Template.Child()
     model_label: Gtk.Label = Gtk.Template.Child()
+    provider_label: Gtk.Label = Gtk.Template.Child()
+    timestamps_chip: Gtk.ToggleButton = Gtk.Template.Child()
+    speakers_chip: Gtk.ToggleButton = Gtk.Template.Child()
+    hint_label: Gtk.Label = Gtk.Template.Child()
     model_popover: Gtk.Popover = Gtk.Template.Child()
     model_list: Gtk.ListBox = Gtk.Template.Child()
     progress_box: Gtk.Box = Gtk.Template.Child()
@@ -27,6 +38,9 @@ class BottomBar(Adw.Bin):
         super().__init__()
         self._repository: ProviderRepository | None = None
         self._choice: ModelChoice | None = None
+        self._wanted = RequestedFeatures()
+        """What the user asked for, kept while a model that lacks a feature is chosen."""
+        self._updating = False
         self._models: Gio.ListStore[ModelChoiceItem] = Gio.ListStore(item_type=ModelChoiceItem)
         self.model_list.bind_model(self._models, self._create_model_row)
         self.model_list.set_header_func(self._update_header)
@@ -39,6 +53,13 @@ class BottomBar(Adw.Bin):
     def choice(self) -> ModelChoice | None:
         return self._choice
 
+    @property
+    def requested_features(self) -> RequestedFeatures:
+        """The chips' state, limited to what the chosen model supports."""
+        if self._choice is None:
+            return RequestedFeatures(timestamps=False, diarization=False)
+        return self._wanted.allowed_by(self._choice.model.capabilities)
+
     def bind_providers(self, repository: ProviderRepository) -> None:
         self._repository = repository
         repository.connect_changed(self._refresh)
@@ -50,8 +71,14 @@ class BottomBar(Adw.Bin):
         self.progress_label.set_label(message or "")
         self.progress_box.set_visible(busy)
         self.cancel_button.set_visible(busy)
-        self.model_button.set_visible(not busy)
-        self.import_button.set_visible(not busy)
+        for widget in (
+            self.model_button,
+            self.timestamps_chip,
+            self.speakers_chip,
+            self.hint_label,
+            self.import_button,
+        ):
+            widget.set_visible(not busy)
 
     def _refresh(self) -> None:
         providers = self._repository.providers if self._repository else ()
@@ -68,15 +95,66 @@ class BottomBar(Adw.Bin):
         choice = self._choice
         if choice is None:
             self.model_label.set_label(_("No Model"))
+            self.provider_label.set_label("")
             self.import_button.set_tooltip_text(_("Add a model in Preferences first"))
         else:
-            self.model_label.set_label(
-                _("{model} · {provider}").format(
-                    model=choice.model.display_name, provider=choice.provider.name
-                )
-            )
+            self.model_label.set_label(choice.model.display_name)
+            self.provider_label.set_label(choice.provider.name)
             self.import_button.set_tooltip_text(None)
+        self._show_chips(choice.model if choice else None)
         self.emit("choice-changed")
+
+    def _show_chips(self, model: ModelSpec | None) -> None:
+        self.timestamps_chip.set_visible(model is not None)
+        self.speakers_chip.set_visible(model is not None)
+        self.hint_label.set_visible(model is not None)
+        if model is None:
+            return
+        allowed = self._wanted.allowed_by(model.capabilities)
+        chips = (
+            (
+                self.timestamps_chip,
+                Capability.TIMESTAMPS,
+                model.capabilities.timestamps,
+                allowed.timestamps,
+            ),
+            (
+                self.speakers_chip,
+                Capability.DIARIZATION,
+                model.capabilities.diarization,
+                allowed.diarization,
+            ),
+        )
+        self._updating = True
+        try:
+            for chip, capability, supported, active in chips:
+                chip.set_sensitive(supported)
+                chip.set_active(active)
+                if supported:
+                    chip.remove_css_class("unsupported")
+                else:
+                    chip.add_css_class("unsupported")
+                chip.set_tooltip_text(
+                    chip_tooltip(capability, model.display_name, supported, active)
+                )
+        finally:
+            self._updating = False
+        self.hint_label.set_label(transcription_hint(model.capabilities))
+
+    @Gtk.Template.Callback()
+    def _on_chip_toggled(self, _chip: Gtk.ToggleButton) -> None:
+        if self._updating or self._choice is None:
+            return
+        caps = self._choice.model.capabilities
+        self._wanted = RequestedFeatures(
+            timestamps=self.timestamps_chip.get_active()
+            if caps.timestamps
+            else self._wanted.timestamps,
+            diarization=self.speakers_chip.get_active()
+            if caps.diarization
+            else self._wanted.diarization,
+        )
+        self._show_chips(self._choice.model)
 
     def _create_model_row(self, item: GObject.Object) -> Gtk.Widget:
         assert isinstance(item, ModelChoiceItem)

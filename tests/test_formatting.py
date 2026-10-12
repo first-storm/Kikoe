@@ -7,6 +7,7 @@ from kikoe.core.formatting import (
     format_duration,
     format_timestamp,
     relative_day,
+    speaker_order,
     transcript_features,
 )
 from kikoe.core.models import Segment
@@ -58,3 +59,10 @@ def test_transcript_features_reflect_what_segments_contain() -> None:
         Capability.TIMESTAMPS,
         Capability.DIARIZATION,
     )
+
+
+def test_speakers_are_numbered_by_first_appearance() -> None:
+    order = ["b", "a", "b", "c"]
+    segments = [Segment("x", speaker_id=s) for s in order] + [Segment("no speaker")]
+
+    assert speaker_order(segments) == {"b": 0, "a": 1, "c": 2}

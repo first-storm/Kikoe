@@ -1,7 +1,13 @@
 from dataclasses import replace
 
-from kikoe.core.choice import available_models, resolve_choice
+from kikoe.core.choice import (
+    RequestedFeatures,
+    available_models,
+    resolve_choice,
+    unsupported_features,
+)
 from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider
+from kikoe.core.validation import Capability
 
 WHISPER = ModelSpec("whisper-1", "Whisper", Capabilities(timestamps=True))
 GPT = ModelSpec("gpt-4o-transcribe", "GPT-4o", Capabilities())
@@ -38,3 +44,15 @@ def test_removed_model_falls_back_to_the_first() -> None:
 
 def test_no_models_means_no_choice() -> None:
     assert resolve_choice([EMPTY], None) is None
+
+
+def test_requested_features_are_limited_to_the_model() -> None:
+    wanted = RequestedFeatures(timestamps=True, diarization=False)
+
+    assert wanted.allowed_by(Capabilities(timestamps=True, diarization=True)) == wanted
+    assert wanted.allowed_by(Capabilities()) == RequestedFeatures(False, False)
+
+
+def test_unsupported_features_feed_the_hint() -> None:
+    assert unsupported_features(Capabilities(timestamps=True)) == (Capability.DIARIZATION,)
+    assert unsupported_features(Capabilities(timestamps=True, diarization=True)) == ()

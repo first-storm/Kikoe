@@ -11,6 +11,7 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 from kikoe.core.choice import ModelChoice
 from kikoe.core.models import DisplayOptions, Note
 from kikoe.i18n import _
+from kikoe.providers.base import TranscriptionOptions
 from kikoe.providers.factory import create_client
 from kikoe.services.importer import ImportStage, import_audio
 from kikoe.storage.notes import NoteRepository
@@ -70,6 +71,7 @@ class Window(Adw.ApplicationWindow):
         self._add_action("import-audio", self._on_import_audio)
         self._add_action("cancel-import", self._on_cancel_import)
         self._import_task: asyncio.Task[None] | None = None
+        self._set_action_enabled("new-note", False)  # Until providers are loaded.
         self._show_note(None)
         providers.connect_changed(self._on_providers_changed)
         notes.connect_changed(self._on_notes_changed)
@@ -158,7 +160,14 @@ class Window(Adw.ApplicationWindow):
 
     def _on_providers_changed(self) -> None:
         self._providers_loaded = True
+        # Matches the first-run design: nothing to transcribe with, so no new notes yet.
+        self._set_action_enabled("new-note", bool(self._providers.providers))
         self._update_content()
+
+    def _set_action_enabled(self, name: str, enabled: bool) -> None:
+        action = self.lookup_action(name)
+        if isinstance(action, Gio.SimpleAction):
+            action.set_enabled(enabled)
 
     # Content
 
@@ -170,12 +179,10 @@ class Window(Adw.ApplicationWindow):
         self.note_menu_button.set_visible(note is not None)
         self.display_options_button.set_visible(note is not None)
         for name in _NOTE_ACTIONS:
-            action = self.lookup_action(name)
-            if isinstance(action, Gio.SimpleAction):
-                action.set_enabled(note is not None)
+            self._set_action_enabled(name, note is not None)
         if note is None:
             self.content_page.set_title(_("Kikoe"))
-            self.window_title.set_title(_("Kikoe"))
+            self.window_title.set_title("")
             self.window_title.set_subtitle("")
         else:
             self.content_page.set_title(note.title)
@@ -274,13 +281,8 @@ class Window(Adw.ApplicationWindow):
 
     def _update_import_actions(self) -> None:
         busy = self._import_task is not None
-        for name, enabled in (
-            ("import-audio", not busy and self.bottom_bar.choice is not None),
-            ("cancel-import", busy),
-        ):
-            action = self.lookup_action(name)
-            if isinstance(action, Gio.SimpleAction):
-                action.set_enabled(enabled)
+        self._set_action_enabled("import-audio", not busy and self.bottom_bar.choice is not None)
+        self._set_action_enabled("cancel-import", busy)
 
     def _on_import_audio(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         run_task(self._pick_and_import(), self)
@@ -295,7 +297,11 @@ class Window(Adw.ApplicationWindow):
         if path is None or choice is None or self._import_task is not None:
             return
         note_id = self._note.note_id if self._note else None
-        task = asyncio.ensure_future(self._import(path, note_id, choice))
+        features = self.bottom_bar.requested_features
+        options = TranscriptionOptions(
+            timestamps=features.timestamps, diarization=features.diarization
+        )
+        task = asyncio.ensure_future(self._import(path, note_id, choice, options))
         self._import_task = task
         self._update_import_actions()
         self.bottom_bar.set_progress(import_stage_label(ImportStage.CONVERTING, 1, 1))
@@ -339,7 +345,13 @@ class Window(Adw.ApplicationWindow):
             return None
         return Path(path)
 
-    async def _import(self, path: Path, note_id: str | None, choice: ModelChoice) -> None:
+    async def _import(
+        self,
+        path: Path,
+        note_id: str | None,
+        choice: ModelChoice,
+        options: TranscriptionOptions,
+    ) -> None:
         def on_progress(stage: ImportStage, part: int, parts: int) -> None:
             self.bottom_bar.set_progress(import_stage_label(stage, part, parts))
 
@@ -352,6 +364,7 @@ class Window(Adw.ApplicationWindow):
                 choice.model,
                 client=create_client(choice.provider, api_key),
                 notes=self._notes,
+                options=options,
                 on_progress=on_progress,
             )
         except USER_FACING_ERRORS as error:

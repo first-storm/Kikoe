@@ -3,7 +3,8 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from kikoe.core.models import ModelSpec, Provider
+from kikoe.core.models import Capabilities, ModelSpec, Provider
+from kikoe.core.validation import Capability
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,3 +33,27 @@ def resolve_choice(
     """
     choices = available_models(providers)
     return next((c for c in choices if c.key == wanted), choices[0] if choices else None)
+
+
+@dataclass(frozen=True, slots=True)
+class RequestedFeatures:
+    """What the user asked the next transcription to include (the bottom bar's chips)."""
+
+    timestamps: bool = True
+    diarization: bool = True
+
+    def allowed_by(self, capabilities: Capabilities) -> RequestedFeatures:
+        """Drop what the model cannot do; those chips are shown as unavailable."""
+        return RequestedFeatures(
+            timestamps=self.timestamps and capabilities.timestamps,
+            diarization=self.diarization and capabilities.diarization,
+        )
+
+
+def unsupported_features(capabilities: Capabilities) -> tuple[Capability, ...]:
+    """Requestable features the model lacks, in display order, for the bar's hint."""
+    pairs = (
+        (capabilities.timestamps, Capability.TIMESTAMPS),
+        (capabilities.diarization, Capability.DIARIZATION),
+    )
+    return tuple(capability for supported, capability in pairs if not supported)

@@ -33,6 +33,7 @@ class TranscriptItem(GObject.Object):
         number: int,
         segment: Segment | None = None,
         speaker_name: str | None = None,
+        color_slot: int | None = None,
     ) -> None:
         super().__init__()
         self.recording = recording
@@ -40,6 +41,7 @@ class TranscriptItem(GObject.Object):
         """1-based position of the recording in its note."""
         self.segment = segment
         self.speaker_name = speaker_name
+        self.color_slot = color_slot
 
 
 class ModelChoiceItem(GObject.Object):

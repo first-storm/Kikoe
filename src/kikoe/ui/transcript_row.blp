@@ -5,56 +5,67 @@ template $KikoeTranscriptRow: Box {
 
   Box header_box {
     orientation: vertical;
-    spacing: 2;
-    margin-top: 24;
-    margin-bottom: 8;
+    spacing: 8;
+    margin-top: 18;
+    margin-bottom: 6;
 
-    Label title_label {
-      xalign: 0;
+    Box {
+      spacing: 10;
 
-      styles [
-        "heading",
-      ]
+      Label title_label {
+        xalign: 0;
+        yalign: 0;
+
+        styles [
+          "caption-heading",
+        ]
+      }
+
+      Label meta_label {
+        xalign: 0;
+        yalign: 0;
+        hexpand: true;
+        wrap: true;
+
+        styles [
+          "caption",
+          "dim-label",
+        ]
+      }
     }
 
-    Label meta_label {
-      xalign: 0;
-      wrap: true;
-
-      styles [
-        "caption",
-        "dim-label",
-      ]
-    }
+    Separator {}
   }
 
   Box segment_box {
-    spacing: 12;
-    margin-top: 3;
-    margin-bottom: 3;
+    spacing: 20;
+    margin-top: 6;
+    margin-bottom: 6;
 
-    Label speaker_label {
-      xalign: 0;
-      yalign: 0;
-      width-chars: 10;
-      max-width-chars: 10;
-      ellipsize: end;
+    Box meta_box {
+      orientation: vertical;
+      spacing: 1;
+      margin-top: 3;
 
-      styles [
-        "heading",
-      ]
-    }
+      Label speaker_label {
+        xalign: 0;
+        ellipsize: end;
 
-    Label timestamp_label {
-      xalign: 0;
-      yalign: 0;
-      width-chars: 5;
+        styles [
+          "heading",
+        ]
+      }
 
-      styles [
-        "monospace",
-        "numeric",
-        "dim-label",
-      ]
+      Label timestamp_label {
+        xalign: 0;
+
+        styles [
+          "caption",
+          "monospace",
+          "numeric",
+          "dim-label",
+        ]
+      }
     }
 
     Label text_label {
@@ -63,6 +74,10 @@ template $KikoeTranscriptRow: Box {
       hexpand: true;
       wrap: true;
       wrap-mode: word_char;
+
+      styles [
+        "transcript-text",
+      ]
     }
   }
 }

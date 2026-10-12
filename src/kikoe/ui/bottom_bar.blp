@@ -2,15 +2,45 @@ using Gtk 4.0;
 using Adw 1;
 
 template $KikoeBottomBar: Adw.Bin {
-  child: ActionBar {
-    [start]
+  child: Box {
+    spacing: 8;
+    margin-top: 8;
+    margin-bottom: 8;
+    margin-start: 12;
+    margin-end: 12;
+
     MenuButton model_button {
       tooltip-text: _("Transcription Model");
-      always-show-arrow: true;
 
-      child: Label model_label {
-        ellipsize: end;
-        max-width-chars: 28;
+      child: Box {
+        spacing: 8;
+
+        Image {
+          icon-name: "weather-overcast-symbolic";
+        }
+
+        Label model_label {
+          ellipsize: end;
+          max-width-chars: 20;
+
+          styles [
+            "heading",
+          ]
+        }
+
+        Label provider_label {
+          ellipsize: end;
+          max-width-chars: 14;
+
+          styles [
+            "caption",
+            "dim-label",
+          ]
+        }
+
+        Image {
+          icon-name: "pan-down-symbolic";
+        }
       };
 
       popover: Popover model_popover {
@@ -48,9 +78,51 @@ template $KikoeBottomBar: Adw.Bin {
       };
     }
 
-    [start]
+    ToggleButton timestamps_chip {
+      toggled => $_on_chip_toggled();
+
+      child: Adw.ButtonContent {
+        icon-name: "document-open-recent-symbolic";
+        label: _("_Timestamps");
+        use-underline: true;
+        can-shrink: true;
+      };
+
+      styles [
+        "feature-chip",
+      ]
+    }
+
+    ToggleButton speakers_chip {
+      toggled => $_on_chip_toggled();
+
+      child: Adw.ButtonContent {
+        icon-name: "system-users-symbolic";
+        label: _("_Speakers");
+        use-underline: true;
+        can-shrink: true;
+      };
+
+      styles [
+        "feature-chip",
+      ]
+    }
+
+    Label hint_label {
+      margin-start: 4;
+      hexpand: true;
+      xalign: 0;
+      ellipsize: end;
+
+      styles [
+        "caption",
+        "dim-label",
+      ]
+    }
+
     Box progress_box {
       spacing: 9;
+      hexpand: true;
       visible: false;
 
       Adw.Spinner {}
@@ -60,18 +132,21 @@ template $KikoeBottomBar: Adw.Bin {
       }
     }
 
-    [end]
     Button import_button {
-      label: _("_Import Audio…");
-      use-underline: true;
       action-name: "win.import-audio";
 
+      child: Adw.ButtonContent {
+        icon-name: "folder-open-symbolic";
+        label: _("_Import Audio…");
+        use-underline: true;
+        can-shrink: true;
+      };
+
       styles [
-        "suggested-action",
+        "flat",
       ]
     }
 
-    [end]
     Button cancel_button {
       label: _("_Cancel");
       use-underline: true;

@@ -6,9 +6,10 @@ of segments stay fast.
 
 from gi.repository import Adw, Gio, GObject, Gtk
 
-from kikoe.core.formatting import transcript_features
+from kikoe.core.formatting import SPEAKER_COLOR_COUNT, speaker_order, transcript_features
 from kikoe.core.models import Note
 from kikoe.core.validation import Capability
+from kikoe.i18n import _
 from kikoe.ui.items import TranscriptItem
 from kikoe.ui.templates import ui_file
 from kikoe.ui.transcript_row import TranscriptRow
@@ -89,18 +90,18 @@ class NoteView(Adw.Bin):
 
 
 def _rows(note: Note) -> list[TranscriptItem]:
+    order = speaker_order(s for r in note.recordings for s in r.segments)
     rows: list[TranscriptItem] = []
     for number, recording in enumerate(note.recordings, start=1):
         rows.append(TranscriptItem(recording, number))
-        rows.extend(
-            TranscriptItem(
-                recording,
-                number,
-                segment,
-                note.speaker_name(segment.speaker_id) or segment.speaker_id
-                if segment.speaker_id
-                else None,
+        for segment in recording.segments:
+            speaker = segment.speaker_id
+            if speaker is None:
+                rows.append(TranscriptItem(recording, number, segment))
+                continue
+            name = note.speaker_name(speaker) or _("Speaker {number}").format(
+                number=order[speaker] + 1
             )
-            for segment in recording.segments
-        )
+            slot = order[speaker] % SPEAKER_COLOR_COUNT
+            rows.append(TranscriptItem(recording, number, segment, name, slot))
     return rows

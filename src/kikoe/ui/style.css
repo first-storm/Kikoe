@@ -1,2 +1,33 @@
 /* App-specific styling. Prefer libadwaita style classes in Blueprints; add rules here
    only when no stock class fits, and use named colors (e.g. var(--accent-color)). */
+
+/* Transcript text is the content people read; give it a little more room than UI text. */
+.transcript-text {
+  font-size: 1.07em;
+  line-height: 1.6;
+}
+
+/* Speaker colors from the GNOME palette, in order of first appearance (see
+   kikoe.core.formatting.speaker_order). Lighter shades keep contrast in dark mode. */
+.speaker-0 { color: var(--blue-4); }
+.speaker-1 { color: var(--orange-5); }
+.speaker-2 { color: var(--green-5); }
+.speaker-3 { color: var(--purple-4); }
+
+@media (prefers-color-scheme: dark) {
+  .speaker-0 { color: var(--blue-2); }
+  .speaker-1 { color: var(--orange-2); }
+  .speaker-2 { color: var(--green-2); }
+  .speaker-3 { color: var(--purple-2); }
+}
+
+/* Bottom bar chips: tinted with the accent color while on, struck through when the
+   chosen model cannot provide the feature. */
+.feature-chip:checked {
+  background-color: color-mix(in srgb, var(--accent-bg-color) 15%, transparent);
+  color: var(--accent-color);
+}
+
+.feature-chip.unsupported label {
+  text-decoration-line: line-through;
+}

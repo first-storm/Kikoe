@@ -44,6 +44,7 @@ template $KikoeWindow: Adw.ApplicationWindow {
             hscrollbar-policy: never;
 
             child: ListBox notes_list {
+              vexpand: true;
               row-selected => $_on_notes_list_row_selected();
 
               styles [
@@ -53,7 +54,7 @@ template $KikoeWindow: Adw.ApplicationWindow {
               [placeholder]
               Label {
                 label: _("No Notes Yet");
-                margin-top: 24;
+                valign: center;
 
                 styles [
                   "dim-label",
@@ -68,6 +69,12 @@ template $KikoeWindow: Adw.ApplicationWindow {
         title: _("Kikoe");
 
         child: Adw.ToolbarView {
+          bottom-bar-style: raised_border;
+
+          styles [
+            "view",
+          ]
+
           [top]
           Adw.HeaderBar {
             title-widget: Adw.WindowTitle window_title {
@@ -85,23 +92,21 @@ template $KikoeWindow: Adw.ApplicationWindow {
             [end]
             MenuButton display_options_button {
               icon-name: "view-reveal-symbolic";
+              always-show-arrow: true;
               tooltip-text: _("Display Options");
               visible: false;
 
               popover: Popover {
                 child: Box {
                   orientation: vertical;
-                  spacing: 12;
-                  margin-top: 6;
-                  margin-bottom: 6;
-                  margin-start: 6;
-                  margin-end: 6;
+                  spacing: 6;
+                  width-request: 280;
 
                   ListBox {
                     selection-mode: none;
 
                     styles [
-                      "boxed-list",
+                      "navigation-sidebar",
                     ]
 
                     Adw.SwitchRow timestamps_row {
@@ -122,6 +127,9 @@ template $KikoeWindow: Adw.ApplicationWindow {
                     wrap: true;
                     max-width-chars: 36;
                     xalign: 0;
+                    margin-start: 12;
+                    margin-end: 12;
+                    margin-bottom: 6;
 
                     styles [
                       "caption",

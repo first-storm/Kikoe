@@ -66,3 +66,19 @@ def _split(total_seconds: int) -> tuple[int, int, int]:
     hours, rest = divmod(total_seconds, 3600)
     minutes, seconds = divmod(rest, 60)
     return hours, minutes, seconds
+
+
+SPEAKER_COLOR_COUNT = 4
+"""Distinct speaker colors before they repeat (blue, orange, green, purple)."""
+
+
+def speaker_order(segments: Iterable[Segment]) -> dict[str, int]:
+    """Number speakers 0, 1, … by first appearance; unnamed ones are shown as “Speaker n+1”.
+
+    The color slot is the number modulo :data:`SPEAKER_COLOR_COUNT`, so colors stay stable.
+    """
+    order: dict[str, int] = {}
+    for segment in segments:
+        if segment.speaker_id is not None and segment.speaker_id not in order:
+            order[segment.speaker_id] = len(order)
+    return order
