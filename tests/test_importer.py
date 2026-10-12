@@ -8,7 +8,12 @@ from helpers import run_async
 from kikoe.core.chunking import TimeSpan
 from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider, RecordingSource, Segment
 from kikoe.media import transcode
-from kikoe.providers.base import TranscriptionError, TranscriptionOptions
+from kikoe.providers.base import (
+    RealtimeSession,
+    TranscriptionError,
+    TranscriptionOptions,
+    UploadLimits,
+)
 from kikoe.services.importer import ImportStage, import_audio
 from kikoe.storage.library import Library
 from kikoe.storage.notes import NoteRepository
@@ -33,6 +38,14 @@ class Stages(list[tuple[ImportStage, int, int]]):
 
 
 class FakeClient:
+    def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
+        return UploadLimits(self.max_upload_bytes)
+
+    async def open_realtime(
+        self, model: ModelSpec, options: TranscriptionOptions
+    ) -> RealtimeSession:
+        raise TranscriptionError("Not a realtime fake")
+
     """Returns one timed segment per upload, numbered in call order."""
 
     def __init__(self, max_upload_bytes: int | None = 1000, fail: bool = False) -> None:
@@ -253,3 +266,36 @@ async def test_cancelling_removes_the_copied_audio(
 
     assert list((tmp_path / "audio").iterdir()) == []
     assert not client.uploads[0].exists()
+
+
+@run_async
+async def test_duration_limit_splits_even_small_compressed_files(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, notes: NoteRepository, source: Path
+) -> None:
+    class DurationClient(FakeClient):
+        def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
+            return UploadLimits(duration=s(60))
+
+    converter = FakeConverter(s(120), size=100)
+    use_converter(monkeypatch, converter)
+    await notes.load()
+    client = DurationClient()
+    await import_audio(source, None, PROVIDER, MODEL, client=client, notes=notes, work_dir=tmp_path)
+    assert len(client.uploads) >= 2
+    assert all(part.end - part.start <= s(60) for part in converter.parts)
+
+
+@run_async
+async def test_live_only_model_is_refused_before_copying_audio(
+    tmp_path: Path, notes: NoteRepository, source: Path
+) -> None:
+    from dataclasses import replace
+
+    provider = replace(PROVIDER, api=ApiKind.GEMINI)
+    model = ModelSpec("gemini-3.5-transcribe-live", "Live", Capabilities(realtime=True))
+    await notes.load()
+    with pytest.raises(TranscriptionError, match="file transcription model"):
+        await import_audio(
+            source, None, provider, model, client=FakeClient(), notes=notes, work_dir=tmp_path
+        )
+    assert list((tmp_path / "audio").glob("*")) == []

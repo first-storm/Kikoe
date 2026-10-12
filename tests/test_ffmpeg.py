@@ -41,3 +41,34 @@ def test_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
 
     with pytest.raises(ffmpeg.FFmpegError, match="not found"):
         ffmpeg.find_ffmpeg()
+
+
+@pytest.mark.parametrize("output_rate", [16000, 24000])
+def test_streaming_resampler_drains_all_audio(output_rate: int) -> None:
+    import asyncio
+    import struct
+
+    async def run() -> None:
+        stream = await ffmpeg.PCMStream.start(48000, output_rate)
+
+        async def feed() -> None:
+            for _ in range(4):
+                await stream.feed(struct.pack("<h", 1000) * 12000)
+            await stream.finish()
+
+        writer = asyncio.create_task(feed())
+        try:
+            audio = b"".join([chunk async for chunk in stream.chunks()])
+            await writer
+            assert abs(len(audio) - output_rate * 2) <= 2
+            assert len(audio) % 2 == 0
+        finally:
+            writer.cancel()
+            await asyncio.gather(writer, return_exceptions=True)
+            await stream.close()
+
+    try:
+        ffmpeg.find_ffmpeg()
+    except ffmpeg.FFmpegNotFoundError:
+        pytest.skip("ffmpeg not installed")
+    asyncio.run(run())

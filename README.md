@@ -1,15 +1,37 @@
 # Kikoe
 
 Kikoe turns speech into text notes. It records or imports audio and transcribes it with
-cloud speech-to-text services (Deepgram, OpenAI, or any OpenAI-compatible API), with
+cloud speech-to-text services (Deepgram, OpenAI, OpenRouter, Gemini AI Studio, or an
+OpenAI-compatible API), with
 optional timestamps and speaker labels, and exports to text, Markdown, SRT, or WebVTT.
 
 Built with Python 3.14, GTK 4 and libadwaita. Linux is the primary platform; macOS and
 Windows are planned (see [docs/packaging.md](docs/packaging.md)).
 
 > Status: provider management, audio import, microphone recording with pause/resume,
-> batch transcription, audio recovery, and transcript/audio export are implemented.
-> Realtime transcription and Deepgram are planned.
+> batch and realtime transcription, audio/text recovery, and transcript/audio export
+> are implemented. All four hosted providers use their official Python SDKs.
+> Real provider accounts and macOS/Windows realtime capture are not yet verified.
+
+## Transcription
+
+Choose an API type and add a model in Preferences. Capabilities can be declared for
+custom models; known API restrictions override unsupported options. Deepgram Nova-3
+supports file and live transcription with timestamps and speaker detection. OpenRouter
+supports file STT. OpenAI and Gemini also offer live transcription, with timestamps and
+speaker options disabled where the live endpoint cannot supply them.
+
+`gpt-live-transcribe` and `gemini-3.5-transcribe-live` are microphone-only models.
+Select a file model (for example `whisper-1`, `gpt-4o-transcribe-diarize`, or
+`gemini-3.5-transcribe`) to import audio or retry an incomplete recording. Live success
+is saved directly without a second file upload.
+
+Recording always saves audio locally. After a network interruption Kikoe reconnects
+and replays unconfirmed audio from disk. If transcription remains incomplete at stop,
+the confirmed text and FLAC are kept. Select a file model and use Retry Transcription;
+failed or cancelled retries preserve the existing text. Recovery never uploads audio
+automatically. Speaker IDs from independent recordings/connections are kept separate;
+matching people between them remains part of M6.
 
 ## Development setup
 

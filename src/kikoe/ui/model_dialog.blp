@@ -34,6 +34,7 @@ template $KikoeModelDialog: Adw.Dialog {
     content: Adw.PreferencesPage {
       Adw.PreferencesGroup {
         Adw.EntryRow model_id_row {
+          changed => $_on_model_id_row_changed();
           title: _("Model ID");
         }
 

@@ -58,3 +58,13 @@ def test_unknown_api_kind_is_refused(tmp_path: Path) -> None:
     path.write_text(json.dumps({"version": 1, "providers": [entry]}), encoding="utf-8")
     with pytest.raises(SettingsError):
         SettingsStore(path).load()
+
+
+@pytest.mark.parametrize("api", list(ApiKind))
+def test_all_official_and_compatible_api_types_round_trip(tmp_path: Path, api: ApiKind) -> None:
+    from dataclasses import replace
+
+    provider = replace(PROVIDER, api=api)
+    store = SettingsStore(tmp_path / "settings.json")
+    store.save((provider,))
+    assert store.load() == (provider,)

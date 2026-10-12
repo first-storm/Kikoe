@@ -260,7 +260,7 @@ class Library:
         recording_id: str,
         state: TranscriptionState,
         *,
-        segments: tuple[Segment, ...] = (),
+        segments: tuple[Segment, ...] | None = None,
         provider_name: str | None = None,
         model_id: str | None = None,
     ) -> Note:
@@ -273,7 +273,7 @@ class Library:
                 (state.value, provider_name, model_id, recording_id, note_id),
             )
             _require_found(cursor.rowcount)
-            if state is TranscriptionState.READY:
+            if segments is not None:
                 connection.execute("DELETE FROM segments WHERE recording_id = ?", (recording_id,))
                 self._insert_segments(connection, recording_id, segments)
             return self._read_note(connection, note_id)

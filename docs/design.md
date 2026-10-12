@@ -96,7 +96,7 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   failure toast; Record/Append Recording, pause/resume, Stop, live level meter, batch
   transcription after stopping, retained-audio retry, and startup recovery.
 - Not yet: *Search Notes*, the banner, *Play This Recording*, "Re-transcribe…",
-  "Delete This Recording", renaming speakers, and realtime transcription.
+  "Delete This Recording", and renaming speakers.
 
 ## 2. Recording in progress
 
@@ -105,12 +105,15 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 - Content header shows the note title and "Recording".
 - Section "Recording 1", meta "In progress · Deepgram nova-3 · Timestamps, Speakers".
 - **Realtime model**: segments stream in ("Speaker 1 00:02 …"); the last line is
-  partial (shown dimmed until finalized).
+  partial (shown dimmed with an inline accent-colored blinking caret until finalized).
+  Existing recordings and live rows share one virtualized list. Updates follow the
+  bottom only while the user is already there; reading older text preserves scrolling.
+  The metadata line shows connecting, reconnecting and catch-up states.
 - **M4 batch mode**: centered 88 px circle containing a microphone icon, "Recording"
   heading, and "Kikoe will upload the audio to {model} and transcribe it automatically
   after you stop. The text will appear here." Existing recordings remain above the
-  appended recording section. All currently supported models use this branch, including
-  models whose configured capabilities include realtime; streaming arrives in M5.
+  appended recording section. Models without effective realtime support use this branch.
+  Deepgram, OpenAI and Gemini native live endpoints use the realtime branch.
 - Bottom bar follows the HTML's order: 10 px red recording indicator, elapsed time
   `00:31` (monospace/tabular digits), 28 live level bars (3 px wide, up to 28 px high),
   model/options summary, round icon-only "Pause Recording" button, and a destructive
@@ -125,10 +128,18 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 - During recording/saving/transcription, starting another capture, importing, changing
   notes and deleting the target note are disabled; exporting is disabled. Display
   options remain available. The selected model/options are fixed for the session.
-- Stop saves original FLAC before automatically starting batch transcription. Upload
-  progress has a Cancel button; cancellation or failure retains audio and displays a
-  per-recording "Retry Transcription" button. Retrying uses the current bottom-bar
-  model/options and updates that recording, rather than appending another one.
+- Stop saves original FLAC. Batch models then upload it automatically. Live models
+  drain their final response for at most ten seconds and save the streamed transcript
+  without another upload. Partial live text and audio are retained on failure, with a
+  "Transcription incomplete" message and the existing "Retry Transcription" button.
+- File-only retry uses the current model/options and replaces the same recording after
+  success; cancellation or failure preserves its existing text. Microphone-only models
+  disable Import Audio and Retry Transcription; their import tooltip explains that a
+  file model is required. No model is substituted automatically.
+- Pause drains the accepted audio and closes the live connection. Resume opens another
+  connection and sends only the unsent local samples. The microphone timer excludes
+  the pause. A new recognition connection does not assume its speaker IDs match the old
+  one. Closing or quitting cancels network work before finalizing local audio.
 - Closing or quitting stops and saves audio; pending transcription can be retried later.
   Startup offers "Recover" or "Later" for interrupted captures. Recovery only restores
   audio and the note; uploading requires an explicit retry. Failed conversion leaves
@@ -180,7 +191,7 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 
 Pushed as a subpage (back button) titled with the provider name.
 - Group "Connection": entry "Name"; combo "API Type" (Deepgram / OpenAI /
-  OpenAI-compatible); entry "Base URL" (e.g. `https://api.groq.com/openai/v1`);
+  OpenAI-compatible / OpenRouter / Gemini AI Studio); entry "Base URL" (e.g. `https://api.groq.com/openai/v1`);
   password entry "API Key" with *Show Key* toggle. Description: "The API type decides
   the request format. Most providers offer an "OpenAI-compatible" API."
 - Group "Models", description "What each model can do is set when you add it.", header
@@ -203,6 +214,9 @@ Pushed as a subpage (back button) titled with the provider name.
   - "Speaker Detection" — "Tells different people apart and labels them."
 - Footnote: "Different models from the same provider can differ. Check the provider's
   documentation. Unchecked options are shown as unavailable when recording."
+- Known endpoint restrictions disable unsupported capability checkboxes. Live-only
+  model IDs force Realtime Transcription and disable file operations. Provider/model
+  summaries and bottom-bar hints use the same effective capability rules.
 
 ## Visual notes
 

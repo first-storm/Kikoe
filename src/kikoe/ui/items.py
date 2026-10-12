@@ -34,6 +34,8 @@ class TranscriptItem(GObject.Object):
         segment: Segment | None = None,
         speaker_name: str | None = None,
         color_slot: int | None = None,
+        preview: bool = False,
+        live_summary: str | None = None,
     ) -> None:
         super().__init__()
         self.recording = recording
@@ -42,6 +44,8 @@ class TranscriptItem(GObject.Object):
         self.segment = segment
         self.speaker_name = speaker_name
         self.color_slot = color_slot
+        self.preview = preview
+        self.live_summary = live_summary
 
 
 class ModelChoiceItem(GObject.Object):

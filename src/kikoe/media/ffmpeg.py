@@ -9,6 +9,7 @@ import logging
 import os
 import shutil
 import sys
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -74,3 +75,92 @@ async def run(*args: str, loglevel: str = "error") -> FFmpegOutput:
         msg = f"ffmpeg exited with status {proc.returncode}: {output.stderr.strip()}"
         raise FFmpegError(msg)
     return output
+
+
+class PCMStream:
+    """Resample bounded PCM buffers while keeping native audio in the durable journal."""
+
+    def __init__(self, process: asyncio.subprocess.Process, output_rate: int) -> None:
+        self._process = process
+        self._rate = output_rate
+        self._errors = asyncio.create_task(self._read_errors())
+
+    @classmethod
+    async def start(cls, input_rate: int, output_rate: int) -> PCMStream:
+        executable = await asyncio.to_thread(find_ffmpeg)
+        process = await asyncio.create_subprocess_exec(
+            str(executable),
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-probesize",
+            "32",
+            "-analyzeduration",
+            "0",
+            "-f",
+            "s16le",
+            "-ar",
+            str(input_rate),
+            "-ac",
+            "1",
+            "-i",
+            "pipe:0",
+            "-ar",
+            str(output_rate),
+            "-ac",
+            "1",
+            "-f",
+            "s16le",
+            "-flush_packets",
+            "1",
+            "pipe:1",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        return cls(process, output_rate)
+
+    async def feed(self, pcm: bytes) -> None:
+        stdin = self._process.stdin
+        if stdin is None:
+            raise FFmpegError("The audio converter has no input stream.")
+        try:
+            stdin.write(pcm)
+            await stdin.drain()
+        except (BrokenPipeError, ConnectionResetError) as error:
+            raise FFmpegError("The audio converter stopped unexpectedly.") from error
+
+    async def finish(self) -> None:
+        if self._process.stdin is not None:
+            self._process.stdin.close()
+
+    async def chunks(self) -> AsyncIterator[bytes]:
+        stdout = self._process.stdout
+        if stdout is None:
+            raise FFmpegError("The audio converter has no output stream.")
+        while True:
+            try:
+                yield await stdout.readexactly(self._rate // 10 * 2)
+            except asyncio.IncompleteReadError as error:
+                if error.partial:
+                    yield error.partial
+                break
+        code = await self._process.wait()
+        detail = await self._errors
+        if code:
+            raise FFmpegError(f"The audio converter failed: {detail}")
+
+    async def close(self) -> None:
+        if self._process.returncode is None:
+            self._process.kill()
+        await self._process.wait()
+        await self._errors
+
+    async def _read_errors(self) -> str:
+        stderr = self._process.stderr
+        if stderr is None:
+            return ""
+        tail = b""
+        while chunk := await stderr.read(4096):
+            tail = (tail + chunk)[-4096:]
+        return tail.decode(errors="replace")

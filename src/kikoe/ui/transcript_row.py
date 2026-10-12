@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from gi.repository import Gio, GLib, Gtk
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
 from kikoe.core.formatting import SPEAKER_COLOR_COUNT, format_timestamp
 from kikoe.core.models import TranscriptionState
@@ -35,19 +35,54 @@ class TranscriptRow(Gtk.Box):
     timestamp_label: Gtk.Label = Gtk.Template.Child()
     text_label: Gtk.Label = Gtk.Template.Child()
 
+    def __init__(self) -> None:
+        super().__init__()
+        self._preview_text: str | None = None
+        self._caret_visible: bool | None = None
+        self._color_slot: int | None = None
+        self._dark: bool | None = None
+        self.add_tick_callback(self._pulse_caret)
+
+    def _pulse_caret(self, _widget: Gtk.Widget, clock: Gdk.FrameClock) -> bool:
+        self._update_speaker_color()
+        if self._preview_text is None:
+            return True
+        animations = bool(self.get_settings().get_property("gtk-enable-animations"))
+        visible = not animations or clock.get_frame_time() % 1_000_000 < 500_000
+        if visible != self._caret_visible:
+            self._caret_visible = visible
+            accent = Adw.StyleManager.get_default().get_accent_color_rgba()
+            color = "#" + "".join(
+                f"{round(channel * 255):02x}" for channel in (accent.red, accent.green, accent.blue)
+            )
+            text = GLib.markup_escape_text(self._preview_text)
+            self.text_label.set_markup(
+                f'{text}<span foreground="{color}" alpha="{65535 if visible else 1}">▏</span>'
+            )
+        return True
+
     def bind(self, item: TranscriptItem, show_timestamps: bool, show_speakers: bool) -> None:
         """Fill the row; the meta column is shown or hidden for the whole note at once."""
         segment = item.segment
         self.header_box.set_visible(segment is None)
         self.segment_box.set_visible(segment is not None)
         if segment is None:
+            self._preview_text = None
             self.title_label.set_label(_("Recording {number}").format(number=item.number))
-            self.meta_label.set_label(recording_meta(item.recording, datetime.now().astimezone()))
+            self.meta_label.set_label(
+                item.live_summary or recording_meta(item.recording, datetime.now().astimezone())
+            )
             self.recording_menu_button.set_menu_model(_recording_menu(item.recording.recording_id))
             state = item.recording.transcription_state
-            self.pending_box.set_visible(state is not TranscriptionState.READY)
+            self.pending_box.set_visible(
+                state is not TranscriptionState.READY and item.live_summary is None
+            )
             self.pending_label.set_label(
-                _("Transcription failed. Your audio has been kept.")
+                (
+                    _("Transcription incomplete. Your text and audio have been kept.")
+                    if item.recording.segments
+                    else _("Transcription failed. Your audio has been kept.")
+                )
                 if state is TranscriptionState.FAILED
                 else _("Audio saved. Transcription is pending.")
             )
@@ -56,7 +91,7 @@ class TranscriptRow(Gtk.Box):
                 GLib.Variant("s", item.recording.recording_id)
             )
             self.retry_button.set_action_name("win.retry-recording")
-            self.recording_menu_button.set_visible(True)
+            self.recording_menu_button.set_visible(item.live_summary is None)
             return
         self.recording_menu_button.set_visible(False)
         self.meta_box.set_visible(show_speakers or show_timestamps)
@@ -65,14 +100,31 @@ class TranscriptRow(Gtk.Box):
         )
         self.speaker_label.set_visible(show_speakers and item.speaker_name is not None)
         self.speaker_label.set_label(item.speaker_name or "")
-        for css_class in _SPEAKER_CLASSES:
-            self.speaker_label.remove_css_class(css_class)
-        if item.color_slot is not None:
-            self.speaker_label.add_css_class(_SPEAKER_CLASSES[item.color_slot])
+        self._color_slot = item.color_slot
+        self._dark = None
+        self._update_speaker_color()
         start = segment.start
         self.timestamp_label.set_visible(show_timestamps and start is not None)
         self.timestamp_label.set_label(format_timestamp(start) if start is not None else "")
-        self.text_label.set_label(segment.text)
+        self.text_label.set_text(segment.text)
+        self._preview_text = segment.text if item.preview else None
+        self._caret_visible = None
+        if item.preview:
+            self.text_label.add_css_class("dim-label")
+        else:
+            self.text_label.remove_css_class("dim-label")
+
+    def _update_speaker_color(self) -> None:
+        dark = Adw.StyleManager.get_default().get_dark()
+        if dark == self._dark:
+            return
+        self._dark = dark
+        for css_class in _SPEAKER_CLASSES:
+            self.speaker_label.remove_css_class(css_class)
+            self.speaker_label.remove_css_class(css_class + "-dark")
+        if self._color_slot is not None:
+            css = _SPEAKER_CLASSES[self._color_slot]
+            self.speaker_label.add_css_class(css + "-dark" if dark else css)
 
 
 def _recording_menu(recording_id: str) -> Gio.Menu:

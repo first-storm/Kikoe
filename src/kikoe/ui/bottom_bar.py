@@ -1,6 +1,7 @@
 """Bar below the note: model picker, feature chips, Import Audio, and import progress."""
 
 import math
+from dataclasses import replace
 
 from gi.repository import Adw, Gdk, Gio, GObject, Gtk, Pango
 
@@ -13,6 +14,7 @@ from kikoe.core.choice import (
 from kikoe.core.formatting import format_timestamp
 from kikoe.core.models import ModelSpec
 from kikoe.core.recording import CaptureProgress, CaptureState
+from kikoe.core.transcription import model_support
 from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
@@ -74,7 +76,18 @@ class BottomBar(Adw.Bin):
         """The chips' state, limited to what the chosen model supports."""
         if self._choice is None:
             return RequestedFeatures(timestamps=False, diarization=False)
-        return self._wanted.allowed_by(self._choice.model.capabilities)
+        return self._wanted.allowed_by(
+            model_support(self._choice.provider.api, self._choice.model).recording
+        )
+
+    @property
+    def file_features(self) -> RequestedFeatures:
+        """Import and retry use file capabilities even when recording would stream."""
+        if self._choice is None:
+            return RequestedFeatures(False, False)
+        return self._wanted.allowed_by(
+            model_support(self._choice.provider.api, self._choice.model).batch
+        )
 
     def bind_providers(self, repository: ProviderRepository) -> None:
         self._repository = repository
@@ -142,8 +155,19 @@ class BottomBar(Adw.Bin):
         else:
             self.model_label.set_label(choice.model.display_name)
             self.provider_label.set_label(choice.provider.name)
-            self.import_button.set_tooltip_text(None)
-        self._show_chips(choice.model if choice else None)
+            self.import_button.set_tooltip_text(
+                None
+                if model_support(choice.provider.api, choice.model).file
+                else _("Choose a file transcription model to import audio.")
+            )
+        self._show_chips(
+            replace(
+                choice.model,
+                capabilities=model_support(choice.provider.api, choice.model).recording,
+            )
+            if choice
+            else None
+        )
         self.emit("choice-changed")
 
     def _show_chips(self, model: ModelSpec | None) -> None:
@@ -189,7 +213,7 @@ class BottomBar(Adw.Bin):
     def _on_chip_toggled(self, _chip: Gtk.ToggleButton) -> None:
         if self._updating or self._choice is None:
             return
-        caps = self._choice.model.capabilities
+        caps = model_support(self._choice.provider.api, self._choice.model).recording
         self._wanted = RequestedFeatures(
             timestamps=self.timestamps_chip.get_active()
             if caps.timestamps
@@ -198,7 +222,7 @@ class BottomBar(Adw.Bin):
             if caps.diarization
             else self._wanted.diarization,
         )
-        self._show_chips(self._choice.model)
+        self._show_chips(replace(self._choice.model, capabilities=caps))
 
     def _create_model_row(self, item: GObject.Object) -> Gtk.Widget:
         assert isinstance(item, ModelChoiceItem)
@@ -207,7 +231,7 @@ class BottomBar(Adw.Bin):
             label=choice.model.display_name, xalign=0, ellipsize=Pango.EllipsizeMode.END
         )
         subtitle = Gtk.Label(
-            label=capability_summary(choice.model.capabilities),
+            label=capability_summary(model_support(choice.provider.api, choice.model).recording),
             xalign=0,
             css_classes=["caption", "dim-label"],
         )

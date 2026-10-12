@@ -20,6 +20,17 @@ def main() -> int:
     """Run Kikoe and return the process exit status."""
     level = os.environ.get("KIKOE_LOG_LEVEL", "INFO").upper()
     logging.basicConfig(level=level, format="%(levelname)s %(name)s: %(message)s")
+    # SDK debug traces may contain authentication headers and signed request URLs.
+    for name in (
+        "openai",
+        "openrouter",
+        "deepgram",
+        "google.genai",
+        "httpx",
+        "httpx2",
+        "websockets",
+    ):
+        logging.getLogger(name).setLevel(logging.WARNING)
     i18n.setup()
 
     # Imported late so that every gi.repository import sees the versions pinned above.

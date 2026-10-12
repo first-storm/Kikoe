@@ -1,155 +1,270 @@
-"""Client for OpenAI's audio transcription endpoint, which Groq and many others also offer."""
+"""Official asynchronous OpenAI SDK, also used for compatible file endpoints."""
 
 import asyncio
-import logging
+import base64
 import mimetypes
+from collections.abc import AsyncGenerator
+from contextlib import AsyncExitStack
 from datetime import timedelta
-from http import HTTPStatus
 from pathlib import Path
 from typing import cast
 from urllib.parse import urlsplit
 
-import httpx
+import httpx2 as httpx
+from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI, omit
+from openai.resources.realtime.realtime import AsyncRealtimeConnection
+from openai.types.realtime.audio_transcription_param import AudioTranscriptionParam
+from pydantic import BaseModel
 
 from kikoe.core.models import ModelSpec, Segment
+from kikoe.core.recording import pcm_level
+from kikoe.core.transcription import SpeechBoundary, TranscriptEvent
 from kikoe.i18n import _
-from kikoe.providers.base import TranscriptionError, TranscriptionOptions
-
-log = logging.getLogger(__name__)
+from kikoe.providers.base import (
+    RealtimeSession,
+    TranscriptionError,
+    TranscriptionOptions,
+    UploadLimits,
+    close_stack,
+)
+from kikoe.providers.parsing import parse_segments
 
 MAX_UPLOAD_BYTES = 25_000_000
-"""OpenAI and Groq (free tier) both reject uploads above 25 MB."""
-
-_TIMEOUT = httpx.Timeout(30.0, write=300.0, read=900.0)
-"""Long audio is transcribed while the request waits, so reading may take minutes."""
 
 
 class OpenAIClient:
-    """Uploads a file to ``{base_url}/audio/transcriptions``.
-
-    Asks for segment timestamps (``verbose_json``) only when the model supports them,
-    because newer models such as ``gpt-4o-transcribe`` reject that format.
-    """
+    """Keep authentication, retries and multipart encoding inside the official SDK."""
 
     max_upload_bytes: int | None = MAX_UPLOAD_BYTES
 
     def __init__(
         self, base_url: str, api_key: str, transport: httpx.AsyncBaseTransport | None = None
     ) -> None:
-        self._url = f"{base_url.rstrip('/')}/audio/transcriptions"
+        self._url = base_url.rstrip("/")
         self._host = urlsplit(base_url).hostname or base_url
-        self._api_key = api_key
+        self._key = api_key
         self._transport = transport
+
+    def _sdk(self) -> AsyncOpenAI:
+        return AsyncOpenAI(
+            api_key=self._key,
+            base_url=self._url,
+            max_retries=0,
+            _enforce_credentials=False,  # Compatible local servers may deliberately have no key.
+            timeout=httpx.Timeout(30, read=900, write=300),
+            http_client=httpx.AsyncClient(transport=self._transport),
+        )
+
+    def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
+        return UploadLimits(MAX_UPLOAD_BYTES)
 
     async def transcribe_file(
         self, audio: Path, model: ModelSpec, options: TranscriptionOptions
     ) -> tuple[Segment, ...]:
-        size = (await asyncio.to_thread(audio.stat)).st_size
-        if size > MAX_UPLOAD_BYTES:
+        if (await asyncio.to_thread(audio.stat)).st_size > MAX_UPLOAD_BYTES:
             raise TranscriptionError(_("The audio file is too large to upload to this provider."))
         content = await asyncio.to_thread(audio.read_bytes)
-        timed = model.capabilities.timestamps and options.timestamps
-        data: dict[str, str] = {"model": model.model_id}
-        if timed:
-            data |= {"response_format": "verbose_json", "timestamp_granularities[]": "segment"}
-        else:
-            data["response_format"] = "json"
-        if options.language:
-            data["language"] = options.language
+        timed = options.timestamps and model.capabilities.timestamps
+        diarize = options.diarization and model.capabilities.diarization
+        if model.model_id.startswith(
+            ("gpt-4o-transcribe", "gpt-4o-mini-transcribe", "gpt-transcribe")
+        ):
+            timed = False
+        diarize = diarize and model.model_id == "gpt-4o-transcribe-diarize"
         mime = mimetypes.guess_type(audio.name)[0] or "application/octet-stream"
-        headers = {"Authorization": f"Bearer {self._api_key}"} if self._api_key else {}
-
-        log.info("Uploading %s (%d bytes) to %s", audio.name, len(content), self._url)
-        response = await self._post(data, (audio.name, content, mime), headers)
-        if response.is_error:
-            raise self._status_error(response)
         try:
-            body: object = response.json()
-            return _parse(body, timed)
-        except (ValueError, TypeError, KeyError) as error:
-            log.warning("Unexpected response from %s: %s", self._host, error)
+            result: object
+            async with self._sdk() as sdk:
+                if model.model_id == "gpt-4o-transcribe-diarize" and (
+                    diarize or (options.timestamps and model.capabilities.timestamps)
+                ):
+                    result = await sdk.audio.transcriptions.create(
+                        file=(audio.name, content, mime),
+                        model=model.model_id,
+                        response_format="diarized_json",
+                        stream=False,
+                        chunking_strategy="auto",
+                        language=options.language or omit,
+                        extra_headers={"Authorization": omit} if not self._key else None,
+                    )
+                elif timed:
+                    result = await sdk.audio.transcriptions.create(
+                        file=(audio.name, content, mime),
+                        model=model.model_id,
+                        response_format="verbose_json",
+                        timestamp_granularities=["segment"],
+                        language=options.language or omit,
+                        extra_headers={"Authorization": omit} if not self._key else None,
+                    )
+                else:
+                    result = await sdk.audio.transcriptions.create(
+                        file=(audio.name, content, mime),
+                        model=model.model_id,
+                        response_format="json",
+                        language=options.language or omit,
+                        extra_headers={"Authorization": omit} if not self._key else None,
+                    )
+                if not isinstance(result, BaseModel):
+                    raise ValueError("Unexpected streaming result")
+                return parse_segments(
+                    result.model_dump(),
+                    options.timestamps and model.capabilities.timestamps,
+                    diarize,
+                )
+        except APIStatusError as error:
+            if error.status_code in (401, 403):
+                raise TranscriptionError(
+                    _("{host} rejected the API key. Check it in Preferences.").format(
+                        host=self._host
+                    )
+                ) from error
+            body: object = error.body
+            message = error.message
+            if isinstance(body, dict):
+                data = cast(dict[str, object], body)
+                if isinstance(data.get("message"), str):
+                    message = str(data["message"])
+                detail = data.get("error")
+                if isinstance(detail, dict):
+                    nested = cast(dict[str, object], detail)
+                    if isinstance(nested.get("message"), str):
+                        message = str(nested["message"])
+            if self._key:
+                message = message.replace(self._key, "[redacted]")
+            raise TranscriptionError(
+                _("{host} reported an error: {message} (HTTP status {status}).").format(
+                    host=self._host, message=message, status=error.status_code
+                ),
+                retryable=error.status_code == 429 or error.status_code >= 500,
+            ) from error
+        except APITimeoutError as error:
+            raise TranscriptionError(
+                _("{host} took too long to respond. Try again later.").format(host=self._host),
+                retryable=True,
+            ) from error
+        except APIConnectionError as error:
+            raise TranscriptionError(
+                _("Could not reach {host}. Try again later.").format(host=self._host),
+                retryable=True,
+            ) from error
+        except (ValueError, TypeError, KeyError, AttributeError) as error:
             raise TranscriptionError(
                 _("{host} sent a response Kikoe does not understand.").format(host=self._host)
             ) from error
 
-    async def _post(
-        self, data: dict[str, str], file: tuple[str, bytes, str], headers: dict[str, str]
-    ) -> httpx.Response:
+    async def open_realtime(
+        self, model: ModelSpec, options: TranscriptionOptions
+    ) -> RealtimeSession:
+        stack = AsyncExitStack()
         try:
-            async with httpx.AsyncClient(transport=self._transport, timeout=_TIMEOUT) as client:
-                return await client.post(
-                    self._url, data=data, files={"file": file}, headers=headers
-                )
-        except httpx.TimeoutException as error:
-            raise TranscriptionError(
-                _("{host} took too long to respond. Try again later.").format(host=self._host)
-            ) from error
-        except httpx.HTTPError as error:
-            raise TranscriptionError(
-                _("Could not reach {host}: {error}").format(host=self._host, error=error)
-            ) from error
-
-    def _status_error(self, response: httpx.Response) -> TranscriptionError:
-        log.warning("%s answered %d: %s", self._host, response.status_code, response.text[:500])
-        if response.status_code == HTTPStatus.UNAUTHORIZED:
-            return TranscriptionError(
-                _("{host} rejected the API key. Check it in Preferences.").format(host=self._host)
+            sdk = await stack.enter_async_context(self._sdk())
+            connection = await stack.enter_async_context(
+                sdk.realtime.connect(extra_query={"intent": "transcription"}, max_retries=0)
             )
-        if response.status_code == HTTPStatus.REQUEST_ENTITY_TOO_LARGE:
-            return TranscriptionError(_("The audio file is too large to upload to this provider."))
-        message = _error_message(response)
-        if message:
-            return TranscriptionError(
-                _("{host} reported an error: {message}").format(host=self._host, message=message)
+            transcription: AudioTranscriptionParam = {"model": model.model_id}
+            if options.language:
+                if model.model_id == "gpt-live-transcribe":
+                    transcription["languages"] = [options.language]
+                else:
+                    transcription["language"] = options.language
+            # send() is the SDK's escape hatch for model-specific session configuration.
+            await connection.send(
+                {
+                    "type": "session.update",
+                    "session": {
+                        "type": "transcription",
+                        "audio": {
+                            "input": {
+                                "format": {"type": "audio/pcm", "rate": 24000},
+                                "transcription": transcription,
+                                "turn_detection": None,
+                            }
+                        },
+                    },
+                }
             )
-        return TranscriptionError(
-            _("{host} answered with HTTP status {status}.").format(
-                host=self._host, status=response.status_code
+            async with asyncio.timeout(30):
+                async for event in connection:
+                    if event.type == "session.updated":
+                        break
+                    if event.type == "error":
+                        raise TranscriptionError(
+                            _(
+                                "The realtime session was rejected. Check the model "
+                                "and API key in Preferences."
+                            )
+                        )
+            return OpenAISession(connection, stack)
+        except BaseException:
+            await close_stack(stack)
+            raise
+
+
+class OpenAISession:
+    """Match completed items to commit order, not network completion order."""
+
+    def __init__(self, connection: AsyncRealtimeConnection, stack: AsyncExitStack) -> None:
+        self._connection = connection
+        self._stack = stack
+        self._order: list[str] = []
+        self._completed: dict[str, str] = {}
+        self._previews: dict[str, str] = {}
+        self._commits = 0
+        self._finals = 0
+        self._bytes = 0
+        self._changed = asyncio.Event()
+        self._boundary = SpeechBoundary()
+
+    async def send(self, pcm: bytes) -> None:
+        await self._connection.input_audio_buffer.append(audio=base64.b64encode(pcm).decode())
+        self._bytes += len(pcm)
+        if self._boundary.feed(timedelta(seconds=len(pcm) / 48000), pcm_level(pcm)):
+            await self.flush()
+
+    async def flush(self) -> None:
+        if not self._bytes:
+            return
+        if self._bytes < 4800:
+            await self._connection.input_audio_buffer.append(
+                audio=base64.b64encode(bytes(4800 - self._bytes)).decode()
             )
-        )
+        self._bytes = 0
+        self._commits += 1
+        await self._connection.input_audio_buffer.commit()
+        while self._finals < self._commits:
+            self._changed.clear()
+            if self._finals < self._commits:
+                await self._changed.wait()
 
+    async def keep_alive(self) -> None:
+        pass  # The SDK maintains WebSocket ping/pong during microphone pauses.
 
-def _parse(body: object, timed: bool) -> tuple[Segment, ...]:
-    fields = _as_dict(body)
-    raw_segments = fields.get("segments")
-    if timed and isinstance(raw_segments, list) and raw_segments:
-        segments = (_parse_segment(entry) for entry in cast(list[object], raw_segments))
-        return tuple(segment for segment in segments if segment.text)
-    text = str(fields["text"]).strip()
-    return (Segment(text),) if text else ()
+    async def close(self) -> None:
+        await close_stack(self._stack)
 
-
-def _parse_segment(entry: object) -> Segment:
-    fields = _as_dict(entry)
-    return Segment(
-        text=str(fields["text"]).strip(),
-        start=timedelta(seconds=_as_float(fields["start"])),
-        end=timedelta(seconds=_as_float(fields["end"])),
-    )
-
-
-def _error_message(response: httpx.Response) -> str | None:
-    """The ``error.message`` that OpenAI-style APIs put in failed responses, if present."""
-    try:
-        body: object = response.json()
-    except ValueError:
-        return None
-    if not isinstance(body, dict):
-        return None
-    error = cast(dict[str, object], body).get("error")
-    if isinstance(error, dict):
-        message = cast(dict[str, object], error).get("message")
-        return str(message) if message else None
-    return str(error) if isinstance(error, str) else None
-
-
-def _as_dict(value: object) -> dict[str, object]:
-    if not isinstance(value, dict):
-        raise TypeError("expected a JSON object")
-    return cast(dict[str, object], value)
-
-
-def _as_float(value: object) -> float:
-    if not isinstance(value, int | float):
-        raise TypeError("expected a number")
-    return float(value)
+    async def events(self) -> AsyncGenerator[TranscriptEvent]:
+        async for event in self._connection:
+            match event.type:
+                case "input_audio_buffer.committed":
+                    if event.item_id not in self._order:
+                        self._order.append(event.item_id)
+                case "conversation.item.input_audio_transcription.delta":
+                    text = self._previews.get(event.item_id, "") + (event.delta or "")
+                    self._previews[event.item_id] = text
+                    yield TranscriptEvent(event.item_id, (Segment(text),), False)
+                case "conversation.item.input_audio_transcription.completed":
+                    self._completed[event.item_id] = event.transcript
+                case "error" | "conversation.item.input_audio_transcription.failed":
+                    raise TranscriptionError(
+                        _("Realtime transcription failed. Your audio has been kept."),
+                        retryable=False,
+                    )
+                case _:
+                    pass
+            while self._order and self._order[0] in self._completed:
+                id = self._order.pop(0)
+                text = self._completed.pop(id).strip()
+                self._previews.pop(id, None)
+                yield TranscriptEvent(id, (Segment(text),) if text else (), True)
+                self._finals += 1
+                self._changed.set()

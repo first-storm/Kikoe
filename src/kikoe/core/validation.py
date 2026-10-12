@@ -33,6 +33,8 @@ class Capability(StrEnum):
 DEFAULT_BASE_URLS: dict[ApiKind, str] = {
     ApiKind.DEEPGRAM: "https://api.deepgram.com/v1",
     ApiKind.OPENAI: "https://api.openai.com/v1",
+    ApiKind.OPENROUTER: "https://openrouter.ai/api/v1",
+    ApiKind.GEMINI: "https://generativelanguage.googleapis.com",
 }
 """Hosted APIs with one well-known endpoint; OpenAI-compatible services have none."""
 

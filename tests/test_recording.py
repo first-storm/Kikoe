@@ -22,7 +22,12 @@ from kikoe.core.models import (
 from kikoe.core.recording import CaptureProgress, CaptureState, pcm_level
 from kikoe.media import transcode
 from kikoe.media.recorder import RecorderError
-from kikoe.providers.base import TranscriptionError, TranscriptionOptions
+from kikoe.providers.base import (
+    RealtimeSession,
+    TranscriptionError,
+    TranscriptionOptions,
+    UploadLimits,
+)
 from kikoe.services.recording import RecordingSession, recover_recording, transcribe_recording
 from kikoe.storage.captures import CaptureJournal, CaptureStore, CaptureStoreError
 from kikoe.storage.library import Library
@@ -72,6 +77,14 @@ class FakeRecorder:
 
 
 class FakeClient:
+    def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
+        return UploadLimits(self.max_upload_bytes)
+
+    async def open_realtime(
+        self, model: ModelSpec, options: TranscriptionOptions
+    ) -> RealtimeSession:
+        raise TranscriptionError("Not a realtime fake")
+
     max_upload_bytes: int | None = None
 
     def __init__(self, fail: bool = False, hang: bool = False, empty: bool = False) -> None:
@@ -382,3 +395,34 @@ async def test_empty_successful_transcript_is_ready(
     )
     assert result.recordings[0].transcription_state is TranscriptionState.READY
     assert result.recordings[0].segments == ()
+
+
+@run_async
+async def test_recovery_restores_confirmed_live_text_and_removes_sidecar_after_commit(
+    store: CaptureStore, notes: NoteRepository
+) -> None:
+    await notes.load()
+    entry = journal()
+    store.create(entry)
+    store.append(entry, bytes(32000))
+    segments = (Segment("Confirmed", timedelta(), timedelta(seconds=1), "recording:0"),)
+    store.checkpoint(entry, segments)
+    assert store.pending() == (entry,)
+    note = await recover_recording(entry, store, notes)
+    assert note is not None
+    assert note.recordings[0].segments == segments
+    assert note.recordings[0].transcription_state is TranscriptionState.PENDING
+    assert store.pending() == ()
+    assert not list(store.directory.glob("*.transcript"))
+    same = await recover_recording(entry, store, notes)
+    assert same == note
+
+
+def test_damaged_live_checkpoint_keeps_pcm_for_recovery(store: CaptureStore) -> None:
+    entry = journal()
+    store.create(entry)
+    store.append(entry, bytes(32000))
+    (store.directory / f"{entry.recording_id}.transcript").write_text('{"version": 99}')
+    with pytest.raises(CaptureStoreError, match="audio has been kept"):
+        store.transcript(entry)
+    assert store.pcm_path(entry).read_bytes() == bytes(32000)

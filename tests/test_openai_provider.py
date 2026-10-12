@@ -1,7 +1,7 @@
 from datetime import timedelta
 from pathlib import Path
 
-import httpx
+import httpx2 as httpx
 import pytest
 
 from helpers import run_async
@@ -190,8 +190,49 @@ def test_factory_supports_openai_style_apis() -> None:
     assert isinstance(create_client(provider, "k"), OpenAIClient)
 
 
-def test_factory_refuses_deepgram_for_now() -> None:
+def test_factory_supports_deepgram() -> None:
     provider = Provider("p", "Deepgram", ApiKind.DEEPGRAM, "https://api.deepgram.com/v1")
 
-    with pytest.raises(TranscriptionError, match="Deepgram is not supported"):
-        create_client(provider, "k")
+    from kikoe.providers.deepgram import DeepgramClient
+
+    assert isinstance(create_client(provider, "k"), DeepgramClient)
+
+
+@run_async
+async def test_diarization_uses_official_format_without_requesting_verbose_json(
+    audio: Path,
+) -> None:
+    model = ModelSpec("gpt-4o-transcribe-diarize", "Diarize", Capabilities(False, True, True))
+    handler = Recorder(
+        httpx.Response(
+            200,
+            json={
+                "text": "Hello.",
+                "segments": [
+                    {
+                        "id": "s",
+                        "type": "transcript.text.segment",
+                        "text": "Hello.",
+                        "start": 0,
+                        "end": 1,
+                        "speaker": "A",
+                    }
+                ],
+            },
+        )
+    )
+    result = await client(handler).transcribe_file(audio, model, TranscriptionOptions(False, True))
+    assert result == (Segment("Hello.", speaker_id="A"),)
+    assert form_field(handler.requests[0], "response_format") == "diarized_json"
+    assert form_field(handler.requests[0], "chunking_strategy") == "auto"
+    assert form_field(handler.requests[0], "timestamp_granularities[]") is None
+
+
+@run_async
+async def test_disabling_all_diarization_options_requests_plain_json(audio: Path) -> None:
+    model = ModelSpec("gpt-4o-transcribe-diarize", "Diarize", Capabilities(False, True, True))
+    handler = Recorder(httpx.Response(200, json={"text": "Hello."}))
+    assert await client(handler).transcribe_file(
+        audio, model, TranscriptionOptions(False, False)
+    ) == (Segment("Hello."),)
+    assert form_field(handler.requests[0], "response_format") == "json"

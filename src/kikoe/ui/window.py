@@ -4,6 +4,7 @@ import asyncio
 import logging
 import shutil
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from kikoe.core.export import ExportFormat, export_filename, export_note
 from kikoe.core.formatting import transcript_features
 from kikoe.core.models import DisplayOptions, Note, Recording, TranscriptionState
 from kikoe.core.recording import CaptureProgress, CaptureState
+from kikoe.core.transcription import LiveSnapshot, model_support
 from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.media.ffmpeg import find_ffmpeg
@@ -21,6 +23,7 @@ from kikoe.media.recorder import SoundDeviceRecorder
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.providers.factory import create_client
 from kikoe.services.importer import ImportStage, import_audio
+from kikoe.services.realtime import RealtimeRecording
 from kikoe.services.recording import RecordingSession, recover_recording, transcribe_recording
 from kikoe.storage.captures import CaptureStore, capture_dir
 from kikoe.storage.notes import NoteRepository
@@ -105,6 +108,7 @@ class Window(Adw.ApplicationWindow):
         self._add_action("cancel-import", self._on_cancel_import)
         self._import_task: asyncio.Task[None] | None = None
         self._recording_task: asyncio.Task[None] | None = None
+        self._live: RealtimeRecording | None = None
         self._session: RecordingSession | None = None
         self._recording_note_id: str | None = None
         self._recording_summary = ""
@@ -274,7 +278,11 @@ class Window(Adw.ApplicationWindow):
             self._update_subtitle_buttons(note)
             self.bottom_bar.set_note(bool(note.recordings))
             if self._session is not None and self._session.state is not CaptureState.STOPPED:
-                self.note_view.show_recording(self._recording_summary, self._recording_model)
+                self.note_view.show_recording(
+                    self._recording_summary, self._recording_model, realtime=self._live is not None
+                )
+                if self._live is not None:
+                    self.note_view.update_live(self._live.snapshot())
                 self.note_view.recording_view.set_state(self._session.state)
                 self.window_title.set_subtitle(
                     _("Paused") if self._session.state is CaptureState.PAUSED else _("Recording")
@@ -517,9 +525,15 @@ class Window(Adw.ApplicationWindow):
             self._import_task is not None or self._recording_task is not None or self._recovery_busy
         )
         available = self.bottom_bar.choice is not None and not busy
-        self._set_action_enabled("import-audio", available)
+        choice = self.bottom_bar.choice
+        file_available = (
+            available
+            and choice is not None
+            and model_support(choice.provider.api, choice.model).file
+        )
+        self._set_action_enabled("import-audio", file_available)
         self._set_action_enabled("start-recording", available)
-        self._set_action_enabled("retry-recording", available and self._note is not None)
+        self._set_action_enabled("retry-recording", file_available and self._note is not None)
         self._set_action_enabled("cancel-import", self._import_task is not None)
         session = self._session
         state = session.state if session is not None else CaptureState.STOPPED
@@ -556,7 +570,7 @@ class Window(Adw.ApplicationWindow):
         ):
             return
         note_id = self._note.note_id if self._note else None
-        features = self.bottom_bar.requested_features
+        features = self.bottom_bar.file_features
         options = TranscriptionOptions(
             timestamps=features.timestamps, diarization=features.diarization
         )
@@ -658,10 +672,18 @@ class Window(Adw.ApplicationWindow):
     async def _record(
         self, note_id: str | None, choice: ModelChoice, options: TranscriptionOptions
     ) -> None:
+        live_task: asyncio.Task[None] | None = None
+        support = model_support(choice.provider.api, choice.model)
+        choice = replace(choice, model=replace(choice.model, capabilities=support.recording))
         try:
             await asyncio.to_thread(find_ffmpeg)
             # Validate the batch backend before opening the microphone.
-            create_client(choice.provider, "")
+            client = create_client(
+                choice.provider,
+                await self._providers.get_api_key(choice.provider.provider_id)
+                if support.recording.realtime
+                else "",
+            )
             directory = await asyncio.to_thread(capture_dir)
             session = RecordingSession(SoundDeviceRecorder(), CaptureStore(directory), self._notes)
             self._session = session
@@ -679,6 +701,10 @@ class Window(Adw.ApplicationWindow):
                 model=choice.model.display_name,
                 options=_("Text only") if not labels else ", ".join(labels),
             )
+            if support.recording.realtime:
+                self._live = RealtimeRecording(
+                    session, choice, client, options, self._on_live_update
+                )
             self._show_note(note)
             self._refresh_recording_sidebar()
             self.split_view.set_show_content(True)
@@ -686,14 +712,39 @@ class Window(Adw.ApplicationWindow):
             self._on_capture_progress(CaptureProgress(CaptureState.RECORDING, session.elapsed, 0))
             if self._closing:
                 await session.stop()
+            if self._live is not None:
+                live_task = run_task(self._live.run(), self)
             error = await session.capture(self._on_capture_progress)
+            if live_task is not None:
+                if self._closing:
+                    live_task.cancel()
+                else:
+                    try:
+                        async with asyncio.timeout(10):
+                            await asyncio.shield(live_task)
+                    except TimeoutError:
+                        live_task.cancel()
+                await asyncio.gather(live_task, return_exceptions=True)
             self.note_view.hide_recording()
             self.bottom_bar.set_progress(_("Saving recording…"))
             self._update_import_actions()
             saved = await session.save()
             if saved is not None:
                 self._show_note(saved)
-                if error is None and not self._closing:
+                if self._live is not None:
+                    recording_id = (
+                        session.journal.recording_id if session.journal is not None else ""
+                    )
+                    saved = await self._notes.update_transcription(
+                        saved.note_id,
+                        recording_id,
+                        TranscriptionState.READY
+                        if self._live.complete and error is None
+                        else TranscriptionState.FAILED,
+                        segments=self._live.segments,
+                    )
+                    self._show_note(saved)
+                elif error is None and not self._closing:
                     recording = next(
                         r
                         for r in saved.recordings
@@ -707,6 +758,10 @@ class Window(Adw.ApplicationWindow):
                 log.warning("Microphone capture stopped: %s", error)
                 show_error(self, str(error))
         finally:
+            if live_task is not None and not live_task.done():
+                live_task.cancel()
+                await asyncio.gather(live_task, return_exceptions=True)
+            self._live = None
             if self._session is not None:
                 await self._session.stop()
             self._session = None
@@ -722,6 +777,9 @@ class Window(Adw.ApplicationWindow):
             0, self._note_items.get_n_items(), [NoteItem(s) for s in self._notes.notes]
         )
         self._select_row(self._note.note_id if self._note else None)
+
+    def _on_live_update(self, snapshot: LiveSnapshot) -> None:
+        self.note_view.update_live(snapshot)
 
     def _on_capture_progress(self, progress: CaptureProgress) -> None:
         self.bottom_bar.update_recording(progress)
@@ -766,7 +824,7 @@ class Window(Adw.ApplicationWindow):
         recording = next((r for r in note.recordings if r.recording_id == param.get_string()), None)
         if recording is None or recording.transcription_state is TranscriptionState.READY:
             return
-        features = self.bottom_bar.requested_features
+        features = self.bottom_bar.file_features
         options = TranscriptionOptions(
             timestamps=features.timestamps, diarization=features.diarization
         )

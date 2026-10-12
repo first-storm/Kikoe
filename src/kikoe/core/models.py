@@ -15,6 +15,8 @@ class ApiKind(StrEnum):
     DEEPGRAM = "deepgram"
     OPENAI = "openai"
     OPENAI_COMPATIBLE = "openai-compatible"
+    OPENROUTER = "openrouter"
+    GEMINI = "gemini"
 
 
 @dataclass(frozen=True, slots=True)

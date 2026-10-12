@@ -4,6 +4,7 @@ import asyncio
 import logging
 import uuid
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
@@ -11,8 +12,15 @@ from pathlib import Path
 from kikoe import paths
 from kikoe.core.chunking import TimeSpan, offset_segments, plan_chunks
 from kikoe.core.models import ModelSpec, Note, Provider, Recording, RecordingSource, Segment
+from kikoe.core.transcription import model_support, scope_speakers
+from kikoe.i18n import _
 from kikoe.media import transcode
-from kikoe.providers.base import TranscriptionOptions, TranscriptionProvider
+from kikoe.providers.base import (
+    TranscriptionError,
+    TranscriptionOptions,
+    TranscriptionProvider,
+    UploadLimits,
+)
 from kikoe.storage.notes import NoteRepository
 
 log = logging.getLogger(__name__)
@@ -53,6 +61,10 @@ async def import_audio(
     cancelled, the copy is removed again and nothing is saved.
     """
     recording_id = uuid.uuid4().hex
+    support = model_support(provider.api, model)
+    if not support.file:
+        raise TranscriptionError(_("Choose a file transcription model to import audio."))
+    model = replace(model, capabilities=support.batch)
     original = await notes.store_audio(source, recording_id)
     try:
         duration, segments = await transcribe_audio(
@@ -71,7 +83,7 @@ async def import_audio(
             source=RecordingSource.IMPORTED,
             provider_name=provider.name,
             model_id=model.model_id,
-            segments=tuple(segments),
+            segments=scope_speakers(segments, recording_id),
             audio_path=original,
         )
         note = await notes.add_recording(note_id, source.stem, recording)
@@ -97,14 +109,15 @@ async def transcribe_audio(
     job = _Job(uuid.uuid4().hex, directory, on_progress)
     on_progress(ImportStage.CONVERTING, 1, 1)
     try:
-        duration, parts = await job.prepare(source, client.max_upload_bytes)
+        limits = client.upload_limits(model, options or TranscriptionOptions())
+        duration, parts = await job.prepare(source, limits)
         segments: list[Segment] = []
         for index, (path, offset) in enumerate(parts, start=1):
             on_progress(ImportStage.TRANSCRIBING, index, len(parts))
             transcript = await client.transcribe_file(
                 path, model, options or TranscriptionOptions()
             )
-            segments.extend(offset_segments(transcript, offset))
+            segments.extend(offset_segments(scope_speakers(transcript, str(index)), offset))
         return duration, tuple(segments)
     finally:
         await job.clean_up()
@@ -120,17 +133,24 @@ class _Job:
         self._files: list[Path] = []
 
     async def prepare(
-        self, original: Path, limit: int | None
+        self, original: Path, limits: UploadLimits
     ) -> tuple[timedelta, list[tuple[Path, timedelta]]]:
         """Convert for upload; return the length and the files to send with their offsets."""
         upload = self._file("")
         duration = await transcode.to_upload(original, upload)
         size = (await asyncio.to_thread(upload.stat)).st_size
-        if limit is None or size <= limit:
+        limit = limits.bytes
+        max_duration = limits.duration
+        if (limit is None or size <= limit) and (max_duration is None or duration <= max_duration):
             return duration, [(upload, timedelta())]
 
         silences = await transcode.find_silences(original)
-        chunks = plan_chunks(duration, silences, duration * (limit / size) * SPLIT_MARGIN)
+        budget = duration
+        if limit is not None and size > limit:
+            budget = min(budget, duration * (limit / size) * SPLIT_MARGIN)
+        if max_duration is not None:
+            budget = min(budget, max_duration * SPLIT_MARGIN)
+        chunks = plan_chunks(duration, silences, budget)
         log.info("Splitting %d bytes of audio into %d parts", size, len(chunks))
         return duration, [
             (await self._convert_part(original, chunk, index, len(chunks)), chunk.start)

@@ -87,7 +87,7 @@ class NoteRepository:
         recording_id: str,
         state: TranscriptionState,
         *,
-        segments: tuple[Segment, ...] = (),
+        segments: tuple[Segment, ...] | None = None,
         provider_name: str | None = None,
         model_id: str | None = None,
     ) -> Note:

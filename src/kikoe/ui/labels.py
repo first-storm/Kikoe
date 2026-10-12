@@ -31,6 +31,10 @@ def api_label(api: ApiKind) -> str:
             return _("Deepgram")
         case ApiKind.OPENAI:
             return _("OpenAI")
+        case ApiKind.OPENROUTER:
+            return _("OpenRouter")
+        case ApiKind.GEMINI:
+            return _("Gemini AI Studio")
         case ApiKind.OPENAI_COMPATIBLE:
             return _("OpenAI-compatible")
 
@@ -188,11 +192,16 @@ def chip_tooltip(capability: Capability, model: str, supported: bool, active: bo
 def transcription_hint(capabilities: Capabilities) -> str:
     """E.g. “Transcribes after recording · This model does not support timestamps”."""
     missing = ", ".join(_feature_name(c) for c in unsupported_features(capabilities))
+    mode = (
+        _("Transcribes while recording")
+        if capabilities.realtime
+        else _("Transcribes after recording")
+    )
     if missing:
-        return _("Transcribes after recording · This model does not support {features}").format(
-            features=missing
+        return _("{mode} · This model does not support {features}").format(
+            mode=mode, features=missing
         )
-    return _("Transcribes after recording")
+    return mode
 
 
 def _feature_name(capability: Capability) -> str:

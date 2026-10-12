@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import cast
 
 from kikoe import paths
+from kikoe.core.models import Segment
 from kikoe.i18n import _
 
 
@@ -77,6 +78,77 @@ class CaptureStore:
         except OSError as error:
             raise _storage_error(error) from error
 
+    def read_pcm(self, journal: CaptureJournal, offset: int, size: int) -> bytes:
+        """Read only accepted samples; the network reader never owns the capture writer."""
+        try:
+            with self.pcm_path(journal).open("rb") as file:
+                file.seek(offset)
+                return file.read(size)
+        except FileNotFoundError:
+            return b""  # Capture metadata is created before the first PCM block.
+        except OSError as error:
+            raise _storage_error(error) from error
+
+    def checkpoint(self, journal: CaptureJournal, segments: tuple[Segment, ...]) -> None:
+        """Only final text is atomically synced; recovery must never promote a preview."""
+        path = self.directory / f"{journal.recording_id}.transcript"
+        temporary = path.with_suffix(".transcript.tmp")
+        data = {
+            "version": 1,
+            "segments": [
+                {
+                    "text": s.text,
+                    "start": s.start.total_seconds() if s.start is not None else None,
+                    "end": s.end.total_seconds() if s.end is not None else None,
+                    "speaker": s.speaker_id,
+                }
+                for s in segments
+            ],
+        }
+        try:
+            with temporary.open("w", encoding="utf-8") as file:
+                json.dump(data, file)
+                file.flush()
+                os.fsync(file.fileno())
+            temporary.replace(path)
+        except OSError as error:
+            raise _storage_error(error) from error
+
+    def transcript(self, journal: CaptureJournal) -> tuple[Segment, ...]:
+        """Existing M4 journals have no transcript sidecar and remain recoverable."""
+        path = self.directory / f"{journal.recording_id}.transcript"
+        try:
+            data: object = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                raise ValueError("Invalid transcript checkpoint")
+            payload = cast(dict[str, object], data)
+            raw = payload.get("segments")
+            if payload.get("version") != 1 or not isinstance(raw, list):
+                raise ValueError("Unsupported transcript checkpoint")
+            segments: list[Segment] = []
+            for item in cast(list[object], raw):
+                if not isinstance(item, dict):
+                    raise ValueError("Invalid segment")
+                fields = cast(dict[str, object], item)
+                speaker = fields.get("speaker")
+                if speaker is not None and not isinstance(speaker, str):
+                    raise ValueError("Invalid speaker")
+                segments.append(
+                    Segment(
+                        _text(fields, "text"),
+                        _offset(fields.get("start")),
+                        _offset(fields.get("end")),
+                        speaker,
+                    )
+                )
+            return tuple(segments)
+        except FileNotFoundError:
+            return ()
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            raise CaptureStoreError(
+                _("Could not read the saved transcript. Its audio has been kept.")
+            ) from error
+
     def finish(self, journal: CaptureJournal) -> timedelta:
         """Discard only an incomplete final sample, then sync before conversion or exit."""
         try:
@@ -137,6 +209,8 @@ class CaptureStore:
         try:
             self.pcm_path(journal).unlink(missing_ok=True)
             self.flac_path(journal).unlink(missing_ok=True)
+            (self.directory / f"{journal.recording_id}.transcript").unlink(missing_ok=True)
+            (self.directory / f"{journal.recording_id}.transcript.tmp").unlink(missing_ok=True)
             (self.directory / f"{journal.recording_id}.json").unlink(missing_ok=True)
             self._last_sync.pop(journal.recording_id, None)
         except OSError as error:
@@ -152,3 +226,18 @@ def _text(fields: dict[str, object], key: str) -> str:
 
 def _storage_error(error: OSError) -> CaptureStoreError:
     return CaptureStoreError(_("Could not save the recording. ({detail})").format(detail=error))
+
+
+def _offset(value: object) -> timedelta | None:
+    import math
+
+    if value is None:
+        return None
+    if (
+        not isinstance(value, int | float)
+        or isinstance(value, bool)
+        or value < 0
+        or not math.isfinite(value)
+    ):
+        raise ValueError("Invalid segment time")
+    return timedelta(seconds=value)

@@ -12,8 +12,12 @@ classifiers = [
 ]
 dependencies = [
   "PyGObject>=3.58",
+  "deepgram-sdk>=7.12.0,<8",
+  "google-genai>=2.29.0,<3",
   "httpx>=0.28.1",
   "keyring>=25.7.0",
+  "openai[realtime]>=3.29.0,<4",
+  "openrouter>=1.3.41,<2",
   "platformdirs>=4.3",
   "sounddevice>=0.5.6",
 ]

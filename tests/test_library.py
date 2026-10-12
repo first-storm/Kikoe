@@ -190,3 +190,21 @@ def test_version_one_library_migrates_without_changing_existing_transcript(tmp_p
         Segment("Existing transcript", timedelta(), timedelta(seconds=1)),
     )
     assert note.title == "Old"
+
+
+def test_incomplete_transcript_survives_retry_failure_and_successful_empty_result(
+    library: Library,
+) -> None:
+    from kikoe.core.models import TranscriptionState
+
+    note = library.add_recording(None, "Test", recording(segments=(Segment("Confirmed"),)))
+    id = note.recordings[0].recording_id
+    library.update_transcription(note.note_id, id, TranscriptionState.PENDING)
+    failed = library.update_transcription(note.note_id, id, TranscriptionState.FAILED)
+    assert failed.recordings[0].segments == (Segment("Confirmed"),)
+    changed = library.update_transcription(
+        note.note_id, id, TranscriptionState.FAILED, segments=(Segment("More confirmed"),)
+    )
+    assert changed.recordings[0].segments == (Segment("More confirmed"),)
+    empty = library.update_transcription(note.note_id, id, TranscriptionState.READY, segments=())
+    assert empty.recordings[0].segments == ()

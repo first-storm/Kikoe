@@ -8,6 +8,7 @@ in GNOME preferences.
 from gi.repository import Adw, Gio, GObject, Gtk
 
 from kikoe.core.models import ApiKind, ModelSpec, Provider
+from kikoe.core.transcription import model_support
 from kikoe.core.validation import DEFAULT_BASE_URLS, effective_base_url, validate_provider
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
@@ -82,9 +83,13 @@ class ProviderPage(Adw.NavigationPage):
     def _create_model_row(self, item: GObject.Object) -> Gtk.Widget:
         assert isinstance(item, ModelItem)
         model = item.model
+        provider = self._repository.find(self._provider_id) if self._provider_id else None
+        capabilities = (
+            model_support(provider.api, model).recording if provider else model.capabilities
+        )
         row = Adw.ActionRow(
             title=model.display_name,
-            subtitle=capability_summary(model.capabilities),
+            subtitle=capability_summary(capabilities),
             use_markup=False,
             activatable=True,
         )

@@ -3,6 +3,7 @@
 from gi.repository import Adw, Gtk
 
 from kikoe.core.models import Capabilities, ModelSpec
+from kikoe.core.transcription import model_support
 from kikoe.core.validation import validate_model
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
@@ -32,6 +33,7 @@ class ModelDialog(Adw.Dialog):
         self._provider_id = provider_id
         self._model = model
         if model is None:
+            self._update_capabilities()
             return
         self.set_title(_("Edit Model"))
         self.confirm_button.set_label(_("_Save"))
@@ -41,6 +43,33 @@ class ModelDialog(Adw.Dialog):
         self.realtime_check.set_active(model.capabilities.realtime)
         self.timestamps_check.set_active(model.capabilities.timestamps)
         self.diarization_check.set_active(model.capabilities.diarization)
+        self._update_capabilities()
+
+    @Gtk.Template.Callback()
+    def _on_model_id_row_changed(self, _row: Adw.EntryRow) -> None:
+        self._update_capabilities()
+
+    def _update_capabilities(self) -> None:
+        provider = self._repository.find(self._provider_id)
+        if provider is None:
+            return
+        model = ModelSpec(self.model_id_row.get_text().strip(), "", Capabilities(True, True, True))
+        support = model_support(provider.api, model)
+        batch = support.batch if support.file else Capabilities()
+        for check, available in (
+            (self.realtime_check, support.recording.realtime),
+            (self.timestamps_check, batch.timestamps or support.recording.timestamps),
+            (self.diarization_check, batch.diarization or support.recording.diarization),
+        ):
+            check.set_sensitive(available)
+            check.set_tooltip_text(
+                None if available else _("This model does not support this option.")
+            )
+            if not available:
+                check.set_active(False)
+        if not support.file:
+            self.realtime_check.set_active(True)
+            self.realtime_check.set_sensitive(False)
 
     @Gtk.Template.Callback()
     def _on_cancel_button_clicked(self, _button: Gtk.Button) -> None:

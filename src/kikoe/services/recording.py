@@ -3,15 +3,18 @@
 import asyncio
 import uuid
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from kikoe.core.choice import ModelChoice
 from kikoe.core.models import Note, Recording, RecordingSource, TranscriptionState
 from kikoe.core.recording import CaptureProgress, CaptureState, pcm_level
+from kikoe.core.transcription import model_support, scope_speakers
+from kikoe.i18n import _
 from kikoe.media import transcode
 from kikoe.media.recorder import Recorder, RecorderError
-from kikoe.providers.base import TranscriptionOptions, TranscriptionProvider
+from kikoe.providers.base import TranscriptionError, TranscriptionOptions, TranscriptionProvider
 from kikoe.services.importer import ProgressCallback, transcribe_audio
 from kikoe.storage.captures import CaptureJournal, CaptureStore
 from kikoe.storage.library import NoteNotFoundError
@@ -30,6 +33,10 @@ class RecordingSession:
         self.elapsed = timedelta()
         self._frames = 0
         self._on_progress: Callable[[CaptureProgress], None] | None = None
+        self.audio_changed = asyncio.Event()
+        self.finished = False
+        self.stopped = asyncio.Event()
+        self.state_changed = asyncio.Event()
 
     async def start(self, note_id: str | None, title: str, choice: ModelChoice) -> Note:
         """Open first, so a missing microphone does not leave a new empty note."""
@@ -72,6 +79,7 @@ class RecordingSession:
                 self._frames += len(chunk) // 2
                 self.elapsed = timedelta(seconds=self._frames / journal.sample_rate)
                 self._notify(pcm_level(chunk) if self.state is CaptureState.RECORDING else 0)
+                self.audio_changed.set()
         except RecorderError as error:
             capture_error = error
         finally:
@@ -81,6 +89,10 @@ class RecordingSession:
                 capture_error = capture_error or error
             self.elapsed = await asyncio.to_thread(self.store.finish, journal)
             self.state = CaptureState.STOPPED
+            self.finished = True
+            self.stopped.set()
+            self.state_changed.set()
+            self.audio_changed.set()
             self._notify(0)
         return capture_error
 
@@ -89,6 +101,8 @@ class RecordingSession:
             return
         await self.recorder.pause()
         self.state = CaptureState.PAUSED
+        self.state_changed.set()
+        self.audio_changed.set()
         self._notify(0)
 
     async def resume(self) -> None:
@@ -96,6 +110,7 @@ class RecordingSession:
             return
         await self.recorder.resume()
         self.state = CaptureState.RECORDING
+        self.state_changed.set()
         self._notify(0)
 
     async def stop(self) -> None:
@@ -140,6 +155,7 @@ async def recover_recording(
         journal.provider_name,
         journal.model_id,
         audio_path=original,
+        segments=await asyncio.to_thread(store.transcript, journal),
         transcription_state=TranscriptionState.PENDING,
     )
     try:
@@ -164,11 +180,14 @@ async def transcribe_recording(
     """Update the saved recording; cancellation never removes its original audio."""
     if recording.audio_path is None:
         raise ValueError("A recording needs retained audio before transcription")
+    support = model_support(choice.provider.api, choice.model)
+    if not support.file:
+        raise TranscriptionError(_("Choose a file transcription model to retry this recording."))
     await notes.update_transcription(note_id, recording.recording_id, TranscriptionState.PENDING)
     try:
         _duration, segments = await transcribe_audio(
             recording.audio_path,
-            choice.model,
+            replace(choice.model, capabilities=support.batch),
             client=client,
             options=options,
             on_progress=on_progress,
@@ -178,7 +197,7 @@ async def transcribe_recording(
             note_id,
             recording.recording_id,
             TranscriptionState.READY,
-            segments=segments,
+            segments=scope_speakers(segments, recording.recording_id),
             provider_name=choice.provider.name,
             model_id=choice.model.model_id,
         )

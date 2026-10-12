@@ -79,8 +79,9 @@ Top-level helpers (`constants`, `paths`, `i18n`) are importable from any layer.
 
 ## Audio pipeline
 
-Importing and batch microphone recording are implemented. Both share
-`services.importer.transcribe_audio` for upload conversion, splitting and timestamps.
+File and realtime microphone transcription are implemented. File import and retained
+recording retry share `services.importer.transcribe_audio` for conversion, splitting
+and timestamps. `services.realtime.RealtimeRecording` owns live connections.
 
 1. **Capture**: `media.recorder.SoundDeviceRecorder` implements the async `Recorder`
    protocol using sounddevice's `RawInputStream`, without NumPy. The default input
@@ -98,21 +99,28 @@ Importing and batch microphone recording are implemented. Both share
    32 kbit/s, which fits about 1¾ hours in 25 MB and is accepted by OpenAI, Groq and most
    compatible servers. ffmpeg's `-progress` output gives the length, so ffprobe is not
    needed.
-4. **Split if still too large**: when the file exceeds the client's `max_upload_bytes`
-   (25 MB for OpenAI-style APIs), `media.transcode.find_silences` runs ffmpeg's
+4. **Split at the effective upload limit**: `UploadLimits` combines file size with
+   model/option-dependent duration. OpenAI and OpenRouter use 25 MB; Deepgram uses
+   2 GB; Gemini accepts 60 minutes, or 30 minutes with word timestamps/speakers.
+   The stricter size/duration budget wins. When a limit is exceeded, `media.transcode.find_silences` runs ffmpeg's
    `silencedetect` (an energy-based voice activity check, no extra dependency), and
    `core.chunking.plan_chunks` cuts in the middle of the last pause before each part's
    limit (90 % of the size budget, since the bitrate varies). Each part is converted from
    the original and transcribed in turn; `offset_segments` shifts its timestamps.
-5. **Transcribe**: realtime models (planned) stream PCM over WebSocket while recording;
-   others upload the finished file. Both go through
-   `kikoe.providers.base.TranscriptionProvider`; `providers.factory.create_client` picks
-   the client for a provider's API type. `providers.openai.OpenAIClient` asks for
-   `verbose_json` segments only when the model has the timestamps capability.
+5. **Transcribe**: each backend uses an official asynchronous SDK: `openai[realtime]`
+   (also for OpenAI-compatible URLs), `openrouter` STT multipart, `google-genai`
+   Interactions/Live, and `deepgram-sdk` Listen v1. Factory clients own their SDK and
+   transport lifetimes. Requests use JSON, verbose JSON or diarized JSON according to
+   the effective model/option support; provider metadata is normalized into `Segment`.
+   Gemini file requests run the async SDK in a cancellable worker loop because its
+   resumable-upload retry internals contain blocking waits. Cancellation waits for
+   remote-file cleanup before temporary local audio is removed. SDK debug logging is
+   disabled so request headers and signed URLs cannot expose credentials.
 6. **Save**: imported recording and transcript are committed together; failed or cancelled
    imports remove their copied original and upload temporary files. Microphone recordings
    are first committed with `TranscriptionState.PENDING`, then updated atomically to READY
-   (including an empty successful result) or FAILED. Failed/cancelled uploads retain their
+   (including an empty successful result) or FAILED. Explicit `segments=()` replaces
+   text with an empty success; `segments=None` changes status without erasing text. Failed/cancelled uploads retain their
    FLAC, and retries update the same recording with the currently selected model/options.
 
 `services.recording.RecordingSession` coordinates capture, storage and finalization.
@@ -127,14 +135,54 @@ Conversion or disk failures leave the recovery files intact. A damaged or newer 
 is reported without modifying it. Database migration 2 adds `transcription_state`, with
 existing recordings defaulting to READY.
 
+## Realtime recording
+
+Native PCM is journaled before the independent sender reads it. A streaming ffmpeg
+process converts bounded buffers to mono little-endian int16: 24 kHz for OpenAI,
+16 kHz for Deepgram/Gemini. The network cannot backpressure the capture writer.
+The original recording remains at the device's native sample rate.
+
+`core.transcription` resolves file/live capabilities and models interim/final events.
+The adapter handles wire events; `LiveTranscript` replaces previews and repeated
+finals. OpenAI completions are ordered by committed item, Deepgram persists every
+`is_final` chunk even before `speech_final`, and Gemini repeats its finite receive
+iterator for each turn. Metadata omitted by an endpoint is never synthesized.
+OpenAI manual commits use PCM energy, 500 ms silence and a 15-second speech limit.
+
+Final text is atomically fsynced to a versioned `<recording id>.transcript` sidecar;
+previews are never stored. The existing v1 audio journal remains compatible. Recovery
+restores both text and audio with PENDING status, without connecting to a provider.
+Sidecars are removed only after retained FLAC and the database transaction are durable.
+
+Reconnect backoff is 1, 2, 4, 8 then 15 seconds; authentication/configuration failures
+stop retries. Unconfirmed ranges are replayed from the local journal at no more than
+1.25 times realtime. The previously shown final text remains until the replay catches
+up, then its replacement is committed. OpenAI/Gemini flush boundaries establish replay
+checkpoints; Deepgram final-event audio ranges do so without exposing unwanted display
+timestamps. Gemini rotates connections after nine minutes. A rotation must not mark
+unsent audio complete merely because microphone capture has already stopped.
+
+Pause drains the resampler and finishes the SDK connection, then waits for resume;
+resume reads from the confirmed native sample offset. Deepgram CloseStream waits for
+terminal Metadata, including silent recordings. Each SDK closes within a bounded
+one-second wait. Stop allows at most ten seconds for finalization; close/quit cancels
+network work immediately. Incomplete transcripts keep final text and original audio,
+with manual file-model retry. Successful live recordings never upload the file again.
+
+Speaker IDs are scoped to recording and recognition connection/file part. No matching
+is inferred between independent sessions; M6 will provide the explicit matching UI.
+
 ## Planned dependencies
 
 Added only when the feature using them lands (see AGENTS.md, "Dependencies"):
 
 | Need | Package | Status |
 | --- | --- | --- |
-| HTTP for batch transcription | `httpx` | added (M2) |
-| Realtime streaming | `websockets` | planned |
+| SDK HTTP transports | `httpx` | added (M2); SDK requests replace hand-written HTTP |
+| OpenAI file/live and compatible APIs | `openai[realtime]` | added (M5; includes `httpx2`/`websockets`) |
+| OpenRouter file STT | `openrouter` | added (M5) |
+| Gemini file/live STT | `google-genai` | added (M5) |
+| Deepgram file/live STT | `deepgram-sdk` | added (M5) |
 | API key storage | `keyring` | added (M1) |
 | Microphone capture | `sounddevice` | added (M4); PortAudio required |
 
@@ -147,7 +195,8 @@ Added only when the feature using them lands (see AGENTS.md, "Dependencies"):
   (`ui/transcript_row.py`), so only visible rows get widgets.
 - `ui/bottom_bar.py`: model picker, Import Audio, Record/Append Recording, upload progress
   and the recording controls. `Adw.WrapBox` keeps controls usable at 360 px.
-- `ui/recording_view.py`: current recording header and batch-transcription placeholder.
+- `ui/recording_view.py`: the batch-transcription placeholder. Realtime headers and
+  rows join the note's existing ListView; the last row is a temporary preview.
 - `ui/level_meter.py`: 28 bars drawn in the inherited theme color from actual PCM RMS;
   PCM measurement and capture states live in `core.recording`.
 - Custom widgets inside other templates are added from Python into an `Adw.Bin` slot,

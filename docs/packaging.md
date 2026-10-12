@@ -76,3 +76,18 @@ On each additional platform, start with a configured OpenAI-compatible batch mod
    uploaded until Retry Transcription is explicitly selected.
 
 Do not claim these platform checks passed until the packaged app is tested there.
+
+## M5 verification
+
+The official SDKs resolve on Python 3.14. Linux GTK recording layouts were inspected
+at 1180×780 and 360 px in light/dark mode, including the inline preview caret and
+controls with animations disabled. SDK requests and live streams are covered with fake
+responses; ffmpeg resampling is checked at 16 and 24 kHz. No real provider account was
+used, and macOS/Windows realtime audio have not been verified on hardware.
+
+For real-account acceptance, test each configured hosted provider's file model, and
+Deepgram/OpenAI/Gemini live models: spoken text, multiple turns, pause/resume, a network
+interruption and catch-up, stop during catch-up, and original FLAC export. For Deepgram,
+verify speaker turns; for Gemini, include a recording longer than ten minutes. A live-only
+model must require an explicit file-model choice for retry. Closing and startup recovery
+must preserve audio and confirmed text without automatically uploading them.

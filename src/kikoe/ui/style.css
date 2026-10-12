@@ -14,12 +14,11 @@
 .speaker-2 { color: var(--green-5); }
 .speaker-3 { color: var(--purple-4); }
 
-@media (prefers-color-scheme: dark) {
-  .speaker-0 { color: var(--blue-2); }
-  .speaker-1 { color: var(--orange-2); }
-  .speaker-2 { color: var(--green-2); }
-  .speaker-3 { color: var(--purple-2); }
-}
+/* Match the application’s Adw.StyleManager, including forced dark mode. */
+.speaker-0-dark { color: var(--blue-2); }
+.speaker-1-dark { color: var(--orange-2); }
+.speaker-2-dark { color: var(--green-2); }
+.speaker-3-dark { color: var(--purple-2); }
 
 /* Bottom bar chips: tinted with the accent color while on, struck through when the
    chosen model cannot provide the feature. */
