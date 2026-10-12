@@ -395,7 +395,7 @@ class Window(Adw.ApplicationWindow):
         else:
             page = "empty"
         self.content_stack.set_visible_child_name(page)
-        self.bottom_bar_slot.set_visible(page in ("note", "empty"))
+        self.bottom_bar_slot.set_visible(page == "note")
 
     # Note actions
 

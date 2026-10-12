@@ -84,7 +84,8 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   → Preferences. The button's tooltip repeats the model, provider and hint.
 - Buttons: "Import Audio…" and the primary "Append Recording" (on an empty note,
   "Record").
-- The bar is always a single line and keeps the same height in every state. As its own
+- The bar is always a single line and keeps the same height whenever it is shown.
+  It is hidden when no note is selected; it appears once a note is opened. As its own
   width shrinks (breakpoints on the bar, not the window): below 600 sp the provider name
   hides and Import Audio becomes icon-only (tooltip and accessible name kept). The
   primary Record/Append Recording button always keeps its label.
@@ -167,6 +168,13 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   turns speech into text using cloud services. Add a provider and a model first, then
   record or import audio.", suggested pill button "Add Provider".
 - **Implemented** (`ui/window.blp`).
+
+## 3b. No note selected (providers exist)
+
+- Content: status page with app icon, title "No Note Selected", description "Create
+  a note, then record or import audio into it.", suggested pill button "New Note"
+  (creates a blank note, same as the sidebar button and `Ctrl+N`).
+- The bottom bar is hidden in this state; it appears once a note is opened.
 
 ## 4. Dialog: Match Speakers (≈520×520)
 

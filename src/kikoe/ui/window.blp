@@ -310,7 +310,19 @@ template $KikoeWindow: Adw.ApplicationWindow {
               child: Adw.StatusPage {
                 icon-name: "io.github.first_storm.Kikoe";
                 title: _("No Note Selected");
-                description: _("Record or import audio to create a note.");
+                description: _("Create a note, then record or import audio into it.");
+
+                child: Button {
+                  label: _("_New Note");
+                  use-underline: true;
+                  halign: center;
+                  action-name: "win.new-note";
+
+                  styles [
+                    "pill",
+                    "suggested-action",
+                  ]
+                };
               };
             }
 
