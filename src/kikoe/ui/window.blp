@@ -131,6 +131,30 @@ template $KikoeWindow: Adw.ApplicationWindow {
               title: _("Kikoe");
             };
 
+            [start]
+            Button undo_button {
+              icon-name: "edit-undo-symbolic";
+              tooltip-text: _("Undo");
+              action-name: "win.undo";
+              visible: bind note_menu_button.visible;
+
+              accessibility {
+                label: _("Undo");
+              }
+            }
+
+            [start]
+            Button redo_button {
+              icon-name: "edit-redo-symbolic";
+              tooltip-text: _("Redo");
+              action-name: "win.redo";
+              visible: bind note_menu_button.visible;
+
+              accessibility {
+                label: _("Redo");
+              }
+            }
+
             [end]
             MenuButton note_menu_button {
               icon-name: "view-more-symbolic";
@@ -141,19 +165,6 @@ template $KikoeWindow: Adw.ApplicationWindow {
               }
 
               menu-model: note_menu;
-              visible: false;
-            }
-
-            [end]
-            Button export_button {
-              icon-name: "document-save-as-symbolic";
-              tooltip-text: _("Export…");
-
-              accessibility {
-                label: _("Export…");
-              }
-
-              action-name: "win.export";
               visible: false;
             }
 
@@ -322,6 +333,11 @@ menu note_menu {
     item {
       label: _("_Copy All Text");
       action: "win.copy-all-text";
+    }
+
+    item {
+      label: _("_Export…");
+      action: "win.export";
     }
   }
 

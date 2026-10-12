@@ -1,47 +1,37 @@
 using Gtk 4.0;
+using Adw 1;
 
 template $KikoeTranscriptRow: Box {
   orientation: vertical;
 
   Box header_box {
     orientation: vertical;
-    spacing: 8;
-    margin-top: 18;
-    margin-bottom: 6;
+    spacing: 2;
+    margin-top: 24;
+    margin-bottom: 10;
+    margin-start: 8;
 
     Box {
-      spacing: 10;
+      spacing: 6;
 
       Label title_label {
         xalign: 0;
-        yalign: 0;
+        hexpand: true;
+        valign: center;
 
         styles [
           "heading",
         ]
       }
 
-      Label meta_label {
-        xalign: 0;
-        yalign: 0;
-        hexpand: true;
-        wrap: true;
-
-        styles [
-          "caption",
-          "dimmed",
-        ]
-      }
-
       Button play_button {
         icon-name: "media-playback-start-symbolic";
         tooltip-text: _("Play This Recording");
+        valign: center;
 
         accessibility {
           label: _("Play This Recording");
         }
-
-        valign: center;
 
         styles [
           "flat",
@@ -52,20 +42,34 @@ template $KikoeTranscriptRow: Box {
       MenuButton recording_menu_button {
         icon-name: "view-more-symbolic";
         tooltip-text: _("Recording Menu");
+        valign: center;
+        visible: false;
 
         accessibility {
           label: _("Recording Menu");
         }
 
-        valign: center;
-        visible: false;
+        styles [
+          "flat",
+          "circular",
+        ]
       }
     }
 
-    Separator {}
+    Label meta_label {
+      xalign: 0;
+      wrap: true;
+      wrap-mode: word_char;
+
+      styles [
+        "caption",
+        "dimmed",
+      ]
+    }
 
     Box pending_box {
       spacing: 12;
+      margin-top: 8;
       visible: false;
 
       Label pending_label {
@@ -86,13 +90,12 @@ template $KikoeTranscriptRow: Box {
   }
 
   Box segment_box {
-    spacing: 20;
-    margin-top: 6;
-    margin-bottom: 6;
+    spacing: 12;
 
     Box meta_box {
       orientation: vertical;
-      spacing: 1;
+      margin-start: 8;
+      margin-top: 4;
 
       Button speaker_button {
         halign: start;
@@ -117,43 +120,133 @@ template $KikoeTranscriptRow: Box {
         };
       }
 
-      Label timestamp_label {
-        xalign: 0;
-        ellipsize: end;
+      MenuButton timestamp_button {
+        halign: start;
+        tooltip-text: _("Edit Timestamps");
+
+        accessibility {
+          label: _("Edit Timestamps");
+        }
 
         styles [
-          "caption",
-          "numeric",
-          "dimmed",
+          "flat",
+          "timestamp-button",
         ]
+
+        child: Label timestamp_label {
+          xalign: 0;
+          ellipsize: end;
+
+          styles [
+            "caption",
+            "numeric",
+            "dimmed",
+          ]
+        };
+
+        popover: Popover timestamp_popover {
+          closed => $_on_timestamp_popover_closed();
+
+          child: Box {
+            orientation: vertical;
+            spacing: 12;
+            width-request: 260;
+            margin-top: 6;
+            margin-bottom: 6;
+            margin-start: 6;
+            margin-end: 6;
+
+            ListBox {
+              selection-mode: none;
+
+              styles [
+                "boxed-list",
+              ]
+
+              Adw.EntryRow start_row {
+                title: _("Start");
+                input-purpose: number;
+                changed => $_on_time_row_changed();
+                entry-activated => $_on_time_row_entry_activated();
+              }
+
+              Adw.EntryRow end_row {
+                title: _("End");
+                input-purpose: number;
+                changed => $_on_time_row_changed();
+                entry-activated => $_on_time_row_entry_activated();
+              }
+            }
+
+            Label times_hint_label {
+              label: _("Use MM:SS or H:MM:SS. Leave empty to clear.");
+              xalign: 0;
+              wrap: true;
+              max-width-chars: 30;
+
+              styles [
+                "caption",
+                "dimmed",
+              ]
+            }
+          };
+        };
       }
     }
 
-    Label text_label {
-      xalign: 0;
-      yalign: 0;
+    Stack text_stack {
       hexpand: true;
-      wrap: true;
-      wrap-mode: word_char;
-      selectable: true;
+      hhomogeneous: false;
+      vhomogeneous: false;
 
-      styles [
-        "transcript-text",
-      ]
-    }
+      StackPage {
+        name: "edit";
+        // Never scrolls: the row grows with its text; the list scrolls instead.
+        child: ScrolledWindow text_scroll {
+          valign: start;
+          hscrollbar-policy: never;
+          vscrollbar-policy: never;
+          propagate-natural-height: true;
 
-    Button edit_button {
-      icon-name: "document-edit-symbolic";
-      tooltip-text: _("Edit Segment…");
-      valign: start;
+          child: TextView text_view {
+            wrap-mode: word_char;
+            accepts-tab: false;
+            pixels-inside-wrap: 4;
+            top-margin: 6;
+            bottom-margin: 6;
+            left-margin: 8;
+            right-margin: 8;
 
-      accessibility {
-        label: _("Edit Segment…");
+            accessibility {
+              label: _("Transcript Text");
+            }
+
+            styles [
+              "segment-text",
+              "transcript-text",
+            ]
+          };
+        };
       }
 
-      styles [
-        "flat",
-      ]
+      StackPage {
+        name: "live";
+
+        child: Label text_label {
+          xalign: 0;
+          yalign: 0;
+          wrap: true;
+          wrap-mode: word_char;
+          margin-top: 6;
+          margin-bottom: 6;
+          margin-start: 8;
+          margin-end: 8;
+
+          styles [
+            "transcript-text",
+          ]
+        };
+      }
     }
   }
 }

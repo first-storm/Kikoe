@@ -1,7 +1,16 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $KikoeNoteView: Adw.Bin {
+template $KikoeNoteView: Adw.BreakpointBin {
+  width-request: 360;
+  height-request: 294;
+
+  Adw.Breakpoint {
+    condition ("max-width: 520sp")
+    apply => $_on_compact_breakpoint_apply();
+    unapply => $_on_compact_breakpoint_unapply();
+  }
+
   child: Box {
     orientation: vertical;
 
@@ -30,8 +39,8 @@ template $KikoeNoteView: Adw.Bin {
             tightening-threshold: 600;
 
             child: ListView transcript_list {
-              margin-start: 24;
-              margin-end: 24;
+              margin-start: 16;
+              margin-end: 16;
               margin-bottom: 32;
             };
           };

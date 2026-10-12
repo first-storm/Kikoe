@@ -51,26 +51,45 @@ Default size 1180×780. Two panes.
   - "Voice Memo" — "Oct 8 · 0:47"
 
 **Content header**: note title ("Podcast Topics") with subtitle "2 recordings · 1:39".
-Header buttons:
+Header buttons: *Undo* and *Redo* at the start (icon buttons, transcript edits only);
+at the end:
 - *Display Options* (popover):
   - Switch "Show Timestamps", switch "Show Speakers".
   - Footnote: "Only changes how this note is shown and exported. The transcript is not modified."
-- *Export* (menu): "Plain Text (.txt)", "Markdown (.md)", "SRT Subtitles (.srt)",
-  "WebVTT Subtitles (.vtt)". Footnote: "Speaker labels follow the current display
-  settings. Subtitle formats always include timestamps."
-- *Note Menu*: "Rename…", "Copy All Text", "Delete Note" (destructive).
+- *Note Menu*: "Rename…", "Copy All Text", "Export…", "Delete Note" (destructive).
+  Export is a menu item rather than its own header button so the header still fits
+  at 360 px with Undo and Redo.
 
 **Banner** (when an appended recording has unmatched speakers):
 "Recording 2 was appended and its speakers are not yet matched with Recording 1" with
 button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 
 **Recordings**, each as a section:
-- Header: "Recording 1" + meta line "Today 14:30 · 0:58 · Deepgram nova-3 ·
-  Timestamps, Speakers"; appended ones say "Today 15:12 appended · 0:41 · …".
-- Header buttons: *Play This Recording*, *Recording Menu*: "Re-transcribe…",
-  "Export Original Audio…", "Delete Recording" (destructive).
-- Segments: speaker name (colored, clickable → "Rename Speaker"), timestamp
-  (`00:09`, tabular digits), text. Speaker/timestamp columns hide per display options.
+- Header, two lines: "Recording 1" (heading) with flat circular *Play This Recording*
+  and *Recording Menu* buttons, then the dimmed meta line "Today 14:30 · 0:58 ·
+  Deepgram nova-3 · Timestamps, Speakers"; appended ones say "Today 15:12 appended ·
+  0:41 · …". No separator; spacing separates recordings. *Recording Menu*:
+  "Re-transcribe…", "Export Original Audio…", "Match Speakers…", "Delete Recording".
+- Segments: a meta column (speaker name, colored, clickable → "Rename Speaker"; below
+  it the time range, tabular digits) and the text. Speaker/timestamp columns hide per
+  display options. Below 520 sp the meta column moves above the text on one line.
+- The transcript is edited in place, like a document: segment text is a borderless
+  text view that tints on hover and, while it holds the caret, with the accent color.
+  There is no edit button or dialog. Edits save themselves after a short pause in
+  typing and whenever the caret leaves the segment; empty text is not saved (toast
+  "Segment text cannot be empty", the text reverts).
+  - Enter moves to the next segment, Shift+Enter inserts a line break, Escape reverts
+    typing not saved yet, Up/Down on the first/last line move between segments. While
+    an input method is composing, these keys belong to it.
+  - The time range is a flat button ("Add Time" when a segment has none) opening a
+    popover with *Start* and *End* entry rows ("Use MM:SS or H:MM:SS. Leave empty to
+    clear."); valid changes apply when it closes or on Enter.
+  - Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z, Ctrl+Y) cover text and time edits across
+    the whole note; quick successive saves of one segment are one step. History is
+    cleared when another note opens or recordings are added, removed or re-transcribed.
+    Undo/Redo scroll to the segment and put the caret in it.
+  - While recording, importing or recovering, the text is read-only and Undo/Redo are
+    disabled. Live rows from realtime transcription are never editable.
 
 **Bottom bar** (recording controls):
 - *Transcription Model* button showing "nova-3 · Deepgram" (`win.choose-model`) opens
@@ -307,7 +326,8 @@ Pushed as a subpage (back button) titled with the provider name.
 ## 10. Keyboard and accessibility (M7)
 
 The main menu offers Keyboard Shortcuts. New Note uses Ctrl+N, Search Notes Ctrl+F,
-Import Audio Ctrl+O, Rename Note F2, Export Note Ctrl+Shift+E, Preferences Ctrl+comma, shortcut help Ctrl+?, and
+Import Audio Ctrl+O, Rename Note F2, Export Note Ctrl+Shift+E, Undo Ctrl+Z, Redo
+Ctrl+Shift+Z/Ctrl+Y, Preferences Ctrl+comma, shortcut help Ctrl+?, and
 Quit Ctrl+Q (Command replaces Ctrl on macOS). Escape closes search; it never stops a
 recording. Shortcuts share action availability with buttons, including busy-state guards.
 Search is disabled while capturing/transcribing so it cannot hide narrow-window Stop
@@ -327,7 +347,7 @@ HIG audit follow-ups:
   save-then-close path as Quit).
 - Secondary click or long press on a sidebar note offers Rename… and Delete Note without
   opening the note.
-- Edit Segment, Rename Speaker and Add/Edit Model ask “Discard Changes?” when closed with
+- Rename Speaker and Add/Edit Model ask “Discard Changes?” when closed with
   Escape or a click outside while they hold unsaved input; Cancel discards immediately.
 - Failures the user must read (transcription, re-transcription, capture) use a dialog;
   small self-explanatory ones (a missing folder or file, playback problems) use a toast.

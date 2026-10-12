@@ -37,6 +37,35 @@ Adw.ShortcutsDialog shortcuts_dialog {
   }
 
   Adw.ShortcutsSection {
+    title: _("Editing");
+
+    Adw.ShortcutsItem {
+      title: _("Undo");
+      accelerator: "<Primary>z";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Redo");
+      accelerator: "<Primary><Shift>z <Primary>y";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Next Segment");
+      accelerator: "Return";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("New Line in Segment");
+      accelerator: "<Shift>Return";
+    }
+
+    Adw.ShortcutsItem {
+      title: _("Revert Unsaved Typing");
+      accelerator: "Escape";
+    }
+  }
+
+  Adw.ShortcutsSection {
     title: _("General");
 
     Adw.ShortcutsItem {

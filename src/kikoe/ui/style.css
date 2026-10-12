@@ -4,7 +4,31 @@
 /* Transcript text is the content people read; give it a little more room than UI text. */
 .transcript-text {
   font-size: 1.07em;
-  line-height: 1.6;
+}
+
+/* Segment text is edited in place: it reads as plain text and only hints at being a
+   field on hover, then shows the caret's segment with a soft accent tint. */
+textview.segment-text,
+textview.segment-text > text {
+  background: none;
+}
+textview.segment-text {
+  border-radius: 8px;
+  transition: background-color 150ms ease-out;
+}
+textview.segment-text:hover {
+  background-color: color-mix(in srgb, currentColor 4%, transparent);
+}
+textview.segment-text:focus-within {
+  background-color: color-mix(in srgb, var(--accent-bg-color) 10%, transparent);
+}
+
+/* Timestamps share the meta column with speaker names: keep the button compact and
+   pull it out by its padding so the digits line up with the name above. */
+menubutton.timestamp-button > button {
+  padding: 0 4px;
+  min-height: 24px;
+  margin: 0 -4px;
 }
 
 /* Palette green-5 is only ~3.2:1 on the white view; speaker 2 darkens it for text. */

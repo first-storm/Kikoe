@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import shutil
+import time
 from collections.abc import Callable
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -11,6 +12,7 @@ from pathlib import Path
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango
 
 from kikoe.core.choice import ModelChoice, available_models
+from kikoe.core.edit_history import EditHistory, SegmentChange, SegmentFields
 from kikoe.core.export import ExportFormat, export_filename, export_note
 from kikoe.core.models import DisplayOptions, Note, NoteSummary, Recording, TranscriptionState
 from kikoe.core.preferences import WindowState, valid_window_state
@@ -42,11 +44,11 @@ from kikoe.ui.labels import (
 )
 from kikoe.ui.note_view import NoteView
 from kikoe.ui.retranscribe_dialog import RetranscribeDialog
-from kikoe.ui.segment_editor import SegmentEditor
 from kikoe.ui.speaker_dialog import SpeakerDialog
 from kikoe.ui.speaker_editor import SpeakerEditor
 from kikoe.ui.tasks import USER_FACING_ERRORS, run_task, show_error, show_notice
 from kikoe.ui.templates import ui_file
+from kikoe.ui.transcript_row import NO_TIME
 
 log = logging.getLogger(__name__)
 
@@ -69,7 +71,6 @@ class Window(Adw.ApplicationWindow):
     content_page: Adw.NavigationPage = Gtk.Template.Child()
     window_title: Adw.WindowTitle = Gtk.Template.Child()
     note_menu_button: Gtk.MenuButton = Gtk.Template.Child()
-    export_button: Gtk.Button = Gtk.Template.Child()
     display_options_button: Gtk.MenuButton = Gtk.Template.Child()
     timestamps_row: Adw.SwitchRow = Gtk.Template.Child()
     speakers_row: Adw.SwitchRow = Gtk.Template.Child()
@@ -100,6 +101,15 @@ class Window(Adw.ApplicationWindow):
         # Custom widgets are added from code: Blueprint's linter cannot inspect their types.
         self.note_view = NoteView()
         self.note_view_slot.set_child(self.note_view)
+        self.note_view.connect("text-edited", self._on_note_view_text_edited)
+        self.note_view.connect("times-edited", self._on_note_view_times_edited)
+        self.note_view.connect("segment-left", self._on_note_view_segment_left)
+        self._history = EditHistory()
+        self._edited: dict[tuple[str, int], SegmentFields] = {}
+        """Segment values already sent to storage, which may be ahead of ``self._note``."""
+        self._edit_lock = asyncio.Lock()
+        self._edit_saves: set[asyncio.Task[None]] = set()
+        self._edits_blocked = False
         self.bottom_bar = BottomBar()
         self.bottom_bar_slot.set_child(self.bottom_bar)
         self._search_generation = 0
@@ -113,6 +123,8 @@ class Window(Adw.ApplicationWindow):
             ("import-audio", ["<primary>o"]),
             ("rename-note", ["F2"]),
             ("export", ["<primary><shift>e"]),
+            ("undo", ["<primary>z"]),
+            ("redo", ["<primary><shift>z", "<primary>y"]),
         ):
             application.set_accels_for_action(f"win.{action}", keys)
         self._providers = providers
@@ -158,7 +170,8 @@ class Window(Adw.ApplicationWindow):
         self._add_action("play-recording", self._on_play_recording, GLib.VariantType.new("s"))
         self._add_action("play-sample", self._on_play_sample, GLib.VariantType.new("(sdd)"))
         self._add_action("edit-speaker", self._on_edit_speaker, GLib.VariantType.new("(ss)"))
-        self._add_action("edit-segment", self._on_edit_segment, GLib.VariantType.new("(si)"))
+        self._add_action("undo", self._on_undo)
+        self._add_action("redo", self._on_redo)
         self._add_action("match-speakers", self._on_match_speakers, GLib.VariantType.new("s"))
         self._add_action(
             "retranscribe-recording", self._on_retranscribe_recording, GLib.VariantType.new("s")
@@ -417,9 +430,11 @@ class Window(Adw.ApplicationWindow):
     def _show_note(self, note: Note | None) -> None:
         if self._note is not None and (note is None or self._note.note_id != note.note_id):
             self._stop_playback()
+            # Saved under the note being left, so this must run before it is replaced.
+            self.note_view.flush_edits()
+            self._forget_edits()
         self._note = note
         self.note_menu_button.set_visible(note is not None)
-        self.export_button.set_visible(note is not None)
         self.display_options_button.set_visible(note is not None)
         for name in _NOTE_ACTIONS:
             self._set_action_enabled(name, note is not None)
@@ -437,7 +452,8 @@ class Window(Adw.ApplicationWindow):
                 self.speakers_row.set_active(note.display.show_speakers)
             finally:
                 self._showing = False
-            self.note_view.show_note(note)
+            if self.note_view.show_note(note):
+                self._forget_edits()
             self.bottom_bar.set_note(bool(note.recordings))
             if self._session is not None and self._session.state is not CaptureState.STOPPED:
                 self.note_view.show_recording(
@@ -670,24 +686,6 @@ class Window(Adw.ApplicationWindow):
         dialog.connect("closed", self._on_audio_dialog_closed)
         dialog.present(self)
 
-    def _on_edit_segment(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        if self._note is None or param is None:
-            return
-        recording_id, position = param.unpack()
-        recording = self._recording_by_id(str(recording_id))
-        index = int(position)
-        if recording is None or not 0 <= index < len(recording.segments):
-            return
-        dialog = SegmentEditor(
-            self._notes,
-            self._note.note_id,
-            recording.recording_id,
-            index,
-            recording.segments[index],
-        )
-        dialog.connect("closed", self._on_audio_dialog_closed)
-        dialog.present(self)
-
     def _on_match_speakers(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
         if param is not None:
             self._present_matching(param.get_string())
@@ -775,9 +773,116 @@ class Window(Adw.ApplicationWindow):
             self.bottom_bar.set_progress(None)
             self._update_import_actions()
 
+    # In-place editing
+
+    def _on_note_view_text_edited(
+        self, _view: NoteView, recording_id: str, position: int, text: str
+    ) -> None:
+        self._edit_segment(
+            recording_id, position, lambda fields: replace(fields, text=text.strip())
+        )
+
+    def _on_note_view_times_edited(
+        self, _view: NoteView, recording_id: str, position: int, start_ms: int, end_ms: int
+    ) -> None:
+        self._edit_segment(
+            recording_id,
+            position,
+            lambda fields: replace(fields, start=_from_ms(start_ms), end=_from_ms(end_ms)),
+        )
+
+    def _on_note_view_segment_left(self, _view: NoteView) -> None:
+        self._history.seal()
+
+    def _edit_segment(
+        self,
+        recording_id: str,
+        position: int,
+        change: Callable[[SegmentFields], SegmentFields],
+    ) -> None:
+        before = self._segment_fields(recording_id, position)
+        if before is None or self._edits_blocked:
+            return
+        after = change(before)
+        if after == before:
+            return
+        self._history.record(SegmentChange(recording_id, position, before, after, time.monotonic()))
+        self._write_segment(recording_id, position, after)
+
+    def _segment_fields(self, recording_id: str, position: int) -> SegmentFields | None:
+        edited = self._edited.get((recording_id, position))
+        if edited is not None:
+            return edited
+        recording = self._recording_by_id(recording_id)
+        if recording is None or not 0 <= position < len(recording.segments):
+            return None
+        segment = recording.segments[position]
+        return SegmentFields(segment.text, segment.start, segment.end)
+
+    def _write_segment(self, recording_id: str, position: int, fields: SegmentFields) -> None:
+        if self._note is None:
+            return
+        self._edited[recording_id, position] = fields
+        task = run_task(
+            self._save_segment(self._note.note_id, recording_id, position, fields), self
+        )
+        self._edit_saves.add(task)
+        task.add_done_callback(self._edit_saves.discard)
+        self._update_history_actions()
+
+    async def _save_segment(
+        self, note_id: str, recording_id: str, position: int, fields: SegmentFields
+    ) -> None:
+        # One at a time, so a quick Undo cannot overtake the save it reverts.
+        async with self._edit_lock:
+            note = await self._notes.update_segment(
+                note_id,
+                recording_id,
+                position,
+                text=fields.text,
+                start_ms=_to_ms(fields.start),
+                end_ms=_to_ms(fields.end),
+            )
+        if self._note is not None and self._note.note_id == note_id:
+            self._show_note(note)
+
+    async def _edits_saved(self) -> None:
+        """Wait for pending segment saves so exports and copies include them."""
+        if self._edit_saves:
+            await asyncio.wait(list(self._edit_saves))
+
+    def _forget_edits(self) -> None:
+        self._history.clear()
+        self._edited.clear()
+        self._update_history_actions()
+
+    def _update_history_actions(self) -> None:
+        enabled = not self._edits_blocked and self._note is not None
+        self._set_action_enabled("undo", enabled and self._history.can_undo)
+        self._set_action_enabled("redo", enabled and self._history.can_redo)
+
+    def _on_undo(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        self.note_view.flush_edits()
+        change = self._history.undo()
+        if change is not None:
+            self._write_segment(change.recording_id, change.position, change.before)
+            self.note_view.focus_segment(change.recording_id, change.position)
+
+    def _on_redo(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        self.note_view.flush_edits()
+        change = self._history.redo()
+        if change is not None:
+            self._write_segment(change.recording_id, change.position, change.after)
+            self.note_view.focus_segment(change.recording_id, change.position)
+
     # Export
 
     def _on_export(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        self.note_view.flush_edits()
+        run_task(self._present_export(), self)
+
+    async def _present_export(self) -> None:
+        await self._edits_saved()
         note = self._note
         if note is None:
             return
@@ -787,6 +892,11 @@ class Window(Adw.ApplicationWindow):
         run_task(self._export_note(fmt, options), self)
 
     def _on_copy_all_text(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        self.note_view.flush_edits()
+        run_task(self._copy_all_text(), self)
+
+    async def _copy_all_text(self) -> None:
+        await self._edits_saved()
         note = self._note
         if note is None:
             return
@@ -913,7 +1023,6 @@ class Window(Adw.ApplicationWindow):
             "play-recording",
             "play-sample",
             "edit-speaker",
-            "edit-segment",
             "match-speakers",
             "retranscribe-recording",
             "delete-recording",
@@ -955,6 +1064,9 @@ class Window(Adw.ApplicationWindow):
         self._set_action_enabled("rename-note", not busy and self._note is not None)
         self._set_action_enabled("export", not busy and self._note is not None)
         self._set_action_enabled("export-audio", not busy and self._note is not None)
+        self._edits_blocked = busy
+        self.note_view.set_editable(not busy)
+        self._update_history_actions()
 
     def _on_choose_model(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         self.bottom_bar.present_transcription_dialog()
@@ -1351,6 +1463,7 @@ class Window(Adw.ApplicationWindow):
         if self._closing:
             return True
         self._stop_playback()
+        self.note_view.flush_edits()
         if self._search_task is not None:
             self._search_generation += 1
             self._search_task.cancel()
@@ -1360,6 +1473,7 @@ class Window(Adw.ApplicationWindow):
             and self._import_task is None
             and not recovery_pending
             and (self._playback_task is None or self._playback_task.done())
+            and not self._edit_saves
         ):
             return False
         self._closing = True
@@ -1368,6 +1482,7 @@ class Window(Adw.ApplicationWindow):
 
     async def _save_and_close(self) -> None:
         try:
+            await self._edits_saved()
             await self._finish_playback()
             task = self._recording_task
             if self._session is not None:
@@ -1397,3 +1512,11 @@ class Window(Adw.ApplicationWindow):
             self._closing = False
             self._update_import_actions()
             raise
+
+
+def _from_ms(value: int) -> timedelta | None:
+    return None if value == NO_TIME else timedelta(milliseconds=value)
+
+
+def _to_ms(value: timedelta | None) -> int | None:
+    return None if value is None else round(value / timedelta(milliseconds=1))
