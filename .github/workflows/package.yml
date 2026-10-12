@@ -54,7 +54,8 @@ jobs:
         run: |
           export XDG_RUNTIME_DIR=/tmp/kikoe-runtime
           mkdir -m 700 -p "$XDG_RUNTIME_DIR"
-          pulseaudio --daemonize=yes --exit-idle-time=-1 --load='module-null-sink sink_name=kikoe_test'
+          pulseaudio -n --daemonize=yes --exit-idle-time=-1 --log-target=stderr \
+            --load=module-native-protocol-unix --load='module-null-sink sink_name=kikoe_test'
           pactl set-default-sink kikoe_test
           pactl set-default-source kikoe_test.monitor
           echo "XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR" >> "$GITHUB_ENV"

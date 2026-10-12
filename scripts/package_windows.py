@@ -96,8 +96,6 @@ def native_extension(name: str, package: dict[str, object], interpreter: Path) -
         "--release",
         "--interpreter",
         str(interpreter),
-        "--manifest-path",
-        str(project / "Cargo.toml"),
         "--out",
         str(wheels),
         cwd=project,

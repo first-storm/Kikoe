@@ -26,14 +26,15 @@ def main() -> int:
     configure_logging(level)
     i18n.setup()
 
+    # Use the same GLib-integrated loop for packaged self-tests and the app.
+    asyncio.set_event_loop_policy(GLibEventLoopPolicy())  # pyright: ignore[reportArgumentType, reportDeprecated]  # PyGObject 3.58 still needs the policy API
+
     if "--self-test" in sys.argv:
         return _self_test()
 
     # Imported late so that every gi.repository import sees the versions pinned above.
     from kikoe.application import Application
 
-    # Lets Application.create_asyncio_task run coroutines on the GLib main loop.
-    asyncio.set_event_loop_policy(GLibEventLoopPolicy())  # pyright: ignore[reportArgumentType, reportDeprecated]  # PyGObject 3.58 still needs the policy API
     app = Application()
     return app.run(sys.argv)
 
@@ -78,9 +79,13 @@ def _self_test() -> int:
                 raise RuntimeError("The packaged ffmpeg executable is missing")
         with tempfile.TemporaryDirectory(prefix="kikoe-self-test-") as directory:
             output = Path(directory) / "test.flac"
-            asyncio.run(
-                run("-f", "lavfi", "-i", "anullsrc=r=16000:cl=mono", "-t", "0.1", str(output))
-            )
+            loop = asyncio.get_event_loop()  # pyright: ignore[reportDeprecated]  # GLib owns the existing main context
+            try:
+                loop.run_until_complete(
+                    run("-f", "lavfi", "-i", "anullsrc=r=16000:cl=mono", "-t", "0.1", str(output))
+                )
+            finally:
+                loop.close()
             if output.stat().st_size == 0:
                 raise RuntimeError("ffmpeg did not produce audio")
         log.info("Packaging self-test passed")
