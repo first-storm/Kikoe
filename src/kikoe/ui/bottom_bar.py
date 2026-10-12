@@ -1,4 +1,4 @@
-"""Bar below the note: model picker, feature chips, Import Audio, and import progress."""
+"""Bar below the note: model picker with its options, Import Audio, Record and progress."""
 
 import math
 from dataclasses import replace
@@ -20,7 +20,7 @@ from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.items import ModelChoiceItem
-from kikoe.ui.labels import capability_summary, chip_tooltip, transcription_hint
+from kikoe.ui.labels import capability_summary, transcription_hint, unsupported_feature_tooltip
 from kikoe.ui.level_meter import LevelMeter
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
@@ -33,8 +33,9 @@ class BottomBar(Adw.Bin):
     model_button: Gtk.MenuButton = Gtk.Template.Child()
     model_label: Gtk.Label = Gtk.Template.Child()
     provider_label: Gtk.Label = Gtk.Template.Child()
-    timestamps_chip: Gtk.ToggleButton = Gtk.Template.Child()
-    speakers_chip: Gtk.ToggleButton = Gtk.Template.Child()
+    options_box: Gtk.Box = Gtk.Template.Child()
+    timestamps_check: Gtk.CheckButton = Gtk.Template.Child()
+    speakers_check: Gtk.CheckButton = Gtk.Template.Child()
     hint_label: Gtk.Label = Gtk.Template.Child()
     model_popover: Gtk.Popover = Gtk.Template.Child()
     model_list: Gtk.ListBox = Gtk.Template.Child()
@@ -76,7 +77,7 @@ class BottomBar(Adw.Bin):
 
     @property
     def requested_features(self) -> RequestedFeatures:
-        """The chips' state, limited to what the chosen model supports."""
+        """The options' state, limited to what the chosen model supports."""
         if self._choice is None:
             return RequestedFeatures(timestamps=False, diarization=False)
         return self._wanted.allowed_by(
@@ -188,11 +189,11 @@ class BottomBar(Adw.Bin):
                 )
             )
             self.import_button.set_tooltip_text(
-                None
+                _("Import Audio…")
                 if model_support(choice.provider.api, choice.model).file
                 else _("Choose a file transcription model to import audio.")
             )
-        self._show_chips(
+        self._show_options(
             replace(
                 choice.model,
                 capabilities=model_support(choice.provider.api, choice.model).recording,
@@ -202,23 +203,22 @@ class BottomBar(Adw.Bin):
         )
         self.emit("choice-changed")
 
-    def _show_chips(self, model: ModelSpec | None) -> None:
-        self.timestamps_chip.set_visible(model is not None)
-        self.speakers_chip.set_visible(model is not None)
+    def _show_options(self, model: ModelSpec | None) -> None:
+        self.options_box.set_visible(model is not None)
         if model is None:
             self.hint_label.set_label("")
             self.hint_label.set_tooltip_text(None)
             return
         allowed = self._wanted.allowed_by(model.capabilities)
-        chips = (
+        checks = (
             (
-                self.timestamps_chip,
+                self.timestamps_check,
                 Capability.TIMESTAMPS,
                 model.capabilities.timestamps,
                 allowed.timestamps,
             ),
             (
-                self.speakers_chip,
+                self.speakers_check,
                 Capability.DIARIZATION,
                 model.capabilities.diarization,
                 allowed.diarization,
@@ -226,15 +226,13 @@ class BottomBar(Adw.Bin):
         )
         self._updating = True
         try:
-            for chip, capability, supported, active in chips:
-                chip.set_sensitive(supported)
-                chip.set_active(active)
-                if supported:
-                    chip.remove_css_class("unsupported")
-                else:
-                    chip.add_css_class("unsupported")
-                chip.set_tooltip_text(
-                    chip_tooltip(capability, model.display_name, supported, active)
+            for check, capability, supported, active in checks:
+                check.set_sensitive(supported)
+                check.set_active(active)
+                check.set_tooltip_text(
+                    None
+                    if supported
+                    else unsupported_feature_tooltip(capability, model.display_name)
                 )
         finally:
             self._updating = False
@@ -243,19 +241,19 @@ class BottomBar(Adw.Bin):
         self.hint_label.set_tooltip_text(hint)
 
     @Gtk.Template.Callback()
-    def _on_chip_toggled(self, _chip: Gtk.ToggleButton) -> None:
+    def _on_feature_check_toggled(self, _check: Gtk.CheckButton) -> None:
         if self._updating or self._choice is None:
             return
         caps = model_support(self._choice.provider.api, self._choice.model).recording
         self._wanted = RequestedFeatures(
-            timestamps=self.timestamps_chip.get_active()
+            timestamps=self.timestamps_check.get_active()
             if caps.timestamps
             else self._wanted.timestamps,
-            diarization=self.speakers_chip.get_active()
+            diarization=self.speakers_check.get_active()
             if caps.diarization
             else self._wanted.diarization,
         )
-        self._show_chips(replace(self._choice.model, capabilities=caps))
+        self._show_options(replace(self._choice.model, capabilities=caps))
 
     def _create_model_row(self, item: GObject.Object) -> Gtk.Widget:
         assert isinstance(item, ModelChoiceItem)

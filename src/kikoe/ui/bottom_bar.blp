@@ -2,270 +2,308 @@ using Gtk 4.0;
 using Adw 1;
 
 template $KikoeBottomBar: Adw.Bin {
-  child: Stack state_stack {
-    hhomogeneous: false;
-    vhomogeneous: false;
+  child: Adw.BreakpointBin {
+    width-request: 360;
+    height-request: 1;
 
-    StackPage {
-      name: "idle";
+    Adw.Breakpoint {
+      condition ("max-width: 600sp")
 
-      child: Adw.WrapBox {
-        wrap-policy: natural;
-        child-spacing: 8;
-        line-spacing: 8;
-        margin-top: 8;
-        margin-bottom: 8;
-        margin-start: 12;
-        margin-end: 12;
+      setters {
+        provider_label.visible: false;
+        import_label.visible: false;
+        recording_summary.visible: false;
+      }
+    }
 
-        MenuButton model_button {
-          can-shrink: true;
-          tooltip-text: _("Transcription Model");
+    Adw.Breakpoint {
+      condition ("max-width: 480sp")
 
-          accessibility {
-            label: _("Transcription Model");
-          }
+      setters {
+        provider_label.visible: false;
+        import_label.visible: false;
+        recording_summary.visible: false;
+        meter_slot.visible: false;
+      }
+    }
 
-          child: Box {
-            spacing: 8;
+    child: Stack state_stack {
+      hhomogeneous: false;
+      vhomogeneous: true;
 
-            Image {
-              icon-name: "weather-overcast-symbolic";
+      StackPage {
+        name: "idle";
+
+        child: Box {
+          MenuButton model_button {
+            can-shrink: true;
+            tooltip-text: _("Transcription Model");
+
+            accessibility {
+              label: _("Transcription Model");
             }
 
-            Label model_label {
-              ellipsize: end;
-              max-width-chars: 20;
-
-              styles [
-                "heading",
-              ]
-            }
-
-            Label provider_label {
-              ellipsize: end;
-              max-width-chars: 14;
-
-              styles [
-                "caption",
-                "dim-label",
-              ]
-            }
-
-            Image {
-              icon-name: "pan-down-symbolic";
-            }
-          };
-
-          popover: Popover model_popover {
             child: Box {
-              orientation: vertical;
-              spacing: 6;
+              spacing: 8;
 
-              ScrolledWindow {
-                hscrollbar-policy: never;
-                propagate-natural-height: true;
-                max-content-height: 360;
-
-                child: ListBox model_list {
-                  selection-mode: none;
-                  row-activated => $_on_model_list_row_activated();
-
-                  styles [
-                    "navigation-sidebar",
-                  ]
-                };
+              Image {
+                icon-name: "weather-overcast-symbolic";
               }
 
-              Separator {}
-
-              Button {
-                label: _("_Manage Providers and Models…");
-                use-underline: true;
-                action-name: "app.preferences";
+              Label model_label {
+                ellipsize: end;
+                max-width-chars: 20;
 
                 styles [
-                  "flat",
+                  "heading",
                 ]
               }
+
+              Label provider_label {
+                ellipsize: end;
+                max-width-chars: 14;
+
+                styles [
+                  "caption",
+                  "dim-label",
+                ]
+              }
+
+              Image {
+                icon-name: "pan-down-symbolic";
+              }
             };
-          };
-        }
-
-        ToggleButton timestamps_chip {
-          toggled => $_on_chip_toggled();
-
-          child: Adw.ButtonContent {
-            icon-name: "document-open-recent-symbolic";
-            label: _("_Timestamps");
-            use-underline: true;
-            can-shrink: true;
-          };
-
-          styles [
-            "feature-chip",
-          ]
-        }
-
-        ToggleButton speakers_chip {
-          toggled => $_on_chip_toggled();
-
-          child: Adw.ButtonContent {
-            icon-name: "system-users-symbolic";
-            label: _("_Speakers");
-            use-underline: true;
-            can-shrink: true;
-          };
-
-          styles [
-            "feature-chip",
-          ]
-        }
-
-        Label hint_label {
-          max-width-chars: 18;
-          margin-start: 4;
-          hexpand: true;
-          xalign: 0;
-          ellipsize: end;
-
-          styles [
-            "caption",
-            "dim-label",
-          ]
-        }
-
-        Button import_button {
-          action-name: "win.import-audio";
-
-          child: Adw.ButtonContent {
-            icon-name: "folder-open-symbolic";
-            label: _("_Import Audio…");
-            use-underline: true;
-            can-shrink: true;
-          };
-
-          styles [
-            "flat",
-          ]
-        }
-
-        Button record_button {
-          action-name: "win.start-recording";
-
-          styles [
-            "suggested-action",
-            "pill",
-          ]
-
-          child: Adw.ButtonContent record_content {
-            icon-name: "audio-input-microphone-symbolic";
-            label: _("_Record");
-            use-underline: true;
-          };
-        }
-      };
-    }
-
-    StackPage {
-      name: "progress";
-
-      child: Box {
-        spacing: 9;
-        margin-top: 10;
-        margin-bottom: 10;
-        margin-start: 18;
-        margin-end: 12;
-
-        Adw.Spinner {}
-
-        Label progress_label {
-          hexpand: true;
-          xalign: 0;
-          ellipsize: end;
-        }
-
-        Button cancel_button {
-          label: _("_Cancel");
-          use-underline: true;
-          action-name: "win.cancel-import";
-        }
-      };
-    }
-
-    StackPage {
-      name: "recording";
-
-      child: Adw.WrapBox {
-        child-spacing: 14;
-        line-spacing: 8;
-        margin-top: 10;
-        margin-bottom: 10;
-        margin-start: 18;
-        margin-end: 12;
-
-        Box {
-          spacing: 14;
-
-          Image recording_dot {
-            icon-name: "media-record-symbolic";
-            pixel-size: 10;
 
             styles [
-              "recording-indicator",
+              "flat",
+            ]
+
+            popover: Popover model_popover {
+              child: Box {
+                orientation: vertical;
+                spacing: 6;
+
+                ScrolledWindow {
+                  hscrollbar-policy: never;
+                  propagate-natural-height: true;
+                  max-content-height: 360;
+
+                  child: ListBox model_list {
+                    selection-mode: none;
+                    row-activated => $_on_model_list_row_activated();
+
+                    styles [
+                      "navigation-sidebar",
+                    ]
+                  };
+                }
+
+                Box options_box {
+                  orientation: vertical;
+                  spacing: 6;
+
+                  Separator {}
+
+                  Label {
+                    label: _("Options");
+                    xalign: 0;
+                    margin-start: 6;
+                    margin-top: 6;
+
+                    styles [
+                      "heading",
+                      "dim-label",
+                    ]
+                  }
+
+                  CheckButton timestamps_check {
+                    label: _("_Timestamps");
+                    use-underline: true;
+                    toggled => $_on_feature_check_toggled();
+                  }
+
+                  CheckButton speakers_check {
+                    label: _("_Speakers");
+                    use-underline: true;
+                    toggled => $_on_feature_check_toggled();
+                  }
+
+                  Label hint_label {
+                    xalign: 0;
+                    wrap: true;
+                    max-width-chars: 32;
+                    margin-start: 6;
+                    margin-end: 6;
+
+                    styles [
+                      "caption",
+                      "dim-label",
+                    ]
+                  }
+                }
+
+                Separator {}
+
+                Button {
+                  label: _("_Manage Providers and Models…");
+                  use-underline: true;
+                  action-name: "app.preferences";
+
+                  styles [
+                    "flat",
+                  ]
+                }
+              };
+            };
+          }
+
+          Box {
+            hexpand: true;
+          }
+
+          Button import_button {
+            action-name: "win.import-audio";
+            tooltip-text: _("Import Audio…");
+
+            accessibility {
+              label: _("Import Audio");
+            }
+
+            child: Box {
+              spacing: 6;
+
+              Image {
+                icon-name: "folder-open-symbolic";
+              }
+
+              Label import_label {
+                label: _("_Import Audio…");
+                use-underline: true;
+                mnemonic-widget: import_button;
+              }
+            };
+
+            styles [
+              "flat",
             ]
           }
 
-          Label elapsed_label {
-            label: "00:00";
+          Button record_button {
+            action-name: "win.start-recording";
 
             styles [
-              "monospace",
-              "numeric",
-              "recording-time",
+              "suggested-action",
             ]
+
+            child: Adw.ButtonContent record_content {
+              icon-name: "audio-input-microphone-symbolic";
+              label: _("_Record");
+              use-underline: true;
+            };
           }
-        }
-
-        Adw.Bin meter_slot {}
-
-        Label recording_summary {
-          hexpand: true;
-          xalign: 0;
-          wrap: true;
-          max-width-chars: 38;
 
           styles [
-            "caption",
-            "dim-label",
+            "toolbar",
           ]
-        }
+        };
+      }
 
-        Box {
-          spacing: 8;
+      StackPage {
+        name: "progress";
+
+        child: Box {
+          spacing: 9;
+
+          Adw.Spinner {
+            margin-start: 6;
+          }
+
+          Label progress_label {
+            hexpand: true;
+            xalign: 0;
+            ellipsize: end;
+          }
+
+          Button cancel_button {
+            label: _("_Cancel");
+            use-underline: true;
+            action-name: "win.cancel-import";
+          }
+
+          styles [
+            "toolbar",
+          ]
+        };
+      }
+
+      StackPage {
+        name: "recording";
+
+        child: Box {
+          spacing: 12;
+
+          Box {
+            spacing: 12;
+            margin-start: 6;
+
+            Image recording_dot {
+              icon-name: "media-record-symbolic";
+              pixel-size: 10;
+
+              styles [
+                "recording-indicator",
+              ]
+            }
+
+            Label elapsed_label {
+              label: "00:00";
+
+              styles [
+                "monospace",
+                "numeric",
+                "recording-time",
+              ]
+            }
+          }
+
+          Adw.Bin meter_slot {}
+
+          Label recording_summary {
+            hexpand: true;
+            xalign: 0;
+            ellipsize: end;
+            max-width-chars: 38;
+
+            styles [
+              "caption",
+              "dim-label",
+            ]
+          }
+
+          Box {
+            hexpand: true;
+            visible: bind recording_summary.visible inverted;
+          }
 
           Button pause_button {
             icon-name: "media-playback-pause-symbolic";
             tooltip-text: _("Pause Recording");
+            action-name: "win.pause-recording";
 
             accessibility {
               label: _("Pause Recording");
             }
-
-            action-name: "win.pause-recording";
 
             styles [
               "circular",
             ]
           }
 
-          Button {
+          Button stop_button {
             action-name: "win.stop-recording";
 
             styles [
-              "destructive-action",
               "suggested-action",
-              "pill",
             ]
 
             child: Adw.ButtonContent {
@@ -274,8 +312,12 @@ template $KikoeBottomBar: Adw.Bin {
               use-underline: true;
             };
           }
-        }
-      };
-    }
+
+          styles [
+            "toolbar",
+          ]
+        };
+      }
+    };
   };
 }

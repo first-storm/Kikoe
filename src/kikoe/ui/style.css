@@ -20,17 +20,6 @@
 .speaker-2-dark { color: var(--green-2); }
 .speaker-3-dark { color: var(--purple-2); }
 
-/* Bottom bar chips: tinted with the accent color while on, struck through when the
-   chosen model cannot provide the feature. */
-.feature-chip:checked {
-  background-color: color-mix(in srgb, var(--accent-bg-color) 15%, transparent);
-  color: var(--accent-color);
-}
-
-.feature-chip.unsupported label {
-  text-decoration-line: line-through;
-}
-
 .recording-indicator { color: var(--red-3); }
 .recording-time { font-size: 1.2em; }
 .recording-microphone {

@@ -13,9 +13,10 @@ Layout details from the draft that the implementation follows:
   separator below. Each segment has a left column with the speaker name (bold, colored)
   above the timestamp (small monospace, dimmed), and the text on the right in slightly
   larger type. The left column disappears when both timestamps and speakers are hidden.
-- Bottom bar (below the content pane only): model button with a cloud icon, the model
-  name in bold and the provider dimmed; chips; hint; then right-aligned "Import Audio…"
-  (flat, folder icon) and the primary "Append Recording" pill (mic icon).
+- Bottom bar (below the content pane only, libadwaita `toolbar` style, flat buttons):
+  model button with a cloud icon, the model name in bold and the provider dimmed; then
+  right-aligned "Import Audio…" (folder icon) and the primary "Append Recording"
+  (`suggested-action`, mic icon). No pill buttons and no custom chip styling.
 - "Add Provider"/"Add Model" header buttons are ordinary buttons with a + icon; removal
   is a full-width destructive row at the end of the page.
 
@@ -74,16 +75,19 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 **Bottom bar** (recording controls):
 - *Transcription Model* picker button showing "nova-3 · Deepgram". Popover lists models
   grouped by provider; each row shows name + capability summary ("Realtime ·
-  Timestamps · Speakers", or "Text only"), check mark on the current one. Footer item
-  "Manage Providers and Models…" → Preferences.
-- Toggle chips "Timestamps" and "Speakers": whether the next recording requests them.
-  If the model lacks the capability, the chip is disabled and struck through, tooltip
-  "<model> does not support <capability>". Enabled tooltips: "Generate <x> while
-  transcribing (click to turn off)".
-- Hint text: "Transcribes while recording" or "Transcribes after recording", plus
-  "· This model does not support <list>" when relevant.
+  Timestamps · Speakers", or "Text only"), check mark on the current one. Below the
+  list, an "Options" section with check boxes "Timestamps" and "Speakers" (whether the
+  next recording requests them) and the hint text: "Transcribes while recording" or
+  "Transcribes after recording", plus "· This model does not support <list>" when
+  relevant. If the model lacks a capability, its check box is disabled with tooltip
+  "<model> does not support <capability>". Footer item "Manage Providers and Models…"
+  → Preferences. The button's tooltip repeats the model, provider and hint.
 - Buttons: "Import Audio…" and the primary "Append Recording" (on an empty note,
   "Record").
+- The bar is always a single line and keeps the same height in every state. As its own
+  width shrinks (breakpoints on the bar, not the window): below 600 sp the provider name
+  hides and Import Audio becomes icon-only (tooltip and accessible name kept). The
+  primary Record/Append Recording button always keeps its label.
 
 **Implementation status**:
 - Implemented: sidebar list with *New Note* (disabled until a provider exists);
@@ -91,8 +95,8 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   "Copy All Text" and "Delete Note"; *Export* with all four formats, a save dialog, and
   subtitle buttons disabled when the note has no timestamps; recordings and segments
   with speaker colors (unnamed speakers show as "Speaker N"); recording header menu
-  with "Export Original Audio…"; the bottom bar's model picker, Timestamps/Speakers chips
-  (they set what the next transcription requests), hint text, and "Import Audio…", which
+  with "Export Original Audio…"; the bottom bar's model picker with its Timestamps/Speakers
+  options (they set what the next transcription requests) and hint text, and "Import Audio…", which
   adds to the open note or creates one named after the file, with progress, Cancel and a
   failure toast; Record/Append Recording, pause/resume, Stop, live level meter, batch
   transcription after stopping, retained-audio retry, and startup recovery.
@@ -103,9 +107,9 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   are case-insensitive literal substrings. Empty queries restore all notes; no matches
   show "No Matching Notes". Filtering preserves the open note. Escape closes search.
   The sidebar is approximately 260 px at desktop sizes; search precedes the main menu.
-- At 360 px, idle controls wrap at their natural widths so action labels remain legible.
-  The provider suffix and mode hint hide below 480 sp; model and feature tooltips retain
-  their explanations. Import Audio is also available in the main menu without a selected note.
+- At 360 px the idle bar stays on one line: model name, icon-only Import Audio, and the
+  labeled primary button. Model and import tooltips retain their explanations. Import
+  Audio is also available in the main menu without a selected note.
 - Not yet: "Delete This Recording" (outside M7).
 
 ## 2. Recording in progress
@@ -126,13 +130,14 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   Deepgram, OpenAI and Gemini native live endpoints use the realtime branch.
 - Bottom bar follows the HTML's order: 10 px red recording indicator, elapsed time
   `00:31` (monospace/tabular digits), 28 live level bars (3 px wide, up to 28 px high),
-  model/options summary, round icon-only "Pause Recording" button, and a destructive
-  "Stop" pill with stop icon. The normal model/import/record controls are replaced.
+  model/options summary, round icon-only "Pause Recording" button, and a
+  `suggested-action` "Stop" button with stop icon (Stop saves, so it is not styled
+  destructive). The normal model/import/record controls are replaced.
 - Pause changes the central heading and header/sidebar subtitle to "Paused", freezes
   the timer, clears the meter, and switches the pause control to "Resume Recording".
   The red indicator dims while paused. Resume appends audio to the same recording.
-- At 360 px, the bottom controls wrap; pause/resume and Stop stay together and visible.
-  At 1180×780, the recording controls stay on one line. Below 480 sp, the content
+- The recording bar is always one line. Below 600 sp the summary hides; below 480 sp
+  the meter hides too, so the timer, pause/resume and the labeled Stop fit at 360 px. Below 480 sp, the content
   header keeps only the close window decoration so all app controls still fit. Colors
   follow the Adwaita theme. The red recording dot pulses while animations are enabled.
 - During recording/saving/transcription, starting another capture, importing, changing

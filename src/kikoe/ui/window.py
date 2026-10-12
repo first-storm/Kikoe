@@ -81,7 +81,6 @@ class Window(Adw.ApplicationWindow):
     note_view_slot: Adw.Bin = Gtk.Template.Child()
     bottom_bar_slot: Adw.Bin = Gtk.Template.Child()
 
-    compact_breakpoint: Adw.Breakpoint = Gtk.Template.Child()
     search_bar: Gtk.SearchBar = Gtk.Template.Child()
     search_entry: Gtk.SearchEntry = Gtk.Template.Child()
     notes_placeholder: Gtk.Label = Gtk.Template.Child()
@@ -95,9 +94,6 @@ class Window(Adw.ApplicationWindow):
         self.note_view_slot.set_child(self.note_view)
         self.bottom_bar = BottomBar()
         self.bottom_bar_slot.set_child(self.bottom_bar)
-        # These children are in a dynamic template slot; the breakpoint lives in Blueprint.
-        self.compact_breakpoint.add_setter(self.bottom_bar.provider_label, "visible", False)
-        self.compact_breakpoint.add_setter(self.bottom_bar.hint_label, "visible", False)
         self._search_generation = 0
         self._search_task: asyncio.Task[None] | None = None
         self.search_bar.connect_entry(self.search_entry)

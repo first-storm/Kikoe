@@ -37,13 +37,13 @@ def resolve_choice(
 
 @dataclass(frozen=True, slots=True)
 class RequestedFeatures:
-    """What the user asked the next transcription to include (the bottom bar's chips)."""
+    """What the user asked the next transcription to include (the model popover's options)."""
 
     timestamps: bool = True
     diarization: bool = True
 
     def allowed_by(self, capabilities: Capabilities) -> RequestedFeatures:
-        """Drop what the model cannot do; those chips are shown as unavailable."""
+        """Drop what the model cannot do; those options are shown as unavailable."""
         return RequestedFeatures(
             timestamps=self.timestamps and capabilities.timestamps,
             diarization=self.diarization and capabilities.diarization,

@@ -172,21 +172,13 @@ def import_stage_label(stage: ImportStage, part: int, parts: int) -> str:
             return _("Saving…")
 
 
-def chip_tooltip(capability: Capability, model: str, supported: bool, active: bool) -> str:
-    """Tooltip of a Timestamps/Speakers chip in the bottom bar."""
-    match capability, supported, active:
-        case Capability.TIMESTAMPS, False, _:
+def unsupported_feature_tooltip(capability: Capability, model: str) -> str:
+    """Why a Timestamps/Speakers option in the model popover is disabled."""
+    match capability:
+        case Capability.TIMESTAMPS:
             return _("{model} does not support timestamps").format(model=model)
-        case Capability.DIARIZATION, False, _:
-            return _("{model} does not support speaker detection").format(model=model)
-        case Capability.TIMESTAMPS, True, True:
-            return _("Generate timestamps while transcribing (click to turn off)")
-        case Capability.TIMESTAMPS, True, False:
-            return _("Generate timestamps while transcribing (click to turn on)")
-        case Capability.DIARIZATION, True, True:
-            return _("Detect speakers while transcribing (click to turn off)")
         case _:
-            return _("Detect speakers while transcribing (click to turn on)")
+            return _("{model} does not support speaker detection").format(model=model)
 
 
 def transcription_hint(capabilities: Capabilities) -> str:
