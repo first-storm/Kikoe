@@ -82,8 +82,13 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
     typing not saved yet, Up/Down on the first/last line move between segments. While
     an input method is composing, these keys belong to it.
   - The time range is a flat button ("Add Time" when a segment has none) opening a
-    popover with *Start* and *End* entry rows ("Use MM:SS or H:MM:SS. Leave empty to
-    clear."); valid changes apply when it closes or on Enter.
+    compact popover with *Start* and *End* labels beside standard entry fields.
+    Labels have mnemonics; Tab moves from Start to End. The hint explains MM:SS,
+    H:MM:SS and optional decimal seconds (for example, 00:26.860); empty clears a time.
+    Valid changes apply when it closes or on Enter, including Escape/outside click.
+    Invalid fields show an error style and a specific explanation; Enter keeps the
+    popover open and focuses the first invalid field. Closing with invalid input
+    restores the saved times and shows a toast explaining that changes were not saved.
   - Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z, Ctrl+Y) cover text and time edits across
     the whole note; quick successive saves of one segment are one step. History is
     cleared when another note opens or recordings are added, removed or re-transcribed.

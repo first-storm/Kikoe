@@ -53,8 +53,9 @@ class TranscriptRow(Gtk.Box):
     timestamp_button: Gtk.MenuButton = Gtk.Template.Child()
     timestamp_label: Gtk.Label = Gtk.Template.Child()
     timestamp_popover: Gtk.Popover = Gtk.Template.Child()
-    start_row: Adw.EntryRow = Gtk.Template.Child()
-    end_row: Adw.EntryRow = Gtk.Template.Child()
+    start_row: Gtk.Entry = Gtk.Template.Child()
+    end_row: Gtk.Entry = Gtk.Template.Child()
+    times_error_label: Gtk.Label = Gtk.Template.Child()
     text_stack: Gtk.Stack = Gtk.Template.Child()
     text_scroll: Gtk.ScrolledWindow = Gtk.Template.Child()
     text_view: Gtk.TextView = Gtk.Template.Child()
@@ -72,6 +73,7 @@ class TranscriptRow(Gtk.Box):
         self._committed = ""
         """The text last saved or loaded; typing beyond it is not committed yet."""
         self._loading = False
+        self._loading_times = False
         self._preedit = False
         self._commit_source = 0
         buffer = self.text_view.get_buffer()
@@ -349,32 +351,52 @@ class TranscriptRow(Gtk.Box):
         self.emit("focus-left")
 
     def _fill_time_rows(self, segment: Segment) -> None:
-        self.start_row.set_text(
-            "" if segment.start is None else format_timestamp_input(segment.start)
-        )
-        self.end_row.set_text("" if segment.end is None else format_timestamp_input(segment.end))
+        self._loading_times = True
+        try:
+            self.start_row.set_text(
+                "" if segment.start is None else format_timestamp_input(segment.start)
+            )
+            self.end_row.set_text(
+                "" if segment.end is None else format_timestamp_input(segment.end)
+            )
+        finally:
+            self._loading_times = False
+        self._parsed_times()
 
     def _parsed_times(self) -> tuple[timedelta | None, timedelta | None] | None:
         """The popover's times, or None while either is invalid; marks invalid rows."""
         start_ok = _mark_row(self.start_row)
         end_ok = _mark_row(self.end_row)
         if not (start_ok and end_ok):
+            self._show_time_error(_("Use MM:SS or H:MM:SS, with optional decimal seconds"))
             return None
         start = parse_timestamp(self.start_row.get_text())
         end = parse_timestamp(self.end_row.get_text())
         if validate_segment_edit(self._committed, start, end) is SegmentEditError.END_BEFORE_START:
             self.end_row.add_css_class("error")
+            message = _("End time must not be earlier than start time")
+            self.end_row.update_property([Gtk.AccessibleProperty.DESCRIPTION], [message])
+            self._show_time_error(message)
             return None
+        self._show_time_error("")
         return start, end
 
-    @Gtk.Template.Callback()
-    def _on_time_row_changed(self, _row: Adw.EntryRow) -> None:
-        self._parsed_times()
+    def _show_time_error(self, message: str) -> None:
+        self.times_error_label.set_text(message)
+        self.times_error_label.set_visible(bool(message))
 
     @Gtk.Template.Callback()
-    def _on_time_row_entry_activated(self, _row: Adw.EntryRow) -> None:
+    def _on_time_row_changed(self, _row: Gtk.Entry) -> None:
+        if not self._loading_times:
+            self._parsed_times()
+
+    @Gtk.Template.Callback()
+    def _on_time_row_entry_activated(self, _row: Gtk.Entry) -> None:
         if self._parsed_times() is not None:
             self.timestamp_popover.popdown()
+            return
+        invalid = self.start_row if self.start_row.has_css_class("error") else self.end_row
+        invalid.grab_focus()
 
     @Gtk.Template.Callback()
     def _on_timestamp_popover_closed(self, _popover: Gtk.Popover) -> None:
@@ -383,7 +405,7 @@ class TranscriptRow(Gtk.Box):
         if segment is None or times is None:
             if segment is not None:
                 self._fill_time_rows(segment)
-                self._parsed_times()
+                show_notice(self, _("Timestamps were not saved because the input is invalid"))
             return
         start, end = times
         if (start, end) != (segment.start, segment.end):
@@ -416,14 +438,19 @@ class TranscriptRow(Gtk.Box):
             self.speaker_label.add_css_class(css + "-dark" if dark else css)
 
 
-def _mark_row(row: Adw.EntryRow) -> bool:
+def _mark_row(row: Gtk.Entry) -> bool:
     """Whether ``row`` holds a parseable timestamp; marks the row when it does not."""
     try:
         parse_timestamp(row.get_text())
     except TimestampParseError:
         row.add_css_class("error")
+        row.update_property(
+            [Gtk.AccessibleProperty.DESCRIPTION],
+            [_("Use MM:SS or H:MM:SS, with optional decimal seconds")],
+        )
         return False
     row.remove_css_class("error")
+    row.update_property([Gtk.AccessibleProperty.DESCRIPTION], [""])
     return True
 
 

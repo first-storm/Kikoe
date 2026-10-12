@@ -1,5 +1,4 @@
 using Gtk 4.0;
-using Adw 1;
 
 template $KikoeTranscriptRow: Box {
   orientation: vertical;
@@ -156,30 +155,71 @@ template $KikoeTranscriptRow: Box {
             margin-start: 6;
             margin-end: 6;
 
-            ListBox {
-              selection-mode: none;
+            Grid {
+              column-spacing: 12;
+              row-spacing: 12;
 
-              styles [
-                "boxed-list",
-              ]
+              Label {
+                label: _("_Start");
+                use-underline: true;
+                mnemonic-widget: start_row;
+                xalign: 0;
 
-              Adw.EntryRow start_row {
-                title: _("Start");
-                input-purpose: number;
-                changed => $_on_time_row_changed();
-                entry-activated => $_on_time_row_entry_activated();
+                layout {
+                  column: 0;
+                  row: 0;
+                }
               }
 
-              Adw.EntryRow end_row {
-                title: _("End");
-                input-purpose: number;
+              Entry start_row {
+                hexpand: true;
+                width-chars: 12;
+                max-width-chars: 12;
                 changed => $_on_time_row_changed();
-                entry-activated => $_on_time_row_entry_activated();
+                activate => $_on_time_row_entry_activated();
+
+                accessibility {
+                  label: _("Start");
+                }
+
+                layout {
+                  column: 1;
+                  row: 0;
+                }
+              }
+
+              Label {
+                label: _("_End");
+                use-underline: true;
+                mnemonic-widget: end_row;
+                xalign: 0;
+
+                layout {
+                  column: 0;
+                  row: 1;
+                }
+              }
+
+              Entry end_row {
+                hexpand: true;
+                width-chars: 12;
+                max-width-chars: 12;
+                changed => $_on_time_row_changed();
+                activate => $_on_time_row_entry_activated();
+
+                accessibility {
+                  label: _("End");
+                }
+
+                layout {
+                  column: 1;
+                  row: 1;
+                }
               }
             }
 
             Label times_hint_label {
-              label: _("Use MM:SS or H:MM:SS. Leave empty to clear.");
+              label: _("Use MM:SS or H:MM:SS, with optional decimal seconds (e.g. 00:26.860). Leave empty to clear");
               xalign: 0;
               wrap: true;
               max-width-chars: 30;
@@ -187,6 +227,18 @@ template $KikoeTranscriptRow: Box {
               styles [
                 "caption",
                 "dimmed",
+              ]
+            }
+
+            Label times_error_label {
+              visible: false;
+              xalign: 0;
+              wrap: true;
+              max-width-chars: 30;
+
+              styles [
+                "caption",
+                "error",
               ]
             }
           };
