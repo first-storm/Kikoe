@@ -353,3 +353,77 @@ def test_replacement_transaction_rolls_back_after_deleting_old_text(
             model_id="new model",
         )
     assert library.get_note(note.note_id) == before
+
+
+def test_update_segment_edits_text_and_times(library: Library) -> None:
+    note = library.add_recording(
+        None,
+        "Meeting",
+        recording(
+            segments=(
+                Segment("One", timedelta(seconds=1), timedelta(seconds=3)),
+                Segment("Two", timedelta(seconds=5), timedelta(seconds=7)),
+            )
+        ),
+    )
+    recording_id = note.recordings[0].recording_id
+
+    updated = library.update_segment(
+        note.note_id,
+        recording_id,
+        1,
+        text="Two edited",
+        start_ms=6000,
+        end_ms=9000,
+    )
+
+    assert updated.recordings[0].segments[1] == Segment(
+        "Two edited", timedelta(seconds=6), timedelta(seconds=9)
+    )
+    assert updated.recordings[0].segments[0] == Segment(
+        "One", timedelta(seconds=1), timedelta(seconds=3)
+    )
+
+
+def test_update_segment_can_clear_timestamps(library: Library) -> None:
+    note = library.add_recording(
+        None,
+        "Meeting",
+        recording(segments=(Segment("One", timedelta(seconds=1), timedelta(seconds=3)),)),
+    )
+    recording_id = note.recordings[0].recording_id
+
+    updated = library.update_segment(
+        note.note_id, recording_id, 0, text="One", start_ms=None, end_ms=None
+    )
+
+    assert updated.recordings[0].segments == (Segment("One"),)
+
+
+def test_update_segment_rejects_bad_input_and_missing_rows(library: Library) -> None:
+    note = library.add_recording(
+        None,
+        "Meeting",
+        recording(segments=(Segment("One", timedelta(seconds=1), timedelta(seconds=3)),)),
+    )
+    recording_id = note.recordings[0].recording_id
+    before = library.get_note(note.note_id)
+    with pytest.raises(LibraryError):
+        library.update_segment(
+            note.note_id, recording_id, 0, text="   ", start_ms=1000, end_ms=3000
+        )
+    with pytest.raises(LibraryError):
+        library.update_segment(
+            note.note_id, recording_id, 0, text="One", start_ms=3000, end_ms=1000
+        )
+    with pytest.raises(LibraryError):
+        library.update_segment(
+            note.note_id, recording_id, 9, text="One", start_ms=1000, end_ms=3000
+        )
+    with pytest.raises(LibraryError):
+        library.update_segment(
+            note.note_id, "missing-recording", 0, text="One", start_ms=None, end_ms=None
+        )
+    with pytest.raises(NoteNotFoundError):
+        library.update_segment("missing-note", "missing", 0, text="One", start_ms=None, end_ms=None)
+    assert library.get_note(note.note_id) == before

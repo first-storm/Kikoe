@@ -4,14 +4,18 @@ import pytest
 
 from kikoe.core.formatting import (
     RelativeDay,
+    TimestampParseError,
     format_duration,
     format_timestamp,
+    format_timestamp_input,
+    format_timestamp_range,
+    parse_timestamp,
     relative_day,
     speaker_order,
     transcript_features,
 )
 from kikoe.core.models import Segment
-from kikoe.core.validation import Capability
+from kikoe.core.validation import Capability, SegmentEditError, validate_segment_edit
 
 
 @pytest.mark.parametrize(
@@ -66,3 +70,72 @@ def test_speakers_are_numbered_by_first_appearance() -> None:
     segments = [Segment("x", speaker_id=s) for s in order] + [Segment("no speaker")]
 
     assert speaker_order(segments) == {"b": 0, "a": 1, "c": 2}
+
+
+@pytest.mark.parametrize(
+    ("start", "end", "expected"),
+    [
+        (9, 14, "00:09–00:14"),  # noqa: RUF001 -- asserts the en-dash range separator
+        (3723, 3850, "1:02:03–1:04:10"),  # noqa: RUF001 -- asserts the en-dash range separator
+        (9, None, "00:09"),
+        (None, 14, "00:14"),
+        (None, None, ""),
+    ],
+)
+def test_timestamp_range_shows_whichever_side_exists(
+    start: float | None, end: float | None, expected: str
+) -> None:
+    assert (
+        format_timestamp_range(
+            timedelta(seconds=start) if start is not None else None,
+            timedelta(seconds=end) if end is not None else None,
+        )
+        == expected
+    )
+
+
+def test_timestamp_input_keeps_milliseconds_when_present() -> None:
+    assert format_timestamp_input(timedelta(seconds=9, milliseconds=500)) == "00:09.500"
+    assert format_timestamp_input(timedelta(seconds=9)) == "00:09"
+    assert format_timestamp_input(timedelta(hours=1, minutes=2, seconds=3)) == "1:02:03"
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("", None),
+        ("   ", None),
+        ("9", timedelta(seconds=9)),
+        ("9.5", timedelta(seconds=9.5)),
+        ("00:09", timedelta(seconds=9)),
+        ("01:02:03.500", timedelta(hours=1, minutes=2, seconds=3, milliseconds=500)),
+        ("1:02:03,500", timedelta(hours=1, minutes=2, seconds=3, milliseconds=500)),
+        ("1:02:03", timedelta(hours=1, minutes=2, seconds=3)),
+    ],
+)
+def test_parse_timestamp_accepts_clock_styles(text: str, expected: timedelta | None) -> None:
+    assert parse_timestamp(text) == expected
+
+
+@pytest.mark.parametrize("text", ["abc", "12:99", "-1:00", "1:2:3:4", ":", "1::2", "--5", "1:-2"])
+def test_parse_timestamp_rejects_garbage(text: str) -> None:
+    with pytest.raises(TimestampParseError):
+        parse_timestamp(text)
+
+
+def test_validate_segment_edit_allows_cleared_timestamps() -> None:
+    assert validate_segment_edit("Hi", timedelta(seconds=9), None) is None
+    assert validate_segment_edit("Hi", None, None) is None
+    assert validate_segment_edit("Hi", timedelta(seconds=9), timedelta(seconds=14)) is None
+
+
+def test_validate_segment_edit_rejects_empty_text_and_inverted_range() -> None:
+    assert validate_segment_edit("  ", timedelta(seconds=1), None) is SegmentEditError.EMPTY_TEXT
+    assert (
+        validate_segment_edit("Hi", timedelta(seconds=14), timedelta(seconds=9))
+        is SegmentEditError.END_BEFORE_START
+    )
+    assert (
+        validate_segment_edit("Hi", timedelta(seconds=9), timedelta(seconds=9))
+        is SegmentEditError.END_BEFORE_START
+    )

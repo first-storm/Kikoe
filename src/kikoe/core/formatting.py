@@ -39,6 +39,70 @@ def format_timestamp(position: timedelta) -> str:
     return f"{minutes:02}:{seconds:02}"
 
 
+class TimestampParseError(ValueError):
+    """A user-entered timestamp could not be understood."""
+
+
+def format_timestamp_range(start: timedelta | None, end: timedelta | None) -> str:
+    """A segment's time span with start and end joined by an en-dash.
+
+    Shows whichever side exists; empty when neither does so the caller can hide
+    the label. The separator has no spaces to fit the narrow meta column.
+    """
+    if start is not None and end is not None:
+        return f"{format_timestamp(start)}{_RANGE_SEPARATOR}{format_timestamp(end)}"
+    if start is not None:
+        return format_timestamp(start)
+    if end is not None:
+        return format_timestamp(end)
+    return ""
+
+
+def format_timestamp_input(position: timedelta) -> str:
+    """Editable text for ``position``, keeping milliseconds when present.
+
+    Display truncates to whole seconds, but the editor must not silently drop
+    the sub-second part that subtitle export relies on.
+    """
+    total_ms = max(0, round(position / timedelta(milliseconds=1)))
+    seconds, millis = divmod(total_ms, 1000)
+    base = format_timestamp(timedelta(seconds=seconds))
+    return f"{base}.{millis:03}" if millis else base
+
+
+def parse_timestamp(value: str) -> timedelta | None:
+    """Parse ``SS``, ``MM:SS`` or ``H:MM:SS`` with an optional fractional part.
+
+    Empty text means the timestamp is cleared and returns None. Raises
+    :class:`TimestampParseError` for anything else unparseable.
+    """
+    text = value.strip().replace(",", ".")
+    if not text:
+        return None
+    if text.startswith("-"):
+        raise TimestampParseError(f"Cannot parse timestamp: {value!r}.")
+    parts = text.split(":")
+    if len(parts) > 3 or any(not part for part in parts):
+        raise TimestampParseError(f"Cannot parse timestamp: {value!r}.")
+    try:
+        *head, last = parts
+        seconds = float(last)
+        numbers = [int(part) for part in head] + [seconds]
+    except ValueError:
+        raise TimestampParseError(f"Cannot parse timestamp: {value!r}.") from None
+    if any(number < 0 for number in numbers):
+        raise TimestampParseError(f"Cannot parse timestamp: {value!r}.")
+    if len(numbers) == 3:
+        hours, minutes, seconds = numbers
+    elif len(numbers) == 2:
+        hours, minutes, seconds = 0, numbers[0], numbers[1]
+    else:
+        hours, minutes, seconds = 0, 0, numbers[0]
+    if minutes >= 60 or seconds >= 60:
+        raise TimestampParseError(f"Cannot parse timestamp: {value!r}.")
+    return timedelta(hours=hours, minutes=minutes, seconds=seconds)
+
+
 def relative_day(when: datetime, now: datetime) -> RelativeDay:
     """Compare calendar dates in ``now``'s time zone (pass the local time)."""
     day = when.astimezone(now.tzinfo).date()
@@ -66,6 +130,10 @@ def _split(total_seconds: int) -> tuple[int, int, int]:
     hours, rest = divmod(total_seconds, 3600)
     minutes, seconds = divmod(rest, 60)
     return hours, minutes, seconds
+
+
+_RANGE_SEPARATOR = "–"  # noqa: RUF001 -- en-dash shown in the UI; escaped form hurts readability
+"""En-dash joining a span's start and end; no spaces to fit the narrow meta column."""
 
 
 SPEAKER_COLOR_COUNT = 4

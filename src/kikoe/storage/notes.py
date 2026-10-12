@@ -77,6 +77,29 @@ class NoteRepository:
         await self._refresh(note_id)
         return note
 
+    async def update_segment(
+        self,
+        note_id: str,
+        recording_id: str,
+        position: int,
+        *,
+        text: str,
+        start_ms: int | None,
+        end_ms: int | None,
+    ) -> Note:
+        """Persist an edited segment's text and timestamps."""
+        note = await asyncio.to_thread(
+            self._library.update_segment,
+            note_id,
+            recording_id,
+            position,
+            text=text,
+            start_ms=start_ms,
+            end_ms=end_ms,
+        )
+        await self._refresh(note_id)
+        return note
+
     async def delete_note(self, note_id: str) -> None:
         await asyncio.to_thread(self._library.delete_note, note_id)
         await self._refresh(note_id)

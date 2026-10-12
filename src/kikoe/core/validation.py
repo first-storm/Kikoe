@@ -5,6 +5,7 @@ translated message next to the field that caused it.
 """
 
 from collections.abc import Collection
+from datetime import timedelta
 from enum import StrEnum
 from urllib.parse import urlsplit
 
@@ -80,3 +81,21 @@ def capability_list(capabilities: Capabilities) -> tuple[Capability, ...]:
         (capabilities.diarization, Capability.DIARIZATION),
     )
     return tuple(capability for enabled, capability in pairs if enabled)
+
+
+class SegmentEditError(StrEnum):
+    """Why an edited transcript segment cannot be saved; the UI shows a message per code."""
+
+    EMPTY_TEXT = "empty-text"
+    END_BEFORE_START = "end-before-start"
+
+
+def validate_segment_edit(
+    text: str, start: timedelta | None, end: timedelta | None
+) -> SegmentEditError | None:
+    """Check edited text and times; either timestamp may be cleared (None)."""
+    if not text.strip():
+        return SegmentEditError.EMPTY_TEXT
+    if start is not None and end is not None and end <= start:
+        return SegmentEditError.END_BEFORE_START
+    return None

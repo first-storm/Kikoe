@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from enum import StrEnum
 
-from kikoe.core.formatting import format_timestamp, speaker_order
+from kikoe.core.formatting import format_timestamp_range, speaker_order
 from kikoe.core.models import DisplayOptions, Note, Segment
 from kikoe.core.speakers import resolved_note
 
@@ -107,8 +107,10 @@ def _prose_line(
     segment: Segment, labels: dict[str, str], options: DisplayOptions, *, markdown: bool
 ) -> str:
     prefix = ""
-    if options.show_timestamps and segment.start is not None:
-        prefix += f"[{format_timestamp(segment.start)}] "
+    if options.show_timestamps:
+        span = format_timestamp_range(segment.start, segment.end)
+        if span:
+            prefix += f"[{span}] "
     name = labels.get(segment.speaker_id) if segment.speaker_id is not None else None
     if options.show_speakers and name is not None:
         prefix += f"**{name}:** " if markdown else f"{name}: "

@@ -337,6 +337,32 @@ class Library:
                 )
             return self._read_note(connection, note_id)
 
+    def update_segment(
+        self,
+        note_id: str,
+        recording_id: str,
+        position: int,
+        *,
+        text: str,
+        start_ms: int | None,
+        end_ms: int | None,
+    ) -> Note:
+        """Edit one segment's text and timestamps without touching anything else."""
+        if not text.strip():
+            raise LibraryError(_("Enter transcript text."))
+        if start_ms is not None and end_ms is not None and end_ms <= start_ms:
+            raise LibraryError(_("The end time must be after the start time."))
+        with self._connect() as connection, connection:
+            self._read_note(connection, note_id)
+            cursor = connection.execute(
+                "UPDATE segments SET text = ?, start_ms = ?, end_ms = ? "
+                "WHERE recording_id = ? AND position = ?",
+                (text.strip(), start_ms, end_ms, recording_id, position),
+            )
+            if cursor.rowcount == 0:
+                raise LibraryError(_("This recording no longer exists."))
+            return self._read_note(connection, note_id)
+
     def rename_speaker(self, note_id: str, speaker_id: str, name: str) -> None:
         """Rename a person everywhere without changing their recognition labels."""
         if not name.strip():

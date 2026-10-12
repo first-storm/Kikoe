@@ -41,6 +41,7 @@ from kikoe.ui.labels import (
 )
 from kikoe.ui.note_view import NoteView
 from kikoe.ui.retranscribe_dialog import RetranscribeDialog
+from kikoe.ui.segment_editor import SegmentEditor
 from kikoe.ui.speaker_dialog import SpeakerDialog
 from kikoe.ui.speaker_editor import SpeakerEditor
 from kikoe.ui.tasks import USER_FACING_ERRORS, run_task, show_error
@@ -148,6 +149,7 @@ class Window(Adw.ApplicationWindow):
         self._add_action("play-recording", self._on_play_recording, GLib.VariantType.new("s"))
         self._add_action("play-sample", self._on_play_sample, GLib.VariantType.new("(sdd)"))
         self._add_action("edit-speaker", self._on_edit_speaker, GLib.VariantType.new("(ss)"))
+        self._add_action("edit-segment", self._on_edit_segment, GLib.VariantType.new("(si)"))
         self._add_action("match-speakers", self._on_match_speakers, GLib.VariantType.new("s"))
         self._add_action(
             "retranscribe-recording", self._on_retranscribe_recording, GLib.VariantType.new("s")
@@ -542,6 +544,24 @@ class Window(Adw.ApplicationWindow):
         dialog.connect("closed", self._on_audio_dialog_closed)
         dialog.present(self)
 
+    def _on_edit_segment(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
+        if self._note is None or param is None:
+            return
+        recording_id, position = param.unpack()
+        recording = self._recording_by_id(str(recording_id))
+        index = int(position)
+        if recording is None or not 0 <= index < len(recording.segments):
+            return
+        dialog = SegmentEditor(
+            self._notes,
+            self._note.note_id,
+            recording.recording_id,
+            index,
+            recording.segments[index],
+        )
+        dialog.connect("closed", self._on_audio_dialog_closed)
+        dialog.present(self)
+
     def _on_match_speakers(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
         if param is not None:
             self._present_matching(param.get_string())
@@ -798,6 +818,7 @@ class Window(Adw.ApplicationWindow):
             "play-recording",
             "play-sample",
             "edit-speaker",
+            "edit-segment",
             "match-speakers",
             "retranscribe-recording",
         ):

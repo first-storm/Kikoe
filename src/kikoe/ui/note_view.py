@@ -88,7 +88,9 @@ class NoteView(Adw.Bin):
         self._has_speakers = any(
             Capability.DIARIZATION in transcript_features(r.segments) for r in note.recordings
         )
-        self._has_timestamps = any(s.start is not None for r in note.recordings for s in r.segments)
+        self._has_timestamps = any(
+            s.start is not None or s.end is not None for r in note.recordings for s in r.segments
+        )
         self._items.splice(0, self._items.get_n_items(), _rows(note))
         if not same_note and self._items.get_n_items():
             self.transcript_list.scroll_to(0, Gtk.ListScrollFlags.NONE, None)
@@ -143,7 +145,9 @@ class NoteView(Adw.Bin):
         numbers = live_speaker_numbers(self._note, all_segments)
         previous_columns = self._has_speakers, self._has_timestamps
         self._has_speakers = bool(order)
-        self._has_timestamps = any(s.start is not None for s in (*existing, *all_segments))
+        self._has_timestamps = any(
+            s.start is not None or s.end is not None for s in (*existing, *all_segments)
+        )
         if previous_columns != (self._has_speakers, self._has_timestamps):
             for row, item in self._bound.items():
                 self._bind_row(row, item)
@@ -241,10 +245,10 @@ def _rows(note: Note) -> list[TranscriptItem]:
     rows: list[TranscriptItem] = []
     for number, recording in enumerate(note.recordings, start=1):
         rows.append(TranscriptItem(recording, number))
-        for segment in recording.segments:
+        for position, segment in enumerate(recording.segments):
             speaker = segment.speaker_id
             if speaker is None:
-                rows.append(TranscriptItem(recording, number, segment))
+                rows.append(TranscriptItem(recording, number, segment, position=position))
                 continue
             identity = identity_for(recording, speaker)
             person = people.get(identity)
@@ -256,5 +260,5 @@ def _rows(note: Note) -> list[TranscriptItem]:
             slot = (
                 (person.ordinal - 1) if person and person.ordinal else order[identity]
             ) % SPEAKER_COLOR_COUNT
-            rows.append(TranscriptItem(recording, number, segment, name, slot))
+            rows.append(TranscriptItem(recording, number, segment, name, slot, position=position))
     return rows

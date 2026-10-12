@@ -120,6 +120,7 @@ template $KikoeTranscriptRow: Box {
 
       Label timestamp_label {
         xalign: 0;
+        ellipsize: end;
 
         styles [
           "caption",
@@ -139,6 +140,20 @@ template $KikoeTranscriptRow: Box {
 
       styles [
         "transcript-text",
+      ]
+    }
+
+    Button edit_button {
+      icon-name: "document-edit-symbolic";
+      tooltip-text: _("Edit Segment…");
+      valign: start;
+
+      accessibility {
+        label: _("Edit Segment…");
+      }
+
+      styles [
+        "flat",
       ]
     }
   }

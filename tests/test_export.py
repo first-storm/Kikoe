@@ -148,6 +148,20 @@ def test_prose_export_uses_screen_timestamp_format() -> None:
     assert export_note(note, ExportFormat.TEXT, _SHOW_ALL) == "Podcast Topics\n\n[00:09] Hi\n"
 
 
+def test_prose_export_shows_timestamp_ranges() -> None:
+    segments = [
+        _segment("Hello", start=9, end=14),
+        _segment("Starting", start=65),
+        _segment("Ending", end=70),
+        _segment("Untimed"),
+    ]
+    note = _note([_recording(segments)])
+
+    assert export_note(note, ExportFormat.TEXT, _SHOW_ALL) == (
+        "Podcast Topics\n\n[00:09–00:14] Hello\n[01:05] Starting\n[01:10] Ending\nUntimed\n"  # noqa: RUF001 -- asserts the en-dash range separator shown in exports
+    )
+
+
 def test_srt_numbering_is_continuous_across_recordings() -> None:
     note = _note(
         [

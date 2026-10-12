@@ -1,0 +1,91 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeSegmentEditor: Adw.Dialog {
+  title: _("Edit Segment");
+  content-width: 480;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      show-start-title-buttons: false;
+      show-end-title-buttons: false;
+
+      [start]
+      Button {
+        label: _("_Cancel");
+        use-underline: true;
+        clicked => $_on_cancel_button_clicked();
+      }
+
+      [end]
+      Button save_button {
+        label: _("_Save");
+        use-underline: true;
+        clicked => $_on_save_button_clicked();
+
+        styles [
+          "suggested-action",
+        ]
+      }
+    }
+
+    content: Box {
+      orientation: vertical;
+      spacing: 12;
+      margin-top: 12;
+      margin-bottom: 12;
+      margin-start: 12;
+      margin-end: 12;
+
+      Adw.PreferencesGroup {
+        title: _("Text");
+
+        Gtk.Frame {
+          styles [
+            "card",
+          ]
+
+          child: Gtk.ScrolledWindow {
+            min-content-height: 120;
+            propagate-natural-height: true;
+
+            child: Gtk.TextView text_view {
+              wrap-mode: word;
+              top-margin: 8;
+              bottom-margin: 8;
+              left-margin: 8;
+              right-margin: 8;
+            };
+          };
+        }
+      }
+
+      Adw.PreferencesGroup {
+        title: _("Timestamps");
+        description: _("Empty clears the timestamp. Use MM:SS or H:MM:SS.");
+
+        Adw.EntryRow start_row {
+          title: _("Start");
+          changed => $_on_start_row_changed();
+        }
+
+        Adw.EntryRow end_row {
+          title: _("End");
+          changed => $_on_end_row_changed();
+        }
+      }
+
+      Label error_label {
+        visible: false;
+        xalign: 0;
+        wrap: true;
+
+        styles [
+          "caption",
+          "error",
+        ]
+      }
+    };
+  };
+}

@@ -36,6 +36,7 @@ class TranscriptItem(GObject.Object):
         color_slot: int | None = None,
         preview: bool = False,
         live_summary: str | None = None,
+        position: int | None = None,
     ) -> None:
         super().__init__()
         self.recording = recording
@@ -46,6 +47,8 @@ class TranscriptItem(GObject.Object):
         self.color_slot = color_slot
         self.preview = preview
         self.live_summary = live_summary
+        self.position = position
+        """Index of ``segment`` in its recording; None for headers and live rows."""
 
 
 class ModelChoiceItem(GObject.Object):

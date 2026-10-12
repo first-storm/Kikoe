@@ -4,7 +4,7 @@ from datetime import datetime
 
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
-from kikoe.core.formatting import SPEAKER_COLOR_COUNT, format_timestamp
+from kikoe.core.formatting import SPEAKER_COLOR_COUNT, format_timestamp_range
 from kikoe.core.models import TranscriptionState
 from kikoe.i18n import _
 from kikoe.ui.items import TranscriptItem
@@ -14,8 +14,8 @@ from kikoe.ui.templates import ui_file
 _SPEAKER_CLASSES = tuple(f"speaker-{slot}" for slot in range(SPEAKER_COLOR_COUNT))
 """Defined in style.css with libadwaita palette colors."""
 
-_META_WIDTH_WITH_SPEAKERS = 96
-_META_WIDTH_TIMES_ONLY = 56
+_META_WIDTH_WITH_SPEAKERS = 150
+_META_WIDTH_TIMES_ONLY = 110
 
 
 @Gtk.Template(filename=ui_file("transcript_row"))
@@ -36,6 +36,7 @@ class TranscriptRow(Gtk.Box):
     speaker_label: Gtk.Label = Gtk.Template.Child()
     timestamp_label: Gtk.Label = Gtk.Template.Child()
     text_label: Gtk.Label = Gtk.Template.Child()
+    edit_button: Gtk.Button = Gtk.Template.Child()
 
     def __init__(self) -> None:
         super().__init__()
@@ -118,10 +119,20 @@ class TranscriptRow(Gtk.Box):
         self._color_slot = item.color_slot
         self._dark = None
         self._update_speaker_color()
-        start = segment.start
-        self.timestamp_label.set_visible(show_timestamps and start is not None)
-        self.timestamp_label.set_label(format_timestamp(start) if start is not None else "")
+        span = format_timestamp_range(segment.start, segment.end)
+        self.timestamp_label.set_visible(show_timestamps and bool(span))
+        self.timestamp_label.set_label(span)
         self.text_label.set_text(segment.text)
+        editable = (
+            item.position is not None and not item.preview and item.recording.recording_id != "live"
+        )
+        self.edit_button.set_visible(editable)
+        self.edit_button.set_action_name(None)
+        if editable:
+            self.edit_button.set_action_target_value(
+                GLib.Variant("(si)", (item.recording.recording_id, item.position))
+            )
+            self.edit_button.set_action_name("win.edit-segment")
         self._preview_text = segment.text if item.preview else None
         self._caret_visible = None
         if item.preview:
