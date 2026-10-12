@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import shutil
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -11,7 +12,7 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk, Pango
 from kikoe.core.choice import ModelChoice
 from kikoe.core.export import ExportFormat, export_filename, export_note
 from kikoe.core.formatting import transcript_features
-from kikoe.core.models import DisplayOptions, Note
+from kikoe.core.models import DisplayOptions, Note, Recording
 from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionOptions
@@ -93,6 +94,7 @@ class Window(Adw.ApplicationWindow):
         self._add_action("export-md", self._on_export_md)
         self._add_action("export-srt", self._on_export_srt)
         self._add_action("export-vtt", self._on_export_vtt)
+        self._add_action("export-audio", self._on_export_audio, GLib.VariantType.new("s"))
         self._add_action("import-audio", self._on_import_audio)
         self._add_action("cancel-import", self._on_cancel_import)
         self._import_task: asyncio.Task[None] | None = None
@@ -118,9 +120,12 @@ class Window(Adw.ApplicationWindow):
             self.split_view.set_show_content(True)
 
     def _add_action(
-        self, name: str, callback: Callable[[Gio.SimpleAction, GLib.Variant | None], None]
+        self,
+        name: str,
+        callback: Callable[[Gio.SimpleAction, GLib.Variant | None], None],
+        parameter_type: GLib.VariantType | None = None,
     ) -> None:
-        action = Gio.SimpleAction.new(name, None)
+        action = Gio.SimpleAction.new(name, parameter_type)
         action.connect("activate", callback)
         self.add_action(action)
 
@@ -361,6 +366,54 @@ class Window(Adw.ApplicationWindow):
             await asyncio.to_thread(target.write_text, content, encoding="utf-8")
         except OSError as error:
             log.warning("Export of note %s failed: %s", note.note_id, error)
+            message = _("Could not save “{name}”: {error}").format(name=target.name, error=error)
+            show_error(self, message)
+            return
+        self.add_toast(Adw.Toast(title=_("Exported “{name}”").format(name=target.name)))
+
+    def _on_export_audio(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
+        note = self._note
+        if note is None or param is None:
+            return
+        recording_id = param.get_string()
+        found = next(
+            (
+                (number, recording)
+                for number, recording in enumerate(note.recordings, start=1)
+                if recording.recording_id == recording_id
+            ),
+            None,
+        )
+        if found is None:
+            self.add_toast(Adw.Toast(title=_("This recording is no longer available.")))
+            return
+        number, recording = found
+        run_task(self._export_audio(number, recording), self)
+
+    async def _export_audio(self, number: int, recording: Recording) -> None:
+        note = self._note
+        source = recording.audio_path
+        if note is None or source is None:
+            return
+        suffix = source.suffix or ".ogg"
+        target = await self._pick_save_path(
+            _("Export Original Audio"),
+            export_filename(f"{note.title} - Recording {number}", suffix.lstrip(".")),
+            _("Audio Files"),
+            f"*{suffix}",
+        )
+        if target is None:
+            return
+        try:
+            await asyncio.to_thread(shutil.copyfile, source, target)
+        except FileNotFoundError:
+            log.warning(
+                "Original audio for recording %s is missing: %s", recording.recording_id, source
+            )
+            show_error(self, _("The original audio for this recording is not available."))
+            return
+        except OSError as error:
+            log.warning("Audio export of recording %s failed: %s", recording.recording_id, error)
             message = _("Could not save “{name}”: {error}").format(name=target.name, error=error)
             show_error(self, message)
             return

@@ -86,14 +86,16 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 
 **Implementation status**:
 - Implemented: sidebar list with *New Note* (disabled until a provider exists);
-  content header with title and subtitle; *Display Options*; *Note Menu* with "Rename…"
-  and "Delete Note"; recordings and segments with speaker colors (unnamed speakers
-  show as "Speaker N"); the bottom bar's model picker, Timestamps/Speakers chips (they
-  set what the next transcription requests), hint text, and "Import Audio…", which adds
-  to the open note or creates one named after the file, with progress, Cancel and a
+  content header with title and subtitle; *Display Options*; *Note Menu* with "Rename…",
+  "Copy All Text" and "Delete Note"; *Export* with all four formats, a save dialog, and
+  subtitle buttons disabled when the note has no timestamps; recordings and segments
+  with speaker colors (unnamed speakers show as "Speaker N"); recording header menu
+  with "Export Original Audio…"; the bottom bar's model picker, Timestamps/Speakers chips
+  (they set what the next transcription requests), hint text, and "Import Audio…", which
+  adds to the open note or creates one named after the file, with progress, Cancel and a
   failure toast.
-- Not yet: *Search Notes*, *Export*, "Copy All Text", the banner, recording header
-  buttons, renaming speakers, "Append Recording"/"Record".
+- Not yet: *Search Notes*, the banner, *Play This Recording*, "Re-transcribe…",
+  "Delete This Recording", renaming speakers, "Append Recording"/"Record".
 
 ## 2. Recording in progress
 
