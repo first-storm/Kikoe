@@ -2,6 +2,7 @@
 
 Opus at 32 kbit/s mono keeps about 1¾ hours under a 25 MB upload limit while staying
 clear enough for speech recognition; OpenAI, Groq and most compatible APIs accept Ogg.
+Providers that need another encoding name it through ``UploadLimits.format``.
 """
 
 import asyncio
@@ -10,12 +11,10 @@ from datetime import timedelta
 from pathlib import Path
 
 from kikoe.core.chunking import TimeSpan
+from kikoe.core.upload import OGG_OPUS, UploadFormat
 from kikoe.i18n import _
 from kikoe.media import ffmpeg
 
-UPLOAD_SUFFIX = ".ogg"
-
-_UPLOAD_ARGS = ("-vn", "-ac", "1", "-ar", "16000", "-c:a", "libopus", "-b:a", "32k")
 _SILENCE_FILTER = "silencedetect=noise=-35dB:d=0.4"
 """Quieter than -35 dB for 0.4 s counts as a pause between words or sentences."""
 
@@ -50,7 +49,11 @@ _SILENCE_END = re.compile(r"silence_end: ([\d.]+)")
 
 
 async def to_upload(
-    source: Path, destination: Path, start: timedelta | None = None, end: timedelta | None = None
+    source: Path,
+    destination: Path,
+    start: timedelta | None = None,
+    end: timedelta | None = None,
+    format: UploadFormat = OGG_OPUS,
 ) -> timedelta:
     """Convert ``source``, or only ``start`` to ``end`` of it, and return the output length."""
     trim: list[str] = []
@@ -63,7 +66,7 @@ async def to_upload(
             *trim,
             "-i",
             str(source),
-            *_UPLOAD_ARGS,
+            *format.args,
             "-progress",
             "pipe:1",
             "-nostats",

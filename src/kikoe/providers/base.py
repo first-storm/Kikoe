@@ -11,6 +11,7 @@ from typing import Protocol
 
 from kikoe.core.models import ModeCapabilities, ModelSpec, Segment, TimestampGranularity
 from kikoe.core.transcription import FileTranscriptSnapshot, TranscriptEvent
+from kikoe.core.upload import OGG_OPUS, UploadFormat
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +60,8 @@ class UploadLimits:
 
     bytes: int | None = None
     duration: timedelta | None = None
+    format: UploadFormat = OGG_OPUS
+    """Encoding the service accepts; split parts are converted to the same one."""
 
 
 class RealtimeSession(Protocol):

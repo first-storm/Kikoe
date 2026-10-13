@@ -20,6 +20,7 @@ from kikoe.core.models import (
 )
 from kikoe.core.recording import CaptureProgress, CaptureState, pcm_level
 from kikoe.core.transcription import FileTranscriptSnapshot
+from kikoe.core.upload import OGG_OPUS, UploadFormat
 from kikoe.media import transcode
 from kikoe.media.recorder import RecorderError
 from kikoe.providers.base import (
@@ -131,6 +132,7 @@ def fake_conversion(monkeypatch: pytest.MonkeyPatch) -> None:
         destination: Path,
         start: timedelta | None = None,
         end: timedelta | None = None,
+        format: UploadFormat = OGG_OPUS,
     ) -> timedelta:
         await asyncio.to_thread(destination.write_bytes, b"upload")
         return timedelta(seconds=2)
@@ -676,7 +678,9 @@ async def test_retranscription_stream_failure_keeps_original_text_and_audio(
     note = await notes.add_recording(None, "Meeting", original)
     before = await notes.get_note(note.note_id)
 
-    async def convert(source: Path, destination: Path) -> timedelta:
+    async def convert(
+        source: Path, destination: Path, *, format: UploadFormat = OGG_OPUS
+    ) -> timedelta:
         await asyncio.to_thread(destination.write_bytes, b"upload")
         return timedelta(seconds=5)
 

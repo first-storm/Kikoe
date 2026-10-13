@@ -35,6 +35,8 @@ def api_label(api: ApiKind) -> str:
             return _("OpenRouter")
         case ApiKind.GEMINI:
             return _("Gemini AI Studio")
+        case ApiKind.MIMO:
+            return _("MiMo")
         case ApiKind.OPENAI_COMPATIBLE:
             return _("OpenAI-compatible")
 

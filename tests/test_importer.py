@@ -16,6 +16,7 @@ from kikoe.core.models import (
     Segment,
 )
 from kikoe.core.transcription import FileTranscriptSnapshot
+from kikoe.core.upload import MP3, OGG_OPUS, UploadFormat
 from kikoe.media import transcode
 from kikoe.providers.base import (
     FileTranscriptCallback,
@@ -91,6 +92,7 @@ class FakeConverter:
         destination: Path,
         start: timedelta | None = None,
         end: timedelta | None = None,
+        format: UploadFormat = OGG_OPUS,
     ) -> timedelta:
         if start is None or end is None:
             write(destination, b"x" * self.size)
@@ -303,6 +305,22 @@ async def test_duration_limit_splits_even_small_compressed_files(
     await import_audio(source, None, PROVIDER, MODEL, client=client, notes=notes, work_dir=tmp_path)
     assert len(client.uploads) >= 2
     assert all(part.end - part.start <= s(60) for part in converter.parts)
+
+
+@run_async
+async def test_provider_chosen_format_is_used_for_every_part(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, notes: NoteRepository, source: Path
+) -> None:
+    class Mp3Client(FakeClient):
+        def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
+            return UploadLimits(1000, format=MP3)
+
+    use_converter(monkeypatch, FakeConverter(s(120), size=1500))
+    await notes.load()
+    client = Mp3Client()
+    await import_audio(source, None, PROVIDER, MODEL, client=client, notes=notes, work_dir=tmp_path)
+    assert len(client.uploads) >= 2
+    assert {path.suffix for path in client.uploads} == {".mp3"}
 
 
 @run_async

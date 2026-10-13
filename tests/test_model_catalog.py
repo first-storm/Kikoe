@@ -27,6 +27,7 @@ def catalog() -> ModelCatalog:
         (ApiKind.GEMINI, "gemini-3.5-transcribe-live", False, True, False, False),
         (ApiKind.GEMINI, "gemini-3.5-transcribe", True, False, True, True),
         (ApiKind.DEEPGRAM, "nova-3", True, True, True, True),
+        (ApiKind.MIMO, "mimo-v2.5-asr", True, False, False, False),
     ],
 )
 def test_known_api_limits_override_manual_capability_claims(

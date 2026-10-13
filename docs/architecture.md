@@ -148,7 +148,8 @@ and removes scheduled updates when a job ends.
    needed.
 4. **Split at the effective upload limit**: `UploadLimits` combines file size with
    model/option-dependent duration. OpenAI and OpenRouter use 25 MB; Deepgram uses
-   2 GB; Gemini accepts 60 minutes, or 30 minutes with word timestamps/speakers.
+   2 GB; MiMo takes MP3 only (`UploadLimits.format`; split parts use the same encoding) and
+   7 MB, since its 10 MB limit applies to Base64; Gemini accepts 60 minutes, or 30 minutes with word timestamps/speakers.
    The stricter size/duration budget wins. When a limit is exceeded, `media.transcode.find_silences` runs ffmpeg's
    `silencedetect` (an energy-based voice activity check, no extra dependency), and
    `core.chunking.plan_chunks` cuts in the middle of the last pause before each part's
