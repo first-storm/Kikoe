@@ -60,6 +60,40 @@ def test_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
         ffmpeg.find_ffmpeg()
 
 
+class _FinishedProcess:
+    returncode = 0
+
+    async def communicate(self) -> tuple[bytes, bytes]:
+        return b"", b""
+
+
+@pytest.mark.parametrize(("platform", "flags"), [("win32", 0x08000000), ("linux", 0)])
+def test_ffmpeg_runs_without_console_window_on_windows(
+    platform: str, flags: int, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import asyncio
+
+    fake = tmp_path / "ffmpeg"
+    fake.touch()
+    monkeypatch.setenv("KIKOE_FFMPEG", str(fake))
+    seen: list[int] = []
+
+    async def fake_exec(*_args: str, creationflags: int, **_kwargs: object) -> _FinishedProcess:
+        seen.append(creationflags)
+        return _FinishedProcess()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", fake_exec)
+
+    async def run_on_platform() -> None:
+        # Switch only once the loop runs; asyncio picks its loop type from sys.platform.
+        monkeypatch.setattr(sys, "platform", platform)
+        await ffmpeg.run("-version")
+
+    asyncio.run(run_on_platform())
+
+    assert seen == [flags]
+
+
 @pytest.mark.parametrize("output_rate", [16000, 24000])
 def test_streaming_resampler_drains_all_audio(output_rate: int) -> None:
     import asyncio

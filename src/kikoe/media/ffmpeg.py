@@ -19,6 +19,9 @@ log = logging.getLogger(__name__)
 
 _EXE_NAME = "ffmpeg.exe" if sys.platform == "win32" else "ffmpeg"
 
+_CREATE_NO_WINDOW = 0x08000000
+"""``subprocess.CREATE_NO_WINDOW``; the name only exists on Windows."""
+
 
 class FFmpegError(Exception):
     """ffmpeg is missing or exited with an error."""
@@ -63,6 +66,21 @@ def find_ffmpeg() -> Path:
     raise FFmpegNotFoundError(msg)
 
 
+def _creation_flags() -> int:
+    """Stop Windows opening a console window for ffmpeg from the windowed build."""
+    return _CREATE_NO_WINDOW if sys.platform == "win32" else 0
+
+
+async def _spawn(*args: str, stdin: int | None = None) -> asyncio.subprocess.Process:
+    return await asyncio.create_subprocess_exec(
+        *args,
+        stdin=stdin,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+        creationflags=_creation_flags(),
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class FFmpegOutput:
     stdout: str
@@ -76,9 +94,7 @@ async def run(*args: str, loglevel: str = "error") -> FFmpegOutput:
     exe = find_ffmpeg()
     cmd = [str(exe), "-hide_banner", "-nostdin", "-loglevel", loglevel, *args]
     log.debug("Running %s", cmd)
-    proc = await asyncio.create_subprocess_exec(
-        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-    )
+    proc = await _spawn(*cmd)
     try:
         stdout, stderr = await proc.communicate()
     except asyncio.CancelledError:
@@ -106,7 +122,7 @@ class PCMStream:
     @classmethod
     async def start(cls, input_rate: int, output_rate: int) -> PCMStream:
         executable = await asyncio.to_thread(find_ffmpeg)
-        process = await asyncio.create_subprocess_exec(
+        process = await _spawn(
             str(executable),
             "-hide_banner",
             "-loglevel",
@@ -133,8 +149,6 @@ class PCMStream:
             "1",
             "pipe:1",
             stdin=asyncio.subprocess.PIPE,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
         )
         return cls(process, output_rate)
 
@@ -203,9 +217,7 @@ async def decode_audio(
     if end is not None:
         args.extend(["-t", str(end - start)])
     args.extend(["-vn", "-ar", str(sample_rate), "-ac", "1", "-f", "s16le", "pipe:1"])
-    process = await asyncio.create_subprocess_exec(
-        *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-    )
+    process = await _spawn(*args)
 
     async def read_errors() -> bytes:
         tail = b""
