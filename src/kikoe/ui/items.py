@@ -48,3 +48,17 @@ class TranscriptItem(GObject.Object):
         self.live_summary = live_summary
         self.position = position
         """Index of ``segment`` in its recording; None for headers and live rows."""
+        self.hidden = False
+        """A spare row kept for the next note; it shows nothing and takes no room."""
+
+    def assign(self, other: TranscriptItem) -> None:
+        """Show ``other``'s row in this item, so the list keeps its row widgets."""
+        self.recording = other.recording
+        self.number = other.number
+        self.segment = other.segment
+        self.speaker_name = other.speaker_name
+        self.color_slot = other.color_slot
+        self.preview = other.preview
+        self.live_summary = other.live_summary
+        self.position = other.position
+        self.hidden = other.hidden

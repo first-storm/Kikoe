@@ -23,6 +23,12 @@ textview.segment-text:focus-within {
   background-color: color-mix(in srgb, var(--accent-bg-color) 10%, transparent);
 }
 
+/* Transcript rows carry the theme's row padding as margins (transcript_row.blp), so
+   that hidden spare rows take no room. */
+listview.transcript-list > row {
+  padding: 0;
+}
+
 /* Timestamps share the meta column with speaker names: keep the button compact and
    pull it out by its padding so the digits line up with the name above. */
 menubutton.timestamp-button > button {

@@ -1,7 +1,13 @@
 using Gtk 4.0;
+using Adw 1;
 
 template $KikoeTranscriptRow: Box {
   orientation: vertical;
+  // The list row's padding, here so that a hidden spare row takes no room.
+  margin-top: 2;
+  margin-bottom: 2;
+  margin-start: 2;
+  margin-end: 2;
 
   Box header_box {
     orientation: vertical;
@@ -98,6 +104,9 @@ template $KikoeTranscriptRow: Box {
 
       Button speaker_button {
         halign: start;
+        action-name: "win.edit-speaker";
+        // (recording id, speaker id), set for each segment shown.
+        action-target: "('', '')";
         tooltip-text: _("Rename or Match Speaker");
 
         accessibility {
@@ -253,32 +262,8 @@ template $KikoeTranscriptRow: Box {
 
       StackPage {
         name: "edit";
-        // Never scrolls: the row grows with its text; the list scrolls instead.
-        child: ScrolledWindow text_scroll {
-          valign: start;
-          hscrollbar-policy: never;
-          vscrollbar-policy: never;
-          propagate-natural-height: true;
-
-          child: TextView text_view {
-            wrap-mode: word_char;
-            accepts-tab: false;
-            pixels-inside-wrap: 4;
-            top-margin: 6;
-            bottom-margin: 6;
-            left-margin: 8;
-            right-margin: 8;
-
-            accessibility {
-              label: _("Transcript Text");
-            }
-
-            styles [
-              "segment-text",
-              "transcript-text",
-            ]
-          };
-        };
+        // The segment's text view, added from Python.
+        child: Adw.Bin text_slot {};
       }
 
       StackPage {

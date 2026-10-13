@@ -5,10 +5,11 @@ of segments stay fast. Segment text is edited in place; the view reports edits a
 window saves them and keeps the Undo history.
 """
 
+import sys
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
-from gi.repository import Adw, Gio, GLib, GObject, Gtk
+from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
 from kikoe.core.formatting import SPEAKER_COLOR_COUNT, speaker_order, transcript_features
 from kikoe.core.models import Note, Recording, RecordingSource
@@ -26,6 +27,23 @@ from kikoe.ui.recording_view import RecordingView
 from kikoe.ui.speaker_row import speaker_label
 from kikoe.ui.templates import ui_file
 from kikoe.ui.transcript_row import TranscriptRow
+
+_ONE_LINE_ROW_HEIGHT = 32
+"""The height of the shortest segment row, used to count the rows that fit in the window."""
+_BOUND_PER_FRAME = 32
+"""Rows off screen bound per frame after a note is opened."""
+_SPARE_ROWS = 200
+"""Rows a list this short gets widgets for, as ``Gtk.ListView`` keeps about that many.
+
+Items beyond the open note's rows are kept, hidden, up to this many, so that the next
+note can reuse their widgets. Beyond it they would have no widgets to reuse.
+"""
+_SPARES_PER_IDLE = 8
+"""Row widgets built per idle callback before the first note is opened."""
+_SPARE = Recording(
+    "spare", datetime.fromtimestamp(0, UTC), timedelta(), RecordingSource.RECORDED, "", ""
+)
+"""Placeholder for the hidden rows made before any note is open."""
 
 
 @Gtk.Template(filename=ui_file("note_view"))
@@ -54,12 +72,22 @@ class NoteView(Adw.BreakpointBin):
         self._items: Gio.ListStore[TranscriptItem] = Gio.ListStore(item_type=TranscriptItem)
         self._bound: dict[TranscriptRow, TranscriptItem] = {}
         """Rows on screen, updated in place when only the display options change."""
+        self._stale: dict[TranscriptRow, int] = {}
+        """Rows off screen still showing the previous note, by their list position."""
+        self._first_frame: int | None = None
+        """The frame that shows a newly opened note; the stale rows are bound after it."""
+        self._bind_tick = 0
         factory = Gtk.SignalListItemFactory()
         factory.connect("setup", self._on_factory_setup)
         factory.connect("bind", self._on_factory_bind)
         factory.connect("unbind", self._on_factory_unbind)
         self.transcript_list.set_factory(factory)
         self.transcript_list.set_model(Gtk.NoSelection(model=self._items))
+        self._style_handler = Adw.StyleManager.get_default().connect(
+            "notify::dark", self._on_style_dark_changed
+        )
+        self.connect("destroy", self._on_destroy)
+        self._prepare_source = GLib.idle_add(self._on_prepare_idle)
 
     __gsignals__ = {  # noqa: RUF012  # PyGObject reads this class attribute once
         # (recording id, position, text): a segment's text was typed over.
@@ -110,18 +138,79 @@ class NoteView(Adw.BreakpointBin):
         self._has_timestamps = any(
             s.start is not None or s.end is not None for r in note.recordings for s in r.segments
         )
-        self._items.splice(0, self._items.get_n_items(), _rows(note))
-        if not same_note and self._items.get_n_items():
-            self.transcript_list.scroll_to(0, Gtk.ListScrollFlags.NONE, None)
+        self._fill(note, scroll_to_top=not same_note)
         return True
+
+    def _fill(self, note: Note, *, scroll_to_top: bool = False) -> None:
+        """Show ``note``'s rows in the items the list already has.
+
+        Replacing the items would make the list destroy and rebuild every row widget,
+        about two hundred of them however short the note, so each item takes over a row
+        of the note and only the row widgets are bound again. Binding them all takes
+        longer than a frame, so when the view moves to the top of a newly opened note,
+        the rows that fit on screen are bound at once and the others in later frames.
+        """
+        # Typing is saved under the row it was typed into, before the items change.
+        self.flush_edits()
+        on_screen = sys.maxsize
+        if scroll_to_top and self._items.get_n_items():
+            self.transcript_list.scroll_to(0, Gtk.ListScrollFlags.NONE, None)
+            # The window's height, as the view has none before the first note is shown.
+            root = self.get_root()
+            height = root.get_height() if isinstance(root, Gtk.Widget) else 0
+            on_screen = height // _ONE_LINE_ROW_HEIGHT + 1
+        rows = _rows(note)
+        count = self._items.get_n_items()
+        positions: dict[TranscriptItem, int] = {}
+        for position in range(min(count, len(rows))):
+            item = self._items.get_item(position)
+            if item is not None:
+                item.assign(rows[position])
+                positions[item] = position
+        if len(rows) > count:
+            self._items.splice(count, 0, rows[count:])
+        else:
+            keep = max(len(rows), _SPARE_ROWS)
+            if count > keep:
+                self._items.splice(keep, count - keep, [])
+            for position in range(len(rows), min(count, keep)):
+                item = self._items.get_item(position)
+                if item is not None:
+                    item.hidden = True
+        for row, item in self._bound.items():
+            position = positions.get(item)
+            # Spare rows have no position; they are cheap to hide, so they are bound now.
+            if position is None or position < on_screen:
+                self._bind_row(row, item)
+            else:
+                self._stale[row] = position
+        self._first_frame = None
+        if self._stale and not self._bind_tick:
+            self._bind_tick = self.transcript_list.add_tick_callback(self._on_bind_tick)
+
+    def _on_bind_tick(self, _list: Gtk.Widget, clock: Gdk.FrameClock) -> bool:
+        frame = clock.get_frame_counter()
+        if self._first_frame is None:
+            self._first_frame = frame
+        if frame == self._first_frame:
+            return True
+        # The view is at the top, so the first rows are the nearest to it.
+        for row in sorted(self._stale, key=self._stale.__getitem__)[:_BOUND_PER_FRAME]:
+            self._bind_row(row, self._bound[row])
+        if self._stale:
+            return True
+        self._bind_tick = 0
+        return False
 
     def _update_segments(self, note: Note) -> None:
         """Swap in edited segments without rebuilding rows, keeping the caret and scroll."""
         recordings = {r.recording_id: r for r in note.recordings}
         for index in range(self._items.get_n_items()):
             item = self._items.get_item(index)
-            recording = recordings.get(item.recording.recording_id) if item else None
-            if item is None or recording is None:
+            if item is None or item.hidden:
+                continue
+            recording = recordings.get(item.recording.recording_id)
+            if recording is None:
                 continue
             item.recording = recording
             if item.segment is not None and item.position is not None:
@@ -152,6 +241,7 @@ class NoteView(Adw.BreakpointBin):
             item = self._items.get_item(index)
             if (
                 item is not None
+                and not item.hidden
                 and item.position == position
                 and item.recording.recording_id == recording_id
             ):
@@ -169,6 +259,8 @@ class NoteView(Adw.BreakpointBin):
             attempts -= 1
             for row, data in self._bound.items():
                 if data is item:
+                    if row in self._stale:
+                        self._bind_row(row, data)
                     row.edit(at_end=at_end)
                     return False
             return attempts > 0
@@ -191,7 +283,7 @@ class NoteView(Adw.BreakpointBin):
             index += step
 
     def _on_row_text_committed(self, row: TranscriptRow, text: str) -> None:
-        item = self._bound.get(row)
+        item = None if row in self._stale else self._bound.get(row)
         if item is not None and item.position is not None:
             self.emit("text-edited", item.recording.recording_id, item.position, text)
 
@@ -240,7 +332,7 @@ class NoteView(Adw.BreakpointBin):
             self._live = None
             self._live_rows = []
             if self._note is not None:
-                self._items.splice(0, self._items.get_n_items(), _rows(self._note))
+                self._fill(self._note)
         self.recording_slot.set_visible(False)
         self.stack.set_visible(True)
         self.stack.set_vexpand(True)
@@ -344,14 +436,39 @@ class NoteView(Adw.BreakpointBin):
             # Recycling must not drop typing that has not been saved yet.
             row.flush()
             self._bound.pop(row, None)
+            self._stale.pop(row, None)
 
     def set_playing(self, recording_id: str | None) -> None:
         """Keep recycled recording headers in sync with the one active player."""
         self._playing = recording_id
         for row, item in self._bound.items():
-            row.set_playing(item.segment is None and item.recording.recording_id == recording_id)
+            if item.segment is None:
+                row.set_playing(item.recording.recording_id == recording_id)
+
+    def _on_style_dark_changed(self, _style: Adw.StyleManager, _spec: GObject.ParamSpec) -> None:
+        for row in self._bound:
+            row.update_speaker_color()
+
+    def _on_destroy(self, _view: Gtk.Widget) -> None:
+        Adw.StyleManager.get_default().disconnect(self._style_handler)
+        if self._prepare_source:
+            GLib.source_remove(self._prepare_source)
+            self._prepare_source = 0
+
+    def _on_prepare_idle(self) -> bool:
+        """Build the row widgets before the first note opens, a few between frames."""
+        count = self._items.get_n_items()
+        if self._note is not None or count >= _SPARE_ROWS:
+            self._prepare_source = 0
+            return False
+        spares = [TranscriptItem(_SPARE, 0) for _ in range(_SPARES_PER_IDLE)]
+        for spare in spares:
+            spare.hidden = True
+        self._items.splice(count, 0, spares)
+        return True
 
     def _bind_row(self, row: TranscriptRow, data: TranscriptItem) -> None:
+        self._stale.pop(row, None)
         display = self._note.display if self._note else None
         row.bind(
             data,
@@ -362,7 +479,8 @@ class NoteView(Adw.BreakpointBin):
             compact=self._compact,
             editable=self._editable,
         )
-        row.set_playing(data.segment is None and data.recording.recording_id == self._playing)
+        if data.segment is None:
+            row.set_playing(data.recording.recording_id == self._playing)
 
 
 def _rows(note: Note) -> list[TranscriptItem]:
@@ -391,7 +509,12 @@ def _rows(note: Note) -> list[TranscriptItem]:
 
 
 def _editable_item(item: TranscriptItem) -> bool:
-    return item.position is not None and not item.preview and item.recording.recording_id != "live"
+    return (
+        item.position is not None
+        and not item.hidden
+        and not item.preview
+        and item.recording.recording_id != "live"
+    )
 
 
 def _same_structure(previous: Note, note: Note) -> bool:
