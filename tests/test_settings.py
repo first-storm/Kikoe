@@ -206,3 +206,44 @@ def test_unusable_window_state_falls_back_to_the_default_size(
     path.write_text(json.dumps({"version": 2, "providers": [], "window": window}), encoding="utf-8")
 
     assert SettingsStore(path).load_state().window is None
+
+
+def test_provider_upload_settings_survive_restart_and_legacy_files_use_defaults(
+    tmp_path: Path,
+) -> None:
+    from dataclasses import replace
+
+    from kikoe.core.models import AudioFormat, UploadSettings
+
+    store = SettingsStore(tmp_path / "settings.json")
+    upload = UploadSettings(4, 120, 2_000_000, AudioFormat.FLAC)
+    store.save((replace(PROVIDER, upload=upload),))
+    assert store.load()[0].upload == upload
+    data = json.loads((tmp_path / "settings.json").read_text())
+    data["providers"][0].pop("upload")
+    (tmp_path / "settings.json").write_text(json.dumps(data))
+    assert store.load()[0].upload == UploadSettings()
+
+
+@pytest.mark.parametrize(
+    "upload",
+    [
+        {"parallelism": True},
+        {"parallelism": 0},
+        {"parallelism": 100},
+        {"chunk_seconds": -1},
+        {"chunk_seconds": "5"},
+        {"chunk_bytes": 25_000_001},
+        {"chunk_bytes": True},
+        {"format": "invalid"},
+    ],
+)
+def test_damaged_upload_settings_are_refused(tmp_path: Path, upload: dict[str, object]) -> None:
+    path = tmp_path / "settings.json"
+    store = SettingsStore(path)
+    store.save((PROVIDER,))
+    data = json.loads(path.read_text())
+    data["providers"][0]["upload"] = upload
+    path.write_text(json.dumps(data))
+    with pytest.raises(SettingsError):
+        store.load()

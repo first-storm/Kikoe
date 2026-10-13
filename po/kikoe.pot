@@ -603,9 +603,9 @@ msgstr ""
 msgid "Converting audio…"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:168
+#: src/kikoe/ui/labels.py:176
 #, python-brace-format
-msgid "Transcribing part {part} of {parts}…"
+msgid "Transcribing… {part} of {parts} chunks complete"
 msgstr ""
 
 #: src/kikoe/ui/labels.py:170 src/kikoe/ui/window.py:746
@@ -1514,4 +1514,60 @@ msgstr ""
 
 #: src/kikoe/ui/window.ui:304
 msgid "_Copy All Text"
+msgstr ""
+
+
+#: src/kikoe/services/importer.py:271
+msgid "The chunk size is too small for this audio format."
+msgstr ""
+
+#: src/kikoe/ui/provider_page.py:209
+#, python-brace-format
+msgid "Maximum {size:g} MB per chunk"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.py:213
+msgid "Maximum 60 minutes, or 30 with timestamps or speaker detection"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.py:217 src/kikoe/ui/provider_page.ui:109
+msgid "0 uses the provider limit; chunks also respect the size limit"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.py:221
+msgid "Defaults to 25 MB; your server may require smaller chunks"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:88
+msgid "File Transcription"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:89
+msgid ""
+"Applies to imported audio, recordings transcribed after stopping, and re-"
+"transcription. Smaller chunks allow more parallel requests."
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:92
+msgid "Parallel Requests"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:93
+msgid "1 processes chunks one at a time; account rate limits still apply"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:108
+msgid "Chunk Length (Minutes)"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:124
+msgid "Chunk Size (MB)"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:139
+msgid "Audio Format"
+msgstr ""
+
+#: src/kikoe/ui/provider_page.ui:145
+msgid "Reset Transcription Defaults"
 msgstr ""

@@ -601,10 +601,10 @@ msgstr "正在转换第 {part}/{parts} 部分…"
 msgid "Converting audio…"
 msgstr "正在转换音频…"
 
-#: src/kikoe/ui/labels.py:168
+#: src/kikoe/ui/labels.py:176
 #, python-brace-format
-msgid "Transcribing part {part} of {parts}…"
-msgstr "正在转录第 {part}/{parts} 部分…"
+msgid "Transcribing… {part} of {parts} chunks complete"
+msgstr "正在转录… 已完成 {part}/{parts} 个分块"
 
 #: src/kikoe/ui/labels.py:170 src/kikoe/ui/window.py:746
 #: src/kikoe/ui/window.py:1401
@@ -1637,3 +1637,59 @@ msgstr "复制全部文字(_C)"
 
 #~ msgid "Record or import audio to create a note."
 #~ msgstr "录制或导入音频以创建笔记。"
+
+
+#: src/kikoe/services/importer.py:271
+msgid "The chunk size is too small for this audio format."
+msgstr "分块大小太小，无法使用此音频格式。"
+
+#: src/kikoe/ui/provider_page.py:209
+#, python-brace-format
+msgid "Maximum {size:g} MB per chunk"
+msgstr "每个分块最大 {size:g} MB"
+
+#: src/kikoe/ui/provider_page.py:213
+msgid "Maximum 60 minutes, or 30 with timestamps or speaker detection"
+msgstr "最长 60 分钟；启用时间戳或说话人识别时为 30 分钟"
+
+#: src/kikoe/ui/provider_page.py:217 src/kikoe/ui/provider_page.ui:109
+msgid "0 uses the provider limit; chunks also respect the size limit"
+msgstr "0 表示按服务商上限分块，同时遵守大小限制"
+
+#: src/kikoe/ui/provider_page.py:221
+msgid "Defaults to 25 MB; your server may require smaller chunks"
+msgstr "默认 25 MB；你的服务器可能要求更小的分块"
+
+#: src/kikoe/ui/provider_page.ui:88
+msgid "File Transcription"
+msgstr "文件转录"
+
+#: src/kikoe/ui/provider_page.ui:89
+msgid ""
+"Applies to imported audio, recordings transcribed after stopping, and re-"
+"transcription. Smaller chunks allow more parallel requests."
+msgstr "适用于导入音频、录音结束后的转录和重新转录。分块越小，可并行处理的请求越多。"
+
+#: src/kikoe/ui/provider_page.ui:92
+msgid "Parallel Requests"
+msgstr "并行请求数"
+
+#: src/kikoe/ui/provider_page.ui:93
+msgid "1 processes chunks one at a time; account rate limits still apply"
+msgstr "1 表示逐个处理分块；仍需遵守账号的请求速率限制"
+
+#: src/kikoe/ui/provider_page.ui:108
+msgid "Chunk Length (Minutes)"
+msgstr "分块时长（分钟）"
+
+#: src/kikoe/ui/provider_page.ui:124
+msgid "Chunk Size (MB)"
+msgstr "分块大小（MB）"
+
+#: src/kikoe/ui/provider_page.ui:139
+msgid "Audio Format"
+msgstr "音频格式"
+
+#: src/kikoe/ui/provider_page.ui:145
+msgid "Reset Transcription Defaults"
+msgstr "恢复转录默认设置"

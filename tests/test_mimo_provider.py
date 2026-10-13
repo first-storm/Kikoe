@@ -124,3 +124,21 @@ async def test_mimo_has_no_realtime_mode() -> None:
         await MiMoClient("https://example.test/v1", "k").open_realtime(
             MODEL, TranscriptionOptions()
         )
+
+
+@run_async
+async def test_mimo_uploads_wav_with_its_actual_mime_type(tmp_path: Path) -> None:
+    requests: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json=completion("Hello"))
+
+    audio = tmp_path / "clip.wav"
+    audio.write_bytes(b"RIFFaudio")
+    client = MiMoClient("https://example.test/v1", "key", transport=httpx.MockTransport(respond))
+    await client.transcribe_file(audio, MODEL, TranscriptionOptions())
+    data = json.loads(requests[0].content)
+    assert data["messages"][0]["content"][0]["input_audio"]["data"].startswith(
+        "data:audio/wav;base64,"
+    )

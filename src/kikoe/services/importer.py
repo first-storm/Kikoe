@@ -10,9 +10,17 @@ from pathlib import Path
 
 from kikoe import paths
 from kikoe.core.chunking import TimeSpan, offset_segments, plan_chunks
-from kikoe.core.models import ModelSpec, Note, Provider, Recording, RecordingSource, Segment
+from kikoe.core.models import (
+    ModelSpec,
+    Note,
+    Provider,
+    Recording,
+    RecordingSource,
+    Segment,
+    UploadSettings,
+)
 from kikoe.core.transcription import FileTranscriptSnapshot, scope_speakers
-from kikoe.core.upload import UploadFormat
+from kikoe.core.upload import UPLOAD_FORMATS, UploadFormat, upload_policy, validate_upload
 from kikoe.i18n import _
 from kikoe.media import transcode
 from kikoe.providers.base import (
@@ -22,6 +30,7 @@ from kikoe.providers.base import (
     TranscriptionProvider,
     UploadLimits,
 )
+from kikoe.services.upload_queue import request_slot
 from kikoe.storage.notes import NoteRepository
 
 log = logging.getLogger(__name__)
@@ -71,6 +80,7 @@ async def import_audio(
             original,
             model,
             client=client,
+            provider=provider,
             options=options,
             on_progress=on_progress,
             on_update=on_update,
@@ -104,6 +114,7 @@ async def transcribe_audio(
     model: ModelSpec,
     *,
     client: TranscriptionProvider,
+    provider: Provider | None = None,
     options: TranscriptionOptions | None = None,
     on_progress: ProgressCallback = _ignore_progress,
     on_update: FileTranscriptCallback | None = None,
@@ -116,42 +127,94 @@ async def transcribe_audio(
     on_progress(ImportStage.CONVERTING, 1, 1)
     try:
         limits = client.upload_limits(model, options or TranscriptionOptions())
-        duration, parts = await job.prepare(source, limits)
-        segments: list[Segment] = []
-        for index, (path, offset) in enumerate(parts, start=1):
-            on_progress(ImportStage.TRANSCRIBING, index, len(parts))
-
-            def update(
-                snapshot: FileTranscriptSnapshot,
-                *,
-                scope: str = str(index),
-                part_offset: timedelta = offset,
-            ) -> None:
-                if on_update is not None:
-                    on_update(
-                        FileTranscriptSnapshot(
-                            (
-                                *segments,
-                                *offset_segments(
-                                    scope_speakers(snapshot.segments, scope), part_offset
-                                ),
-                            ),
-                            offset_segments(scope_speakers(snapshot.preview, scope), part_offset),
-                        )
-                    )
-
-            transcript = await client.transcribe_file(
-                path,
-                model,
-                options or TranscriptionOptions(),
-                on_update=update,
+        settings = provider.upload if provider else UploadSettings(parallelism=1)
+        if provider is not None:
+            validate_upload(settings, provider.api)
+            policy = upload_policy(provider.api)
+            size = min(settings.chunk_bytes or policy.bytes, limits.bytes or policy.bytes)
+            seconds = settings.chunk_seconds or policy.seconds
+            duration_limit = timedelta(seconds=seconds) if seconds else limits.duration
+            if limits.duration is not None:
+                duration_limit = min(duration_limit or limits.duration, limits.duration)
+            limits = UploadLimits(
+                size, duration_limit, UPLOAD_FORMATS[settings.format or policy.format]
             )
-            segments.extend(offset_segments(scope_speakers(transcript, str(index)), offset))
-            if on_update is not None:
-                on_update(FileTranscriptSnapshot(tuple(segments)))
-        return duration, tuple(segments)
+        duration, parts = await job.prepare(source, limits)
+        segments = await _transcribe_parts(
+            parts,
+            model,
+            client,
+            options or TranscriptionOptions(),
+            settings.parallelism,
+            on_progress,
+            on_update,
+            provider.provider_id if provider else job.recording_id,
+        )
+        return duration, segments
     finally:
         await job.clean_up()
+
+
+async def _transcribe_parts(
+    parts: list[tuple[Path, timedelta]],
+    model: ModelSpec,
+    client: TranscriptionProvider,
+    options: TranscriptionOptions,
+    parallelism: int,
+    on_progress: ProgressCallback,
+    on_update: FileTranscriptCallback | None,
+    provider_id: str,
+) -> tuple[Segment, ...]:
+    """Bound workers and drain cancellations before the upload files are deleted."""
+    pending = iter(enumerate(parts))
+    results: list[tuple[Segment, ...] | None] = [None] * len(parts)
+    snapshots = [FileTranscriptSnapshot(()) for _ in parts]
+    completed = 0
+    on_progress(ImportStage.TRANSCRIBING, 0, len(parts))
+
+    def publish() -> None:
+        if on_update is None:
+            return
+        segments: list[Segment] = []
+        preview: tuple[Segment, ...] = ()
+        for index, result in enumerate(results):
+            if result is None:
+                segments.extend(snapshots[index].segments)
+                preview = snapshots[index].preview
+                break
+            segments.extend(result)
+        on_update(FileTranscriptSnapshot(tuple(segments), preview))
+
+    async def transcribe(index: int, path: Path, offset: timedelta) -> None:
+        nonlocal completed
+        scope = str(index + 1)
+
+        def update(snapshot: FileTranscriptSnapshot) -> None:
+            snapshots[index] = FileTranscriptSnapshot(
+                offset_segments(scope_speakers(snapshot.segments, scope), offset),
+                offset_segments(scope_speakers(snapshot.preview, scope), offset),
+            )
+            publish()
+
+        transcript = await client.transcribe_file(path, model, options, on_update=update)
+        results[index] = offset_segments(scope_speakers(transcript, scope), offset)
+        completed += 1
+        on_progress(ImportStage.TRANSCRIBING, completed, len(parts))
+        publish()
+
+    async def worker() -> None:
+        for index, (path, offset) in pending:
+            async with request_slot(provider_id, parallelism):
+                await transcribe(index, path, offset)
+
+    tasks = [asyncio.create_task(worker()) for _ in range(min(parallelism, len(parts)))]
+    try:
+        await asyncio.gather(*tasks)
+    finally:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+    return tuple(segment for result in results if result is not None for segment in result)
 
 
 class _Job:
@@ -183,21 +246,32 @@ class _Job:
             budget = min(budget, max_duration * SPLIT_MARGIN)
         chunks = plan_chunks(duration, silences, budget)
         log.info("Splitting %d bytes of audio into %d parts", size, len(chunks))
-        return duration, [
-            (
-                await self._convert_part(original, chunk, index, len(chunks), limits.format),
-                chunk.start,
-            )
-            for index, chunk in enumerate(chunks, start=1)
-        ]
+        parts: list[tuple[Path, timedelta]] = []
+        for index, chunk in enumerate(chunks, start=1):
+            self._on_progress(ImportStage.CONVERTING, index, len(chunks))
+            parts.extend(await self._convert_part(original, chunk, limits))
+        return duration, parts
 
     async def _convert_part(
-        self, original: Path, chunk: TimeSpan, index: int, count: int, format: UploadFormat
-    ) -> Path:
-        self._on_progress(ImportStage.CONVERTING, index, count)
-        path = self._file(f"-{index}", format)
-        await transcode.to_upload(original, path, chunk.start, chunk.end, format)
-        return path
+        self,
+        original: Path,
+        chunk: TimeSpan,
+        limits: UploadLimits,
+    ) -> list[tuple[Path, timedelta]]:
+        """Recheck each encoded chunk: variable bitrate can defeat the initial estimate."""
+        path = self._file(f"-{len(self._files)}", limits.format)
+        duration = await transcode.to_upload(original, path, chunk.start, chunk.end, limits.format)
+        size = (await asyncio.to_thread(path.stat)).st_size
+        if (limits.bytes is None or size <= limits.bytes) and (
+            limits.duration is None or duration <= limits.duration
+        ):
+            return [(path, chunk.start)]
+        await asyncio.to_thread(path.unlink, missing_ok=True)
+        if chunk.end - chunk.start <= timedelta(milliseconds=10):
+            raise TranscriptionError(_("The chunk size is too small for this audio format."))
+        first = await self._convert_part(original, TimeSpan(chunk.start, chunk.middle), limits)
+        second = await self._convert_part(original, TimeSpan(chunk.middle, chunk.end), limits)
+        return first + second
 
     async def clean_up(self) -> None:
         for path in self._files:

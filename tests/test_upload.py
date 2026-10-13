@@ -1,0 +1,34 @@
+from dataclasses import replace
+
+import pytest
+
+from kikoe.core.models import ApiKind, AudioFormat, UploadSettings
+from kikoe.core.upload import upload_policy, validate_upload
+
+
+@pytest.mark.parametrize("api", list(ApiKind))
+def test_defaults_and_documented_maxima_are_valid(api: ApiKind) -> None:
+    policy = upload_policy(api)
+    validate_upload(UploadSettings(), api)
+    validate_upload(UploadSettings(chunk_bytes=policy.bytes, chunk_seconds=policy.seconds), api)
+    with pytest.raises(ValueError, match="size"):
+        validate_upload(UploadSettings(chunk_bytes=policy.bytes + 1), api)
+
+
+@pytest.mark.parametrize("value", [0, -1, 33, True])
+def test_invalid_parallelism_is_rejected(value: int) -> None:
+    with pytest.raises(ValueError, match="parallel"):
+        validate_upload(UploadSettings(parallelism=value), ApiKind.OPENAI)
+
+
+def test_gemini_duration_and_mimo_format_are_bounded() -> None:
+    with pytest.raises(ValueError, match="duration"):
+        validate_upload(UploadSettings(chunk_seconds=3601), ApiKind.GEMINI)
+    with pytest.raises(ValueError, match="format"):
+        validate_upload(UploadSettings(format=AudioFormat.OGG), ApiKind.MIMO)
+
+
+@pytest.mark.parametrize("field", ["chunk_seconds", "chunk_bytes"])
+def test_boolean_limits_are_rejected(field: str) -> None:
+    with pytest.raises(ValueError):
+        validate_upload(replace(UploadSettings(), **{field: True}), ApiKind.OPENAI)

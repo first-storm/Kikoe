@@ -234,3 +234,26 @@ async def test_loading_clamps_models_saved_by_an_older_catalog(
 
     capabilities = repository.get("p").models[0].capabilities
     assert capabilities == Capabilities(file=None, realtime=ModeCapabilities())
+
+
+@run_async
+async def test_upload_edits_preserve_models_credentials_and_other_providers(
+    repo: ProviderRepository,
+    secrets: FakeSecrets,
+) -> None:
+    from kikoe.core.models import AudioFormat, UploadSettings
+
+    first = await repo.add_provider("First", ApiKind.OPENAI_COMPATIBLE, URL, "secret")
+    second = await repo.add_provider("Second", ApiKind.OPENAI, URL, "other")
+    model = ModelSpec("custom", "Custom", file_caps())
+    await repo.save_model(first.provider_id, model)
+    upload = UploadSettings(3, 60, 1_000_000, AudioFormat.FLAC)
+    await repo.update_upload(first.provider_id, upload)
+    assert repo.get(first.provider_id).upload == upload
+    assert repo.get(first.provider_id).models == (model,)
+    assert repo.get(second.provider_id) == second
+    assert secrets.items == {first.provider_id: "secret", second.provider_id: "other"}
+    await repo.update_provider(first.provider_id, "Renamed", first.api, URL, "secret")
+    assert repo.get(first.provider_id).upload == upload
+    await repo.update_provider(first.provider_id, "Changed", ApiKind.MIMO, URL, "secret")
+    assert repo.get(first.provider_id).upload == UploadSettings()

@@ -65,6 +65,24 @@ class ModelSpec:
 
 
 @dataclass(frozen=True, slots=True)
+class UploadSettings:
+    """Per-provider upload choices; None uses the documented provider defaults."""
+
+    parallelism: int = 2
+    chunk_seconds: int | None = None
+    chunk_bytes: int | None = None
+    format: AudioFormat | None = None
+
+
+class AudioFormat(StrEnum):
+    """Upload encodings available in every packaged ffmpeg build."""
+
+    OGG = "ogg"
+    FLAC = "flac"
+    WAV = "wav"
+
+
+@dataclass(frozen=True, slots=True)
 class Provider:
     """A configured transcription service. The API key lives in the OS keyring, not here."""
 
@@ -73,6 +91,7 @@ class Provider:
     api: ApiKind
     base_url: str
     models: tuple[ModelSpec, ...] = ()
+    upload: UploadSettings = UploadSettings()
 
 
 @dataclass(frozen=True, slots=True)

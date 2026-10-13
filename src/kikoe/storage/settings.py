@@ -9,8 +9,17 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import cast
 
-from kikoe.core.models import ApiKind, Capabilities, ModeCapabilities, ModelSpec, Provider
+from kikoe.core.models import (
+    ApiKind,
+    AudioFormat,
+    Capabilities,
+    ModeCapabilities,
+    ModelSpec,
+    Provider,
+    UploadSettings,
+)
 from kikoe.core.preferences import Preferences, WindowState, valid_language, valid_window_state
+from kikoe.core.upload import validate_upload
 from kikoe.i18n import _
 from kikoe.paths import config_dir
 
@@ -101,11 +110,18 @@ class SettingsStore:
 
 
 def _encode(provider: Provider) -> dict[str, object]:
+    validate_upload(provider.upload, provider.api)
     return {
         "id": provider.provider_id,
         "name": provider.name,
         "api": provider.api.value,
         "base_url": provider.base_url,
+        "upload": {
+            "parallelism": provider.upload.parallelism,
+            "chunk_seconds": provider.upload.chunk_seconds,
+            "chunk_bytes": provider.upload.chunk_bytes,
+            "format": provider.upload.format,
+        },
         "models": [
             {
                 "id": model.model_id,
@@ -154,13 +170,34 @@ def _decode(data: object) -> tuple[Provider, ...]:
 def _decode_provider(entry: object) -> Provider:
     fields = _as_dict(entry, "a provider")
     models = _as_list(fields.get("models", []), "models")
+    api = ApiKind(fields["api"])
     return Provider(
         provider_id=str(fields["id"]),
         name=str(fields["name"]),
-        api=ApiKind(fields["api"]),
+        api=api,
         base_url=str(fields["base_url"]),
         models=tuple(_decode_model(model) for model in models),
+        upload=_decode_upload(fields.get("upload", {}), api),
     )
+
+
+def _decode_upload(value: object, api: ApiKind) -> UploadSettings:
+    fields = _as_dict(value, "upload settings")
+    parallelism = fields.get("parallelism", 2)
+    seconds = fields.get("chunk_seconds")
+    size = fields.get("chunk_bytes")
+    format_value = fields.get("format")
+    if not isinstance(parallelism, int):
+        raise ValueError("parallelism must be an integer")
+    if seconds is not None and not isinstance(seconds, int):
+        raise ValueError("chunk duration must be an integer")
+    if size is not None and not isinstance(size, int):
+        raise ValueError("chunk size must be an integer")
+    settings = UploadSettings(
+        parallelism, seconds, size, AudioFormat(format_value) if format_value is not None else None
+    )
+    validate_upload(settings, api)
+    return settings
 
 
 def _decode_model(entry: object) -> ModelSpec:
