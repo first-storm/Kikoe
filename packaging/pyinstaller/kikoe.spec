@@ -25,7 +25,7 @@ if not ffmpeg.is_file():
     raise SystemExit(f"KIKOE_FFMPEG_BIN does not point to a file: {ffmpeg}")
 icon = os.environ.get("KIKOE_ICON")
 
-# kikoe.media.ffmpeg looks for ffmpeg next to the frozen executable.
+# Lands in sys._MEIPASS, where kikoe.media.ffmpeg looks for it.
 binaries = [(str(ffmpeg), ".")]
 if sys.platform == "win32":
     # MSYS2's PortAudio; sounddevice's own hook only finds the pip wheel's copy.
