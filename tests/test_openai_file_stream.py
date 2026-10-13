@@ -8,16 +8,25 @@ from pathlib import Path
 import httpx2 as httpx
 import pytest
 
-from helpers import run_async
-from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider, Segment
+from helpers import file_caps, run_async
+from kikoe.core.models import Capabilities, ModelSpec, Segment
 from kikoe.core.transcription import FileTranscriptSnapshot
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
-from kikoe.providers.factory import create_client
-from kikoe.providers.openai import FILE_STREAM_MODELS, OpenAIClient
+from kikoe.providers.openai import OpenAIClient
 from test_openai_provider import Recorder, form_field
 
-TEXT = ModelSpec("gpt-4o-transcribe", "GPT-4o", Capabilities())
-DIARIZE = ModelSpec("gpt-4o-transcribe-diarize", "Diarize", Capabilities(False, True, True))
+TEXT = ModelSpec("gpt-4o-transcribe", "GPT-4o", file_caps(streaming=True))
+DIARIZE = ModelSpec(
+    "gpt-4o-transcribe-diarize",
+    "Diarize",
+    file_caps(timestamps=True, diarization=True, streaming=True),
+)
+STREAMING_TEXT_MODELS = (
+    "gpt-transcribe",
+    "gpt-4o-transcribe",
+    "gpt-4o-mini-transcribe",
+    "gpt-4o-mini-transcribe-2025-12-15",
+)
 
 
 class EventBytes(httpx.AsyncByteStream):
@@ -74,7 +83,6 @@ def client(events: EventBytes) -> tuple[OpenAIClient, Recorder]:
         "https://api.openai.com/v1",
         "secret",
         transport=httpx.MockTransport(recorder),
-        file_streaming=True,
     ), recorder
 
 
@@ -86,7 +94,7 @@ def audio(tmp_path: Path) -> Path:
 
 
 @run_async
-@pytest.mark.parametrize("model", sorted(FILE_STREAM_MODELS - {DIARIZE.model_id}))
+@pytest.mark.parametrize("model", STREAMING_TEXT_MODELS)
 async def test_stream_preserves_spaces_and_uses_corrected_done_text(
     audio: Path, model: str
 ) -> None:
@@ -95,7 +103,7 @@ async def test_stream_preserves_spaces_and_uses_corrected_done_text(
     updates: list[FileTranscriptSnapshot] = []
     result = await sdk.transcribe_file(
         audio,
-        ModelSpec(model, model, Capabilities()),
+        ModelSpec(model, model, file_caps(streaming=True)),
         TranscriptionOptions(language="zh"),
         on_update=updates.append,
     )
@@ -250,15 +258,12 @@ async def test_diarized_segments_keep_audio_order_even_when_timestamps_are_hidde
     )
 
 
-@pytest.mark.parametrize("model", ["whisper-1", "unknown-transcribe"])
+@pytest.mark.parametrize("model", ["whisper-1", "gpt-4o-transcribe"])
 @run_async
-async def test_unsupported_models_keep_nonstreaming_requests(audio: Path, model: str) -> None:
+async def test_models_without_streaming_keep_nonstreaming_requests(audio: Path, model: str) -> None:
     handler = Recorder(httpx.Response(200, json={"text": "Text"}))
     sdk = OpenAIClient(
-        "https://api.openai.com/v1",
-        "secret",
-        transport=httpx.MockTransport(handler),
-        file_streaming=True,
+        "https://api.openai.com/v1", "secret", transport=httpx.MockTransport(handler)
     )
     assert await sdk.transcribe_file(
         audio, ModelSpec(model, model, Capabilities()), TranscriptionOptions()
@@ -266,10 +271,12 @@ async def test_unsupported_models_keep_nonstreaming_requests(audio: Path, model:
     assert form_field(handler.requests[0], "stream") is None
 
 
-def test_factory_enables_file_streaming_only_for_openai() -> None:
-    official = create_client(Provider("p", "OpenAI", ApiKind.OPENAI, "https://example.test"), "key")
-    compatible = create_client(
-        Provider("p", "Compatible", ApiKind.OPENAI_COMPATIBLE, "https://example.test"), "key"
+@run_async
+async def test_compatible_providers_stream_when_the_model_allows_it(audio: Path) -> None:
+    events = EventBytes([delta("Hi"), done("Hi")])
+    recorder = Recorder(
+        httpx.Response(200, headers={"content-type": "text/event-stream"}, stream=events)
     )
-    assert isinstance(official, OpenAIClient) and official._file_streaming
-    assert isinstance(compatible, OpenAIClient) and not compatible._file_streaming
+    sdk = OpenAIClient("http://localhost:8000/v1", "", transport=httpx.MockTransport(recorder))
+    assert await sdk.transcribe_file(audio, TEXT, TranscriptionOptions()) == (Segment("Hi"),)
+    assert form_field(recorder.requests[0], "stream") == "true"

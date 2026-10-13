@@ -27,21 +27,13 @@ from kikoe.providers.base import (
     TranscriptionOptions,
     UploadLimits,
     close_stack,
+    file_capabilities,
 )
 from kikoe.providers.errors import status_error
 from kikoe.providers.openai_file_stream import OpenAIFileTranscript
 from kikoe.providers.parsing import parse_segments
 
 MAX_UPLOAD_BYTES = 25_000_000
-FILE_STREAM_MODELS = frozenset(
-    {
-        "gpt-transcribe",
-        "gpt-4o-transcribe",
-        "gpt-4o-mini-transcribe",
-        "gpt-4o-mini-transcribe-2025-12-15",
-        "gpt-4o-transcribe-diarize",
-    }
-)
 
 
 class OpenAIClient:
@@ -54,14 +46,11 @@ class OpenAIClient:
         base_url: str,
         api_key: str,
         transport: httpx.AsyncBaseTransport | None = None,
-        *,
-        file_streaming: bool = False,
     ) -> None:
         self._url = base_url.rstrip("/")
         self._host = urlsplit(base_url).hostname or base_url
         self._key = api_key
         self._transport = transport
-        self._file_streaming = file_streaming
 
     def _sdk(self) -> AsyncOpenAI:
         return AsyncOpenAI(
@@ -87,34 +76,25 @@ class OpenAIClient:
         if (await asyncio.to_thread(audio.stat)).st_size > MAX_UPLOAD_BYTES:
             raise TranscriptionError(_("The audio file is too large to upload to this provider."))
         content = await asyncio.to_thread(audio.read_bytes)
-        timed = options.timestamps and model.capabilities.timestamps
-        diarize = options.diarization and model.capabilities.diarization
-        if model.model_id.startswith(
-            ("gpt-4o-transcribe", "gpt-4o-mini-transcribe", "gpt-transcribe")
-        ):
-            timed = False
-        diarize = diarize and model.model_id == "gpt-4o-transcribe-diarize"
+        caps = file_capabilities(model)
+        timed = options.timestamps and caps.timestamps
+        diarize = options.diarization and caps.diarization
+        # Diarizing models return speakers and times only in diarized_json.
+        structured = caps.diarization and (diarize or timed)
         mime = mimetypes.guess_type(audio.name)[0] or "application/octet-stream"
         try:
             result: object
             async with self._sdk() as sdk:
-                if self._file_streaming and model.model_id in FILE_STREAM_MODELS:
-                    structured = model.model_id == "gpt-4o-transcribe-diarize" and (
-                        diarize or (options.timestamps and model.capabilities.timestamps)
-                    )
+                if caps.streaming:
                     transcript = OpenAIFileTranscript(
-                        structured=structured,
-                        timed=options.timestamps and model.capabilities.timestamps,
-                        diarize=diarize,
+                        structured=structured, timed=timed, diarize=diarize
                     )
                     stream = await sdk.audio.transcriptions.create(
                         file=(audio.name, content, mime),
                         model=model.model_id,
                         response_format="diarized_json" if structured else "json",
                         stream=True,
-                        chunking_strategy="auto"
-                        if model.model_id == "gpt-4o-transcribe-diarize"
-                        else omit,
+                        chunking_strategy="auto" if caps.diarization else omit,
                         language=options.language or omit,
                         extra_headers={"Authorization": omit} if not self._key else None,
                     )
@@ -126,9 +106,7 @@ class OpenAIClient:
                             if event.type == "transcript.text.done":
                                 break
                     return transcript.result()
-                if model.model_id == "gpt-4o-transcribe-diarize" and (
-                    diarize or (options.timestamps and model.capabilities.timestamps)
-                ):
+                if structured:
                     result = await sdk.audio.transcriptions.create(
                         file=(audio.name, content, mime),
                         model=model.model_id,
@@ -157,11 +135,7 @@ class OpenAIClient:
                     )
                 if not isinstance(result, BaseModel):
                     raise ValueError("Unexpected streaming result")
-                return parse_segments(
-                    result.model_dump(),
-                    options.timestamps and model.capabilities.timestamps,
-                    diarize,
-                )
+                return parse_segments(result.model_dump(), timed, diarize)
         except APIStatusError as error:
             body: object = error.body
             message = error.message

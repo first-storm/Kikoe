@@ -4,7 +4,6 @@ import asyncio
 import logging
 import uuid
 from collections.abc import Callable
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
@@ -12,7 +11,7 @@ from pathlib import Path
 from kikoe import paths
 from kikoe.core.chunking import TimeSpan, offset_segments, plan_chunks
 from kikoe.core.models import ModelSpec, Note, Provider, Recording, RecordingSource, Segment
-from kikoe.core.transcription import FileTranscriptSnapshot, model_support, scope_speakers
+from kikoe.core.transcription import FileTranscriptSnapshot, scope_speakers
 from kikoe.i18n import _
 from kikoe.media import transcode
 from kikoe.providers.base import (
@@ -63,10 +62,8 @@ async def import_audio(
     cancelled, the copy is removed again and nothing is saved.
     """
     recording_id = uuid.uuid4().hex
-    support = model_support(provider.api, model)
-    if not support.file:
+    if model.capabilities.file is None:
         raise TranscriptionError(_("Choose a file transcription model to import audio."))
-    model = replace(model, capabilities=support.batch)
     original = await notes.store_audio(source, recording_id)
     try:
         duration, segments = await transcribe_audio(

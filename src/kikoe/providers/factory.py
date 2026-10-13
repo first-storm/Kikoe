@@ -12,9 +12,7 @@ def create_client(provider: Provider, api_key: str) -> TranscriptionProvider:
     """Return a client for ``provider``; raise :class:`TranscriptionError` if unsupported."""
     match provider.api:
         case ApiKind.OPENAI | ApiKind.OPENAI_COMPATIBLE:
-            return OpenAIClient(
-                provider.base_url, api_key, file_streaming=provider.api is ApiKind.OPENAI
-            )
+            return OpenAIClient(provider.base_url, api_key)
         case ApiKind.DEEPGRAM:
             return DeepgramClient(provider.base_url, api_key)
         case ApiKind.OPENROUTER:

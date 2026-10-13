@@ -9,7 +9,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Protocol
 
-from kikoe.core.models import ModelSpec, Segment, TimestampGranularity
+from kikoe.core.models import ModeCapabilities, ModelSpec, Segment, TimestampGranularity
 from kikoe.core.transcription import FileTranscriptSnapshot, TranscriptEvent
 
 log = logging.getLogger(__name__)
@@ -37,7 +37,12 @@ class TranscriptionOptions:
     timestamp_granularities: tuple[TimestampGranularity, ...] = field(
         default=(TimestampGranularity.SEGMENT,), kw_only=True
     )
-    """Timestamp detail; only OpenRouter honours the selection for now."""
+    """Timestamp detail; honoured only when the model has word timestamps."""
+
+
+def file_capabilities(model: ModelSpec) -> ModeCapabilities:
+    """Upload options; a live-only model requests nothing beyond plain text."""
+    return model.capabilities.file or ModeCapabilities()
 
 
 class TranscriptionError(Exception):

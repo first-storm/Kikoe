@@ -9,7 +9,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import cast
 
-from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider
+from kikoe.core.models import ApiKind, Capabilities, ModeCapabilities, ModelSpec, Provider
 from kikoe.core.preferences import Preferences, WindowState, valid_language, valid_window_state
 from kikoe.i18n import _
 from kikoe.paths import config_dir
@@ -110,12 +110,22 @@ def _encode(provider: Provider) -> dict[str, object]:
             {
                 "id": model.model_id,
                 "name": model.display_name,
-                "realtime": model.capabilities.realtime,
-                "timestamps": model.capabilities.timestamps,
-                "diarization": model.capabilities.diarization,
+                "file": _encode_mode(model.capabilities.file),
+                "realtime": _encode_mode(model.capabilities.realtime),
             }
             for model in provider.models
         ],
+    }
+
+
+def _encode_mode(mode: ModeCapabilities | None) -> dict[str, bool] | None:
+    if mode is None:
+        return None
+    return {
+        "timestamps": mode.timestamps,
+        "word_timestamps": mode.word_timestamps,
+        "diarization": mode.diarization,
+        "streaming": mode.streaming,
     }
 
 
@@ -159,10 +169,20 @@ def _decode_model(entry: object) -> ModelSpec:
         model_id=str(fields["id"]),
         display_name=str(fields["name"]),
         capabilities=Capabilities(
-            realtime=bool(fields.get("realtime", False)),
-            timestamps=bool(fields.get("timestamps", False)),
-            diarization=bool(fields.get("diarization", False)),
+            file=_decode_mode(fields.get("file")), realtime=_decode_mode(fields.get("realtime"))
         ),
+    )
+
+
+def _decode_mode(value: object) -> ModeCapabilities | None:
+    if value is None:
+        return None
+    fields = _as_dict(value, "model capabilities")
+    return ModeCapabilities(
+        timestamps=bool(fields.get("timestamps", False)),
+        word_timestamps=bool(fields.get("word_timestamps", False)),
+        diarization=bool(fields.get("diarization", False)),
+        streaming=bool(fields.get("streaming", False)),
     )
 
 

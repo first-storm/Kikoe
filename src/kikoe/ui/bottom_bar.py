@@ -9,7 +9,6 @@ from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models, 
 from kikoe.core.formatting import format_timestamp
 from kikoe.core.preferences import preferred_model
 from kikoe.core.recording import CaptureProgress, CaptureState
-from kikoe.core.transcription import model_support
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.labels import transcription_hint
@@ -63,18 +62,15 @@ class BottomBar(Adw.Bin):
         """The options' state, limited to what the chosen model supports."""
         if self._choice is None:
             return RequestedFeatures(timestamps=False, diarization=False)
-        return self._wanted.allowed_by(
-            model_support(self._choice.provider.api, self._choice.model).recording
-        )
+        return self._wanted.allowed_by(self._choice.model.capabilities.recording)
 
     @property
     def file_features(self) -> RequestedFeatures:
         """Import and retry use file capabilities even when recording would stream."""
-        if self._choice is None:
+        file = self._choice.model.capabilities.file if self._choice else None
+        if file is None:
             return RequestedFeatures(False, False)
-        return self._wanted.allowed_by(
-            model_support(self._choice.provider.api, self._choice.model).batch
-        )
+        return self._wanted.allowed_by(file)
 
     def bind_providers(self, repository: ProviderRepository) -> None:
         self._repository = repository
@@ -161,14 +157,12 @@ class BottomBar(Adw.Bin):
                 _("{model} · {provider}\n{hint}").format(
                     model=choice.model.display_name,
                     provider=choice.provider.name,
-                    hint=transcription_hint(
-                        model_support(choice.provider.api, choice.model).recording
-                    ),
+                    hint=transcription_hint(choice.model.capabilities),
                 )
             )
             self.import_button.set_tooltip_text(
                 _("Import Audio…")
-                if model_support(choice.provider.api, choice.model).file
+                if choice.model.capabilities.file is not None
                 else _("Choose a file transcription model to import audio.")
             )
         self.emit("choice-changed")

@@ -7,10 +7,9 @@ from pathlib import Path
 import httpx
 import pytest
 
-from helpers import run_async
+from helpers import file_caps, run_async
 from kikoe.core.models import (
     ApiKind,
-    Capabilities,
     ModelSpec,
     Provider,
     Segment,
@@ -85,7 +84,7 @@ def test_gemini_plain_result_never_invents_timestamps() -> None:
 def test_gemini_annotation_options_reduce_upload_duration() -> None:
     client = GeminiClient("https://example.test", "fake")
     model = ModelSpec(
-        "gemini-3.5-transcribe", "Gemini", Capabilities(timestamps=True, diarization=True)
+        "gemini-3.5-transcribe", "Gemini", file_caps(timestamps=True, diarization=True)
     )
     assert client.upload_limits(model, TranscriptionOptions()).duration == timedelta(minutes=30)
     assert client.upload_limits(model, TranscriptionOptions(False, False)).duration == timedelta(
@@ -140,7 +139,7 @@ async def test_openrouter_sdk_encodes_diarization_and_parses_word_speakers(tmp_p
     client = OpenRouterClient(
         "https://example.test/api/v1", "fake-key", httpx.MockTransport(respond)
     )
-    model = ModelSpec("deepgram/nova-3", "Nova", Capabilities(timestamps=True, diarization=True))
+    model = ModelSpec("deepgram/nova-3", "Nova", file_caps(timestamps=True, diarization=True))
     result = await client.transcribe_file(audio, model, TranscriptionOptions())
     assert result == (Segment("Hello.", timedelta(), timedelta(seconds=1), "0"),)
     assert requests[0].url.path == "/api/v1/audio/transcriptions"
@@ -176,7 +175,7 @@ async def test_openrouter_default_requests_segment_only(tmp_path: Path) -> None:
     requests: list[httpx.Request] = []
     audio = tmp_path / "clip.ogg"
     audio.write_bytes(b"fake ogg")
-    model = ModelSpec("m", "M", Capabilities(timestamps=True))
+    model = ModelSpec("m", "M", file_caps(timestamps=True))
 
     result = await openrouter_client(requests, {"text": "Hi"}).transcribe_file(
         audio, model, TranscriptionOptions()
@@ -194,7 +193,7 @@ async def test_openrouter_word_and_segment_requests_both_in_canonical_order(
     requests: list[httpx.Request] = []
     audio = tmp_path / "clip.ogg"
     audio.write_bytes(b"fake ogg")
-    model = ModelSpec("m", "M", Capabilities(timestamps=True))
+    model = ModelSpec("m", "M", file_caps(timestamps=True, word_timestamps=True))
     options = TranscriptionOptions(
         timestamp_granularities=(TimestampGranularity.WORD, TimestampGranularity.SEGMENT)
     )
@@ -205,13 +204,26 @@ async def test_openrouter_word_and_segment_requests_both_in_canonical_order(
 
 
 @run_async
+async def test_openrouter_sends_segments_only_without_word_timestamps(tmp_path: Path) -> None:
+    requests: list[httpx.Request] = []
+    audio = tmp_path / "clip.ogg"
+    audio.write_bytes(b"fake ogg")
+    model = ModelSpec("m", "M", file_caps(timestamps=True))
+    options = TranscriptionOptions(timestamp_granularities=(TimestampGranularity.WORD,))
+
+    await openrouter_client(requests, {"text": "Hi"}).transcribe_file(audio, model, options)
+
+    assert granularity_fields(requests[0]) == ["segment"]
+
+
+@run_async
 async def test_openrouter_timestamps_off_sends_no_granularities_and_json(
     tmp_path: Path,
 ) -> None:
     requests: list[httpx.Request] = []
     audio = tmp_path / "clip.ogg"
     audio.write_bytes(b"fake ogg")
-    model = ModelSpec("m", "M", Capabilities(timestamps=True))
+    model = ModelSpec("m", "M", file_caps(timestamps=True))
 
     await openrouter_client(requests, {"text": "Hi"}).transcribe_file(
         audio, model, TranscriptionOptions(timestamps=False)
@@ -226,7 +238,7 @@ async def test_openrouter_empty_granularities_falls_back_to_segment(tmp_path: Pa
     requests: list[httpx.Request] = []
     audio = tmp_path / "clip.ogg"
     audio.write_bytes(b"fake ogg")
-    model = ModelSpec("m", "M", Capabilities(timestamps=True))
+    model = ModelSpec("m", "M", file_caps(timestamps=True))
 
     await openrouter_client(requests, {"text": "Hi"}).transcribe_file(
         audio, model, TranscriptionOptions(timestamp_granularities=())
@@ -265,7 +277,9 @@ async def test_deepgram_sdk_uses_one_v1_prefix_and_requested_options(tmp_path: P
     audio.write_bytes(b"fake ogg")
     client = DeepgramClient("https://example.test/v1", "fake-key", httpx.MockTransport(respond))
     result = await client.transcribe_file(
-        audio, ModelSpec("nova-3", "Nova", Capabilities(False, True, True)), TranscriptionOptions()
+        audio,
+        ModelSpec("nova-3", "Nova", file_caps(timestamps=True, diarization=True)),
+        TranscriptionOptions(),
     )
     assert result == (Segment("Hello.", timedelta(), timedelta(seconds=1), "0"),)
     assert requests[0].url.path == "/v1/listen"
@@ -314,7 +328,7 @@ async def test_gemini_sdk_uploads_transcribes_and_deletes_remote_file(tmp_path: 
     client = GeminiClient("https://example.test", "fake-key", httpx.MockTransport(respond))
     result = await client.transcribe_file(
         audio,
-        ModelSpec("gemini-3.5-transcribe", "Gemini", Capabilities(False, True, True)),
+        ModelSpec("gemini-3.5-transcribe", "Gemini", file_caps(timestamps=True, diarization=True)),
         TranscriptionOptions(),
     )
     assert result == (Segment("Hello."),)

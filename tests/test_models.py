@@ -2,8 +2,9 @@ from dataclasses import FrozenInstanceError, replace
 
 import pytest
 
+from helpers import file_caps
 from kikoe.core.export import ExportFormat
-from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider
+from kikoe.core.models import ApiKind, ModelSpec, Provider
 
 
 def test_provider_is_immutable() -> None:
@@ -13,7 +14,7 @@ def test_provider_is_immutable() -> None:
 
 
 def test_replace_returns_updated_copy() -> None:
-    model = ModelSpec("whisper-1", "whisper-1", Capabilities(timestamps=True))
+    model = ModelSpec("whisper-1", "whisper-1", file_caps(timestamps=True))
     provider = Provider("p1", "OpenAI", ApiKind.OPENAI, "https://api.openai.com/v1")
 
     updated = replace(provider, models=(*provider.models, model))

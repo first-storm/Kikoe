@@ -28,7 +28,6 @@ from kikoe.core.speakers import identity_for
 from kikoe.core.transcription import (
     FileTranscriptSnapshot,
     LiveSnapshot,
-    model_support,
     scope_speakers,
 )
 from kikoe.i18n import _
@@ -753,7 +752,7 @@ class Window(Adw.ApplicationWindow):
         def submit(choice: ModelChoice, options: TranscriptionOptions) -> None:
             choices = available_models(self._providers.providers)
             refreshed = next((c for c in choices if c.key == choice.key), None)
-            if refreshed is None or not model_support(refreshed.provider.api, refreshed.model).file:
+            if refreshed is None or refreshed.model.capabilities.file is None:
                 self.add_toast(Adw.Toast(title=_("Choose an available file transcription model.")))
                 return
             self._stop_playback()
@@ -1067,9 +1066,7 @@ class Window(Adw.ApplicationWindow):
         available = self.bottom_bar.choice is not None and not busy
         choice = self.bottom_bar.choice
         file_available = (
-            available
-            and choice is not None
-            and model_support(choice.provider.api, choice.model).file
+            available and choice is not None and choice.model.capabilities.file is not None
         )
         self._set_action_enabled("import-audio", file_available)
         self._set_action_enabled("start-recording", available)
@@ -1306,17 +1303,14 @@ class Window(Adw.ApplicationWindow):
         self, note_id: str | None, choice: ModelChoice, options: TranscriptionOptions
     ) -> None:
         live_task: asyncio.Task[None] | None = None
-        support = model_support(choice.provider.api, choice.model)
-        choice = replace(choice, model=replace(choice.model, capabilities=support.recording))
+        realtime = choice.model.capabilities.realtime is not None
         try:
             await self._finish_playback()
             await asyncio.to_thread(find_ffmpeg)
             # Validate the batch backend before opening the microphone.
             client = create_client(
                 choice.provider,
-                await self._providers.get_api_key(choice.provider.provider_id)
-                if support.recording.realtime
-                else "",
+                await self._providers.get_api_key(choice.provider.provider_id) if realtime else "",
             )
             directory = await asyncio.to_thread(capture_dir)
             session = RecordingSession(
@@ -1339,7 +1333,7 @@ class Window(Adw.ApplicationWindow):
                 model=choice.model.display_name,
                 options=_("Text only") if not labels else ", ".join(labels),
             )
-            if support.recording.realtime:
+            if realtime:
                 self._live = RealtimeRecording(
                     session, choice, client, options, self._on_live_update
                 )

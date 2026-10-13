@@ -55,41 +55,94 @@ template $KikoeModelDialog: Adw.Dialog {
       }
 
       Adw.PreferencesGroup {
-        title: _("This Model Supports");
+        title: _("What This Model Supports");
         description: _(
-          "Different models from the same provider can differ. Check the provider’s documentation. Unchecked options are shown as unavailable when recording."
+          "Known models are filled in automatically. Options the provider rejects for this model are unavailable."
         );
 
-        Adw.ActionRow {
-          title: _("Realtime Transcription");
-          subtitle: _("Text appears while recording. If unchecked, the whole recording is uploaded after it stops.");
-          activatable-widget: realtime_check;
+        Adw.ExpanderRow file_row {
+          title: _("Transcribe _Files");
+          subtitle: _("Imported files, and recordings uploaded after they stop.");
+          use-underline: true;
+          show-enable-switch: true;
+          notify::enable-expansion => $_on_option_changed();
 
-          [prefix]
-          CheckButton realtime_check {
-            valign: center;
+          Adw.ActionRow {
+            title: _("Timestamps");
+            subtitle: _("Each segment carries a time. Needed for subtitle export.");
+            activatable-widget: file_timestamps_check;
+
+            [prefix]
+            CheckButton file_timestamps_check {
+              valign: center;
+              notify::active => $_on_option_changed();
+            }
+          }
+
+          Adw.ActionRow {
+            title: _("Word Timestamps");
+            subtitle: _("Times can be requested for single words.");
+            activatable-widget: file_words_check;
+
+            [prefix]
+            CheckButton file_words_check {
+              valign: center;
+              notify::active => $_on_option_changed();
+            }
+          }
+
+          Adw.ActionRow {
+            title: _("Speaker Detection");
+            subtitle: _("Tells different people apart and labels them.");
+            activatable-widget: file_speakers_check;
+
+            [prefix]
+            CheckButton file_speakers_check {
+              valign: center;
+              notify::active => $_on_option_changed();
+            }
+          }
+
+          Adw.ActionRow {
+            title: _("Streaming Preview");
+            subtitle: _("Text appears while a file is transcribed.");
+            activatable-widget: file_streaming_check;
+
+            [prefix]
+            CheckButton file_streaming_check {
+              valign: center;
+              notify::active => $_on_option_changed();
+            }
           }
         }
 
-        Adw.ActionRow {
-          title: _("Timestamps");
-          subtitle: _("Each segment carries a time. Needed for subtitle export.");
-          activatable-widget: timestamps_check;
+        Adw.ExpanderRow realtime_row {
+          title: _("Transcribe While _Recording");
+          subtitle: _("Text appears while recording. If off, the whole recording is uploaded after it stops.");
+          use-underline: true;
+          show-enable-switch: true;
+          notify::enable-expansion => $_on_option_changed();
 
-          [prefix]
-          CheckButton timestamps_check {
-            valign: center;
+          Adw.ActionRow {
+            title: _("Timestamps");
+            activatable-widget: realtime_timestamps_check;
+
+            [prefix]
+            CheckButton realtime_timestamps_check {
+              valign: center;
+              notify::active => $_on_option_changed();
+            }
           }
-        }
 
-        Adw.ActionRow {
-          title: _("Speaker Detection");
-          subtitle: _("Tells different people apart and labels them.");
-          activatable-widget: diarization_check;
+          Adw.ActionRow {
+            title: _("Speaker Detection");
+            activatable-widget: realtime_speakers_check;
 
-          [prefix]
-          CheckButton diarization_check {
-            valign: center;
+            [prefix]
+            CheckButton realtime_speakers_check {
+              valign: center;
+              notify::active => $_on_option_changed();
+            }
           }
         }
       }

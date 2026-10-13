@@ -4,11 +4,10 @@ from pathlib import Path
 
 import pytest
 
-from helpers import run_async
+from helpers import LIVE_ONLY, file_caps, run_async
 from kikoe.core.chunking import TimeSpan
 from kikoe.core.models import (
     ApiKind,
-    Capabilities,
     ModelSpec,
     Note,
     Provider,
@@ -29,7 +28,7 @@ from kikoe.services.importer import ImportStage, import_audio, transcribe_audio
 from kikoe.storage.library import Library
 from kikoe.storage.notes import NoteRepository
 
-MODEL = ModelSpec("whisper-large-v3", "Whisper", Capabilities(timestamps=True))
+MODEL = ModelSpec("whisper-large-v3", "Whisper", file_caps(timestamps=True))
 PROVIDER = Provider("p1", "Groq", ApiKind.OPENAI_COMPATIBLE, "https://example.test/v1", (MODEL,))
 
 
@@ -313,7 +312,7 @@ async def test_live_only_model_is_refused_before_copying_audio(
     from dataclasses import replace
 
     provider = replace(PROVIDER, api=ApiKind.GEMINI)
-    model = ModelSpec("gemini-3.5-transcribe-live", "Live", Capabilities(realtime=True))
+    model = ModelSpec("gemini-3.5-transcribe-live", "Live", LIVE_ONLY)
     await notes.load()
     with pytest.raises(TranscriptionError, match="file transcription model"):
         await import_audio(

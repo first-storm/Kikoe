@@ -9,11 +9,10 @@ from pathlib import Path
 
 import pytest
 
-from helpers import run_async
+from helpers import file_caps, run_async
 from kikoe.core.choice import ModelChoice
 from kikoe.core.models import (
     ApiKind,
-    Capabilities,
     ModelSpec,
     Provider,
     Segment,
@@ -35,7 +34,7 @@ from kikoe.storage.captures import CaptureJournal, CaptureStore, CaptureStoreErr
 from kikoe.storage.library import Library
 from kikoe.storage.notes import NoteRepository
 
-MODEL = ModelSpec("whisper-1", "Whisper", Capabilities(timestamps=True))
+MODEL = ModelSpec("whisper-1", "Whisper", file_caps(timestamps=True))
 PROVIDER = Provider("p", "OpenAI", ApiKind.OPENAI, "https://example.test/v1", (MODEL,))
 CHOICE = ModelChoice(PROVIDER, MODEL)
 

@@ -22,6 +22,7 @@ from kikoe.providers.base import (
     TranscriptionOptions,
     UploadLimits,
     close_stack,
+    file_capabilities,
 )
 from kikoe.providers.errors import sdk_error
 from kikoe.providers.parsing import entries, fields, parse_words, seconds
@@ -115,13 +116,13 @@ class DeepgramClient:
                     smart_format=True,
                     utterances=True,
                     diarize_model="latest"
-                    if options.diarization and model.capabilities.diarization
+                    if options.diarization and file_capabilities(model).diarization
                     else None,
                 )
                 return parse_deepgram(
                     result.model_dump(),
-                    options.timestamps and model.capabilities.timestamps,
-                    options.diarization and model.capabilities.diarization,
+                    options.timestamps and file_capabilities(model).timestamps,
+                    options.diarization and file_capabilities(model).diarization,
                 )
         except Exception as error:
             raise sdk_error(error) from error

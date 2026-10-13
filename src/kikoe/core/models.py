@@ -20,15 +20,32 @@ class ApiKind(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class Capabilities:
-    """What a model can do. Ticked by the user when adding the model."""
+class ModeCapabilities:
+    """What one request mode returns. Word timestamps and streaming apply to files only."""
 
-    realtime: bool = False
-    """Streams text while recording. Otherwise audio is uploaded after recording stops."""
     timestamps: bool = False
     """Segments carry times. Required for subtitle export."""
+    word_timestamps: bool = False
+    """Times can be requested per word, not only per segment."""
     diarization: bool = False
     """Segments are attributed to distinct speakers."""
+    streaming: bool = False
+    """Text previews arrive while an uploaded file is still being transcribed."""
+
+
+@dataclass(frozen=True, slots=True)
+class Capabilities:
+    """What a model can do per mode, within the limits of kikoe.core.model_catalog."""
+
+    file: ModeCapabilities | None = ModeCapabilities()
+    """Finished audio can be uploaded; None means a live-only model."""
+    realtime: ModeCapabilities | None = None
+    """Text streams while recording; None means recordings are uploaded after they stop."""
+
+    @property
+    def recording(self) -> ModeCapabilities:
+        """Microphone recordings stream when they can, otherwise they are uploaded."""
+        return self.realtime or self.file or ModeCapabilities()
 
 
 class TimestampGranularity(StrEnum):

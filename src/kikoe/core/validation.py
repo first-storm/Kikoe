@@ -21,6 +21,7 @@ class ProviderError(StrEnum):
 class ModelError(StrEnum):
     EMPTY_MODEL_ID = "empty-model-id"
     DUPLICATE_MODEL_ID = "duplicate-model-id"
+    NO_MODE = "no-mode"
 
 
 class Capability(StrEnum):
@@ -28,7 +29,9 @@ class Capability(StrEnum):
 
     REALTIME = "realtime"
     TIMESTAMPS = "timestamps"
+    WORD_TIMESTAMPS = "word-timestamps"
     DIARIZATION = "diarization"
+    STREAMING = "streaming"
 
 
 DEFAULT_BASE_URLS: dict[ApiKind, str] = {
@@ -59,9 +62,12 @@ def effective_base_url(api: ApiKind, base_url: str) -> str:
 
 
 def validate_model(
-    model_id: str, existing_ids: Collection[str], editing_id: str | None = None
+    model_id: str,
+    existing_ids: Collection[str],
+    editing_id: str | None = None,
+    capabilities: Capabilities | None = None,
 ) -> ModelError | None:
-    """Check a model ID is present and unique within its provider.
+    """Check a model ID is present and unique within its provider, and can transcribe.
 
     ``editing_id`` is the model's current ID when editing, so keeping it is not a duplicate.
     """
@@ -70,15 +76,21 @@ def validate_model(
         return ModelError.EMPTY_MODEL_ID
     if stripped != editing_id and stripped in existing_ids:
         return ModelError.DUPLICATE_MODEL_ID
+    if capabilities is not None and capabilities.file is None and capabilities.realtime is None:
+        return ModelError.NO_MODE
     return None
 
 
 def capability_list(capabilities: Capabilities) -> tuple[Capability, ...]:
-    """The capabilities a model has, in display order; empty means text only."""
+    """What a model can do in either mode, in display order; empty means text only."""
+    modes = tuple(m for m in (capabilities.file, capabilities.realtime) if m is not None)
+    file = capabilities.file
     pairs = (
-        (capabilities.realtime, Capability.REALTIME),
-        (capabilities.timestamps, Capability.TIMESTAMPS),
-        (capabilities.diarization, Capability.DIARIZATION),
+        (capabilities.realtime is not None, Capability.REALTIME),
+        (any(m.timestamps for m in modes), Capability.TIMESTAMPS),
+        (file is not None and file.word_timestamps, Capability.WORD_TIMESTAMPS),
+        (any(m.diarization for m in modes), Capability.DIARIZATION),
+        (file is not None and file.streaming, Capability.STREAMING),
     )
     return tuple(capability for enabled, capability in pairs if enabled)
 

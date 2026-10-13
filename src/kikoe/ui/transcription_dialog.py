@@ -1,23 +1,14 @@
 """Choose the model and options the next recording or import is transcribed with."""
 
 from collections.abc import Callable, Sequence
-from dataclasses import replace
 
-from gi.repository import Adw, GObject, Gtk
+from gi.repository import Adw, Gtk
 
-from kikoe.core.choice import ModelChoice, RequestedFeatures, normalize_granularities
-from kikoe.core.models import ApiKind, TimestampGranularity
-from kikoe.core.transcription import model_support
+from kikoe.core.choice import ModelChoice, RequestedFeatures
 from kikoe.i18n import _
-from kikoe.ui.labels import capability_summary, transcription_mode, unsupported_option_subtitle
+from kikoe.ui.labels import capability_summary, transcription_mode
+from kikoe.ui.options_group import OptionsGroup
 from kikoe.ui.templates import ui_file
-
-_GRANULARITIES: tuple[tuple[TimestampGranularity, ...], ...] = (
-    (TimestampGranularity.SEGMENT,),
-    (TimestampGranularity.WORD,),
-    (TimestampGranularity.SEGMENT, TimestampGranularity.WORD),
-)
-"""Selections offered by the Timestamp Detail row, in its order."""
 
 
 @Gtk.Template(filename=ui_file("transcription_dialog"))
@@ -27,10 +18,7 @@ class TranscriptionDialog(Adw.Dialog):
     __gtype_name__ = "KikoeTranscriptionDialog"
 
     models_box: Gtk.Box = Gtk.Template.Child()
-    options_group: Adw.PreferencesGroup = Gtk.Template.Child()
-    timestamps_row: Adw.SwitchRow = Gtk.Template.Child()
-    granularity_row: Adw.ComboRow = Gtk.Template.Child()
-    speakers_row: Adw.SwitchRow = Gtk.Template.Child()
+    options_slot: Gtk.Box = Gtk.Template.Child()
 
     def __init__(
         self,
@@ -43,7 +31,9 @@ class TranscriptionDialog(Adw.Dialog):
         self._choice = current
         self._wanted = wanted
         self._on_change = on_change
-        self._updating = False
+        self._options = OptionsGroup()
+        self._options.connect("changed", self._on_options_group_changed)
+        self.options_slot.append(self._options)
         self._radio_anchor = Gtk.CheckButton()
         """Never shown; a lone model still needs a group to look like a radio, not a check."""
         self._current_radio: Gtk.CheckButton | None = None
@@ -81,7 +71,7 @@ class TranscriptionDialog(Adw.Dialog):
         radio.connect("toggled", self._on_model_radio_toggled, choice)
         row = Adw.ActionRow(
             title=choice.model.display_name,
-            subtitle=capability_summary(model_support(choice.provider.api, choice.model).recording),
+            subtitle=capability_summary(choice.model.capabilities),
             use_markup=False,
             activatable_widget=radio,
         )
@@ -97,58 +87,17 @@ class TranscriptionDialog(Adw.Dialog):
 
     def _show_options(self) -> None:
         choice = self._choice
-        self.options_group.set_visible(choice is not None)
+        self.options_slot.set_visible(choice is not None)
         if choice is None:
             return
-        capabilities = model_support(choice.provider.api, choice.model).recording
-        allowed = self._wanted.allowed_by(capabilities)
-        self.options_group.set_description(transcription_mode(capabilities))
-        self._updating = True
-        try:
-            for row, supported, active in (
-                (self.timestamps_row, capabilities.timestamps, allowed.timestamps),
-                (self.speakers_row, capabilities.diarization, allowed.diarization),
-            ):
-                row.set_sensitive(supported)
-                row.set_active(active)
-                row.set_subtitle("" if supported else unsupported_option_subtitle())
-            self.granularity_row.set_visible(
-                choice.provider.api is ApiKind.OPENROUTER and allowed.timestamps
-            )
-            wanted = normalize_granularities(self._wanted.timestamp_granularities)
-            self.granularity_row.set_selected(
-                _GRANULARITIES.index(wanted) if wanted in _GRANULARITIES else 0
-            )
-        finally:
-            self._updating = False
+        capabilities = choice.model.capabilities
+        self._options.set_description(transcription_mode(capabilities))
+        self._options.set_options(capabilities.recording, self._wanted)
 
-    @Gtk.Template.Callback()
-    def _on_option_row_notify_active(self, _row: Adw.SwitchRow, _spec: GObject.ParamSpec) -> None:
-        if self._updating or self._choice is None:
-            return
-        capabilities = model_support(self._choice.provider.api, self._choice.model).recording
-        # A row the model cannot honor keeps the earlier wish for the next model that can.
-        self._wanted = replace(
-            self._wanted,
-            timestamps=self.timestamps_row.get_active()
-            if capabilities.timestamps
-            else self._wanted.timestamps,
-            diarization=self.speakers_row.get_active()
-            if capabilities.diarization
-            else self._wanted.diarization,
-        )
-        self._show_options()
-        self._on_change(self._choice, self._wanted)
-
-    @Gtk.Template.Callback()
-    def _on_granularity_row_notify_selected(
-        self, row: Adw.ComboRow, _spec: GObject.ParamSpec
-    ) -> None:
-        index = row.get_selected()
-        if self._updating or self._choice is None or index >= len(_GRANULARITIES):
-            return
-        self._wanted = replace(self._wanted, timestamp_granularities=_GRANULARITIES[index])
-        self._on_change(self._choice, self._wanted)
+    def _on_options_group_changed(self, group: OptionsGroup) -> None:
+        self._wanted = group.wanted
+        if self._choice is not None:
+            self._on_change(self._choice, self._wanted)
 
     @Gtk.Template.Callback()
     def _on_manage_row_activated(self, _row: Adw.ButtonRow) -> None:

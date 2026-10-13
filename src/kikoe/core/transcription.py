@@ -1,50 +1,10 @@
-"""Resolve API limits and accumulate live text without depending on SDKs or GTK."""
+"""Accumulate live and file transcript text without depending on SDKs or GTK."""
 
 from dataclasses import dataclass, replace
 from datetime import timedelta
 from enum import StrEnum
 
-from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Segment
-
-
-@dataclass(frozen=True, slots=True)
-class ModelSupport:
-    """File and microphone requests can have different effective capabilities."""
-
-    file: bool
-    recording: Capabilities
-    batch: Capabilities
-
-
-def model_support(api: ApiKind, model: ModelSpec) -> ModelSupport:
-    """Manual declarations cannot enable options rejected by a known endpoint."""
-    caps = model.capabilities
-    batch = replace(caps, realtime=False)
-    file = True
-    match api:
-        case ApiKind.OPENROUTER:
-            caps = replace(caps, realtime=False)
-        case ApiKind.GEMINI:
-            live = model.model_id == "gemini-3.5-transcribe-live"
-            file = not live
-            caps = Capabilities(realtime=True) if live else replace(caps, realtime=False)
-        case ApiKind.OPENAI | ApiKind.OPENAI_COMPATIBLE:
-            file = model.model_id not in {"gpt-live-transcribe", "gpt-realtime-whisper"}
-            if model.model_id == "whisper-1":
-                caps = replace(caps, realtime=False, diarization=False)
-                batch = replace(batch, diarization=False)
-            elif model.model_id == "gpt-4o-transcribe-diarize":
-                caps = replace(caps, realtime=False)
-            else:
-                if model.model_id in {"gpt-live-transcribe", "gpt-realtime-whisper"}:
-                    caps = replace(caps, realtime=True)
-                if model.model_id.startswith(("gpt-4o", "gpt-transcribe")):
-                    batch = replace(batch, timestamps=False, diarization=False)
-                if caps.realtime:
-                    caps = replace(caps, timestamps=False, diarization=False)
-        case ApiKind.DEEPGRAM:
-            pass
-    return ModelSupport(file, caps, batch)
+from kikoe.core.models import Segment
 
 
 def scope_speakers(segments: tuple[Segment, ...], scope: str) -> tuple[Segment, ...]:

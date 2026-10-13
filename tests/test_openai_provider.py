@@ -4,14 +4,14 @@ from pathlib import Path
 import httpx2 as httpx
 import pytest
 
-from helpers import run_async
+from helpers import file_caps, run_async
 from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider, Segment
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
 from kikoe.providers.factory import create_client
 from kikoe.providers.openai import MAX_UPLOAD_BYTES, OpenAIClient
 
 BASE_URL = "https://api.groq.com/openai/v1/"
-WHISPER = ModelSpec("whisper-large-v3", "Whisper", Capabilities(timestamps=True))
+WHISPER = ModelSpec("whisper-large-v3", "Whisper", file_caps(timestamps=True))
 TEXT_ONLY = ModelSpec("gpt-4o-transcribe", "GPT-4o", Capabilities())
 
 # Trimmed from a real Groq verbose_json response.
@@ -202,7 +202,9 @@ def test_factory_supports_deepgram() -> None:
 async def test_diarization_uses_official_format_without_requesting_verbose_json(
     audio: Path,
 ) -> None:
-    model = ModelSpec("gpt-4o-transcribe-diarize", "Diarize", Capabilities(False, True, True))
+    model = ModelSpec(
+        "gpt-4o-transcribe-diarize", "Diarize", file_caps(timestamps=True, diarization=True)
+    )
     handler = Recorder(
         httpx.Response(
             200,
@@ -230,7 +232,9 @@ async def test_diarization_uses_official_format_without_requesting_verbose_json(
 
 @run_async
 async def test_disabling_all_diarization_options_requests_plain_json(audio: Path) -> None:
-    model = ModelSpec("gpt-4o-transcribe-diarize", "Diarize", Capabilities(False, True, True))
+    model = ModelSpec(
+        "gpt-4o-transcribe-diarize", "Diarize", file_caps(timestamps=True, diarization=True)
+    )
     handler = Recorder(httpx.Response(200, json={"text": "Hello."}))
     assert await client(handler).transcribe_file(
         audio, model, TranscriptionOptions(False, False)

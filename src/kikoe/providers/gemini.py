@@ -20,6 +20,7 @@ from kikoe.providers.base import (
     TranscriptionOptions,
     UploadLimits,
     close_stack,
+    file_capabilities,
 )
 from kikoe.providers.errors import sdk_error
 from kikoe.providers.parsing import entries, fields, parse_words
@@ -61,8 +62,8 @@ class GeminiClient:
         )
 
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-        annotated = (options.timestamps and model.capabilities.timestamps) or (
-            options.diarization and model.capabilities.diarization
+        annotated = (options.timestamps and file_capabilities(model).timestamps) or (
+            options.diarization and file_capabilities(model).diarization
         )
         return UploadLimits(duration=timedelta(minutes=30 if annotated else 60))
 
@@ -81,8 +82,9 @@ class GeminiClient:
     async def _transcribe_file(
         self, audio: Path, model: ModelSpec, options: TranscriptionOptions
     ) -> tuple[Segment, ...]:
-        timed = options.timestamps and model.capabilities.timestamps
-        diarize = options.diarization and model.capabilities.diarization
+        caps = file_capabilities(model)
+        timed = options.timestamps and caps.timestamps
+        diarize = options.diarization and caps.diarization
         try:
             async with self._sdk().aio as sdk:
                 uploaded = await sdk.files.upload(file=audio)
