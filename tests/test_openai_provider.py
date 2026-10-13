@@ -141,7 +141,7 @@ async def test_api_error_message_is_passed_on(audio: Path) -> None:
     body = {"error": {"message": "The model `nope` does not exist", "code": "model_not_found"}}
     handler = Recorder(httpx.Response(404, json=body))
 
-    with pytest.raises(TranscriptionError, match=r"api\.groq\.com reported an error: The model"):
+    with pytest.raises(TranscriptionError, match=r"api\.groq\.com could not find this model"):
         await client(handler).transcribe_file(audio, WHISPER, TranscriptionOptions())
 
 
@@ -149,7 +149,7 @@ async def test_api_error_message_is_passed_on(audio: Path) -> None:
 async def test_error_without_body_reports_the_status(audio: Path) -> None:
     handler = Recorder(httpx.Response(502, text="Bad Gateway"))
 
-    with pytest.raises(TranscriptionError, match="HTTP status 502"):
+    with pytest.raises(TranscriptionError, match="HTTP 502"):
         await client(handler).transcribe_file(audio, WHISPER, TranscriptionOptions())
 
 

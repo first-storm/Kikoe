@@ -205,6 +205,13 @@ class DeepgramSession:
             if data.get("type") == "Metadata":
                 self._drained.set()
             if data.get("type") == "Error":
+                reason = fields(data).get("description") or fields(data).get("message")
+                if isinstance(reason, str) and reason:
+                    raise TranscriptionError(
+                        _("Deepgram rejected realtime transcription: {message}").format(
+                            message=reason
+                        )
+                    )
                 raise TranscriptionError(
                     _("The provider rejected realtime transcription. Check the model and API key.")
                 )

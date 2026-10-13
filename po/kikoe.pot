@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kikoe\n"
 "Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
-"POT-Creation-Date: 2026-10-13 05:36+1100\n"
+"POT-Creation-Date: 2026-10-13 14:21+1100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -118,66 +118,118 @@ msgid ""
 "({detail})"
 msgstr ""
 
-#: src/kikoe/providers/deepgram.py:209
+#: src/kikoe/providers/deepgram.py:211
+#, python-brace-format
+msgid "Deepgram rejected realtime transcription: {message}"
+msgstr ""
+
+#: src/kikoe/providers/deepgram.py:216
 msgid ""
 "The provider rejected realtime transcription. Check the model and API key."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:11
+#: src/kikoe/providers/errors.py:44
+#, python-brace-format
+msgid "{subject} rejected the API key. Check it in Preferences."
+msgstr ""
+
+#: src/kikoe/providers/errors.py:47
+#, python-brace-format
+msgid ""
+"{subject} does not allow this API key to use this model, or is not available "
+"in your region. Check your account and the key in Preferences."
+msgstr ""
+
+#: src/kikoe/providers/errors.py:51
+#, python-brace-format
+msgid "{subject} reports that your account has run out of credits."
+msgstr ""
+
+#: src/kikoe/providers/errors.py:53
+#, python-brace-format
+msgid "{subject} could not find this model. Check the model name."
+msgstr ""
+
+#: src/kikoe/providers/errors.py:55
+#, python-brace-format
+msgid "{subject} took too long to respond. Try again later."
+msgstr ""
+
+#: src/kikoe/providers/errors.py:57
+#, python-brace-format
+msgid "The audio is too large for {subject}."
+msgstr ""
+
+#: src/kikoe/providers/errors.py:60
+#, python-brace-format
+msgid ""
+"{subject} is limiting requests, or your quota is used up. Wait a while and "
+"try again, or check your plan."
+msgstr ""
+
+#: src/kikoe/providers/errors.py:64
+#, python-brace-format
+msgid "{subject} is having problems (HTTP {status}). Try again later."
+msgstr ""
+
+#: src/kikoe/providers/errors.py:66
+#, python-brace-format
+msgid "{subject} could not process this audio (HTTP {status})."
+msgstr ""
+
+#: src/kikoe/providers/errors.py:69
+#, python-brace-format
+msgid ""
+"{subject} rejected this request (HTTP {status}). Check the model and options."
+msgstr ""
+
+#: src/kikoe/providers/errors.py:72
+#, python-brace-format
+msgid "{subject} returned an unexpected error (HTTP {status})."
+msgstr ""
+
+#: src/kikoe/providers/errors.py:77
+#, python-brace-format
+msgid "{message} Details: {detail}"
+msgstr ""
+
+#: src/kikoe/providers/errors.py:85
 msgid "The provider sent a response Kikoe does not understand."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:17
-msgid "The provider rejected the API key. Check it in Preferences."
+#: src/kikoe/providers/errors.py:88
+msgid "The provider"
 msgstr ""
 
-#: src/kikoe/providers/errors.py:21
-#, python-brace-format
-msgid ""
-"The provider rejected this request (HTTP {status}). Check the model and "
-"options."
-msgstr ""
-
-#: src/kikoe/providers/errors.py:25
+#: src/kikoe/providers/errors.py:90
 msgid "Could not complete transcription. Check your connection and try again."
 msgstr ""
 
-#: src/kikoe/providers/openai.py:65 src/kikoe/providers/openrouter.py:42
+#: src/kikoe/providers/openai.py:66 src/kikoe/providers/openrouter.py:42
 msgid "The audio file is too large to upload to this provider."
 msgstr ""
 
-#: src/kikoe/providers/openai.py:117
-#, python-brace-format
-msgid "{host} rejected the API key. Check it in Preferences."
-msgstr ""
-
-#: src/kikoe/providers/openai.py:135
-#, python-brace-format
-msgid "{host} reported an error: {message} (HTTP status {status})."
-msgstr ""
-
-#: src/kikoe/providers/openai.py:142
+#: src/kikoe/providers/openai.py:132
 #, python-brace-format
 msgid "{host} took too long to respond. Try again later."
 msgstr ""
 
-#: src/kikoe/providers/openai.py:147
+#: src/kikoe/providers/openai.py:137
 #, python-brace-format
 msgid "Could not reach {host}. Try again later."
 msgstr ""
 
-#: src/kikoe/providers/openai.py:152
+#: src/kikoe/providers/openai.py:142
 #, python-brace-format
 msgid "{host} sent a response Kikoe does not understand."
 msgstr ""
 
-#: src/kikoe/providers/openai.py:193
-msgid ""
-"The realtime session was rejected. Check the model and API key in "
-"Preferences."
+#: src/kikoe/providers/openai.py:182
+#, python-brace-format
+msgid "{host} rejected the realtime session: {message}"
 msgstr ""
 
-#: src/kikoe/providers/openai.py:259
+#: src/kikoe/providers/openai.py:248
 msgid "Realtime transcription failed. Your audio has been kept."
 msgstr ""
 

@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kikoe 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
-"POT-Creation-Date: 2026-10-13 05:36+1100\n"
+"POT-Creation-Date: 2026-10-13 14:21+1100\n"
 "PO-Revision-Date: 2026-10-12 00:00+0000\n"
 "Last-Translator: first-storm\n"
 "Language-Team: Simplified Chinese\n"
@@ -115,66 +115,118 @@ msgid ""
 "({detail})"
 msgstr "无法读取“{name}”，它可能不是音频文件，或文件已经损坏。（{detail}）"
 
-#: src/kikoe/providers/deepgram.py:209
+#: src/kikoe/providers/deepgram.py:211
+#, python-brace-format
+msgid "Deepgram rejected realtime transcription: {message}"
+msgstr "Deepgram 拒绝了实时转录：{message}"
+
+#: src/kikoe/providers/deepgram.py:216
 msgid ""
 "The provider rejected realtime transcription. Check the model and API key."
 msgstr "服务商拒绝了实时转录，请检查模型和 API 密钥。"
 
-#: src/kikoe/providers/errors.py:11
+#: src/kikoe/providers/errors.py:44
+#, python-brace-format
+msgid "{subject} rejected the API key. Check it in Preferences."
+msgstr "{subject}拒绝了 API 密钥，请在偏好设置中检查。"
+
+#: src/kikoe/providers/errors.py:47
+#, python-brace-format
+msgid ""
+"{subject} does not allow this API key to use this model, or is not available "
+"in your region. Check your account and the key in Preferences."
+msgstr "{subject}不允许此 API 密钥使用该模型，或在你所在的地区不可用。请检查账户，并在偏好设置中检查密钥。"
+
+#: src/kikoe/providers/errors.py:51
+#, python-brace-format
+msgid "{subject} reports that your account has run out of credits."
+msgstr "{subject}提示你的账户额度已用完。"
+
+#: src/kikoe/providers/errors.py:53
+#, python-brace-format
+msgid "{subject} could not find this model. Check the model name."
+msgstr "{subject}找不到此模型，请检查模型名称。"
+
+#: src/kikoe/providers/errors.py:55
+#, python-brace-format
+msgid "{subject} took too long to respond. Try again later."
+msgstr "{subject}响应超时，请稍后重试。"
+
+#: src/kikoe/providers/errors.py:57
+#, python-brace-format
+msgid "The audio is too large for {subject}."
+msgstr "音频文件过大，{subject}无法接收。"
+
+#: src/kikoe/providers/errors.py:60
+#, python-brace-format
+msgid ""
+"{subject} is limiting requests, or your quota is used up. Wait a while and "
+"try again, or check your plan."
+msgstr "{subject}正在限制请求，或你的配额已用完。请稍等后重试，或检查你的套餐。"
+
+#: src/kikoe/providers/errors.py:64
+#, python-brace-format
+msgid "{subject} is having problems (HTTP {status}). Try again later."
+msgstr "{subject}出现故障（HTTP {status}），请稍后重试。"
+
+#: src/kikoe/providers/errors.py:66
+#, python-brace-format
+msgid "{subject} could not process this audio (HTTP {status})."
+msgstr "{subject}无法处理此音频（HTTP {status}）。"
+
+#: src/kikoe/providers/errors.py:69
+#, python-brace-format
+msgid ""
+"{subject} rejected this request (HTTP {status}). Check the model and options."
+msgstr "{subject}拒绝了请求（HTTP {status}），请检查模型和选项。"
+
+#: src/kikoe/providers/errors.py:72
+#, python-brace-format
+msgid "{subject} returned an unexpected error (HTTP {status})."
+msgstr "{subject}返回了意外错误（HTTP {status}）。"
+
+#: src/kikoe/providers/errors.py:77
+#, python-brace-format
+msgid "{message} Details: {detail}"
+msgstr "{message}详情：{detail}"
+
+#: src/kikoe/providers/errors.py:85
 msgid "The provider sent a response Kikoe does not understand."
 msgstr "服务商返回了 Kikoe 无法解析的响应。"
 
-#: src/kikoe/providers/errors.py:17
-msgid "The provider rejected the API key. Check it in Preferences."
-msgstr "服务商拒绝了 API 密钥，请在偏好设置中检查。"
+#: src/kikoe/providers/errors.py:88
+msgid "The provider"
+msgstr "服务商"
 
-#: src/kikoe/providers/errors.py:21
-#, python-brace-format
-msgid ""
-"The provider rejected this request (HTTP {status}). Check the model and "
-"options."
-msgstr "服务商拒绝了请求（HTTP {status}），请检查模型和选项。"
-
-#: src/kikoe/providers/errors.py:25
+#: src/kikoe/providers/errors.py:90
 msgid "Could not complete transcription. Check your connection and try again."
 msgstr "无法完成转录，请检查网络连接后重试。"
 
-#: src/kikoe/providers/openai.py:65 src/kikoe/providers/openrouter.py:42
+#: src/kikoe/providers/openai.py:66 src/kikoe/providers/openrouter.py:42
 msgid "The audio file is too large to upload to this provider."
 msgstr "音频文件过大，无法上传到此服务商。"
 
-#: src/kikoe/providers/openai.py:117
-#, python-brace-format
-msgid "{host} rejected the API key. Check it in Preferences."
-msgstr "{host} 拒绝了 API 密钥，请在偏好设置中检查。"
-
-#: src/kikoe/providers/openai.py:135
-#, python-brace-format
-msgid "{host} reported an error: {message} (HTTP status {status})."
-msgstr "{host} 报告了错误：{message}（HTTP 状态 {status}）。"
-
-#: src/kikoe/providers/openai.py:142
+#: src/kikoe/providers/openai.py:132
 #, python-brace-format
 msgid "{host} took too long to respond. Try again later."
 msgstr "{host} 响应超时，请稍后重试。"
 
-#: src/kikoe/providers/openai.py:147
+#: src/kikoe/providers/openai.py:137
 #, python-brace-format
 msgid "Could not reach {host}. Try again later."
 msgstr "无法连接 {host}，请稍后重试。"
 
-#: src/kikoe/providers/openai.py:152
+#: src/kikoe/providers/openai.py:142
 #, python-brace-format
 msgid "{host} sent a response Kikoe does not understand."
 msgstr "{host} 返回了 Kikoe 无法解析的响应。"
 
-#: src/kikoe/providers/openai.py:193
-msgid ""
-"The realtime session was rejected. Check the model and API key in "
-"Preferences."
-msgstr "实时会话被拒绝，请在偏好设置中检查模型和 API 密钥。"
+#: src/kikoe/providers/openai.py:182
+#, python-brace-format
+msgid "{host} rejected the realtime session: {message}"
+msgstr "{host} 拒绝了实时会话：{message}"
 
-#: src/kikoe/providers/openai.py:259
+#: src/kikoe/providers/openai.py:248
 msgid "Realtime transcription failed. Your audio has been kept."
 msgstr "实时转录失败，已保留音频。"
 
@@ -1482,6 +1534,14 @@ msgstr "关于 Kikoe(_A)"
 #: src/kikoe/ui/window.ui:304
 msgid "_Copy All Text"
 msgstr "复制全部文字(_C)"
+
+#~ msgid "The provider rejected the API key. Check it in Preferences."
+#~ msgstr "服务商拒绝了 API 密钥，请在偏好设置中检查。"
+
+#~ msgid ""
+#~ "The realtime session was rejected. Check the model and API key in "
+#~ "Preferences."
+#~ msgstr "实时会话被拒绝，请在偏好设置中检查模型和 API 密钥。"
 
 #~ msgid "Enter a valid start time, or leave it empty."
 #~ msgstr "请输入有效的开始时间，或留空。"

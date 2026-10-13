@@ -27,6 +27,7 @@ from kikoe.providers.base import (
     UploadLimits,
     close_stack,
 )
+from kikoe.providers.errors import status_error
 from kikoe.providers.parsing import parse_segments
 
 MAX_UPLOAD_BYTES = 25_000_000
@@ -112,12 +113,6 @@ class OpenAIClient:
                     diarize,
                 )
         except APIStatusError as error:
-            if error.status_code in (401, 403):
-                raise TranscriptionError(
-                    _("{host} rejected the API key. Check it in Preferences.").format(
-                        host=self._host
-                    )
-                ) from error
             body: object = error.body
             message = error.message
             if isinstance(body, dict):
@@ -131,12 +126,7 @@ class OpenAIClient:
                         message = str(nested["message"])
             if self._key:
                 message = message.replace(self._key, "[redacted]")
-            raise TranscriptionError(
-                _("{host} reported an error: {message} (HTTP status {status}).").format(
-                    host=self._host, message=message, status=error.status_code
-                ),
-                retryable=error.status_code == 429 or error.status_code >= 500,
-            ) from error
+            raise status_error(error.status_code, self._host, message) from error
         except APITimeoutError as error:
             raise TranscriptionError(
                 _("{host} took too long to respond. Try again later.").format(host=self._host),
@@ -189,9 +179,8 @@ class OpenAIClient:
                         break
                     if event.type == "error":
                         raise TranscriptionError(
-                            _(
-                                "The realtime session was rejected. Check the model "
-                                "and API key in Preferences."
+                            _("{host} rejected the realtime session: {message}").format(
+                                host=self._host, message=event.error.message
                             )
                         )
             return OpenAISession(connection, stack)
