@@ -230,7 +230,7 @@ class TranscriptRow(Gtk.Box):
         )
         self.timestamp_button.set_sensitive(editable and not live)
         self._segment = segment
-        if not self.timestamp_popover.get_visible():
+        if self.timestamp_popover.get_visible():
             self._fill_time_rows(segment)
 
     def _bind_text(self, key: tuple[str, int], text: str) -> None:
@@ -397,6 +397,11 @@ class TranscriptRow(Gtk.Box):
             return
         invalid = self.start_row if self.start_row.has_css_class("error") else self.end_row
         invalid.grab_focus()
+
+    @Gtk.Template.Callback()
+    def _on_timestamp_popover_show(self, _popover: Gtk.Popover) -> None:
+        if self._segment is not None:
+            self._fill_time_rows(self._segment)
 
     @Gtk.Template.Callback()
     def _on_timestamp_popover_closed(self, _popover: Gtk.Popover) -> None:

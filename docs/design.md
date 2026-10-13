@@ -72,8 +72,10 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 - Segments: a meta column (speaker name, colored, clickable → "Rename Speaker"; below
   it the time range, tabular digits) and the text. Speaker/timestamp columns hide per
   display options. Below 520 sp the meta column moves above the text on one line.
-- The transcript is edited in place, like a document: segment text is a borderless
-  text view that tints on hover and, while it holds the caret, with the accent color.
+- The transcript is edited in place, like a document: segment text is borderless
+  and tints on hover and, while it holds the caret, with the accent color. Reading
+  uses lightweight text labels; clicking text or focusing it with the keyboard
+  creates the in-place text view. Scrolling does not allocate offscreen editors.
   There is no edit button or dialog. Edits save themselves after a short pause in
   typing and whenever the caret leaves the segment; empty text is not saved (toast
   "Segment text cannot be empty", the text reverts).

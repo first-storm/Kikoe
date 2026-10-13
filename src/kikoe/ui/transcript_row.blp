@@ -144,6 +144,7 @@ template $KikoeTranscriptRow: Box {
         };
 
         popover: Popover timestamp_popover {
+          show => $_on_timestamp_popover_show();
           closed => $_on_timestamp_popover_closed();
 
           child: Box {

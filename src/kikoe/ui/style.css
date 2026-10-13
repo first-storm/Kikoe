@@ -12,11 +12,13 @@ textview.segment-text,
 textview.segment-text > text {
   background: none;
 }
-textview.segment-text {
+textview.segment-text,
+label.transcript-preview {
   border-radius: 8px;
   transition: background-color 150ms ease-out;
 }
-textview.segment-text:hover {
+textview.segment-text:hover,
+label.transcript-preview:hover {
   background-color: color-mix(in srgb, currentColor 4%, transparent);
 }
 textview.segment-text:focus-within {
@@ -26,6 +28,12 @@ textview.segment-text:focus-within {
 /* Timestamps share the meta column with speaker names: keep the button compact and
    pull it out by its padding so the digits line up with the name above. */
 menubutton.timestamp-button > button {
+  padding: 0 4px;
+  min-height: 24px;
+  margin: 0 -4px;
+}
+
+button.timestamp-preview {
   padding: 0 4px;
   min-height: 24px;
   margin: 0 -4px;

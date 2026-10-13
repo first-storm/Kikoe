@@ -26,6 +26,8 @@ class NoteItem(GObject.Object):
 class TranscriptItem(GObject.Object):
     """A row of the note view: a recording header when ``segment`` is None."""
 
+    __gtype_name__ = "KikoeTranscriptItem"
+
     def __init__(
         self,
         recording: Recording,

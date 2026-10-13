@@ -1,30 +1,31 @@
 """The open note: each recording's header followed by its segments, in one list.
 
-A ``Gtk.ListView`` only creates widgets for visible rows, so transcripts with thousands
-of segments stay fast. Segment text is edited in place; the view reports edits and the
-window saves them and keeps the Undo history.
+The list model wraps rows lazily, and offscreen cells use cheap size estimates.
+Reading widgets are created near the viewport; full editors are used on interaction.
+The window saves edits and keeps the Undo history.
 """
 
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
-from gi.repository import Adw, Gio, GLib, GObject, Gtk
+from gi.repository import Adw, GLib, GObject, Gtk
 
-from kikoe.core.formatting import SPEAKER_COLOR_COUNT, speaker_order, transcript_features
+from kikoe.core.formatting import SPEAKER_COLOR_COUNT, speaker_order
 from kikoe.core.models import Note, Recording, RecordingSource
 from kikoe.core.speakers import (
-    identity_for,
     live_speaker_numbers,
     resolved_note,
     unresolved_recordings,
 )
 from kikoe.core.transcription import LiveSnapshot, LiveState
-from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.ui.items import TranscriptItem
 from kikoe.ui.recording_view import RecordingView
-from kikoe.ui.speaker_row import speaker_label
 from kikoe.ui.templates import ui_file
+from kikoe.ui.transcript_cell import TranscriptCell
+from kikoe.ui.transcript_model import TranscriptModel
+from kikoe.ui.transcript_preview import TranscriptPreview
 from kikoe.ui.transcript_row import TranscriptRow
 
 
@@ -51,15 +52,20 @@ class NoteView(Adw.BreakpointBin):
         self._live_summary = ""
         self._compact = False
         self._editable = True
-        self._items: Gio.ListStore[TranscriptItem] = Gio.ListStore(item_type=TranscriptItem)
-        self._bound: dict[TranscriptRow, TranscriptItem] = {}
+        self._items = TranscriptModel()
+        self._bound: dict[TranscriptCell, TranscriptItem] = {}
         """Rows on screen, updated in place when only the display options change."""
         factory = Gtk.SignalListItemFactory()
         factory.connect("setup", self._on_factory_setup)
         factory.connect("bind", self._on_factory_bind)
         factory.connect("unbind", self._on_factory_unbind)
+        factory.connect("teardown", self._on_factory_teardown)
         self.transcript_list.set_factory(factory)
         self.transcript_list.set_model(Gtk.NoSelection(model=self._items))
+        # Editors are reusable UI infrastructure, independent of any loaded note.
+        self._row_pool = [self._new_row() for _ in range(2)]
+        self._preview_pool: list[TranscriptPreview] = []
+        self._cell_pool: list[TranscriptCell] = []
 
     __gsignals__ = {  # noqa: RUF012  # PyGObject reads this class attribute once
         # (recording id, position, text): a segment's text was typed over.
@@ -104,33 +110,38 @@ class NoteView(Adw.BreakpointBin):
         if previous is not None and same_note and _same_structure(previous, note):
             self._update_segments(note)
             return False
-        self._has_speakers = any(
-            Capability.DIARIZATION in transcript_features(r.segments) for r in note.recordings
-        )
-        self._has_timestamps = any(
-            s.start is not None or s.end is not None for r in note.recordings for s in r.segments
-        )
-        self._items.splice(0, self._items.get_n_items(), _rows(note))
+        self.flush_edits()
+        if not same_note:
+            for cell in tuple(self._bound):
+                cell.leave_editor()
+        self._items.set_note(note)
+        self._live_rows = []
+        self._has_speakers = self._items.index.has_speakers
+        self._has_timestamps = self._items.index.has_timestamps
+        self._rebind()
         if not same_note and self._items.get_n_items():
             self.transcript_list.scroll_to(0, Gtk.ListScrollFlags.NONE, None)
+            for cell, data in self._bound.items():
+                index = (
+                    self._items.index.offsets[data.number - 1]
+                    + (data.position or 0)
+                    + (data.position is not None)
+                )
+                if index < 16:
+                    cell.prepare()
         return True
 
     def _update_segments(self, note: Note) -> None:
         """Swap in edited segments without rebuilding rows, keeping the caret and scroll."""
-        recordings = {r.recording_id: r for r in note.recordings}
-        for index in range(self._items.get_n_items()):
-            item = self._items.get_item(index)
-            recording = recordings.get(item.recording.recording_id) if item else None
-            if item is None or recording is None:
-                continue
-            item.recording = recording
-            if item.segment is not None and item.position is not None:
-                item.segment = recording.segments[item.position]
+        self._items.set_note(note, preserve_live=self._live is not None)
+        self._has_speakers = self._items.index.has_speakers
+        self._has_timestamps = self._items.index.has_timestamps
         self._rebind()
 
     def _rebind(self) -> None:
-        for row, data in self._bound.items():
-            self._bind_row(row, data)
+        for cell, data in self._bound.items():
+            cell.bind(data, self._bind_row)
+            self._set_cell_columns(cell)
 
     def set_editable(self, editable: bool) -> None:
         """Lock the text while a capture or import may change the note underneath."""
@@ -143,19 +154,34 @@ class NoteView(Adw.BreakpointBin):
 
     def flush_edits(self) -> None:
         """Commit typing that has not been saved yet, e.g. before Undo or leaving the note."""
-        for row in list(self._bound):
-            row.flush()
+        for cell in list(self._bound):
+            if cell.row is not None:
+                cell.row.flush()
+
+    def layout_ready(self) -> bool:
+        """Whether allocated transcript rows have their full measured height."""
+        for cell in self._bound:
+            if not cell.get_mapped():
+                continue
+            child = cell.get_child()
+            if child is None:
+                return False
+            minimum, _natural, _baseline, _natural_baseline = child.measure(
+                Gtk.Orientation.VERTICAL, cell.get_width()
+            )
+            if cell.get_height() < minimum:
+                return False
+        return True
 
     def focus_segment(self, recording_id: str, position: int) -> None:
         """Scroll to a segment and put the caret at the end of its text."""
-        for index in range(self._items.get_n_items()):
-            item = self._items.get_item(index)
-            if (
-                item is not None
-                and item.position == position
-                and item.recording.recording_id == recording_id
-            ):
-                self._focus_index(index, at_end=True)
+        if self._note is None:
+            return
+        for recording_index, recording in enumerate(self._note.recordings):
+            if recording.recording_id == recording_id and 0 <= position < len(recording.segments):
+                self._focus_index(
+                    self._items.index.offsets[recording_index] + 1 + position, at_end=True
+                )
                 return
 
     def _focus_index(self, index: int, *, at_end: bool) -> None:
@@ -167,16 +193,16 @@ class NoteView(Adw.BreakpointBin):
             # Rows are bound during the next layout, so the target may not exist yet.
             nonlocal attempts
             attempts -= 1
-            for row, data in self._bound.items():
+            for cell, data in self._bound.items():
                 if data is item:
-                    row.edit(at_end=at_end)
+                    cell.ensure_row().edit(at_end=at_end)
                     return False
             return attempts > 0
 
         GLib.idle_add(focus)
 
     def _on_row_navigate(self, row: TranscriptRow, step: int) -> None:
-        current = self._bound.get(row)
+        current = self._row_item(row)
         if current is None:
             return
         found = self._items.find(current)
@@ -191,12 +217,12 @@ class NoteView(Adw.BreakpointBin):
             index += step
 
     def _on_row_text_committed(self, row: TranscriptRow, text: str) -> None:
-        item = self._bound.get(row)
+        item = self._row_item(row)
         if item is not None and item.position is not None:
             self.emit("text-edited", item.recording.recording_id, item.position, text)
 
     def _on_row_times_committed(self, row: TranscriptRow, start_ms: int, end_ms: int) -> None:
-        item = self._bound.get(row)
+        item = self._row_item(row)
         if item is not None and item.position is not None:
             self.emit("times-edited", item.recording.recording_id, item.position, start_ms, end_ms)
 
@@ -240,7 +266,8 @@ class NoteView(Adw.BreakpointBin):
             self._live = None
             self._live_rows = []
             if self._note is not None:
-                self._items.splice(0, self._items.get_n_items(), _rows(self._note))
+                self._items.set_note(self._note)
+                self._rebind()
         self.recording_slot.set_visible(False)
         self.stack.set_visible(True)
         self.stack.set_vexpand(True)
@@ -322,36 +349,83 @@ class NoteView(Adw.BreakpointBin):
         item.set_activatable(False)
         item.set_selectable(False)
         item.set_focusable(False)
+        item.set_child(self._cell_pool.pop() if self._cell_pool else self._new_cell())
+
+    def _new_cell(self) -> TranscriptCell:
+        return TranscriptCell(
+            self._create_row, self._release_row, self._create_preview, self._release_preview
+        )
+
+    def _create_preview(self, ensure_row: Callable[[], TranscriptRow]) -> TranscriptPreview:
+        preview = self._preview_pool.pop() if self._preview_pool else TranscriptPreview()
+        preview.set_editor_factory(ensure_row)
+        return preview
+
+    def _release_preview(self, preview: TranscriptPreview) -> None:
+        preview.set_editor_factory(None)
+        self._preview_pool.append(preview)
+
+    def _on_factory_teardown(
+        self, _factory: Gtk.SignalListItemFactory, item: GObject.Object
+    ) -> None:
+        assert isinstance(item, Gtk.ListItem)
+        cell = item.get_child()
+        if isinstance(cell, TranscriptCell):
+            item.set_child(None)
+            self._cell_pool.append(cell)
+
+    def _create_row(self) -> TranscriptRow:
+        return self._row_pool.pop() if self._row_pool else self._new_row()
+
+    def _release_row(self, row: TranscriptRow) -> None:
+        self._row_pool.append(row)
+
+    def _new_row(self) -> TranscriptRow:
         row = TranscriptRow()
         row.connect("text-committed", self._on_row_text_committed)
         row.connect("times-committed", self._on_row_times_committed)
         row.connect("navigate", self._on_row_navigate)
         row.connect("focus-left", self._on_row_focus_left)
-        item.set_child(row)
+        return row
+
+    def _row_item(self, row: TranscriptRow) -> TranscriptItem | None:
+        return next((data for cell, data in self._bound.items() if cell.row is row), None)
 
     def _on_factory_bind(self, _factory: Gtk.SignalListItemFactory, item: GObject.Object) -> None:
         assert isinstance(item, Gtk.ListItem)
-        row, data = item.get_child(), item.get_item()
-        if not isinstance(row, TranscriptRow) or not isinstance(data, TranscriptItem):
+        cell, data = item.get_child(), item.get_item()
+        if not isinstance(cell, TranscriptCell) or not isinstance(data, TranscriptItem):
             return
-        self._bound[row] = data
-        self._bind_row(row, data)
+        self._bound[cell] = data
+        cell.bind(data, self._bind_row)
+        self._set_cell_columns(cell)
+
+    def _set_cell_columns(self, cell: TranscriptCell) -> None:
+        display = self._note.display if self._note else None
+        cell.set_columns(
+            speakers=self._has_speakers and display is not None and display.show_speakers,
+            timestamps=self._has_timestamps and display is not None and display.show_timestamps,
+            compact=self._compact,
+        )
 
     def _on_factory_unbind(self, _factory: Gtk.SignalListItemFactory, item: GObject.Object) -> None:
         assert isinstance(item, Gtk.ListItem)
-        row = item.get_child()
-        if isinstance(row, TranscriptRow):
+        cell = item.get_child()
+        if isinstance(cell, TranscriptCell):
             # Recycling must not drop typing that has not been saved yet.
-            row.flush()
-            self._bound.pop(row, None)
+            cell.unbind()
+            self._bound.pop(cell, None)
 
     def set_playing(self, recording_id: str | None) -> None:
         """Keep recycled recording headers in sync with the one active player."""
         self._playing = recording_id
-        for row, item in self._bound.items():
-            row.set_playing(item.segment is None and item.recording.recording_id == recording_id)
+        for cell, item in self._bound.items():
+            if cell.row is not None:
+                cell.row.set_playing(
+                    item.segment is None and item.recording.recording_id == recording_id
+                )
 
-    def _bind_row(self, row: TranscriptRow, data: TranscriptItem) -> None:
+    def _bind_row(self, row: TranscriptRow | TranscriptPreview, data: TranscriptItem) -> None:
         display = self._note.display if self._note else None
         row.bind(
             data,
@@ -362,32 +436,8 @@ class NoteView(Adw.BreakpointBin):
             compact=self._compact,
             editable=self._editable,
         )
-        row.set_playing(data.segment is None and data.recording.recording_id == self._playing)
-
-
-def _rows(note: Note) -> list[TranscriptItem]:
-    order = speaker_order(s for r in resolved_note(note).recordings for s in r.segments)
-    people = {s.speaker_id: s for s in note.speakers}
-    rows: list[TranscriptItem] = []
-    for number, recording in enumerate(note.recordings, start=1):
-        rows.append(TranscriptItem(recording, number))
-        for position, segment in enumerate(recording.segments):
-            speaker = segment.speaker_id
-            if speaker is None:
-                rows.append(TranscriptItem(recording, number, segment, position=position))
-                continue
-            identity = identity_for(recording, speaker)
-            person = people.get(identity)
-            name = (
-                speaker_label(note, identity)
-                if person
-                else _("Speaker {number}").format(number=order[identity] + 1)
-            )
-            slot = (
-                (person.ordinal - 1) if person and person.ordinal else order[identity]
-            ) % SPEAKER_COLOR_COUNT
-            rows.append(TranscriptItem(recording, number, segment, name, slot, position=position))
-    return rows
+        if isinstance(row, TranscriptRow):
+            row.set_playing(data.segment is None and data.recording.recording_id == self._playing)
 
 
 def _editable_item(item: TranscriptItem) -> bool:

@@ -1,0 +1,83 @@
+using Gtk 4.0;
+
+template $KikoeTranscriptPreview: Box {
+  spacing: 12;
+
+  Box meta_box {
+    orientation: vertical;
+    margin-start: 8;
+    margin-top: 4;
+
+    Button speaker_button {
+      halign: start;
+      tooltip-text: _("Rename or Match Speaker");
+
+      accessibility {
+        label: _("Rename or Match Speaker");
+      }
+
+      styles [
+        "flat",
+        "speaker-button",
+      ]
+
+      child: Label speaker_label {
+        xalign: 0;
+        ellipsize: end;
+
+        styles [
+          "heading",
+        ]
+      };
+    }
+
+    Button timestamp_button {
+      halign: start;
+      tooltip-text: _("Edit Timestamps");
+
+      accessibility {
+        label: _("Edit Timestamps");
+      }
+
+      clicked => $_on_timestamp_button_clicked();
+
+      styles [
+        "flat",
+        "timestamp-preview",
+      ]
+
+      child: Label timestamp_label {
+        xalign: 0;
+        ellipsize: end;
+
+        styles [
+          "caption",
+          "numeric",
+          "dimmed",
+        ]
+      };
+    }
+  }
+
+  Label text_label {
+    hexpand: true;
+    xalign: 0;
+    yalign: 0;
+    wrap: true;
+    wrap-mode: word_char;
+    focusable: true;
+    margin-top: 6;
+    margin-bottom: 6;
+    margin-start: 8;
+    margin-end: 8;
+
+    accessibility {
+      label: _("Transcript Text");
+    }
+
+    styles [
+      "transcript-text",
+      "transcript-preview",
+    ]
+  }
+}

@@ -204,10 +204,26 @@ Added only when the feature using them lands (see AGENTS.md, "Dependencies"):
   content: a `Gtk.Stack` with the welcome page, the empty state and the note view, with
   the bottom bar below). Collapses below 640 sp.
 - `ui/note_view.py`: a `Gtk.ListView` over a flat list of recording headers and segments
-  (`ui/transcript_row.py`), so only visible rows get widgets. Segment text is edited in
-  place; rows commit text after a pause, on focus loss and when recycled. Saves of
+  backed by `ui/transcript_model.py`. `core/transcript_index.py` indexes recording offsets
+  and speaker metadata without copying segments. Row GObjects are created only when
+  GTK requests them, and cached row identities survive content refreshes. GTK measures
+  roughly 200 prefetched cells; `ui/transcript_cell.py` uses height estimates for those
+  outside the viewport. First-screen reading widgets are prepared before layout;
+  other reading widgets (`ui/transcript_preview.py`) are built when allocated.
+  Text editors and timestamp popovers
+  (`ui/transcript_row.py`) are used when text is clicked/focused or a timestamp is opened.
+  Headers and live rows use the full row. Segment text is edited in place; rows commit
+  text after a pause, on focus loss and when recycled. Saves of
   only segment contents update rows in place so the caret survives. The window owns
   the note-wide Undo/Redo history (`core/edit_history.py`) and serializes saves.
+- `uv run scripts/benchmark_note_switch.py /path/to/library.sqlite3` measures actual
+  sidebar selection through a painted frame with a complete logical transcript model
+  and fully allocated visible rows. It opens `test*` notes, records each first opening
+  and ten repeat cycles, and exits unsuccessfully if any sample exceeds 50 ms.
+  `--output report.json` saves measurements; `--prefix`, `--repeats` and `--limit-ms`
+  adjust the workload. It uses SQLite's backup API into isolated temporary XDG storage;
+  the source database is opened read-only. Run on a desktop or under Xvfb. App startup
+  is excluded, but no note is opened or rendered before its first measured selection.
 - `ui/bottom_bar.py`: model button, Import Audio, Record/Append Recording, upload progress
   and the recording controls. `Adw.WrapBox` keeps controls usable at 360 px.
 - `ui/transcription_dialog.py`: the bottom bar's model and options dialog; the bar
