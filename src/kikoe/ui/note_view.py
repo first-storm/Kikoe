@@ -40,10 +40,6 @@ note can reuse their widgets. Beyond it they would have no widgets to reuse.
 """
 _SPARES_PER_IDLE = 8
 """Row widgets built per idle callback before the first note is opened."""
-_SPARE = Recording(
-    "spare", datetime.fromtimestamp(0, UTC), timedelta(), RecordingSource.RECORDED, "", ""
-)
-"""Placeholder for the hidden rows made before any note is open."""
 
 
 @Gtk.Template(filename=ui_file("note_view"))
@@ -72,6 +68,8 @@ class NoteView(Adw.BreakpointBin):
         self._items: Gio.ListStore[TranscriptItem] = Gio.ListStore(item_type=TranscriptItem)
         self._bound: dict[TranscriptRow, TranscriptItem] = {}
         """Rows on screen, updated in place when only the display options change."""
+        self._row_cache: list[TranscriptRow] = []
+        """Prepared or recycled widgets kept outside the list until they are needed."""
         self._stale: dict[TranscriptRow, int] = {}
         """Rows off screen still showing the previous note, by their list position."""
         self._first_frame: int | None = None
@@ -414,18 +412,25 @@ class NoteView(Adw.BreakpointBin):
         item.set_activatable(False)
         item.set_selectable(False)
         item.set_focusable(False)
+
+    def _create_row(self) -> TranscriptRow:
+        """Connect editing signals once, including for rows prepared before a note opens."""
         row = TranscriptRow()
         row.connect("text-committed", self._on_row_text_committed)
         row.connect("times-committed", self._on_row_times_committed)
         row.connect("navigate", self._on_row_navigate)
         row.connect("focus-left", self._on_row_focus_left)
-        item.set_child(row)
+        return row
 
     def _on_factory_bind(self, _factory: Gtk.SignalListItemFactory, item: GObject.Object) -> None:
         assert isinstance(item, Gtk.ListItem)
-        row, data = item.get_child(), item.get_item()
-        if not isinstance(row, TranscriptRow) or not isinstance(data, TranscriptItem):
+        data = item.get_item()
+        if not isinstance(data, TranscriptItem):
             return
+        row = item.get_child()
+        if not isinstance(row, TranscriptRow):
+            row = self._row_cache.pop() if self._row_cache else self._create_row()
+            item.set_child(row)
         self._bound[row] = data
         self._bind_row(row, data)
 
@@ -437,6 +442,9 @@ class NoteView(Adw.BreakpointBin):
             row.flush()
             self._bound.pop(row, None)
             self._stale.pop(row, None)
+            item.set_child(None)
+            if len(self._row_cache) < _SPARE_ROWS:
+                self._row_cache.append(row)
 
     def set_playing(self, recording_id: str | None) -> None:
         """Keep recycled recording headers in sync with the one active player."""
@@ -451,20 +459,19 @@ class NoteView(Adw.BreakpointBin):
 
     def _on_destroy(self, _view: Gtk.Widget) -> None:
         Adw.StyleManager.get_default().disconnect(self._style_handler)
+        self._row_cache.clear()
         if self._prepare_source:
             GLib.source_remove(self._prepare_source)
             self._prepare_source = 0
 
     def _on_prepare_idle(self) -> bool:
         """Build the row widgets before the first note opens, a few between frames."""
-        count = self._items.get_n_items()
+        count = len(self._row_cache)
         if self._note is not None or count >= _SPARE_ROWS:
             self._prepare_source = 0
             return False
-        spares = [TranscriptItem(_SPARE, 0) for _ in range(_SPARES_PER_IDLE)]
-        for spare in spares:
-            spare.hidden = True
-        self._items.splice(count, 0, spares)
+        for _index in range(min(_SPARES_PER_IDLE, _SPARE_ROWS - count)):
+            self._row_cache.append(self._create_row())
         return True
 
     def _bind_row(self, row: TranscriptRow, data: TranscriptItem) -> None:

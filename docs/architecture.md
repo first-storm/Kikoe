@@ -208,7 +208,9 @@ Added only when the feature using them lands (see AGENTS.md, "Dependencies"):
   about 200 rows and would rebuild all of them if its items were replaced, so opening a
   note reuses the items: each takes over a row of the note, leftover items stay as
   hidden spare rows, and the rows on screen are bound at once while the others follow
-  over the next frames. Segment text is a text view (`ui/segment_text.py`) that reports
+  over the next frames. Prepared and recycled row widgets stay in a bounded cache outside
+  the list, so sidebar folding does not rebuild placeholder rows on the empty home page.
+  Segment text is a text view (`ui/segment_text.py`) that reports
   its height for any width, which `Gtk.TextView` itself does not, so no row needs a
   frame callback. Segment text is edited in place; rows commit text after a pause, on
   focus loss and when recycled. Saves of only segment contents update rows in place so
