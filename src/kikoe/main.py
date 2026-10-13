@@ -1,6 +1,7 @@
 """Entry point: configure process-wide state, then hand over to the application."""
 
 import asyncio
+import gc
 import os
 import sys
 
@@ -28,4 +29,8 @@ def main() -> int:
     # Lets Application.create_asyncio_task run coroutines on the GLib main loop.
     asyncio.set_event_loop_policy(GLibEventLoopPolicy())  # pyright: ignore[reportArgumentType, reportDeprecated]  # PyGObject 3.58 still needs the policy API
     app = Application()
+    # The provider SDKs leave a large heap of objects that live as long as the process.
+    # Without this, the collector rescans all of them now and then, which froze the
+    # window for about 100 ms while a long transcript was being read.
+    gc.freeze()
     return app.run(sys.argv)
