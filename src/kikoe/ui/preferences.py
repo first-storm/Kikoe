@@ -218,7 +218,6 @@ class PreferencesDialog(Adw.PreferencesDialog):
             use_markup=False,
             activatable=True,
         )
-        row.add_prefix(Adw.Avatar(size=40, text=provider.name, show_initials=True))
         row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
 
         def open_provider(_row: Adw.ActionRow) -> None:
