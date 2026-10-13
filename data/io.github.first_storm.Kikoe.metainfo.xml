@@ -44,6 +44,17 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.1.1" date="2026-10-14">
+      <description>
+        <p>Faster transcription of long recordings and fixes for packaged builds.</p>
+        <ul>
+          <li>Transcribe long audio in parallel chunks, with per-provider concurrency and chunk length settings.</li>
+          <li>Find the bundled ffmpeg in the Windows and macOS packages.</li>
+          <li>No longer flash a console window when running ffmpeg on Windows.</li>
+          <li>Fix audio import failing on Windows.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-10-13">
       <description>
         <p>Record or import audio, transcribe with cloud services, and export notes or subtitles.</p>
