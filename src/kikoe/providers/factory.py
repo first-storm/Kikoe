@@ -4,6 +4,7 @@ from kikoe.core.models import ApiKind, Provider
 from kikoe.providers.base import TranscriptionProvider
 from kikoe.providers.deepgram import DeepgramClient
 from kikoe.providers.gemini import GeminiClient
+from kikoe.providers.mimo import MiMoClient
 from kikoe.providers.openai import OpenAIClient
 from kikoe.providers.openrouter import OpenRouterClient
 
@@ -19,3 +20,5 @@ def create_client(provider: Provider, api_key: str) -> TranscriptionProvider:
             return OpenRouterClient(provider.base_url, api_key)
         case ApiKind.GEMINI:
             return GeminiClient(provider.base_url, api_key)
+        case ApiKind.MIMO:
+            return MiMoClient(provider.base_url, api_key)

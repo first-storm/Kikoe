@@ -284,7 +284,7 @@ M6 implementation behavior:
 
 Pushed as a subpage (back button) titled with the provider name.
 - Group "Connection": entry "Name"; combo "API Type" (Deepgram / OpenAI /
-  OpenAI-compatible / OpenRouter / Gemini AI Studio); entry "Base URL" (e.g. `https://api.groq.com/openai/v1`);
+  OpenAI-compatible / OpenRouter / Gemini AI Studio / MiMo); entry "Base URL" (e.g. `https://api.groq.com/openai/v1`);
   password entry "API Key" with *Show Key* toggle. Description: "The API type decides
   the request format. Most providers offer an "OpenAI-compatible" API."
 - Group "Models", description "What each model can do is set when you add it.", header

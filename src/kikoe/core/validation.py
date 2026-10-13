@@ -39,6 +39,7 @@ DEFAULT_BASE_URLS: dict[ApiKind, str] = {
     ApiKind.OPENAI: "https://api.openai.com/v1",
     ApiKind.OPENROUTER: "https://openrouter.ai/api/v1",
     ApiKind.GEMINI: "https://generativelanguage.googleapis.com",
+    ApiKind.MIMO: "https://api.xiaomimimo.com/v1",
 }
 """Hosted APIs with one well-known endpoint; OpenAI-compatible services have none."""
 

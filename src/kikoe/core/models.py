@@ -17,6 +17,7 @@ class ApiKind(StrEnum):
     OPENAI_COMPATIBLE = "openai-compatible"
     OPENROUTER = "openrouter"
     GEMINI = "gemini"
+    MIMO = "mimo"
 
 
 @dataclass(frozen=True, slots=True)

@@ -30,7 +30,7 @@ def test_openai_compatible_requires_a_base_url() -> None:
     assert error is ProviderError.EMPTY_BASE_URL
 
 
-@pytest.mark.parametrize("api", [ApiKind.DEEPGRAM, ApiKind.OPENAI])
+@pytest.mark.parametrize("api", [ApiKind.DEEPGRAM, ApiKind.OPENAI, ApiKind.MIMO])
 def test_hosted_apis_accept_an_empty_base_url(api: ApiKind) -> None:
     assert validate_provider("Hosted", api, "") is None
 

@@ -12,6 +12,7 @@ from kikoe import paths
 from kikoe.core.chunking import TimeSpan, offset_segments, plan_chunks
 from kikoe.core.models import ModelSpec, Note, Provider, Recording, RecordingSource, Segment
 from kikoe.core.transcription import FileTranscriptSnapshot, scope_speakers
+from kikoe.core.upload import UploadFormat
 from kikoe.i18n import _
 from kikoe.media import transcode
 from kikoe.providers.base import (
@@ -166,8 +167,8 @@ class _Job:
         self, original: Path, limits: UploadLimits
     ) -> tuple[timedelta, list[tuple[Path, timedelta]]]:
         """Convert for upload; return the length and the files to send with their offsets."""
-        upload = self._file("")
-        duration = await transcode.to_upload(original, upload)
+        upload = self._file("", limits.format)
+        duration = await transcode.to_upload(original, upload, format=limits.format)
         size = (await asyncio.to_thread(upload.stat)).st_size
         limit = limits.bytes
         max_duration = limits.duration
@@ -183,21 +184,26 @@ class _Job:
         chunks = plan_chunks(duration, silences, budget)
         log.info("Splitting %d bytes of audio into %d parts", size, len(chunks))
         return duration, [
-            (await self._convert_part(original, chunk, index, len(chunks)), chunk.start)
+            (
+                await self._convert_part(original, chunk, index, len(chunks), limits.format),
+                chunk.start,
+            )
             for index, chunk in enumerate(chunks, start=1)
         ]
 
-    async def _convert_part(self, original: Path, chunk: TimeSpan, index: int, count: int) -> Path:
+    async def _convert_part(
+        self, original: Path, chunk: TimeSpan, index: int, count: int, format: UploadFormat
+    ) -> Path:
         self._on_progress(ImportStage.CONVERTING, index, count)
-        path = self._file(f"-{index}")
-        await transcode.to_upload(original, path, chunk.start, chunk.end)
+        path = self._file(f"-{index}", format)
+        await transcode.to_upload(original, path, chunk.start, chunk.end, format)
         return path
 
     async def clean_up(self) -> None:
         for path in self._files:
             await asyncio.to_thread(path.unlink, missing_ok=True)
 
-    def _file(self, suffix: str) -> Path:
-        path = self._work_dir / f"{self.recording_id}{suffix}{transcode.UPLOAD_SUFFIX}"
+    def _file(self, suffix: str, format: UploadFormat) -> Path:
+        path = self._work_dir / f"{self.recording_id}{suffix}{format.suffix}"
         self._files.append(path)
         return path

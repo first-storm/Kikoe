@@ -26,6 +26,18 @@
         "diarization": "unsupported"
       }
     },
+    "mimo": {
+      "file": {
+        "available": "on",
+        "timestamps": "unsupported",
+        "diarization": "unsupported"
+      },
+      "realtime": {
+        "available": "unsupported",
+        "timestamps": "unsupported",
+        "diarization": "unsupported"
+      }
+    },
     "gemini": {
       "file": { "available": "on", "timestamps": "on", "diarization": "on" },
       "realtime": {
