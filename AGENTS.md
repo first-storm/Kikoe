@@ -27,6 +27,7 @@ uv run ruff check --fix              # lint Python
 uv run scripts/build_ui.py --fix     # format Blueprint
 uv run pyright                       # strict type check
 uv run pytest                        # tests
+uv run scripts/flatpak_deps.py       # refresh the Flatpak module after uv.lock changes
 ```
 
 **Before you finish any change**, all of these must pass:
@@ -50,7 +51,8 @@ src/kikoe/
   storage/     SQLite library, settings, audio files   (no gi)
   services/    workflows across providers/media/storage (no gi; e.g. import audio)
   ui/          widgets: one foo.py + foo.blp per widget, style.css, icons/
-scripts/       dev tools (build_ui.py, i18n.py)
+scripts/       dev tools (build_ui.py, i18n.py, flatpak_deps.py)
+packaging/     Flatpak, AppImage, macOS, Windows and ffmpeg build files (see docs/packaging.md)
 tests/         pytest, mirrors src/kikoe names: test_<module>.py
 data/          desktop file, metainfo (installed by packagers)
 po/            translations
@@ -156,7 +158,8 @@ po/            translations
 
 - Add a dependency only when the feature that needs it lands, and only if the stdlib or
   an existing dependency can't do it reasonably. It must work on Linux, macOS and Windows.
-- Add with `uv add <pkg>` (dev tools: `uv add --dev`); commit `uv.lock`.
+- Add with `uv add <pkg>` (dev tools: `uv add --dev`); commit `uv.lock` and the
+  regenerated `packaging/flatpak/python3-dependencies.json`.
 - Planned choices are listed in docs/architecture.md; use those instead of alternatives.
 
 ## Git

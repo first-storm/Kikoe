@@ -1,0 +1,159 @@
+name: Package (Linux)
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - packaging/linux/**
+      - packaging/flatpak/**
+      - packaging/pyinstaller/**
+      - packaging/ffmpeg/**
+      - .github/workflows/package-linux.yml
+      - .github/workflows/wheel.yml
+      - pyproject.toml
+      - uv.lock
+
+concurrency:
+  # Not github.workflow: when called from the release workflow it names the caller.
+  group: package-linux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wheel:
+    uses: ./.github/workflows/wheel.yml
+    with:
+      artifact-name: wheel-linux
+
+  appimage:
+    needs: wheel
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    # The oldest Ubuntu with libadwaita >= 1.8; the AppImage needs its glibc or newer.
+    container: ubuntu:26.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      UV_PYTHON_PREFERENCE: only-managed
+    steps:
+      - name: Install GTK and build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates curl git gcc make pkg-config nasm xz-utils file \
+            libgirepository-2.0-dev libcairo2-dev \
+            gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-girepository-3.0 \
+            adwaita-icon-theme libportaudio2 \
+            xvfb xauth dbus
+
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v6
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: wheel-linux
+          path: dist
+
+      # Saved right away, so a later failure in the job does not waste the build.
+      - id: ffmpeg-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build/ffmpeg
+          key: ffmpeg-linux-${{ matrix.arch }}-${{ hashFiles('packaging/ffmpeg/*.sh') }}
+
+      - name: Build ffmpeg
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: packaging/ffmpeg/build.sh build/ffmpeg
+
+      - if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: build/ffmpeg
+          key: ffmpeg-linux-${{ matrix.arch }}-${{ hashFiles('packaging/ffmpeg/*.sh') }}
+
+      - name: Build the AppImage
+        run: packaging/linux/build-appimage.sh
+
+      - name: Start the AppImage
+        run: |
+          appimage=$(ls out/*.AppImage)
+          export APPIMAGE_EXTRACT_AND_RUN=1 KIKOE_LOG_LEVEL=DEBUG
+          status=0
+          dbus-run-session -- xvfb-run -a timeout 20 "$appimage" || status=$?
+          # timeout's 124 means Kikoe was still running after 20 seconds.
+          test "$status" -eq 124
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kikoe-appimage-${{ matrix.arch }}
+          path: out/*.AppImage
+          if-no-files-found: error
+
+  flatpak:
+    needs: wheel
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: Install flatpak-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder elfutils \
+            librsvg2-common
+          flatpak remote-add --user --if-not-exists flathub \
+            https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: wheel-linux
+          path: dist
+
+      - uses: actions/cache@v4
+        with:
+          path: .flatpak-builder
+          # Unchanged modules (PortAudio, ffmpeg, Python dependencies) are reused.
+          key: flatpak-${{ matrix.arch }}-${{ hashFiles('packaging/flatpak/**', 'packaging/ffmpeg/configure.sh') }}
+          restore-keys: flatpak-${{ matrix.arch }}-
+
+      - name: Build the Flatpak
+        run: |
+          manifest=packaging/flatpak/io.github.first_storm.Kikoe.yml
+          flatpak-builder --user --install-deps-from=flathub --disable-rofiles-fuse \
+            --force-clean --repo=build/flatpak-repo build/flatpak "$manifest"
+          flatpak-builder --run build/flatpak "$manifest" python3 -c '
+          import gi
+          gi.require_version("Gtk", "4.0")
+          gi.require_version("Adw", "1")
+          from gi.repository import Adw
+          import sounddevice
+          import kikoe.application
+          print("PyGObject", gi.version_info, "libadwaita", Adw.MAJOR_VERSION, Adw.MINOR_VERSION)
+          print(sounddevice.get_portaudio_version()[1])
+          '
+          flatpak-builder --run build/flatpak "$manifest" ffmpeg -hide_banner -version
+          version=$(ls dist/kikoe-*.whl | xargs basename | cut -d- -f2)
+          mkdir -p out
+          flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
+            build/flatpak-repo "out/Kikoe-$version-linux-${{ matrix.arch }}.flatpak" \
+            io.github.first_storm.Kikoe
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kikoe-flatpak-${{ matrix.arch }}
+          path: out/*.flatpak
+          if-no-files-found: error

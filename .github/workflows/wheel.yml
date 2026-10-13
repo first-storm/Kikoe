@@ -1,0 +1,49 @@
+name: Wheel
+
+# Builds the Kikoe wheel with compiled Blueprint templates and translations, plus the
+# locked runtime requirements, for the packaging workflows. Only blueprint-compiler
+# and gettext need Linux; every package is built from this wheel.
+on:
+  workflow_call:
+    inputs:
+      artifact-name:
+        description: Name of the uploaded artifact (unique per workflow run).
+        type: string
+        required: true
+
+jobs:
+  wheel:
+    runs-on: ubuntu-latest
+    # Same image as CI: blueprint-compiler checks templates against libadwaita >= 1.8.
+    container: ubuntu:26.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      UV_PYTHON_PREFERENCE: only-managed
+    steps:
+      - name: Install GTK and build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates git gcc pkg-config \
+            libgirepository-2.0-dev libcairo2-dev \
+            gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-girepository-3.0 \
+            gettext
+
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Build the wheel
+        run: |
+          uv sync --locked
+          uv run scripts/build_ui.py
+          uv run scripts/i18n.py compile
+          uv build --wheel --out-dir dist
+          uv export --frozen --no-dev --no-emit-project --no-hashes \
+            --output-file dist/requirements.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: dist/
+          if-no-files-found: error

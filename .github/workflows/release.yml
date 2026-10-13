@@ -1,0 +1,36 @@
+name: Release
+
+# Builds every package for a version tag and attaches them to a draft release, which
+# a maintainer reviews and publishes.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  linux:
+    uses: ./.github/workflows/package-linux.yml
+
+  macos:
+    uses: ./.github/workflows/package-macos.yml
+
+  windows:
+    uses: ./.github/workflows/package-windows.yml
+
+  release:
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: kikoe-*
+          path: out
+          merge-multiple: true
+
+      - name: Create a draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" out/* --repo "$GITHUB_REPOSITORY" \
+            --draft --verify-tag --title "Kikoe ${GITHUB_REF_NAME#v}" --generate-notes

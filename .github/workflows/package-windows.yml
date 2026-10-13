@@ -1,0 +1,148 @@
+name: Package (Windows)
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - packaging/windows/**
+      - packaging/pyinstaller/**
+      - packaging/ffmpeg/**
+      - .github/workflows/package-windows.yml
+      - .github/workflows/wheel.yml
+      - pyproject.toml
+      - uv.lock
+
+concurrency:
+  # Not github.workflow: when called from the release workflow it names the caller.
+  group: package-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  wheel:
+    uses: ./.github/workflows/wheel.yml
+    with:
+      artifact-name: wheel-windows
+
+  app:
+    needs: wheel
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-2025
+            msystem: UCRT64
+            arch: x64
+          - runner: windows-11-arm
+            msystem: CLANGARM64
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.msystem }}
+          update: true
+          install: make diffutils curl tar xz
+          pacboy: >-
+            toolchain:p python:p python-pip:p python-setuptools:p
+            meson:p ninja:p pkgconf:p rust:p
+            gtk4:p libadwaita:p adwaita-icon-theme:p gobject-introspection:p
+            python-cairo:p python-cffi:p python-cryptography:p python-pydantic:p
+            python-pillow:p portaudio:p librsvg:p
+
+      - name: Install optional MSYS2 packages
+        run: |
+          # Prebuilt where MSYS2 has them; otherwise pip builds them from source.
+          for package in pyinstaller pyinstaller-hooks-contrib python-maturin python-jiter \
+              python-meson-python meson-python nasm; do
+            pacman -S --needed --noconfirm "${MINGW_PACKAGE_PREFIX}-$package" \
+              || echo "MSYS2 has no $package for $MSYSTEM"
+          done
+          # Pure-Python fallbacks from PyPI (sources are built without isolation).
+          python -c "import mesonpy" 2>/dev/null \
+            || python -m pip install --break-system-packages meson-python
+          python -c "import PyInstaller" 2>/dev/null \
+            || python -m pip install --break-system-packages pyinstaller==6.22.3
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: wheel-windows
+          path: dist
+
+      # Saved right away, so a later failure in the job does not waste the build.
+      - id: ffmpeg-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: build/ffmpeg
+          key: ffmpeg-windows-${{ matrix.arch }}-${{ hashFiles('packaging/ffmpeg/*.sh') }}
+
+      - name: Build ffmpeg
+        if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        run: packaging/ffmpeg/build.sh build/ffmpeg
+
+      - if: steps.ffmpeg-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: build/ffmpeg
+          key: ffmpeg-windows-${{ matrix.arch }}-${{ hashFiles('packaging/ffmpeg/*.sh') }}
+
+      - name: Build the app
+        run: packaging/windows/build.sh
+
+      - name: Start the app
+        shell: pwsh
+        run: |
+          $env:KIKOE_LOG_LEVEL = "DEBUG"
+          $app = Start-Process -FilePath build\dist\Kikoe\Kikoe.exe -PassThru
+          Start-Sleep -Seconds 20
+          if ($app.HasExited) {
+            Get-Content "$env:LOCALAPPDATA\Kikoe\Logs\kikoe.log" -ErrorAction SilentlyContinue
+            throw "Kikoe exited with code $($app.ExitCode)"
+          }
+          Stop-Process -Id $app.Id
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kikoe-windows-${{ matrix.arch }}-zip
+          path: out/*.zip
+          if-no-files-found: error
+
+  installer:
+    needs: app
+    runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: kikoe-windows-${{ matrix.arch }}-zip
+          path: out
+
+      - name: Build the installer
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem out\*.zip | Select-Object -First 1
+          $version = $zip.Name.Split("-")[1]
+          Expand-Archive -Path $zip.FullName -DestinationPath build
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup --yes --no-progress
+          }
+          & $iscc "/DVersion=$version" "/DArch=${{ matrix.arch }}" "/DBundleDir=$PWD\build\Kikoe" `
+            packaging\windows\kikoe.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kikoe-windows-${{ matrix.arch }}-setup
+          path: out/*-setup.exe
+          if-no-files-found: error

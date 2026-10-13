@@ -45,7 +45,11 @@ Fresh Linux captures of the current app, using synthetic notes and speaker names
 
 ## 🚀 Get started
 
-Install [uv](https://docs.astral.sh/uv/), GTK 4, libadwaita ≥ 1.8, ffmpeg, and PortAudio.
+Packages for Linux (Flatpak, AppImage), macOS (`.dmg`) and Windows (installer or
+portable zip), for x86-64 and ARM, are attached to each
+[release](https://github.com/first-storm/Kikoe/releases); see
+[docs/packaging.md](docs/packaging.md) for requirements. To run from source instead,
+install [uv](https://docs.astral.sh/uv/), GTK 4, libadwaita ≥ 1.8, ffmpeg, and PortAudio.
 Building PyGObject needs `girepository-2.0` (GLib ≥ 2.80), Cairo headers,
 `pkg-config`, and a C compiler. uv installs Python 3.14 if needed.
 
