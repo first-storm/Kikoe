@@ -163,6 +163,12 @@ class Window(Adw.ApplicationWindow):
         self._committing_transcription = False
         self._file_transcription = False
         self._file_recording_id = ""
+        self._file_note_id: str | None = None
+        """The note being transcribed into; None while a new note is imported."""
+        self._file_recording: Recording | None = None
+        self._file_replacing = False
+        self._file_shown = False
+        """Whether the transcription overlay is on screen (not while another note is open)."""
         self._file_update_timeout = 0
         self._file_pending: FileTranscriptSnapshot | None = None
         self._file_rendered = FileTranscriptSnapshot()
@@ -434,13 +440,25 @@ class Window(Adw.ApplicationWindow):
     def _on_notes_list_row_selected(self, _list: Gtk.ListBox, row: Gtk.ListBoxRow | None) -> None:
         if self._selecting or row is None:
             return
-        if self._recording_task is not None or self._import_task is not None or self._recovery_busy:
+        if self._switch_locked():
             self._select_row(self._note.note_id if self._note else None)
             return
         item = self._note_items.get_item(row.get_index())
         if item is not None:
             run_task(self._open_note(item.summary.note_id), self)
             self.split_view.set_show_content(True)
+
+    def _switch_locked(self) -> bool:
+        """Whether the open note must stay put; transcription alone never pins it."""
+        return self._recovery_busy or (
+            self._recording_task is not None and self._import_task is None
+        )
+
+    def _viewing_transcription(self) -> bool:
+        """Whether the note on screen is the one a running transcription writes to."""
+        if self._import_task is None:
+            return False
+        return self._note is None or self._note.note_id == self._file_note_id
 
     def _on_notes_changed(self, note_id: str | None) -> None:
         if not self._recovery_checked:
@@ -474,10 +492,16 @@ class Window(Adw.ApplicationWindow):
     async def _open_note(self, note_id: str) -> None:
         note = await self._notes.get_note(note_id)
         current = self._recording_note_id or (self._note.note_id if self._note else None)
-        if self._recording_task is None or note_id == current:
+        if not self._switch_locked() or note_id == current:
             self._show_note(note)
 
     def _show_note(self, note: Note | None) -> None:
+        overlay_here = (
+            self._file_transcription and note is not None and note.note_id == self._file_note_id
+        )
+        if self._file_shown and not overlay_here:
+            self.note_view.end_file_transcription()
+            self._file_shown = False
         if self._note is not None and (note is None or self._note.note_id != note.note_id):
             self._stop_playback()
             # Saved under the note being left, so this must run before it is replaced.
@@ -500,6 +524,14 @@ class Window(Adw.ApplicationWindow):
             self._set_display_action_state("show-speakers", note.display.show_speakers)
             if self.note_view.show_note(note):
                 self._forget_edits()
+            if overlay_here and not self._file_shown and self._file_recording is not None:
+                self.note_view.begin_file_transcription(
+                    note,
+                    self._file_recording,
+                    replace_recording_id=self._file_recording_id if self._file_replacing else None,
+                )
+                self.note_view.update_file_transcription(self._file_rendered)
+                self._file_shown = True
             self.bottom_bar.set_note(bool(note.recordings))
             if self._session is not None and self._session.state is not CaptureState.STOPPED:
                 self.note_view.show_recording(
@@ -1052,7 +1084,8 @@ class Window(Adw.ApplicationWindow):
         busy = (
             self._import_task is not None or self._recording_task is not None or self._recovery_busy
         )
-        if busy:
+        locked = self._switch_locked() or self._viewing_transcription()
+        if locked:
             self._stop_playback()
         for name in (
             "play-recording",
@@ -1062,7 +1095,7 @@ class Window(Adw.ApplicationWindow):
             "retranscribe-recording",
             "delete-recording",
         ):
-            self._set_action_enabled(name, not busy and self._note is not None)
+            self._set_action_enabled(name, not locked and self._note is not None)
         available = self.bottom_bar.choice is not None and not busy
         choice = self.bottom_bar.choice
         file_available = (
@@ -1085,20 +1118,20 @@ class Window(Adw.ApplicationWindow):
         self._set_action_enabled(
             "stop-recording", state is not CaptureState.STOPPED and not self._closing
         )
-        self.notes_list.set_can_target(not busy)
+        self.notes_list.set_can_target(not self._switch_locked())
         self._set_action_enabled("search-notes", not busy)
         self.search_button.set_sensitive(not busy)
         # Typing in the list starts a search, which must not hide the Stop controls.
         self.search_bar.set_key_capture_widget(None if busy else self.notes_list)
         self._set_action_enabled("new-note", not busy and bool(self._providers.providers))
-        self._set_action_enabled("delete-note", not busy and self._note is not None)
+        self._set_action_enabled("delete-note", not locked and self._note is not None)
         self._set_action_enabled("rename-note-row", not busy)
         self._set_action_enabled("delete-note-row", not busy)
-        self._set_action_enabled("rename-note", not busy and self._note is not None)
-        self._set_action_enabled("export", not busy and self._note is not None)
-        self._set_action_enabled("export-audio", not busy and self._note is not None)
-        self._edits_blocked = busy
-        self.note_view.set_editable(not busy)
+        self._set_action_enabled("rename-note", not locked and self._note is not None)
+        self._set_action_enabled("export", not locked and self._note is not None)
+        self._set_action_enabled("export-audio", not locked and self._note is not None)
+        self._edits_blocked = locked
+        self.note_view.set_editable(not locked)
         self._update_history_actions()
 
     def _on_choose_model(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
@@ -1210,7 +1243,10 @@ class Window(Adw.ApplicationWindow):
             return
         finally:
             self._end_file_transcription()
-        self.select_note(note.note_id)
+        if self._note is None or self._note.note_id == note.note_id:
+            self.select_note(note.note_id)
+        else:
+            self.add_toast(Adw.Toast(title=_("Transcription finished")))
 
     def _begin_file_transcription(
         self,
@@ -1222,12 +1258,18 @@ class Window(Adw.ApplicationWindow):
     ) -> None:
         self._file_transcription = True
         self._file_recording_id = recording.recording_id
+        self._file_note_id = self._note.note_id if self._note else None
+        self._file_replacing = replacing
+        self._file_recording = replace(
+            recording, provider_name=choice.provider.name, model_id=choice.model.model_id
+        )
         self._file_rendered = FileTranscriptSnapshot()
         self.note_view.begin_file_transcription(
             self._note,
-            replace(recording, provider_name=choice.provider.name, model_id=choice.model.model_id),
+            self._file_recording,
             replace_recording_id=recording.recording_id if replacing else None,
         )
+        self._file_shown = True
         if self._note is None:
             self.content_page.set_title(title)
             self.window_title.set_title(title)
@@ -1260,7 +1302,8 @@ class Window(Adw.ApplicationWindow):
         if self._file_transcription and self._file_pending is not None:
             self._file_rendered = self._file_pending
             self._file_pending = None
-            self.note_view.update_file_transcription(self._file_rendered)
+            if self._file_shown:
+                self.note_view.update_file_transcription(self._file_rendered)
         return False
 
     def _end_file_transcription(self) -> None:
@@ -1272,7 +1315,11 @@ class Window(Adw.ApplicationWindow):
         self._file_pending = None
         self._file_transcription = False
         self._committing_transcription = False
-        self.note_view.end_file_transcription()
+        self._file_note_id = None
+        self._file_recording = None
+        if self._file_shown:
+            self.note_view.end_file_transcription()
+            self._file_shown = False
         if self._note is None:
             self.content_page.set_title(_("Kikoe"))
             self.window_title.set_title("")
@@ -1517,7 +1564,8 @@ class Window(Adw.ApplicationWindow):
             return
         finally:
             self._end_file_transcription()
-        self._show_note(note)
+        if self._note is not None and self._note.note_id == note_id:
+            self._show_note(note)
 
     async def _offer_recovery(self) -> None:
         store = CaptureStore(await asyncio.to_thread(capture_dir))
