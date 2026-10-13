@@ -95,6 +95,41 @@ File and realtime microphone transcription are implemented. File import and reta
 recording retry share `services.importer.transcribe_audio` for conversion, splitting
 and timestamps. `services.realtime.RealtimeRecording` owns live connections.
 
+### Model capabilities and presets
+
+`core.models.Capabilities` holds one `ModeCapabilities` for file uploads and one for
+realtime recording (`None` when the model lacks that mode). Microphone recordings use
+`realtime` when present, otherwise `file`; imports, retries and re-transcription always use
+`file`. Clients read only these stored flags, never model IDs, to decide what to request.
+
+`storage/model_presets.json` is the single source of per-model knowledge. Each API has a
+fallback entry, and ordered rules (exact `ids` or `prefixes`, first match wins) override
+fields for known models. Every field is `on`/`off` (default, user may change) or
+`unsupported` (hard limit). `core.model_catalog` parses and validates it;
+`storage.model_catalog.load_catalog` reads the packaged file. `ProviderRepository` clamps
+every model on load and on every save, including API-type changes, so the rest of the app
+trusts `ModelSpec.capabilities`. To support a new model, add a rule to the JSON and a row
+to `tests/test_model_catalog.py`.
+
+Models with the streaming capability use the OpenAI SDK's `create(stream=True)` SSE response for
+finished audio files, on OpenAI and compatible providers alike. This is independent of
+microphone realtime capabilities. Models whose file capabilities include diarization use
+`diarized_json`. The adapter
+accumulates `transcript.text.delta`, replaces completed diarized segments by ID, and requires
+`transcript.text.done` before returning a successful result. Plain text uses the complete
+done text; diarized output uses segment events so speaker labels and timestamps survive.
+EOF without done is retryable failure; the response is closed on cancellation or error.
+
+`FileTranscriptSnapshot` separates completed segments from temporary previews. Optional
+provider callbacks flow through the shared file service, which adds chunk offsets and
+speaker scopes and includes earlier completed chunks in each snapshot. Only the final
+result of every chunk is written to SQLite. Imports and retained recording updates shield
+the final commit so cancellation cannot leave saved text pointing to discarded audio.
+The note view overlays temporary rows at the target recording, or appends them for imports,
+without changing the saved note. Its virtualized renderer is shared with microphone live
+text. The window coalesces text deltas every 50 ms, immediately renders completed segments,
+and removes scheduled updates when a job ends.
+
 1. **Capture**: `media.recorder.SoundDeviceRecorder` implements the async `Recorder`
    protocol using sounddevice's `RawInputStream`, without NumPy. The chosen (or default) input
    device supplies mono int16 PCM at its native sample rate; buffers are converted to
@@ -154,7 +189,7 @@ process converts bounded buffers to mono little-endian int16: 24 kHz for OpenAI,
 16 kHz for Deepgram/Gemini. The network cannot backpressure the capture writer.
 The original recording remains at the device's native sample rate.
 
-`core.transcription` resolves file/live capabilities and models interim/final events.
+`core.transcription` models interim/final events.
 The adapter handles wire events; `LiveTranscript` replaces previews and repeated
 finals. OpenAI completions are ordered by committed item, Deepgram persists every
 `is_final` chunk even before `speech_final`, and Gemini repeats its finite receive

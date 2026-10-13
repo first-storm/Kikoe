@@ -1,0 +1,88 @@
+{
+  "version": 1,
+  "apis": {
+    "deepgram": {
+      "file": { "available": "on", "timestamps": "on", "diarization": "on" },
+      "realtime": { "available": "off", "timestamps": "on", "diarization": "on" }
+    },
+    "openai": {
+      "file": { "available": "on", "timestamps": "on", "diarization": "off", "streaming": "off" },
+      "realtime": { "available": "off", "timestamps": "unsupported", "diarization": "unsupported" }
+    },
+    "openai-compatible": {
+      "file": { "available": "on", "timestamps": "on", "diarization": "off", "streaming": "off" },
+      "realtime": { "available": "off", "timestamps": "unsupported", "diarization": "unsupported" }
+    },
+    "openrouter": {
+      "file": {
+        "available": "on",
+        "timestamps": "on",
+        "word_timestamps": "off",
+        "diarization": "off"
+      },
+      "realtime": {
+        "available": "unsupported",
+        "timestamps": "unsupported",
+        "diarization": "unsupported"
+      }
+    },
+    "gemini": {
+      "file": { "available": "on", "timestamps": "on", "diarization": "on" },
+      "realtime": {
+        "available": "unsupported",
+        "timestamps": "unsupported",
+        "diarization": "unsupported"
+      }
+    }
+  },
+  "models": [
+    {
+      "note": "Live-only OpenAI models; file uploads are rejected.",
+      "apis": ["openai", "openai-compatible"],
+      "ids": ["gpt-live-transcribe", "gpt-realtime-whisper"],
+      "file": { "available": "unsupported" },
+      "realtime": { "available": "on" }
+    },
+    {
+      "apis": ["openai", "openai-compatible"],
+      "ids": ["whisper-1"],
+      "file": { "diarization": "unsupported", "streaming": "unsupported" },
+      "realtime": { "available": "unsupported" }
+    },
+    {
+      "note": "Speakers and times come from the diarized_json response format.",
+      "apis": ["openai"],
+      "ids": ["gpt-4o-transcribe-diarize"],
+      "file": { "diarization": "on", "streaming": "on" },
+      "realtime": { "available": "unsupported" }
+    },
+    {
+      "apis": ["openai-compatible"],
+      "ids": ["gpt-4o-transcribe-diarize"],
+      "file": { "diarization": "on" },
+      "realtime": { "available": "unsupported" }
+    },
+    {
+      "note": "These models only return plain text for files, but can stream it.",
+      "apis": ["openai"],
+      "prefixes": ["gpt-4o", "gpt-transcribe"],
+      "file": { "timestamps": "unsupported", "diarization": "unsupported", "streaming": "on" }
+    },
+    {
+      "apis": ["openai-compatible"],
+      "prefixes": ["gpt-4o", "gpt-transcribe"],
+      "file": { "timestamps": "unsupported", "diarization": "unsupported" }
+    },
+    {
+      "apis": ["gemini"],
+      "ids": ["gemini-3.5-transcribe-live"],
+      "file": { "available": "unsupported" },
+      "realtime": { "available": "on" }
+    },
+    {
+      "apis": ["deepgram"],
+      "prefixes": ["nova"],
+      "realtime": { "available": "on" }
+    }
+  ]
+}

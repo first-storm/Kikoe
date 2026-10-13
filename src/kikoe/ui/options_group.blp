@@ -1,0 +1,32 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeOptionsGroup: Adw.PreferencesGroup {
+  title: _("Options");
+
+  Adw.SwitchRow timestamps_row {
+    title: _("_Timestamps");
+    use-underline: true;
+    notify::active => $_on_option_row_notify_active();
+  }
+
+  Adw.ComboRow granularity_row {
+    title: _("Timestamp _Detail");
+    use-underline: true;
+    notify::selected => $_on_granularity_row_notify_selected();
+
+    model: StringList {
+      strings [
+        _("Segments"),
+        _("Words"),
+        _("Segments and Words"),
+      ]
+    };
+  }
+
+  Adw.SwitchRow speakers_row {
+    title: _("_Speakers");
+    use-underline: true;
+    notify::active => $_on_option_row_notify_active();
+  }
+}

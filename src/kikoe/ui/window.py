@@ -14,11 +14,22 @@ from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango
 from kikoe.core.choice import ModelChoice, available_models
 from kikoe.core.edit_history import EditHistory, SegmentChange, SegmentFields
 from kikoe.core.export import ExportFormat, export_filename, export_note
-from kikoe.core.models import DisplayOptions, Note, NoteSummary, Recording, TranscriptionState
+from kikoe.core.models import (
+    DisplayOptions,
+    Note,
+    NoteSummary,
+    Recording,
+    RecordingSource,
+    TranscriptionState,
+)
 from kikoe.core.preferences import WindowState, valid_window_state
 from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.core.speakers import identity_for
-from kikoe.core.transcription import LiveSnapshot, model_support
+from kikoe.core.transcription import (
+    FileTranscriptSnapshot,
+    LiveSnapshot,
+    scope_speakers,
+)
 from kikoe.i18n import _
 from kikoe.media.ffmpeg import find_ffmpeg
 from kikoe.media.player import PlaybackError, play_audio
@@ -150,6 +161,11 @@ class Window(Adw.ApplicationWindow):
         self._add_action("cancel-import", self._on_cancel_import)
         self._import_task: asyncio.Task[None] | None = None
         self._committing_transcription = False
+        self._file_transcription = False
+        self._file_recording_id = ""
+        self._file_update_timeout = 0
+        self._file_pending: FileTranscriptSnapshot | None = None
+        self._file_rendered = FileTranscriptSnapshot()
         self._recording_task: asyncio.Task[None] | None = None
         self._live: RealtimeRecording | None = None
         self._session: RecordingSession | None = None
@@ -499,7 +515,7 @@ class Window(Adw.ApplicationWindow):
         self._update_import_actions()
 
     def _update_content(self) -> None:
-        if self._note is not None:
+        if self._note is not None or self._file_transcription:
             page = "note"
         elif not self._providers_loaded:
             page = "loading"
@@ -736,7 +752,7 @@ class Window(Adw.ApplicationWindow):
         def submit(choice: ModelChoice, options: TranscriptionOptions) -> None:
             choices = available_models(self._providers.providers)
             refreshed = next((c for c in choices if c.key == choice.key), None)
-            if refreshed is None or not model_support(refreshed.provider.api, refreshed.model).file:
+            if refreshed is None or refreshed.model.capabilities.file is None:
                 self.add_toast(Adw.Toast(title=_("Choose an available file transcription model.")))
                 return
             self._stop_playback()
@@ -759,11 +775,7 @@ class Window(Adw.ApplicationWindow):
     async def _retranscribe(
         self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
     ) -> None:
-        def progress(stage: ImportStage, part: int, parts: int) -> None:
-            self._committing_transcription = stage is ImportStage.SAVING
-            self._set_action_enabled("cancel-import", not self._committing_transcription)
-            self.bottom_bar.set_progress(import_stage_label(stage, part, parts))
-
+        self._begin_file_transcription(recording, choice, replacing=True)
         try:
             await self._finish_playback()
             key = await self._providers.get_api_key(choice.provider.provider_id)
@@ -774,9 +786,11 @@ class Window(Adw.ApplicationWindow):
                 client=create_client(choice.provider, key),
                 notes=self._notes,
                 options=options,
-                on_progress=progress,
+                on_progress=self._on_file_progress,
+                on_update=self._on_file_update,
                 preserve_on_failure=True,
             )
+            self._end_file_transcription()
             self._show_note(note)
         except asyncio.CancelledError:
             self.add_toast(Adw.Toast(title=_("Re-transcription cancelled")))
@@ -788,6 +802,7 @@ class Window(Adw.ApplicationWindow):
                 _("Re-transcription Failed"),
             )
         finally:
+            self._end_file_transcription()
             self._committing_transcription = False
             self._import_task = None
             self.bottom_bar.set_progress(None)
@@ -1051,9 +1066,7 @@ class Window(Adw.ApplicationWindow):
         available = self.bottom_bar.choice is not None and not busy
         choice = self.bottom_bar.choice
         file_available = (
-            available
-            and choice is not None
-            and model_support(choice.provider.api, choice.model).file
+            available and choice is not None and choice.model.capabilities.file is not None
         )
         self._set_action_enabled("import-audio", file_available)
         self._set_action_enabled("start-recording", available)
@@ -1168,9 +1181,15 @@ class Window(Adw.ApplicationWindow):
         choice: ModelChoice,
         options: TranscriptionOptions,
     ) -> None:
-        def on_progress(stage: ImportStage, part: int, parts: int) -> None:
-            self.bottom_bar.set_progress(import_stage_label(stage, part, parts))
-
+        recording = Recording(
+            "file-preview",
+            datetime.now(UTC),
+            timedelta(),
+            RecordingSource.IMPORTED,
+            choice.provider.name,
+            choice.model.model_id,
+        )
+        self._begin_file_transcription(recording, choice, title=path.stem)
         try:
             await self._finish_playback()
             api_key = await self._providers.get_api_key(choice.provider.provider_id)
@@ -1182,13 +1201,83 @@ class Window(Adw.ApplicationWindow):
                 client=create_client(choice.provider, api_key),
                 notes=self._notes,
                 options=options,
-                on_progress=on_progress,
+                on_progress=self._on_file_progress,
+                on_update=self._on_file_update,
             )
         except USER_FACING_ERRORS as error:
             log.warning("Import of %s failed: %s", path, error)
             self._show_import_failure(str(error))
             return
+        finally:
+            self._end_file_transcription()
         self.select_note(note.note_id)
+
+    def _begin_file_transcription(
+        self,
+        recording: Recording,
+        choice: ModelChoice,
+        *,
+        replacing: bool = False,
+        title: str = "",
+    ) -> None:
+        self._file_transcription = True
+        self._file_recording_id = recording.recording_id
+        self._file_rendered = FileTranscriptSnapshot()
+        self.note_view.begin_file_transcription(
+            self._note,
+            replace(recording, provider_name=choice.provider.name, model_id=choice.model.model_id),
+            replace_recording_id=recording.recording_id if replacing else None,
+        )
+        if self._note is None:
+            self.content_page.set_title(title)
+            self.window_title.set_title(title)
+            self.window_title.set_subtitle(_("Transcribing…"))
+        self._update_content()
+        self.split_view.set_show_content(True)
+
+    def _on_file_progress(self, stage: ImportStage, part: int, parts: int) -> None:
+        self._committing_transcription = stage is ImportStage.SAVING
+        self._set_action_enabled("cancel-import", not self._committing_transcription)
+        self.bottom_bar.set_progress(import_stage_label(stage, part, parts))
+
+    def _on_file_update(self, snapshot: FileTranscriptSnapshot) -> None:
+        if not self._file_transcription:
+            return
+        self._file_pending = FileTranscriptSnapshot(
+            scope_speakers(snapshot.segments, self._file_recording_id),
+            scope_speakers(snapshot.preview, self._file_recording_id),
+        )
+        if self._file_pending.segments != self._file_rendered.segments or not snapshot.preview:
+            if self._file_update_timeout:
+                GLib.source_remove(self._file_update_timeout)
+                self._file_update_timeout = 0
+            self._render_file_update()
+        elif not self._file_update_timeout:
+            self._file_update_timeout = GLib.timeout_add(50, self._render_file_update)
+
+    def _render_file_update(self) -> bool:
+        self._file_update_timeout = 0
+        if self._file_transcription and self._file_pending is not None:
+            self._file_rendered = self._file_pending
+            self._file_pending = None
+            self.note_view.update_file_transcription(self._file_rendered)
+        return False
+
+    def _end_file_transcription(self) -> None:
+        if not self._file_transcription:
+            return
+        if self._file_update_timeout:
+            GLib.source_remove(self._file_update_timeout)
+            self._file_update_timeout = 0
+        self._file_pending = None
+        self._file_transcription = False
+        self._committing_transcription = False
+        self.note_view.end_file_transcription()
+        if self._note is None:
+            self.content_page.set_title(_("Kikoe"))
+            self.window_title.set_title("")
+            self.window_title.set_subtitle("")
+        self._update_content()
 
     def _show_import_failure(self, message: str) -> None:
         show_error(self, message, _("Transcription Failed"))
@@ -1214,17 +1303,14 @@ class Window(Adw.ApplicationWindow):
         self, note_id: str | None, choice: ModelChoice, options: TranscriptionOptions
     ) -> None:
         live_task: asyncio.Task[None] | None = None
-        support = model_support(choice.provider.api, choice.model)
-        choice = replace(choice, model=replace(choice.model, capabilities=support.recording))
+        realtime = choice.model.capabilities.realtime is not None
         try:
             await self._finish_playback()
             await asyncio.to_thread(find_ffmpeg)
             # Validate the batch backend before opening the microphone.
             client = create_client(
                 choice.provider,
-                await self._providers.get_api_key(choice.provider.provider_id)
-                if support.recording.realtime
-                else "",
+                await self._providers.get_api_key(choice.provider.provider_id) if realtime else "",
             )
             directory = await asyncio.to_thread(capture_dir)
             session = RecordingSession(
@@ -1247,7 +1333,7 @@ class Window(Adw.ApplicationWindow):
                 model=choice.model.display_name,
                 options=_("Text only") if not labels else ", ".join(labels),
             )
-            if support.recording.realtime:
+            if realtime:
                 self._live = RealtimeRecording(
                     session, choice, client, options, self._on_live_update
                 )
@@ -1410,9 +1496,7 @@ class Window(Adw.ApplicationWindow):
     async def _upload_recording(
         self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
     ) -> None:
-        def progress(stage: ImportStage, part: int, parts: int) -> None:
-            self.bottom_bar.set_progress(import_stage_label(stage, part, parts))
-
+        self._begin_file_transcription(recording, choice, replacing=True)
         try:
             key = await self._providers.get_api_key(choice.provider.provider_id)
             note = await transcribe_recording(
@@ -1422,7 +1506,8 @@ class Window(Adw.ApplicationWindow):
                 client=create_client(choice.provider, key),
                 notes=self._notes,
                 options=options,
-                on_progress=progress,
+                on_progress=self._on_file_progress,
+                on_update=self._on_file_update,
             )
         except USER_FACING_ERRORS as error:
             await self._notes.update_transcription(
@@ -1430,6 +1515,8 @@ class Window(Adw.ApplicationWindow):
             )
             self._show_import_failure(str(error))
             return
+        finally:
+            self._end_file_transcription()
         self._show_note(note)
 
     async def _offer_recovery(self) -> None:

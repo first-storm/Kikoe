@@ -4,7 +4,6 @@ import asyncio
 import logging
 import uuid
 from collections.abc import Callable
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from pathlib import Path
@@ -12,10 +11,11 @@ from pathlib import Path
 from kikoe import paths
 from kikoe.core.chunking import TimeSpan, offset_segments, plan_chunks
 from kikoe.core.models import ModelSpec, Note, Provider, Recording, RecordingSource, Segment
-from kikoe.core.transcription import model_support, scope_speakers
+from kikoe.core.transcription import FileTranscriptSnapshot, scope_speakers
 from kikoe.i18n import _
 from kikoe.media import transcode
 from kikoe.providers.base import (
+    FileTranscriptCallback,
     TranscriptionError,
     TranscriptionOptions,
     TranscriptionProvider,
@@ -53,6 +53,7 @@ async def import_audio(
     notes: NoteRepository,
     options: TranscriptionOptions | None = None,
     on_progress: ProgressCallback = _ignore_progress,
+    on_update: FileTranscriptCallback | None = None,
     work_dir: Path | None = None,
 ) -> Note:
     """Transcribe ``source`` into ``note_id``, or into a new note named after the file.
@@ -61,10 +62,8 @@ async def import_audio(
     cancelled, the copy is removed again and nothing is saved.
     """
     recording_id = uuid.uuid4().hex
-    support = model_support(provider.api, model)
-    if not support.file:
+    if model.capabilities.file is None:
         raise TranscriptionError(_("Choose a file transcription model to import audio."))
-    model = replace(model, capabilities=support.batch)
     original = await notes.store_audio(source, recording_id)
     try:
         duration, segments = await transcribe_audio(
@@ -73,6 +72,7 @@ async def import_audio(
             client=client,
             options=options,
             on_progress=on_progress,
+            on_update=on_update,
             work_dir=work_dir,
         )
         on_progress(ImportStage.SAVING, 1, 1)
@@ -86,7 +86,11 @@ async def import_audio(
             segments=scope_speakers(segments, recording_id),
             audio_path=original,
         )
-        note = await notes.add_recording(note_id, source.stem, recording)
+        commit = asyncio.create_task(notes.add_recording(note_id, source.stem, recording))
+        try:
+            note = await asyncio.shield(commit)
+        except asyncio.CancelledError:
+            note = await commit
     except BaseException:
         await notes.discard_audio(original)
         raise
@@ -101,6 +105,7 @@ async def transcribe_audio(
     client: TranscriptionProvider,
     options: TranscriptionOptions | None = None,
     on_progress: ProgressCallback = _ignore_progress,
+    on_update: FileTranscriptCallback | None = None,
     work_dir: Path | None = None,
 ) -> tuple[timedelta, tuple[Segment, ...]]:
     """Share conversion and chunk offsets without deciding who owns the original audio."""
@@ -114,10 +119,35 @@ async def transcribe_audio(
         segments: list[Segment] = []
         for index, (path, offset) in enumerate(parts, start=1):
             on_progress(ImportStage.TRANSCRIBING, index, len(parts))
+
+            def update(
+                snapshot: FileTranscriptSnapshot,
+                *,
+                scope: str = str(index),
+                part_offset: timedelta = offset,
+            ) -> None:
+                if on_update is not None:
+                    on_update(
+                        FileTranscriptSnapshot(
+                            (
+                                *segments,
+                                *offset_segments(
+                                    scope_speakers(snapshot.segments, scope), part_offset
+                                ),
+                            ),
+                            offset_segments(scope_speakers(snapshot.preview, scope), part_offset),
+                        )
+                    )
+
             transcript = await client.transcribe_file(
-                path, model, options or TranscriptionOptions()
+                path,
+                model,
+                options or TranscriptionOptions(),
+                on_update=update,
             )
             segments.extend(offset_segments(scope_speakers(transcript, str(index)), offset))
+            if on_update is not None:
+                on_update(FileTranscriptSnapshot(tuple(segments)))
         return duration, tuple(segments)
     finally:
         await job.clean_up()

@@ -6,9 +6,11 @@ import uuid
 from collections.abc import Callable
 from dataclasses import replace
 
+from kikoe.core.model_catalog import ModelCatalog
 from kikoe.core.models import ApiKind, ModelSpec, Provider
 from kikoe.core.preferences import Preferences, WindowState
 from kikoe.i18n import _
+from kikoe.storage.model_catalog import load_catalog
 from kikoe.storage.secrets import SecretStore
 from kikoe.storage.settings import Settings, SettingsStore
 
@@ -20,11 +22,18 @@ class ProviderNotFoundError(LookupError):
 
 
 class ProviderRepository:
-    """In-memory provider list that persists every change before notifying listeners."""
+    """In-memory provider list that persists every change before notifying listeners.
 
-    def __init__(self, settings: SettingsStore, secrets: SecretStore) -> None:
+    Every model is kept within the catalog's limits, so the rest of the application can
+    trust ``ModelSpec.capabilities`` without knowing about specific endpoints.
+    """
+
+    def __init__(
+        self, settings: SettingsStore, secrets: SecretStore, catalog: ModelCatalog | None = None
+    ) -> None:
         self._settings = settings
         self._secrets = secrets
+        self._catalog = catalog or load_catalog()
         self._state = Settings()
         self._loaded = False
         self._lock = asyncio.Lock()
@@ -34,6 +43,15 @@ class ProviderRepository:
     @property
     def providers(self) -> tuple[Provider, ...]:
         return self._state.providers
+
+    @property
+    def catalog(self) -> ModelCatalog:
+        """Presets and limits that the model dialog offers and saving enforces."""
+        return self._catalog
+
+    def _clamp(self, provider: Provider) -> Provider:
+        models = tuple(self._catalog.clamp(provider.api, m) for m in provider.models)
+        return provider if models == provider.models else replace(provider, models=models)
 
     def find(self, provider_id: str) -> Provider | None:
         return next((p for p in self._state.providers if p.provider_id == provider_id), None)
@@ -56,8 +74,7 @@ class ProviderRepository:
 
     async def load(self) -> None:
         async with self._lock:
-            self._state = await asyncio.to_thread(self._settings.load_state)
-            self._loaded = True
+            await self._read_state()
         self._notify()
         self._notify_preferences()
 
@@ -175,7 +192,7 @@ class ProviderRepository:
     async def _commit(self, change: Callable[[], tuple[Provider, ...]]) -> None:
         async with self._lock:
             await self._ensure_loaded()
-            state = replace(self._state, providers=change())
+            state = replace(self._state, providers=tuple(self._clamp(p) for p in change()))
             await asyncio.to_thread(self._settings.save_state, state)
             self._state = state
         self._notify()
@@ -183,8 +200,13 @@ class ProviderRepository:
     async def _ensure_loaded(self) -> None:
         """A failed startup read must never turn a later edit into data loss."""
         if not self._loaded:
-            self._state = await asyncio.to_thread(self._settings.load_state)
-            self._loaded = True
+            await self._read_state()
+
+    async def _read_state(self) -> None:
+        """An app update may tighten a limit, so stored models are clamped again on load."""
+        state = await asyncio.to_thread(self._settings.load_state)
+        self._state = replace(state, providers=tuple(self._clamp(p) for p in state.providers))
+        self._loaded = True
 
     def _notify(self) -> None:
         for listener in self._listeners:

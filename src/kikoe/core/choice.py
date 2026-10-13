@@ -3,7 +3,7 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from kikoe.core.models import Capabilities, ModelSpec, Provider, TimestampGranularity
+from kikoe.core.models import ModeCapabilities, ModelSpec, Provider, TimestampGranularity
 from kikoe.core.validation import Capability
 
 
@@ -42,14 +42,16 @@ class RequestedFeatures:
     timestamps: bool = True
     diarization: bool = True
     timestamp_granularities: tuple[TimestampGranularity, ...] = (TimestampGranularity.SEGMENT,)
-    """Timestamp detail; only OpenRouter honours the selection for now."""
+    """Timestamp detail; honoured only by models with word timestamps."""
 
-    def allowed_by(self, capabilities: Capabilities) -> RequestedFeatures:
+    def allowed_by(self, capabilities: ModeCapabilities) -> RequestedFeatures:
         """Drop what the model cannot do; those options are shown as unavailable."""
         return RequestedFeatures(
             timestamps=self.timestamps and capabilities.timestamps,
             diarization=self.diarization and capabilities.diarization,
-            timestamp_granularities=self.timestamp_granularities,
+            timestamp_granularities=normalize_granularities(self.timestamp_granularities)
+            if capabilities.word_timestamps
+            else (TimestampGranularity.SEGMENT,),
         )
 
 
@@ -62,7 +64,7 @@ def normalize_granularities(
     return ordered or (TimestampGranularity.SEGMENT,)
 
 
-def unsupported_features(capabilities: Capabilities) -> tuple[Capability, ...]:
+def unsupported_features(capabilities: ModeCapabilities) -> tuple[Capability, ...]:
     """Requestable features the model lacks, in display order, for the bar's hint."""
     pairs = (
         (capabilities.timestamps, Capability.TIMESTAMPS),

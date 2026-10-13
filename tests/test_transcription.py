@@ -2,38 +2,14 @@
 
 from datetime import timedelta
 
-import pytest
-
-from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Segment
+from kikoe.core.models import Segment
 from kikoe.core.transcript_words import TranscriptWord, group_words
 from kikoe.core.transcription import (
     LiveTranscript,
     SpeechBoundary,
     TranscriptEvent,
-    model_support,
     scope_speakers,
 )
-
-
-@pytest.mark.parametrize(
-    ("api", "id", "file", "realtime", "timestamps", "speakers"),
-    [
-        (ApiKind.OPENAI, "gpt-live-transcribe", False, True, False, False),
-        (ApiKind.OPENAI, "gpt-4o-transcribe", True, True, False, False),
-        (ApiKind.OPENAI, "whisper-1", True, False, True, False),
-        (ApiKind.OPENAI, "gpt-4o-transcribe-diarize", True, False, True, True),
-        (ApiKind.OPENROUTER, "openai/whisper-1", True, False, True, True),
-        (ApiKind.GEMINI, "gemini-3.5-transcribe-live", False, True, False, False),
-        (ApiKind.GEMINI, "gemini-3.5-transcribe", True, False, True, True),
-        (ApiKind.DEEPGRAM, "nova-3", True, True, True, True),
-    ],
-)
-def test_known_api_limits_override_manual_capability_claims(
-    api: ApiKind, id: str, file: bool, realtime: bool, timestamps: bool, speakers: bool
-) -> None:
-    support = model_support(api, ModelSpec(id, id, Capabilities(True, True, True)))
-    assert support.file is file
-    assert support.recording == Capabilities(realtime, timestamps, speakers)
 
 
 def test_final_replaces_preview_and_duplicate_final_without_appending() -> None:

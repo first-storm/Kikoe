@@ -3,18 +3,22 @@
 import asyncio
 import uuid
 from collections.abc import Callable
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from kikoe.core.choice import ModelChoice
 from kikoe.core.models import Note, Recording, RecordingSource, TranscriptionState
 from kikoe.core.recording import CaptureProgress, CaptureState, pcm_level
-from kikoe.core.transcription import model_support, scope_speakers
+from kikoe.core.transcription import scope_speakers
 from kikoe.i18n import _
 from kikoe.media import transcode
 from kikoe.media.recorder import Recorder, RecorderError
-from kikoe.providers.base import TranscriptionError, TranscriptionOptions, TranscriptionProvider
+from kikoe.providers.base import (
+    FileTranscriptCallback,
+    TranscriptionError,
+    TranscriptionOptions,
+    TranscriptionProvider,
+)
 from kikoe.services.importer import ImportStage, ProgressCallback, transcribe_audio
 from kikoe.storage.captures import CaptureJournal, CaptureStore
 from kikoe.storage.library import NoteNotFoundError
@@ -175,14 +179,14 @@ async def transcribe_recording(
     notes: NoteRepository,
     options: TranscriptionOptions,
     on_progress: ProgressCallback,
+    on_update: FileTranscriptCallback | None = None,
     work_dir: Path | None = None,
     preserve_on_failure: bool = False,
 ) -> Note:
     """Update the saved recording; cancellation never removes its original audio."""
     if recording.audio_path is None:
         raise ValueError("A recording needs retained audio before transcription")
-    support = model_support(choice.provider.api, choice.model)
-    if not support.file:
+    if choice.model.capabilities.file is None:
         raise TranscriptionError(_("Choose a file transcription model to retry this recording."))
     if not preserve_on_failure:
         await notes.update_transcription(
@@ -191,10 +195,11 @@ async def transcribe_recording(
     try:
         _duration, segments = await transcribe_audio(
             recording.audio_path,
-            replace(choice.model, capabilities=support.batch),
+            choice.model,
             client=client,
             options=options,
             on_progress=on_progress,
+            on_update=on_update,
             work_dir=work_dir,
         )
         on_progress(ImportStage.SAVING, 1, 1)

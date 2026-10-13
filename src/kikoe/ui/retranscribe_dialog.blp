@@ -38,23 +38,11 @@ template $KikoeRetranscribeDialog: Adw.Dialog {
           use-markup: false;
           notify::selected => $_on_model_row_notify_selected();
         }
+      }
 
-        Adw.SwitchRow timestamps_row {
-          title: _("Timestamps");
-        }
-
-        Adw.SwitchRow segment_row {
-          title: _("Segment Timestamps");
-          notify::active => $_on_granularity_row_toggled();
-        }
-
-        Adw.SwitchRow word_row {
-          title: _("Word Timestamps");
-          notify::active => $_on_granularity_row_toggled();
-        }
-
-        Adw.SwitchRow speakers_row {
-          title: _("Speaker Detection");
+      Adw.PreferencesGroup {
+        Box options_slot {
+          orientation: vertical;
         }
       }
 

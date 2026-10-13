@@ -1,6 +1,6 @@
 import pytest
 
-from kikoe.core.models import ApiKind, Capabilities
+from kikoe.core.models import ApiKind, Capabilities, ModeCapabilities
 from kikoe.core.validation import (
     Capability,
     ModelError,
@@ -69,9 +69,20 @@ def test_capability_list_is_empty_for_text_only_models() -> None:
 
 
 def test_capability_list_keeps_display_order() -> None:
-    caps = Capabilities(realtime=True, timestamps=True, diarization=True)
+    caps = Capabilities(
+        file=ModeCapabilities(timestamps=True, word_timestamps=True, streaming=True),
+        realtime=ModeCapabilities(diarization=True),
+    )
     assert capability_list(caps) == (
         Capability.REALTIME,
         Capability.TIMESTAMPS,
+        Capability.WORD_TIMESTAMPS,
         Capability.DIARIZATION,
+        Capability.STREAMING,
     )
+
+
+def test_a_model_needs_file_or_realtime_transcription() -> None:
+    none = Capabilities(file=None, realtime=None)
+    assert validate_model("m", [], capabilities=none) is ModelError.NO_MODE
+    assert validate_model("m", [], capabilities=Capabilities()) is None

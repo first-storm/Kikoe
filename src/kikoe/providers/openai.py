@@ -11,7 +11,7 @@ from typing import cast
 from urllib.parse import urlsplit
 
 import httpx2 as httpx
-from openai import APIConnectionError, APIStatusError, APITimeoutError, AsyncOpenAI, omit
+from openai import APIConnectionError, APIError, APIStatusError, APITimeoutError, AsyncOpenAI, omit
 from openai.resources.realtime.realtime import AsyncRealtimeConnection
 from openai.types.realtime.audio_transcription_param import AudioTranscriptionParam
 from pydantic import BaseModel
@@ -21,13 +21,16 @@ from kikoe.core.recording import pcm_level
 from kikoe.core.transcription import SpeechBoundary, TranscriptEvent
 from kikoe.i18n import _
 from kikoe.providers.base import (
+    FileTranscriptCallback,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
     UploadLimits,
     close_stack,
+    file_capabilities,
 )
 from kikoe.providers.errors import status_error
+from kikoe.providers.openai_file_stream import OpenAIFileTranscript
 from kikoe.providers.parsing import parse_segments
 
 MAX_UPLOAD_BYTES = 25_000_000
@@ -39,7 +42,10 @@ class OpenAIClient:
     max_upload_bytes: int | None = MAX_UPLOAD_BYTES
 
     def __init__(
-        self, base_url: str, api_key: str, transport: httpx.AsyncBaseTransport | None = None
+        self,
+        base_url: str,
+        api_key: str,
+        transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
         self._url = base_url.rstrip("/")
         self._host = urlsplit(base_url).hostname or base_url
@@ -60,25 +66,47 @@ class OpenAIClient:
         return UploadLimits(MAX_UPLOAD_BYTES)
 
     async def transcribe_file(
-        self, audio: Path, model: ModelSpec, options: TranscriptionOptions
+        self,
+        audio: Path,
+        model: ModelSpec,
+        options: TranscriptionOptions,
+        *,
+        on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         if (await asyncio.to_thread(audio.stat)).st_size > MAX_UPLOAD_BYTES:
             raise TranscriptionError(_("The audio file is too large to upload to this provider."))
         content = await asyncio.to_thread(audio.read_bytes)
-        timed = options.timestamps and model.capabilities.timestamps
-        diarize = options.diarization and model.capabilities.diarization
-        if model.model_id.startswith(
-            ("gpt-4o-transcribe", "gpt-4o-mini-transcribe", "gpt-transcribe")
-        ):
-            timed = False
-        diarize = diarize and model.model_id == "gpt-4o-transcribe-diarize"
+        caps = file_capabilities(model)
+        timed = options.timestamps and caps.timestamps
+        diarize = options.diarization and caps.diarization
+        # Diarizing models return speakers and times only in diarized_json.
+        structured = caps.diarization and (diarize or timed)
         mime = mimetypes.guess_type(audio.name)[0] or "application/octet-stream"
         try:
             result: object
             async with self._sdk() as sdk:
-                if model.model_id == "gpt-4o-transcribe-diarize" and (
-                    diarize or (options.timestamps and model.capabilities.timestamps)
-                ):
+                if caps.streaming:
+                    transcript = OpenAIFileTranscript(
+                        structured=structured, timed=timed, diarize=diarize
+                    )
+                    stream = await sdk.audio.transcriptions.create(
+                        file=(audio.name, content, mime),
+                        model=model.model_id,
+                        response_format="diarized_json" if structured else "json",
+                        stream=True,
+                        chunking_strategy="auto" if caps.diarization else omit,
+                        language=options.language or omit,
+                        extra_headers={"Authorization": omit} if not self._key else None,
+                    )
+                    async with stream:
+                        async for event in stream:
+                            transcript.apply(event)
+                            if on_update is not None:
+                                on_update(transcript.snapshot)
+                            if event.type == "transcript.text.done":
+                                break
+                    return transcript.result()
+                if structured:
                     result = await sdk.audio.transcriptions.create(
                         file=(audio.name, content, mime),
                         model=model.model_id,
@@ -107,11 +135,7 @@ class OpenAIClient:
                     )
                 if not isinstance(result, BaseModel):
                     raise ValueError("Unexpected streaming result")
-                return parse_segments(
-                    result.model_dump(),
-                    options.timestamps and model.capabilities.timestamps,
-                    diarize,
-                )
+                return parse_segments(result.model_dump(), timed, diarize)
         except APIStatusError as error:
             body: object = error.body
             message = error.message
@@ -135,6 +159,14 @@ class OpenAIClient:
         except APIConnectionError as error:
             raise TranscriptionError(
                 _("Could not reach {host}. Try again later.").format(host=self._host),
+                retryable=True,
+            ) from error
+        except APIError as error:
+            message = error.message.replace(self._key, "[redacted]") if self._key else error.message
+            raise TranscriptionError(
+                _("{host} could not finish transcription: {message}").format(
+                    host=self._host, message=message
+                ),
                 retryable=True,
             ) from error
         except (ValueError, TypeError, KeyError, AttributeError) as error:

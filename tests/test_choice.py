@@ -1,5 +1,6 @@
 from dataclasses import replace
 
+from helpers import file_caps
 from kikoe.core.choice import (
     RequestedFeatures,
     available_models,
@@ -7,10 +8,17 @@ from kikoe.core.choice import (
     resolve_choice,
     unsupported_features,
 )
-from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider, TimestampGranularity
+from kikoe.core.models import (
+    ApiKind,
+    Capabilities,
+    ModeCapabilities,
+    ModelSpec,
+    Provider,
+    TimestampGranularity,
+)
 from kikoe.core.validation import Capability
 
-WHISPER = ModelSpec("whisper-1", "Whisper", Capabilities(timestamps=True))
+WHISPER = ModelSpec("whisper-1", "Whisper", file_caps(timestamps=True))
 GPT = ModelSpec("gpt-4o-transcribe", "GPT-4o", Capabilities())
 OPENAI = Provider("o", "OpenAI", ApiKind.OPENAI, "https://api.openai.com/v1", (WHISPER, GPT))
 EMPTY = Provider("e", "Empty", ApiKind.OPENAI_COMPATIBLE, "http://localhost/v1")
@@ -50,22 +58,26 @@ def test_no_models_means_no_choice() -> None:
 def test_requested_features_are_limited_to_the_model() -> None:
     wanted = RequestedFeatures(timestamps=True, diarization=False)
 
-    assert wanted.allowed_by(Capabilities(timestamps=True, diarization=True)) == wanted
-    assert wanted.allowed_by(Capabilities()) == RequestedFeatures(False, False)
+    assert wanted.allowed_by(ModeCapabilities(timestamps=True, diarization=True)) == wanted
+    assert wanted.allowed_by(ModeCapabilities()) == RequestedFeatures(False, False)
 
 
 def test_granularity_defaults_to_segment() -> None:
     assert RequestedFeatures().timestamp_granularities == (TimestampGranularity.SEGMENT,)
 
 
-def test_allowed_by_preserves_granularity_selection() -> None:
+def test_allowed_by_keeps_granularity_only_with_word_timestamps() -> None:
     wanted = RequestedFeatures(
-        timestamp_granularities=(TimestampGranularity.SEGMENT, TimestampGranularity.WORD)
+        timestamp_granularities=(TimestampGranularity.WORD, TimestampGranularity.SEGMENT)
     )
 
-    assert wanted.allowed_by(Capabilities()).timestamp_granularities == (
+    words = ModeCapabilities(timestamps=True, word_timestamps=True)
+    assert wanted.allowed_by(words).timestamp_granularities == (
         TimestampGranularity.SEGMENT,
         TimestampGranularity.WORD,
+    )
+    assert wanted.allowed_by(ModeCapabilities()).timestamp_granularities == (
+        TimestampGranularity.SEGMENT,
     )
 
 
@@ -81,5 +93,5 @@ def test_normalize_granularities_dedupes_orders_and_falls_back() -> None:
 
 
 def test_unsupported_features_feed_the_hint() -> None:
-    assert unsupported_features(Capabilities(timestamps=True)) == (Capability.DIARIZATION,)
-    assert unsupported_features(Capabilities(timestamps=True, diarization=True)) == ()
+    assert unsupported_features(ModeCapabilities(timestamps=True)) == (Capability.DIARIZATION,)
+    assert unsupported_features(ModeCapabilities(timestamps=True, diarization=True)) == ()

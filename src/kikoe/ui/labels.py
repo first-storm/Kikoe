@@ -45,8 +45,12 @@ def capability_label(capability: Capability) -> str:
             return _("Realtime")
         case Capability.TIMESTAMPS:
             return _("Timestamps")
+        case Capability.WORD_TIMESTAMPS:
+            return _("Word Timestamps")
         case Capability.DIARIZATION:
             return _("Speakers")
+        case Capability.STREAMING:
+            return _("Streaming")
 
 
 def capability_summary(capabilities: Capabilities) -> str:
@@ -83,6 +87,8 @@ def model_error_message(error: ModelError) -> str:
             return _("Enter the model ID.")
         case ModelError.DUPLICATE_MODEL_ID:
             return _("This provider already has a model with that ID.")
+        case ModelError.NO_MODE:
+            return _("Turn on file or realtime transcription.")
 
 
 def day_label(when: datetime, now: datetime) -> str:
@@ -179,14 +185,14 @@ def unsupported_option_subtitle() -> str:
 
 def transcription_mode(capabilities: Capabilities) -> str:
     """“Transcribes while recording” or “Transcribes after recording”."""
-    if capabilities.realtime:
+    if capabilities.realtime is not None:
         return _("Transcribes while recording")
     return _("Transcribes after recording")
 
 
 def transcription_hint(capabilities: Capabilities) -> str:
     """E.g. “Transcribes after recording · This model does not support timestamps”."""
-    missing = ", ".join(_feature_name(c) for c in unsupported_features(capabilities))
+    missing = ", ".join(_feature_name(c) for c in unsupported_features(capabilities.recording))
     mode = transcription_mode(capabilities)
     if missing:
         return _("{mode} · This model does not support {features}").format(
@@ -202,5 +208,9 @@ def _feature_name(capability: Capability) -> str:
             return _("realtime transcription")
         case Capability.TIMESTAMPS:
             return _("timestamps")
+        case Capability.WORD_TIMESTAMPS:
+            return _("word timestamps")
         case Capability.DIARIZATION:
             return _("speaker detection")
+        case Capability.STREAMING:
+            return _("streaming preview")

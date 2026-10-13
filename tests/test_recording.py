@@ -9,20 +9,21 @@ from pathlib import Path
 
 import pytest
 
-from helpers import run_async
+from helpers import file_caps, run_async
 from kikoe.core.choice import ModelChoice
 from kikoe.core.models import (
     ApiKind,
-    Capabilities,
     ModelSpec,
     Provider,
     Segment,
     TranscriptionState,
 )
 from kikoe.core.recording import CaptureProgress, CaptureState, pcm_level
+from kikoe.core.transcription import FileTranscriptSnapshot
 from kikoe.media import transcode
 from kikoe.media.recorder import RecorderError
 from kikoe.providers.base import (
+    FileTranscriptCallback,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
@@ -33,7 +34,7 @@ from kikoe.storage.captures import CaptureJournal, CaptureStore, CaptureStoreErr
 from kikoe.storage.library import Library
 from kikoe.storage.notes import NoteRepository
 
-MODEL = ModelSpec("whisper-1", "Whisper", Capabilities(timestamps=True))
+MODEL = ModelSpec("whisper-1", "Whisper", file_caps(timestamps=True))
 PROVIDER = Provider("p", "OpenAI", ApiKind.OPENAI, "https://example.test/v1", (MODEL,))
 CHOICE = ModelChoice(PROVIDER, MODEL)
 
@@ -94,7 +95,12 @@ class FakeClient:
         self.started = asyncio.Event()
 
     async def transcribe_file(
-        self, audio: Path, model: ModelSpec, options: TranscriptionOptions
+        self,
+        audio: Path,
+        model: ModelSpec,
+        options: TranscriptionOptions,
+        *,
+        on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         self.started.set()
         if self.fail:
@@ -547,7 +553,12 @@ async def test_later_upload_part_failure_does_not_replace_existing_text(
         calls = 0
 
         async def transcribe_file(
-            self, audio: Path, model: ModelSpec, options: TranscriptionOptions
+            self,
+            audio: Path,
+            model: ModelSpec,
+            options: TranscriptionOptions,
+            *,
+            on_update: FileTranscriptCallback | None = None,
         ) -> tuple[Segment, ...]:
             self.calls += 1
             if self.calls == 2:
@@ -638,3 +649,69 @@ async def test_shutdown_waits_for_an_already_started_replacement_commit(
     result = await task
     assert result.recordings[0].segments[0].text == "Hello"
     assert await notes.get_note(note.note_id) == result
+
+
+@run_async
+async def test_retranscription_stream_failure_keeps_original_text_and_audio(
+    notes: NoteRepository,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from kikoe.core.models import Recording, RecordingSource
+
+    await notes.load()
+    source = tmp_path / "original.flac"
+    source.write_bytes(b"original audio")
+    original_audio = await notes.store_audio(source, "kept")
+    original = Recording(
+        "kept",
+        datetime.now(UTC),
+        timedelta(seconds=5),
+        RecordingSource.IMPORTED,
+        "Old provider",
+        "old model",
+        (Segment("Edited original"),),
+        original_audio,
+    )
+    note = await notes.add_recording(None, "Meeting", original)
+    before = await notes.get_note(note.note_id)
+
+    async def convert(source: Path, destination: Path) -> timedelta:
+        await asyncio.to_thread(destination.write_bytes, b"upload")
+        return timedelta(seconds=5)
+
+    monkeypatch.setattr(transcode, "to_upload", convert)
+
+    class StreamingClient(FakeClient):
+        async def transcribe_file(
+            self,
+            audio: Path,
+            model: ModelSpec,
+            options: TranscriptionOptions,
+            *,
+            on_update: FileTranscriptCallback | None = None,
+        ) -> tuple[Segment, ...]:
+            assert on_update is not None
+            on_update(
+                FileTranscriptSnapshot((Segment("New completed segment"),), (Segment("Partial"),))
+            )
+            raise TranscriptionError("Stream interrupted", retryable=True)
+
+    updates: list[FileTranscriptSnapshot] = []
+    with pytest.raises(TranscriptionError, match="Stream interrupted"):
+        await transcribe_recording(
+            note.note_id,
+            original,
+            CHOICE,
+            client=StreamingClient(),
+            notes=notes,
+            options=TranscriptionOptions(),
+            on_progress=lambda _s, _p, _n: None,
+            on_update=updates.append,
+            work_dir=tmp_path / "work",
+            preserve_on_failure=True,
+        )
+    assert updates[0].preview == (Segment("Partial"),)
+    assert await notes.get_note(note.note_id) == before
+    assert await asyncio.to_thread(original_audio.read_bytes) == b"original audio"
+    assert list((tmp_path / "work").iterdir()) == []

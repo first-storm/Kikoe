@@ -2,8 +2,8 @@ from pathlib import Path
 
 import pytest
 
-from helpers import run_async
-from kikoe.core.models import ApiKind, Capabilities, ModelSpec
+from helpers import file_caps, run_async
+from kikoe.core.models import ApiKind, Capabilities, ModeCapabilities, ModelSpec, Provider
 from kikoe.storage.providers import ProviderNotFoundError, ProviderRepository
 from kikoe.storage.settings import SettingsStore
 
@@ -84,11 +84,11 @@ async def test_removing_a_provider_deletes_its_key(
 async def test_model_can_be_added_edited_and_removed(repo: ProviderRepository) -> None:
     provider = await repo.add_provider("Groq", ApiKind.OPENAI_COMPATIBLE, URL, "")
     first = ModelSpec("a", "A", Capabilities())
-    second = ModelSpec("b", "B", Capabilities(timestamps=True))
+    second = ModelSpec("b", "B", file_caps(timestamps=True))
     await repo.save_model(provider.provider_id, first)
     await repo.save_model(provider.provider_id, second)
 
-    renamed = ModelSpec("a2", "A2", Capabilities(realtime=True))
+    renamed = ModelSpec("a2", "A2", Capabilities(realtime=ModeCapabilities()))
     await repo.save_model(provider.provider_id, renamed, replacing_id="a")
     assert repo.get(provider.provider_id).models == (renamed, second)
 
@@ -194,3 +194,43 @@ async def test_window_state_persists_and_keeps_providers_and_defaults(
     assert reloaded.window == WindowState(1000, 700, maximized=True)
     assert [p.name for p in reloaded.providers] == ["Cloud"]
     assert reloaded.preferences.language == "zh"
+
+
+ALL_ON = Capabilities(
+    file=ModeCapabilities(True, True, True, True), realtime=ModeCapabilities(True, True, True, True)
+)
+
+
+@run_async
+async def test_saved_models_lose_options_the_endpoint_rejects(repo: ProviderRepository) -> None:
+    provider = await repo.add_provider("OpenAI", ApiKind.OPENAI, URL, "")
+    await repo.save_model(provider.provider_id, ModelSpec("whisper-1", "Whisper", ALL_ON))
+
+    assert repo.get(provider.provider_id).models[0].capabilities == file_caps(timestamps=True)
+
+
+@run_async
+async def test_changing_the_api_type_applies_the_new_limits(repo: ProviderRepository) -> None:
+    provider = await repo.add_provider("Deepgram", ApiKind.DEEPGRAM, URL, "")
+    await repo.save_model(provider.provider_id, ModelSpec("nova-3", "Nova", ALL_ON))
+
+    await repo.update_provider(provider.provider_id, "Router", ApiKind.OPENROUTER, URL, "")
+
+    capabilities = repo.get(provider.provider_id).models[0].capabilities
+    assert capabilities == file_caps(timestamps=True, diarization=True)
+
+
+@run_async
+async def test_loading_clamps_models_saved_by_an_older_catalog(
+    tmp_path: Path, secrets: FakeSecrets
+) -> None:
+    path = tmp_path / "settings.json"
+    model = ModelSpec("gpt-live-transcribe", "Live", file_caps(timestamps=True))
+    provider = Provider("p", "OpenAI", ApiKind.OPENAI, URL, (model,))
+    SettingsStore(path).save((provider,))
+    repository = ProviderRepository(SettingsStore(path), secrets)
+
+    await repository.load()
+
+    capabilities = repository.get("p").models[0].capabilities
+    assert capabilities == Capabilities(file=None, realtime=ModeCapabilities())

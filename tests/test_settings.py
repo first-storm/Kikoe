@@ -3,7 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider
+from helpers import file_caps
+from kikoe.core.models import ApiKind, Capabilities, ModeCapabilities, ModelSpec, Provider
 from kikoe.core.preferences import WindowState
 from kikoe.storage.settings import Settings, SettingsError, SettingsStore
 
@@ -12,7 +13,7 @@ PROVIDER = Provider(
     "Groq",
     ApiKind.OPENAI_COMPATIBLE,
     "https://api.groq.com/openai/v1",
-    (ModelSpec("whisper-large-v3", "Whisper “Large”", Capabilities(timestamps=True)),),
+    (ModelSpec("whisper-large-v3", "Whisper “Large”", file_caps(timestamps=True)),),
 )
 
 
@@ -83,6 +84,22 @@ def test_version_one_upgrades_without_losing_providers(tmp_path: Path) -> None:
     state = SettingsStore(path).load_state()
     assert state.providers == (PROVIDER,)
     assert state.preferences == Preferences()
+
+
+def test_per_mode_capabilities_round_trip(tmp_path: Path) -> None:
+    live = ModelSpec("live", "Live", Capabilities(file=None, realtime=ModeCapabilities(True)))
+    both = ModelSpec(
+        "both",
+        "Both",
+        Capabilities(
+            file=ModeCapabilities(True, True, True, True),
+            realtime=ModeCapabilities(diarization=True),
+        ),
+    )
+    provider = Provider("p", "P", ApiKind.DEEPGRAM, "https://example.test", (live, both))
+    store = SettingsStore(tmp_path / "settings.json")
+    store.save((provider,))
+    assert store.load() == (provider,)
 
 
 def test_defaults_survive_legacy_provider_save(tmp_path: Path) -> None:

@@ -2,17 +2,19 @@
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
 from datetime import timedelta
 from pathlib import Path
 from typing import Protocol
 
-from kikoe.core.models import ModelSpec, Segment, TimestampGranularity
-from kikoe.core.transcription import TranscriptEvent
+from kikoe.core.models import ModeCapabilities, ModelSpec, Segment, TimestampGranularity
+from kikoe.core.transcription import FileTranscriptSnapshot, TranscriptEvent
 
 log = logging.getLogger(__name__)
+
+type FileTranscriptCallback = Callable[[FileTranscriptSnapshot], None]
 
 
 async def close_stack(stack: AsyncExitStack) -> None:
@@ -35,7 +37,12 @@ class TranscriptionOptions:
     timestamp_granularities: tuple[TimestampGranularity, ...] = field(
         default=(TimestampGranularity.SEGMENT,), kw_only=True
     )
-    """Timestamp detail; only OpenRouter honours the selection for now."""
+    """Timestamp detail; honoured only when the model has word timestamps."""
+
+
+def file_capabilities(model: ModelSpec) -> ModeCapabilities:
+    """Upload options; a live-only model requests nothing beyond plain text."""
+    return model.capabilities.file or ModeCapabilities()
 
 
 class TranscriptionError(Exception):
@@ -71,7 +78,12 @@ class TranscriptionProvider(Protocol):
         ...
 
     async def transcribe_file(
-        self, audio: Path, model: ModelSpec, options: TranscriptionOptions
+        self,
+        audio: Path,
+        model: ModelSpec,
+        options: TranscriptionOptions,
+        *,
+        on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         """Upload a finished recording and return its transcript."""
         ...

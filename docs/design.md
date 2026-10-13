@@ -34,9 +34,11 @@ renaming and confidently preserving an identity keep its color.
 - **Segment**: a line of transcript, optionally with a timestamp and a speaker.
 - **Provider**: a configured cloud service (name, API type, base URL, API key) holding
   one or more **models**.
-- **Model capabilities**: *realtime* (text appears while recording), *timestamps*,
-  *speaker diarization*. The user ticks these when adding a model; the UI disables
-  options a model cannot do.
+- **Model capabilities**: declared per mode. *File transcription* (timestamps, word
+  timestamps, speaker diarization, streaming preview) and *realtime transcription* (text
+  appears while recording; timestamps, speaker diarization). A bundled preset catalog
+  fills these in for known models and marks what an endpoint rejects; the user can change
+  everything else, and the UI disables what a model cannot do.
 
 ## 1. Main window — note with appended recording
 
@@ -103,7 +105,7 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
     only"). Initial focus is on the current model.
   - Group "Options", description "Transcribes while recording" or "Transcribes after
     recording": switch rows "Timestamps" and "Speakers" (whether the next recording
-    requests them). For OpenRouter models, while Timestamps is on, a combo row
+    requests them). For models with word timestamps, while Timestamps is on, a combo row
     "Timestamp Detail" offers "Segments", "Words", "Segments and Words". If the model
     lacks a capability, its switch is disabled with the subtitle "Not supported by
     this model"; the earlier choice comes back with a model that supports it.
@@ -140,6 +142,16 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 - At 360 px the idle bar stays on one line: model name, icon-only Import Audio, and the
   labeled primary button. Model and import tooltips retain their explanations. Import
   Audio is also available in the main menu without a selected note.
+- Models with the Streaming Preview capability display text while transcribing imports, stopped recordings,
+  retries and re-transcriptions. Imports append a temporary recording section; imports
+  without an open note show a temporary page titled after the file, with progress and Cancel.
+  No note or sidebar entry is created until the import succeeds. Retry and Re-transcribe
+  preview new text in the original recording's position, keeping neighboring recordings.
+  Completed segments use normal text; unfinished text is dimmed with the existing blinking
+  caret. Temporary rows cannot be edited, played or used to match speakers. Scrolling follows
+  the bottom only when the reader was already there. Cancel or failure removes previews and
+  restores existing text; success replaces it with the saved result. Cancel is disabled
+  during the final save. Whisper and compatible APIs retain their existing file requests.
 - Not yet: "Delete This Recording" (outside M7).
 
 ## 2. Recording in progress
@@ -237,15 +249,16 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 - Header: "Cancel" · title "Re-transcribe" · suggested "Transcribe".
 - Intro: "Re-transcribe "Recording 1" (0:58) from the kept original audio. Timestamps
   or speaker detection that were off during transcription can be added this way."
-- Group: "Model" row (value "Deepgram · nova-3", opens model picker), switches
-  "Timestamps" and "Speaker Detection" (disabled when unsupported).
+- Group: "Model" row (value "Deepgram · nova-3", opens model picker), then the same
+  "Options" group as the Transcription Model dialog ("Timestamps", "Timestamp Detail",
+  "Speakers"), using the selected model's file capabilities.
 - Warning: "The text of this recording will be replaced, including any manual edits.
   Other recordings in the note are not affected. Speaker names are kept where possible."
 
 M6 implementation behavior:
 - The picker starts with the bottom bar's current model only when it supports files.
   Live-only models require an explicit file-model choice. Switches initially reflect
-  the current transcript and use the selected model's effective batch capabilities.
+  the current transcript and use the selected model's file capabilities.
 - Only a fully successful transcription replaces this recording. Failed/cancelled work
   keeps its previous text, identities, original audio and completion state. Progress and
   Cancel use the existing bottom bar; conflicting recording/import/edit actions are disabled.
@@ -287,16 +300,20 @@ Pushed as a subpage (back button) titled with the provider name.
 
 - Header: "Cancel" · title "Add Model" · suggested "Add".
 - Entries: "Model ID", "Display Name".
-- Group "This Model Supports" (check rows):
-  - "Realtime Transcription" — "Text appears while recording. If unchecked, the whole
-    recording is uploaded after it stops."
-  - "Timestamps" — "Each segment carries a time. Needed for subtitle export."
-  - "Speaker Detection" — "Tells different people apart and labels them."
-- Footnote: "Different models from the same provider can differ. Check the provider's
-  documentation. Unchecked options are shown as unavailable when recording."
-- Known endpoint restrictions disable unsupported capability checkboxes. Live-only
-  model IDs force Realtime Transcription and disable file operations. Provider/model
-  summaries and bottom-bar hints use the same effective capability rules.
+- Group "What This Model Supports", description "Known models are filled in
+  automatically. Options the provider rejects for this model are unavailable.":
+  - Expander row with switch "Transcribe Files" — "Imported files, and recordings
+    uploaded after they stop." Check rows: "Timestamps", "Word Timestamps", "Speaker
+    Detection", "Streaming Preview" ("Text appears while a file is transcribed.").
+  - Expander row with switch "Transcribe While Recording" — "Text appears while
+    recording. If off, the whole recording is uploaded after it stops." Check rows:
+    "Timestamps", "Speaker Detection".
+- Typing a model ID applies the preset from `storage/model_presets.json` until the user
+  changes an option; editing never replaces saved options. Options the preset marks
+  unsupported are disabled with the tooltip "This model does not support this option.";
+  a mode the model lacks is disabled, and the other mode then has no switch (always on).
+  Saving with both modes off shows "Turn on file or realtime transcription."
+- Provider/model summaries and bottom-bar hints use the same stored capabilities.
 
 ## Visual notes
 
