@@ -20,13 +20,14 @@ pytestmark = pytest.mark.gtk
 def view() -> NoteView:
     gi.require_version("Gtk", "4.0")
     gi.require_version("Adw", "1")
-    from gi.repository import Adw, Gtk
+    from gi.repository import Adw, Gdk, Gtk
+
+    if not Gtk.init_check() or Gdk.Display.get_default() is None:
+        pytest.skip("A display is required for GTK previews")
+    Adw.init()
 
     from kikoe.ui.note_view import NoteView
 
-    if not Gtk.init_check():
-        pytest.skip("A display is required for GTK previews")
-    Adw.init()
     return NoteView()
 
 
