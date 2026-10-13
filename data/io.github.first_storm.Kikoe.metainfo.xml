@@ -23,15 +23,15 @@
   <screenshots>
     <screenshot type="default">
       <caption>Notes with timestamps and speaker labels</caption>
-      <image width="1180" height="780">https://raw.githubusercontent.com/first-storm/Kikoe/main/data/screenshots/main-en.png</image>
+      <image width="2360" height="1560">https://raw.githubusercontent.com/first-storm/Kikoe/main/data/screenshots/main-en.png</image>
     </screenshot>
     <screenshot>
       <caption>Recording audio for transcription</caption>
-      <image width="1180" height="780">https://raw.githubusercontent.com/first-storm/Kikoe/main/data/screenshots/recording-en.png</image>
+      <image width="2360" height="1560">https://raw.githubusercontent.com/first-storm/Kikoe/main/data/screenshots/recording-en.png</image>
     </screenshot>
     <screenshot>
       <caption>Default model, language and local storage preferences</caption>
-      <image width="1180" height="780">https://raw.githubusercontent.com/first-storm/Kikoe/main/data/screenshots/preferences-en.png</image>
+      <image width="2360" height="1560">https://raw.githubusercontent.com/first-storm/Kikoe/main/data/screenshots/preferences-en.png</image>
     </screenshot>
   </screenshots>
   <content_rating type="oars-1.1"/>

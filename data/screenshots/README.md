@@ -1,9 +1,12 @@
 # M7 screenshots
 
-Captured from the Linux GTK application at 1180×780 and 360×650, in light and dark
-mode. Notes, speaker names and recording timelines are synthetic; no credentials,
-network requests or audio devices were used. Temporary storage paths in Preferences
-belong to the preview library, not a user library.
+Rendered by GTK itself from the Linux application (Wayland, 2× scale), so the rounded
+corners are the real client-side window shape. Logical sizes are 1180×780 and 360×650;
+files are saved at native resolution (2360×1560 and 720×1300). Wide shots use the light
+theme except the dark ones; the 360 px shots use the dark theme. Notes, speaker names and
+recording timelines are synthetic; no credentials, network requests or audio devices were
+used. Temporary storage paths in Preferences belong to a throwaway preview library, not a
+user library.
 
 The first three English images are referenced by AppStream. Push these files to the
 main branch and verify the metadata image URLs before submitting a release.
