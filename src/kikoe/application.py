@@ -38,6 +38,7 @@ class Application(Adw.Application):
         self._add_action("quit", self._on_quit, ["<primary>q"])
         self._add_action("preferences", self._on_preferences, ["<primary>comma"])
         self._add_action("add-provider", self._on_add_provider)
+        self._add_action("manage-providers", self._on_manage_providers)
         self._add_action("about", self._on_about)
         self._add_action("shortcuts", self._on_shortcuts, ["<primary>question"])
         self.set_accels_for_action("window.close", ["<primary>w"])
@@ -98,6 +99,11 @@ class Application(Adw.Application):
 
     def _on_preferences(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         PreferencesDialog(self.providers).present(self.get_active_window())
+
+    def _on_manage_providers(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        dialog = PreferencesDialog(self.providers)
+        dialog.set_visible_page_name("providers")
+        dialog.present(self.get_active_window())
 
     def _on_add_provider(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         dialog = PreferencesDialog(self.providers)

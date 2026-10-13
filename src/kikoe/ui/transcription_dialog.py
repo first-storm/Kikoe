@@ -105,4 +105,4 @@ class TranscriptionDialog(Adw.Dialog):
         window = self.get_root()
         self.close()
         if isinstance(window, Gtk.Widget):
-            window.activate_action("app.preferences", None)
+            window.activate_action("app.manage-providers", None)
