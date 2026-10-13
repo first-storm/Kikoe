@@ -3,6 +3,11 @@ using Adw 1;
 
 template $KikoeTranscriptRow: Box {
   orientation: vertical;
+  // The list row's padding, here so that a hidden spare row takes no room.
+  margin-top: 2;
+  margin-bottom: 2;
+  margin-start: 2;
+  margin-end: 2;
 
   Box header_box {
     orientation: vertical;
@@ -99,6 +104,9 @@ template $KikoeTranscriptRow: Box {
 
       Button speaker_button {
         halign: start;
+        action-name: "win.edit-speaker";
+        // (recording id, speaker id), set for each segment shown.
+        action-target: "('', '')";
         tooltip-text: _("Rename or Match Speaker");
 
         accessibility {

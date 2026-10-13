@@ -73,9 +73,13 @@ class TranscriptRow(Gtk.Box):
         self._key: tuple[str, int] | None = None
         """(recording id, position) of the editable segment shown, if any."""
         self._segment: Segment | None = None
+        self._layout: tuple[bool, bool, bool] | None = None
+        """(compact, speakers, timestamps) the meta column is laid out for."""
         self._committed = ""
         """The text last saved or loaded; typing beyond it is not committed yet."""
         self._loading = False
+        self._typed = False
+        """Whether there is typing that has not been committed."""
         self._loading_times = False
         self._preedit = False
         self._commit_source = 0
@@ -132,6 +136,12 @@ class TranscriptRow(Gtk.Box):
         editable: bool,
     ) -> None:
         """Fill the row; the meta column is shown or hidden for the whole note at once."""
+        # A spare row kept for the next note shows nothing and takes no room.
+        self.set_visible(not item.hidden)
+        if item.hidden:
+            self._key = None
+            self._set_preview(None)
+            return
         segment = item.segment
         self.header_box.set_visible(segment is None)
         self.segment_box.set_visible(segment is not None)
@@ -204,30 +214,34 @@ class TranscriptRow(Gtk.Box):
         compact: bool,
         editable: bool,
     ) -> None:
-        self.segment_box.set_orientation(
-            Gtk.Orientation.VERTICAL if compact else Gtk.Orientation.HORIZONTAL
-        )
-        self.meta_box.set_orientation(
-            Gtk.Orientation.HORIZONTAL if compact else Gtk.Orientation.VERTICAL
-        )
-        self.meta_box.set_spacing(8 if compact else 0)
-        self.segment_box.set_spacing(0 if compact else 12)
-        self.meta_box.set_visible(show_speakers or show_timestamps)
-        width = _META_WIDTH_WITH_SPEAKERS if show_speakers else _META_WIDTH_TIMES_ONLY
-        self.meta_box.set_size_request(-1 if compact else width, -1)
+        # Rows are bound again for every note opened, so the layout is set only when the
+        # note's columns differ from the last one.
+        layout = compact, show_speakers, show_timestamps
+        if layout != self._layout:
+            self._layout = layout
+            self.segment_box.set_orientation(
+                Gtk.Orientation.VERTICAL if compact else Gtk.Orientation.HORIZONTAL
+            )
+            self.meta_box.set_orientation(
+                Gtk.Orientation.HORIZONTAL if compact else Gtk.Orientation.VERTICAL
+            )
+            self.meta_box.set_spacing(8 if compact else 0)
+            self.segment_box.set_spacing(0 if compact else 12)
+            self.meta_box.set_visible(show_speakers or show_timestamps)
+            width = _META_WIDTH_WITH_SPEAKERS if show_speakers else _META_WIDTH_TIMES_ONLY
+            self.meta_box.set_size_request(-1 if compact else width, -1)
         self.speaker_button.set_visible(show_speakers and item.speaker_name is not None)
-        self.speaker_button.set_action_name(None)
         self.speaker_button.set_action_target_value(
             GLib.Variant("(ss)", (item.recording.recording_id, segment.speaker_id or ""))
         )
-        self.speaker_button.set_action_name("win.edit-speaker")
         self.speaker_button.set_sensitive(
             not item.preview and item.recording.recording_id != "live"
         )
         self.speaker_label.set_label(item.speaker_name or "")
-        self._color_slot = item.color_slot
-        self._dark = None
-        self.update_speaker_color()
+        if item.color_slot != self._color_slot:
+            self._color_slot = item.color_slot
+            self._dark = None
+            self.update_speaker_color()
         span = format_timestamp_range(segment.start, segment.end)
         live = item.position is None or item.preview or item.recording.recording_id == "live"
         self.timestamp_button.set_visible(show_timestamps and (bool(span) or not live))
@@ -242,12 +256,13 @@ class TranscriptRow(Gtk.Box):
 
     def _bind_text(self, key: tuple[str, int], text: str) -> None:
         """Show ``text`` without disturbing the caret or typing that is not saved yet."""
-        current = self._text()
         if key != self._key:
             self._cancel_commit()
             self._key = key
             self._load(text)
-        elif current.strip() == text.strip():
+            return
+        current = self._text()
+        if current.strip() == text.strip():
             self._committed = current
         elif current == self._committed:
             # Changed elsewhere (Undo or Redo); nothing typed here is lost.
@@ -282,6 +297,7 @@ class TranscriptRow(Gtk.Box):
         finally:
             self._loading = False
         self._committed = text
+        self._typed = False
 
     def _text(self) -> str:
         buffer = self.text_view.get_buffer()
@@ -291,6 +307,7 @@ class TranscriptRow(Gtk.Box):
     def _on_buffer_changed(self, _buffer: Gtk.TextBuffer) -> None:
         if self._loading or self._key is None:
             return
+        self._typed = True
         self._cancel_commit()
         self._commit_source = GLib.timeout_add(_COMMIT_DELAY_MS, self._on_commit_timeout)
 
@@ -307,8 +324,12 @@ class TranscriptRow(Gtk.Box):
     def _commit(self, *, final: bool) -> None:
         """Emit the typed text; empty text waits for more typing, or reverts when final."""
         self._cancel_commit()
+        # Every row is flushed whenever a note opens; only typed ones read their text.
+        if not self._typed:
+            return
         text = self._text()
         if self._key is None or text == self._committed:
+            self._typed = False
             return
         if validate_segment_edit(text, None, None) is SegmentEditError.EMPTY_TEXT:
             if final:
@@ -316,6 +337,7 @@ class TranscriptRow(Gtk.Box):
                 show_notice(self, _("Segment text cannot be empty"))
             return
         self._committed = text
+        self._typed = False
         self.emit("text-committed", text)
 
     def _on_text_key_pressed(
