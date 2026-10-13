@@ -197,6 +197,7 @@ async def transcribe_recording(
             recording.audio_path,
             choice.model,
             client=client,
+            provider=choice.provider,
             options=options,
             on_progress=on_progress,
             on_update=on_update,

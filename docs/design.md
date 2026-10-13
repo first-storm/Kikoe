@@ -289,6 +289,12 @@ Pushed as a subpage (back button) titled with the provider name.
   the request format. Most providers offer an "OpenAI-compatible" API."
 - Group "Models", description "What each model can do is set when you add it.", header
   button "Add Model". Rows: model name + capability tags, *Edit Model* button.
+- Group "File Transcription" before Models: SpinRows for Parallel Requests (1–32,
+  default 2), Chunk Length (Minutes), and Chunk Size (MB), plus an Audio Format ComboRow
+  and Reset Transcription Defaults ButtonRow. Limits and defaults depend on the API;
+  Gemini additionally enforces its 30-minute metadata limit at request time. See
+  [Provider upload settings](upload-settings.md) for official sources and exact defaults.
+  Rows apply immediately; content scrolls at 360 px and inherits Adwaita styling.
 - Destructive button "Remove Provider" at the bottom.
 - No Save button: changes to an existing provider apply when a field is confirmed
   (Enter or the row's apply button) or the API type changes. Adding a new provider uses

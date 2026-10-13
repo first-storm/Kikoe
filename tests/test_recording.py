@@ -550,6 +550,18 @@ async def test_later_upload_part_failure_does_not_replace_existing_text(
 
     monkeypatch.setattr(transcode, "find_silences", silences)
 
+    async def sized_upload(
+        _source: Path,
+        destination: Path,
+        start: timedelta | None = None,
+        end: timedelta | None = None,
+        format: UploadFormat = OGG_OPUS,
+    ) -> timedelta:
+        await asyncio.to_thread(destination.write_bytes, b"upload" if start is None else b"part")
+        return timedelta(seconds=2) if end is None else end - (start or timedelta())
+
+    monkeypatch.setattr(transcode, "to_upload", sized_upload)
+
     class PartClient(FakeClient):
         max_upload_bytes = 4
         calls = 0

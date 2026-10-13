@@ -166,14 +166,16 @@ def recording_meta(recording: Recording, now: datetime) -> str:
 
 
 def import_stage_label(stage: ImportStage, part: int, parts: int) -> str:
-    """Progress text for the bottom bar, e.g. “Transcribing part 2 of 3…”."""
+    """Progress counts completed uploads, including requests that finish out of order."""
     match stage:
         case ImportStage.CONVERTING if parts > 1:
             return _("Converting part {part} of {parts}…").format(part=part, parts=parts)
         case ImportStage.CONVERTING:
             return _("Converting audio…")
         case ImportStage.TRANSCRIBING if parts > 1:
-            return _("Transcribing part {part} of {parts}…").format(part=part, parts=parts)
+            return _("Transcribing… {part} of {parts} chunks complete").format(
+                part=part, parts=parts
+            )
         case ImportStage.TRANSCRIBING:
             return _("Transcribing…")
         case ImportStage.SAVING:

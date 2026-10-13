@@ -1,4 +1,5 @@
 import asyncio
+from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
 
@@ -8,12 +9,14 @@ from helpers import LIVE_ONLY, file_caps, run_async
 from kikoe.core.chunking import TimeSpan
 from kikoe.core.models import (
     ApiKind,
+    AudioFormat,
     ModelSpec,
     Note,
     Provider,
     Recording,
     RecordingSource,
     Segment,
+    UploadSettings,
 )
 from kikoe.core.transcription import FileTranscriptSnapshot
 from kikoe.core.upload import MP3, OGG_OPUS, UploadFormat
@@ -154,6 +157,7 @@ async def test_import_creates_a_note_named_after_the_file(
     assert list(work.iterdir()) == []
     assert [stage for stage, _, _ in stages] == [
         ImportStage.CONVERTING,
+        ImportStage.TRANSCRIBING,
         ImportStage.TRANSCRIBING,
         ImportStage.SAVING,
     ]
@@ -318,7 +322,7 @@ async def test_provider_chosen_format_is_used_for_every_part(
     use_converter(monkeypatch, FakeConverter(s(120), size=1500))
     await notes.load()
     client = Mp3Client()
-    await import_audio(source, None, PROVIDER, MODEL, client=client, notes=notes, work_dir=tmp_path)
+    await transcribe_audio(source, MODEL, client=client, work_dir=tmp_path)
     assert len(client.uploads) >= 2
     assert {path.suffix for path in client.uploads} == {".mp3"}
 
@@ -451,3 +455,158 @@ async def test_cancel_during_import_commit_finishes_saving_audio_and_text(
     assert note.recordings[0].segments[0].text == "part 1"
     audio = note.recordings[0].audio_path
     assert audio is not None and audio.read_bytes() == b"original"
+
+
+class ControlledClient(FakeClient):
+    """Release requests individually to verify true concurrency and out-of-order results."""
+
+    def __init__(self) -> None:
+        super().__init__(max_upload_bytes=None)
+        self.active = 0
+        self.maximum = 0
+        self.started: asyncio.Queue[int] = asyncio.Queue()
+        self.release: dict[int, asyncio.Event] = {}
+        self.cancelled: list[int] = []
+
+    async def transcribe_file(
+        self,
+        audio: Path,
+        model: ModelSpec,
+        options: TranscriptionOptions,
+        *,
+        on_update: FileTranscriptCallback | None = None,
+    ) -> tuple[Segment, ...]:
+        number = len(self.uploads)
+        self.uploads.append(audio)
+        self.release[number] = asyncio.Event()
+        self.active += 1
+        self.maximum = max(self.maximum, self.active)
+        self.started.put_nowait(number)
+        try:
+            await self.release[number].wait()
+            if on_update is not None:
+                on_update(FileTranscriptSnapshot(preview=(Segment(str(number)),)))
+            return (Segment(str(number), s(1), s(2), "A"),)
+        except asyncio.CancelledError:
+            assert await asyncio.to_thread(audio.exists), "cleanup must wait for every request"
+            self.cancelled.append(number)
+            raise
+        finally:
+            self.active -= 1
+
+
+@run_async
+async def test_parallel_chunks_finish_out_of_order_but_transcript_and_previews_stay_ordered(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    source: Path,
+) -> None:
+    use_converter(monkeypatch, FakeConverter(s(12), size=100))
+    provider = replace(PROVIDER, upload=UploadSettings(parallelism=2, chunk_seconds=5))
+    client = ControlledClient()
+    stages = Stages()
+    updates: list[FileTranscriptSnapshot] = []
+    async with asyncio.timeout(5):
+        task = asyncio.create_task(
+            transcribe_audio(
+                source,
+                MODEL,
+                client=client,
+                provider=provider,
+                work_dir=tmp_path / "work",
+                on_progress=stages,
+                on_update=updates.append,
+            )
+        )
+        assert await client.started.get() == 0
+        assert await client.started.get() == 1
+        assert not task.done()
+        client.release[1].set()
+        assert await client.started.get() == 2
+        assert all(not update.segments and not update.preview for update in updates)
+        client.release[0].set()
+        client.release[2].set()
+        duration, segments = await task
+    assert duration == s(12)
+    assert [segment.text for segment in segments] == ["0", "1", "2"]
+    assert [segment.start for segment in segments] == [s(1), s(5.5), s(10)]
+    assert [segment.speaker_id for segment in segments] == ["1:A", "2:A", "3:A"]
+    assert client.maximum == 2
+    assert updates[-1] == FileTranscriptSnapshot(segments)
+    assert [part for stage, part, _ in stages if stage == ImportStage.TRANSCRIBING] == [0, 1, 2, 3]
+    assert not any(path.exists() for path in client.uploads)
+
+
+@run_async
+async def test_cancel_drains_active_requests_and_never_starts_queued_chunks(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    source: Path,
+) -> None:
+    use_converter(monkeypatch, FakeConverter(s(12), size=100))
+    provider = replace(PROVIDER, upload=UploadSettings(parallelism=2, chunk_seconds=5))
+    client = ControlledClient()
+    work = tmp_path / "work"
+    async with asyncio.timeout(5):
+        task = asyncio.create_task(
+            transcribe_audio(
+                source,
+                MODEL,
+                client=client,
+                provider=provider,
+                work_dir=work,
+            )
+        )
+        await client.started.get()
+        await client.started.get()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    assert sorted(client.cancelled) == [0, 1]
+    assert client.active == 0
+    assert len(client.uploads) == 2
+    assert list(work.iterdir()) == []
+
+
+@run_async
+async def test_encoded_parts_are_resplit_when_variable_bitrate_exceeds_size_budget(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    source: Path,
+) -> None:
+    class VariableConverter(FakeConverter):
+        async def to_upload(
+            self,
+            source: Path,
+            destination: Path,
+            start: timedelta | None = None,
+            end: timedelta | None = None,
+            format: UploadFormat = OGG_OPUS,
+        ) -> timedelta:
+            if start is None or end is None:
+                write(destination, b"x" * 2000)
+                return self.duration
+            length = end - start
+            write(destination, b"x" * (1500 if length > s(3) else 500))
+            return length
+
+    use_converter(monkeypatch, VariableConverter(s(12), size=2000))
+    client = FakeClient(max_upload_bytes=1000)
+    await transcribe_audio(source, MODEL, client=client, work_dir=tmp_path / "work")
+    assert len(client.uploads) > 2
+    assert not any(path.exists() for path in client.uploads)
+
+
+@run_async
+async def test_provider_format_and_size_override_apply_to_every_part(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    source: Path,
+) -> None:
+    converter = FakeConverter(s(12), size=2000)
+    use_converter(monkeypatch, converter)
+    client = FakeClient(max_upload_bytes=5000)
+    provider = replace(PROVIDER, upload=UploadSettings(chunk_bytes=1000, format=AudioFormat.FLAC))
+    await transcribe_audio(source, MODEL, client=client, provider=provider, work_dir=tmp_path)
+    assert len(client.uploads) >= 2
+    assert {path.suffix for path in client.uploads} == {".flac"}

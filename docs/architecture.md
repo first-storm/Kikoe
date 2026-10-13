@@ -122,8 +122,14 @@ EOF without done is retryable failure; the response is closed on cancellation or
 
 `FileTranscriptSnapshot` separates completed segments from temporary previews. Optional
 provider callbacks flow through the shared file service, which adds chunk offsets and
-speaker scopes and includes earlier completed chunks in each snapshot. Only the final
-result of every chunk is written to SQLite. Imports and retained recording updates shield
+speaker scopes and includes earlier completed chunks in each snapshot. Results are
+ordered by original chunk index, even when requests complete out of order.
+Per-provider upload settings combine with endpoint/model bounds before conversion;
+encoded chunks are checked again against both limits. A bounded worker pool shares
+provider slots through `services.upload_queue`, drains cancelled/failed requests before
+cleanup, and publishes only the contiguous prefix of parallel streaming previews.
+See [Provider upload settings](upload-settings.md) for defaults and official sources.
+SQLite is updated only after every chunk succeeds. Imports and retained recording updates shield
 the final commit so cancellation cannot leave saved text pointing to discarded audio.
 The note view overlays temporary rows at the target recording, or appends them for imports,
 without changing the saved note. Its virtualized renderer is shared with microphone live
@@ -142,19 +148,21 @@ and removes scheduled updates when a job ends.
    with versioned JSON metadata and fsync at least every second. Metadata contains no
    credentials. On stop, ffmpeg creates a lossless FLAC, which is retained in the library
    before any upload. Capture duration is the count of saved samples, excluding pauses.
-3. **Transcode** for upload (`media.transcode.to_upload`): Ogg Opus, 16 kHz mono,
-   32 kbit/s, which fits about 1¾ hours in 25 MB and is accepted by OpenAI, Groq and most
-   compatible servers. ffmpeg's `-progress` output gives the length, so ffprobe is not
-   needed.
+3. **Transcode** for upload (`media.transcode.to_upload`): the provider's selected
+   Ogg Opus (32 kbit/s), FLAC, or WAV encoding at 16 kHz mono. Defaults are Ogg Opus,
+   except OpenAI/MiMo use WAV. ffmpeg's `-progress` output gives the length, so ffprobe
+   is not needed.
 4. **Split at the effective upload limit**: `UploadLimits` combines file size with
    model/option-dependent duration. OpenAI and OpenRouter use 25 MB; Deepgram uses
-   2 GB; MiMo takes MP3 only (`UploadLimits.format`; split parts use the same encoding) and
-   7 MB, since its 10 MB limit applies to Base64; Gemini accepts 60 minutes, or 30 minutes with word timestamps/speakers.
+   2 GB; MiMo uses WAV and 7.5 MB, since its 10 MB limit applies to Base64;
+   Gemini Files accepts 2 GB and Transcribe accepts 60 minutes, or 30 minutes with
+   word timestamps/speakers. Per-provider settings can lower these bounds.
    The stricter size/duration budget wins. When a limit is exceeded, `media.transcode.find_silences` runs ffmpeg's
    `silencedetect` (an energy-based voice activity check, no extra dependency), and
    `core.chunking.plan_chunks` cuts in the middle of the last pause before each part's
    limit (90 % of the size budget, since the bitrate varies). Each part is converted from
-   the original and transcribed in turn; `offset_segments` shifts its timestamps.
+   the original, checked against the bounds again, and transcribed by bounded parallel
+   workers; `offset_segments` shifts its timestamps before ordered merging.
 5. **Transcribe**: each backend uses an official asynchronous SDK: `openai[realtime]`
    (also for OpenAI-compatible URLs), `openrouter` STT multipart, `google-genai`
    Interactions/Live, and `deepgram-sdk` Listen v1. Factory clients own their SDK and

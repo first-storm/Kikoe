@@ -7,8 +7,9 @@ from collections.abc import Callable
 from dataclasses import replace
 
 from kikoe.core.model_catalog import ModelCatalog
-from kikoe.core.models import ApiKind, ModelSpec, Provider
+from kikoe.core.models import ApiKind, ModelSpec, Provider, UploadSettings
 from kikoe.core.preferences import Preferences, WindowState
+from kikoe.core.upload import validate_upload
 from kikoe.i18n import _
 from kikoe.storage.model_catalog import load_catalog
 from kikoe.storage.secrets import SecretStore
@@ -120,19 +121,37 @@ class ProviderRepository:
     async def get_api_key(self, provider_id: str) -> str:
         return await asyncio.to_thread(self._secrets.get, provider_id) or ""
 
-    async def add_provider(self, name: str, api: ApiKind, base_url: str, api_key: str) -> Provider:
+    async def add_provider(
+        self,
+        name: str,
+        api: ApiKind,
+        base_url: str,
+        api_key: str,
+        upload: UploadSettings | None = None,
+    ) -> Provider:
+        upload = upload or UploadSettings()
+        validate_upload(upload, api)
         async with self._lock:
             await self._ensure_loaded()
-        provider = Provider(uuid.uuid4().hex, name.strip(), api, base_url)
+        provider = Provider(uuid.uuid4().hex, name.strip(), api, base_url, upload=upload)
         if api_key:
             await asyncio.to_thread(self._secrets.set, provider.provider_id, api_key)
         await self._commit(lambda: (*self.providers, provider))
         return provider
 
     async def update_provider(
-        self, provider_id: str, name: str, api: ApiKind, base_url: str, api_key: str
+        self,
+        provider_id: str,
+        name: str,
+        api: ApiKind,
+        base_url: str,
+        api_key: str,
+        *,
+        upload: UploadSettings | None = None,
     ) -> None:
         """Replace connection details; an empty ``api_key`` removes the stored key."""
+        if upload is not None:
+            validate_upload(upload, api)
         current = self.get(provider_id)
         if api_key:
             await asyncio.to_thread(self._secrets.set, provider_id, api_key)
@@ -146,9 +165,25 @@ class ProviderRepository:
                     name=updated.name,
                     api=updated.api,
                     base_url=updated.base_url,
+                    upload=upload
+                    or (
+                        self.get(provider_id).upload
+                        if self.get(provider_id).api == api
+                        else UploadSettings()
+                    ),
                 )
             )
         )
+
+    async def update_upload(self, provider_id: str, upload: UploadSettings) -> None:
+        """Merge upload edits under the writer lock without touching credentials or models."""
+
+        def change() -> tuple[Provider, ...]:
+            provider = self.get(provider_id)
+            validate_upload(upload, provider.api)
+            return self._replace_provider(replace(provider, upload=upload))
+
+        await self._commit(change)
 
     async def remove_provider(self, provider_id: str) -> None:
         self.get(provider_id)

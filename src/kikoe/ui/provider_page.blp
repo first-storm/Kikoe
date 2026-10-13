@@ -71,6 +71,63 @@ template $KikoeProviderPage: Adw.NavigationPage {
         }
       }
 
+      Adw.PreferencesGroup upload_group {
+        title: _("File Transcription");
+        description: _(
+          "Applies to imported audio, recordings transcribed after stopping, and re-transcription. Smaller chunks allow more parallel requests."
+        );
+
+        Adw.SpinRow parallel_row {
+          title: _("Parallel Requests");
+          subtitle: _("1 processes chunks one at a time; account rate limits still apply");
+
+          adjustment: Adjustment {
+            lower: 1;
+            upper: 32;
+            value: 2;
+          };
+
+          notify::value => $_on_upload_row_changed();
+        }
+
+        Adw.SpinRow chunk_length_row {
+          title: _("Chunk Length (Minutes)");
+          subtitle: _("0 uses the provider limit; chunks also respect the size limit");
+          digits: 1;
+
+          adjustment: Adjustment {
+            lower: 0;
+            upper: 1440;
+            value: 0;
+          };
+
+          notify::value => $_on_upload_row_changed();
+        }
+
+        Adw.SpinRow chunk_size_row {
+          title: _("Chunk Size (MB)");
+          digits: 1;
+
+          adjustment: Adjustment {
+            lower: 0.1;
+            upper: 2000;
+            value: 25;
+          };
+
+          notify::value => $_on_upload_row_changed();
+        }
+
+        Adw.ComboRow upload_format_row {
+          title: _("Audio Format");
+          notify::selected => $_on_upload_row_changed();
+        }
+
+        Adw.ButtonRow {
+          title: _("Reset Transcription Defaults");
+          activated => $_on_reset_upload_activated();
+        }
+      }
+
       Adw.PreferencesGroup models_group {
         title: _("Models");
         description: _("What each model can do is set when you add it.");

@@ -2,6 +2,8 @@
 
 from dataclasses import dataclass
 
+from kikoe.core.models import ApiKind, AudioFormat, UploadSettings
+
 
 @dataclass(frozen=True, slots=True)
 class UploadFormat:
@@ -19,3 +21,53 @@ OGG_OPUS = UploadFormat(".ogg", "audio/ogg", (*_SPEECH, "-c:a", "libopus", "-b:a
 
 MP3 = UploadFormat(".mp3", "audio/mpeg", (*_SPEECH, "-c:a", "libmp3lame", "-b:a", "32k"))
 """For services that accept only WAV or MP3, such as MiMo."""
+
+FLAC = UploadFormat(".flac", "audio/flac", (*_SPEECH, "-c:a", "flac"))
+WAV = UploadFormat(".wav", "audio/wav", (*_SPEECH, "-c:a", "pcm_s16le"))
+
+UPLOAD_FORMATS = {AudioFormat.OGG: OGG_OPUS, AudioFormat.FLAC: FLAC, AudioFormat.WAV: WAV}
+MAX_PARALLELISM = 32
+MAX_CHUNK_SECONDS = 24 * 60 * 60
+
+
+@dataclass(frozen=True, slots=True)
+class UploadPolicy:
+    """Known endpoint caps; no duration cap means file size governs automatic splitting."""
+
+    bytes: int
+    seconds: int | None = None
+    format: AudioFormat = AudioFormat.OGG
+    formats: tuple[AudioFormat, ...] = tuple(AudioFormat)
+
+
+def upload_policy(api: ApiKind) -> UploadPolicy:
+    """Use the documented limits of the endpoint Kikoe actually calls."""
+    match api:
+        case ApiKind.DEEPGRAM:
+            return UploadPolicy(2_000_000_000)
+        case ApiKind.GEMINI:
+            return UploadPolicy(2_000_000_000, 3600)
+        case ApiKind.MIMO:
+            return UploadPolicy(7_500_000, format=AudioFormat.WAV, formats=(AudioFormat.WAV,))
+        case ApiKind.OPENAI:
+            return UploadPolicy(25_000_000, format=AudioFormat.WAV)
+        case ApiKind.OPENROUTER | ApiKind.OPENAI_COMPATIBLE:
+            return UploadPolicy(25_000_000)
+
+
+def validate_upload(settings: UploadSettings, api: ApiKind) -> None:
+    """Reject damaged settings and choices exceeding the endpoint caps."""
+    policy = upload_policy(api)
+    if type(settings.parallelism) is not int or not 1 <= settings.parallelism <= MAX_PARALLELISM:
+        raise ValueError("invalid parallel transcription count")
+    if settings.chunk_seconds is not None and (
+        type(settings.chunk_seconds) is not int
+        or not 1 <= settings.chunk_seconds <= (policy.seconds or MAX_CHUNK_SECONDS)
+    ):
+        raise ValueError("invalid audio chunk duration")
+    if settings.chunk_bytes is not None and (
+        type(settings.chunk_bytes) is not int or not 1 <= settings.chunk_bytes <= policy.bytes
+    ):
+        raise ValueError("invalid audio chunk size")
+    if settings.format is not None and settings.format not in policy.formats:
+        raise ValueError("unsupported upload audio format")

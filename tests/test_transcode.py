@@ -1,3 +1,4 @@
+import asyncio
 import shutil
 from datetime import timedelta
 from pathlib import Path
@@ -133,3 +134,20 @@ async def test_failed_flac_conversion_preserves_the_pcm(
         await transcode.pcm_to_flac(source, destination, 16000)
     assert source.read_bytes() == b"\0\0"
     assert not destination.exists()
+
+
+@needs_ffmpeg
+@run_async
+async def test_lossless_upload_formats_use_the_expected_container_and_duration(
+    tmp_path: Path,
+) -> None:
+    from kikoe.core.upload import FLAC, WAV
+
+    source = tmp_path / "source.wav"
+    await ffmpeg.run("-f", "lavfi", "-i", "sine=frequency=440:duration=1", "-y", str(source))
+    for format, magic in ((FLAC, b"fLaC"), (WAV, b"RIFF")):
+        destination = tmp_path / f"upload{format.suffix}"
+        duration = await transcode.to_upload(source, destination, format=format)
+        content = await asyncio.to_thread(destination.read_bytes)
+        assert content.startswith(magic)
+        assert abs(duration - timedelta(seconds=1)) < timedelta(milliseconds=100)

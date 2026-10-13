@@ -11,7 +11,7 @@ from openai import APIConnectionError, APIError, APIStatusError, APITimeoutError
 from openai.types.chat import ChatCompletionMessageParam
 
 from kikoe.core.models import ModelSpec, Segment
-from kikoe.core.upload import MP3
+from kikoe.core.upload import MP3, WAV
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileTranscriptCallback,
@@ -22,8 +22,8 @@ from kikoe.providers.base import (
 )
 from kikoe.providers.errors import detail_of, status_error
 
-MAX_UPLOAD_BYTES = 7_000_000
-"""MiMo accepts 10 MB of Base64, which is about 7.5 MB of audio; leave some margin."""
+MAX_UPLOAD_BYTES = 7_500_000
+"""10 MB of Base64 holds at most 7.5 MB of raw audio."""
 
 
 def asr_language(tag: str | None) -> str:
@@ -59,7 +59,8 @@ class MiMoClient:
         if (await asyncio.to_thread(audio.stat)).st_size > MAX_UPLOAD_BYTES:
             raise TranscriptionError(_("The audio file is too large to upload to this provider."))
         content = await asyncio.to_thread(audio.read_bytes)
-        data = f"data:{MP3.mime};base64,{base64.b64encode(content).decode('ascii')}"
+        mime = WAV.mime if audio.suffix.lower() == WAV.suffix else MP3.mime
+        data = f"data:{mime};base64,{base64.b64encode(content).decode('ascii')}"
         try:
             async with AsyncOpenAI(
                 api_key=self._key,
