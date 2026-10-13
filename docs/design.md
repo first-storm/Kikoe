@@ -140,6 +140,16 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
 - At 360 px the idle bar stays on one line: model name, icon-only Import Audio, and the
   labeled primary button. Model and import tooltips retain their explanations. Import
   Audio is also available in the main menu without a selected note.
+- Supported OpenAI file models display text while transcribing imports, stopped recordings,
+  retries and re-transcriptions. Imports append a temporary recording section; imports
+  without an open note show a temporary page titled after the file, with progress and Cancel.
+  No note or sidebar entry is created until the import succeeds. Retry and Re-transcribe
+  preview new text in the original recording's position, keeping neighboring recordings.
+  Completed segments use normal text; unfinished text is dimmed with the existing blinking
+  caret. Temporary rows cannot be edited, played or used to match speakers. Scrolling follows
+  the bottom only when the reader was already there. Cancel or failure removes previews and
+  restores existing text; success replaces it with the saved result. Cancel is disabled
+  during the final save. Whisper and compatible APIs retain their existing file requests.
 - Not yet: "Delete This Recording" (outside M7).
 
 ## 2. Recording in progress

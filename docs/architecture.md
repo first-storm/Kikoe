@@ -95,6 +95,24 @@ File and realtime microphone transcription are implemented. File import and reta
 recording retry share `services.importer.transcribe_audio` for conversion, splitting
 and timestamps. `services.realtime.RealtimeRecording` owns live connections.
 
+Known OpenAI transcription models use the SDK's `create(stream=True)` SSE response for
+finished audio files. This is independent of microphone realtime capabilities. Whisper,
+unknown models and OpenAI-compatible providers retain non-streaming requests. The adapter
+accumulates `transcript.text.delta`, replaces completed diarized segments by ID, and requires
+`transcript.text.done` before returning a successful result. Plain text uses the complete
+done text; diarized output uses segment events so speaker labels and timestamps survive.
+EOF without done is retryable failure; the response is closed on cancellation or error.
+
+`FileTranscriptSnapshot` separates completed segments from temporary previews. Optional
+provider callbacks flow through the shared file service, which adds chunk offsets and
+speaker scopes and includes earlier completed chunks in each snapshot. Only the final
+result of every chunk is written to SQLite. Imports and retained recording updates shield
+the final commit so cancellation cannot leave saved text pointing to discarded audio.
+The note view overlays temporary rows at the target recording, or appends them for imports,
+without changing the saved note. Its virtualized renderer is shared with microphone live
+text. The window coalesces text deltas every 50 ms, immediately renders completed segments,
+and removes scheduled updates when a job ends.
+
 1. **Capture**: `media.recorder.SoundDeviceRecorder` implements the async `Recorder`
    protocol using sounddevice's `RawInputStream`, without NumPy. The chosen (or default) input
    device supplies mono int16 PCM at its native sample rate; buffers are converted to

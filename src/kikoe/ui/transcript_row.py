@@ -234,9 +234,7 @@ class TranscriptRow(Gtk.Box):
         self.speaker_button.set_action_target_value(
             GLib.Variant("(ss)", (item.recording.recording_id, segment.speaker_id or ""))
         )
-        self.speaker_button.set_sensitive(
-            not item.preview and item.recording.recording_id != "live"
-        )
+        self.speaker_button.set_sensitive(item.position is not None and not item.preview)
         self.speaker_label.set_label(item.speaker_name or "")
         if item.color_slot != self._color_slot:
             self._color_slot = item.color_slot

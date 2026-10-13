@@ -6,15 +6,26 @@ import pytest
 
 from helpers import run_async
 from kikoe.core.chunking import TimeSpan
-from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider, RecordingSource, Segment
+from kikoe.core.models import (
+    ApiKind,
+    Capabilities,
+    ModelSpec,
+    Note,
+    Provider,
+    Recording,
+    RecordingSource,
+    Segment,
+)
+from kikoe.core.transcription import FileTranscriptSnapshot
 from kikoe.media import transcode
 from kikoe.providers.base import (
+    FileTranscriptCallback,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
     UploadLimits,
 )
-from kikoe.services.importer import ImportStage, import_audio
+from kikoe.services.importer import ImportStage, import_audio, transcribe_audio
 from kikoe.storage.library import Library
 from kikoe.storage.notes import NoteRepository
 
@@ -54,7 +65,12 @@ class FakeClient:
         self._fail = fail
 
     async def transcribe_file(
-        self, audio: Path, model: ModelSpec, options: TranscriptionOptions
+        self,
+        audio: Path,
+        model: ModelSpec,
+        options: TranscriptionOptions,
+        *,
+        on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         self.uploads.append(audio)
         if self._fail:
@@ -240,7 +256,12 @@ class HangingClient(FakeClient):
         self.started = asyncio.Event()
 
     async def transcribe_file(
-        self, audio: Path, model: ModelSpec, options: TranscriptionOptions
+        self,
+        audio: Path,
+        model: ModelSpec,
+        options: TranscriptionOptions,
+        *,
+        on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         self.uploads.append(audio)
         self.started.set()
@@ -299,3 +320,117 @@ async def test_live_only_model_is_refused_before_copying_audio(
             source, None, provider, model, client=FakeClient(), notes=notes, work_dir=tmp_path
         )
     assert list((tmp_path / "audio").glob("*")) == []
+
+
+class StreamingClient(FakeClient):
+    """Send partial text before the authoritative result of each upload."""
+
+    async def transcribe_file(
+        self,
+        audio: Path,
+        model: ModelSpec,
+        options: TranscriptionOptions,
+        *,
+        on_update: FileTranscriptCallback | None = None,
+    ) -> tuple[Segment, ...]:
+        self.uploads.append(audio)
+        number = len(self.uploads)
+        if on_update is not None:
+            on_update(FileTranscriptSnapshot(preview=(Segment(f"preview {number}"),)))
+            on_update(FileTranscriptSnapshot((Segment(f"draft {number}", s(1), s(2), "A"),)))
+        if self._fail and number == 2:
+            raise TranscriptionError("Second stream failed")
+        return (Segment(f"final {number}", s(1), s(2), "A"),)
+
+
+@run_async
+async def test_file_stream_offsets_previews_and_keeps_previous_parts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    source: Path,
+) -> None:
+    use_converter(monkeypatch, FakeConverter(s(120), size=1500))
+    updates: list[FileTranscriptSnapshot] = []
+    client = StreamingClient()
+    duration, result = await transcribe_audio(
+        source,
+        MODEL,
+        client=client,
+        on_update=updates.append,
+        work_dir=tmp_path / "work",
+    )
+    first = Segment("final 1", s(1), s(2), "1:A")
+    second = Segment("final 2", s(52), s(53), "2:A")
+    assert duration == s(120)
+    assert result == (first, second)
+    assert updates[2] == FileTranscriptSnapshot((first,))
+    assert updates[3] == FileTranscriptSnapshot((first,), (Segment("preview 2"),))
+    assert updates[4].segments == (first, Segment("draft 2", s(52), s(53), "2:A"))
+    assert updates[-1] == FileTranscriptSnapshot(result)
+    assert not any(path.exists() for path in client.uploads)
+
+
+@run_async
+async def test_failed_later_stream_does_not_save_earlier_completed_parts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    notes: NoteRepository,
+    source: Path,
+) -> None:
+    use_converter(monkeypatch, FakeConverter(s(120), size=1500))
+    await notes.load()
+    updates: list[FileTranscriptSnapshot] = []
+    client = StreamingClient(fail=True)
+    with pytest.raises(TranscriptionError, match="Second stream failed"):
+        await import_audio(
+            source,
+            None,
+            PROVIDER,
+            MODEL,
+            client=client,
+            notes=notes,
+            on_update=updates.append,
+            work_dir=tmp_path / "work",
+        )
+    assert updates[-1].segments[0].text == "final 1"
+    assert notes.notes == ()
+    assert await asyncio.to_thread(source.read_bytes) == b"original"
+    assert not any(path.exists() for path in client.uploads)
+
+
+@run_async
+async def test_cancel_during_import_commit_finishes_saving_audio_and_text(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    notes: NoteRepository,
+    source: Path,
+) -> None:
+    use_converter(monkeypatch, FakeConverter(s(10), size=10))
+    await notes.load()
+    started, release = asyncio.Event(), asyncio.Event()
+    original = notes.add_recording
+
+    async def commit(note_id: str | None, title: str, recording: Recording) -> Note:
+        started.set()
+        await release.wait()
+        return await original(note_id, title, recording)
+
+    monkeypatch.setattr(notes, "add_recording", commit)
+    task = asyncio.create_task(
+        import_audio(
+            source,
+            None,
+            PROVIDER,
+            MODEL,
+            client=FakeClient(),
+            notes=notes,
+            work_dir=tmp_path / "work",
+        )
+    )
+    await started.wait()
+    task.cancel()
+    release.set()
+    note = await task
+    assert note.recordings[0].segments[0].text == "part 1"
+    audio = note.recordings[0].audio_path
+    assert audio is not None and audio.read_bytes() == b"original"

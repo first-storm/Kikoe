@@ -13,6 +13,7 @@ from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider, Segmen
 from kikoe.core.recording import CaptureState
 from kikoe.core.transcription import LiveSnapshot, LiveState, TranscriptEvent
 from kikoe.providers.base import (
+    FileTranscriptCallback,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
@@ -130,7 +131,12 @@ class Client:
         return UploadLimits()
 
     async def transcribe_file(
-        self, audio: Path, model: ModelSpec, options: TranscriptionOptions
+        self,
+        audio: Path,
+        model: ModelSpec,
+        options: TranscriptionOptions,
+        *,
+        on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         raise AssertionError("Live success must not upload the file again")
 

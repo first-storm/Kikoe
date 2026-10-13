@@ -14,7 +14,12 @@ from kikoe.core.transcription import model_support, scope_speakers
 from kikoe.i18n import _
 from kikoe.media import transcode
 from kikoe.media.recorder import Recorder, RecorderError
-from kikoe.providers.base import TranscriptionError, TranscriptionOptions, TranscriptionProvider
+from kikoe.providers.base import (
+    FileTranscriptCallback,
+    TranscriptionError,
+    TranscriptionOptions,
+    TranscriptionProvider,
+)
 from kikoe.services.importer import ImportStage, ProgressCallback, transcribe_audio
 from kikoe.storage.captures import CaptureJournal, CaptureStore
 from kikoe.storage.library import NoteNotFoundError
@@ -175,6 +180,7 @@ async def transcribe_recording(
     notes: NoteRepository,
     options: TranscriptionOptions,
     on_progress: ProgressCallback,
+    on_update: FileTranscriptCallback | None = None,
     work_dir: Path | None = None,
     preserve_on_failure: bool = False,
 ) -> Note:
@@ -195,6 +201,7 @@ async def transcribe_recording(
             client=client,
             options=options,
             on_progress=on_progress,
+            on_update=on_update,
             work_dir=work_dir,
         )
         on_progress(ImportStage.SAVING, 1, 1)

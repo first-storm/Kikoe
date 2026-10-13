@@ -16,6 +16,7 @@ from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.transcription import TranscriptEvent
 from kikoe.i18n import _
 from kikoe.providers.base import (
+    FileTranscriptCallback,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
@@ -96,7 +97,12 @@ class DeepgramClient:
         return UploadLimits(self.max_upload_bytes)
 
     async def transcribe_file(
-        self, audio: Path, model: ModelSpec, options: TranscriptionOptions
+        self,
+        audio: Path,
+        model: ModelSpec,
+        options: TranscriptionOptions,
+        *,
+        on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         content = await asyncio.to_thread(audio.read_bytes)
         try:

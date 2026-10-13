@@ -19,7 +19,7 @@ from kikoe.core.speakers import (
     resolved_note,
     unresolved_recordings,
 )
-from kikoe.core.transcription import LiveSnapshot, LiveState
+from kikoe.core.transcription import FileTranscriptSnapshot, LiveSnapshot, LiveState
 from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.ui.items import TranscriptItem
@@ -67,6 +67,15 @@ class NoteView(Adw.BreakpointBin):
         self._live: Recording | None = None
         self._live_rows: list[TranscriptItem] = []
         self._live_summary = ""
+        self._file_recording: Recording | None = None
+        self._file_base_note: Note | None = None
+        self._file_context: Note | None = None
+        self._file_number = 1
+        self._file_base = 0
+        self._file_rows: list[TranscriptItem] = []
+        self._file_summary = ""
+        self._file_snapshot = FileTranscriptSnapshot()
+        self._file_replace_id: str | None = None
         self._compact = False
         self._editable = True
         self._items: Gio.ListStore[TranscriptItem] = Gio.ListStore(item_type=TranscriptItem)
@@ -104,6 +113,17 @@ class NoteView(Adw.BreakpointBin):
         Returns whether the transcript's structure changed (recordings or segments added,
         removed or replaced), which makes earlier Undo steps meaningless.
         """
+        if self._file_recording is not None:
+            recording, snapshot, target = (
+                self._file_recording,
+                self._file_snapshot,
+                self._file_replace_id,
+            )
+            self.end_file_transcription()
+            changed = self.show_note(note)
+            self.begin_file_transcription(note, recording, replace_recording_id=target)
+            self.update_file_transcription(snapshot)
+            return changed
         previous = self._note
         self._note = note
         pending = unresolved_recordings(note)
@@ -150,6 +170,10 @@ class NoteView(Adw.BreakpointBin):
         longer than a frame, so when the view moves to the top of a newly opened note,
         the rows that fit on screen are bound at once and the others in later frames.
         """
+        self._fill_rows(_rows(note), scroll_to_top=scroll_to_top)
+
+    def _fill_rows(self, rows: list[TranscriptItem], *, scroll_to_top: bool = False) -> None:
+        """Retain the row pool for both saved notes and temporary file overlays."""
         # Typing is saved under the row it was typed into, before the items change.
         self.flush_edits()
         on_screen = sys.maxsize
@@ -159,7 +183,6 @@ class NoteView(Adw.BreakpointBin):
             root = self.get_root()
             height = root.get_height() if isinstance(root, Gtk.Widget) else 0
             on_screen = height // _ONE_LINE_ROW_HEIGHT + 1
-        rows = _rows(note)
         count = self._items.get_n_items()
         positions: dict[TranscriptItem, int] = {}
         for position in range(min(count, len(rows))):
@@ -349,10 +372,99 @@ class NoteView(Adw.BreakpointBin):
             LiveState.INCOMPLETE: _("Transcription incomplete"),
             LiveState.PAUSED: _("Paused"),
         }
-        existing = [s for r in resolved_note(self._note).recordings for s in r.segments]
+        summary = _("{status} · {summary}").format(
+            status=statuses[snapshot.state], summary=self._live_summary
+        )
+        self._live_rows = self._render_stream(
+            FileTranscriptSnapshot(snapshot.segments, snapshot.preview),
+            self._live,
+            len(self._note.recordings) + 1,
+            summary,
+            self._live_rows,
+            sum(1 + len(r.segments) for r in self._note.recordings),
+            self._note,
+        )
+
+    def begin_file_transcription(
+        self, note: Note | None, recording: Recording, *, replace_recording_id: str | None = None
+    ) -> None:
+        """Overlay a recording's rows without changing the saved note or its history."""
+        self.end_file_transcription()
+        self.hide_recording()
+        self._file_base_note = note
+        context = note or Note("file-preview", "", datetime.now(UTC))
+        self._note = context
+        self._file_recording = recording
+        self._file_replace_id = replace_recording_id
+        self._file_rows = []
+        rows = _rows(context)
+        index = next(
+            (i for i, r in enumerate(context.recordings) if r.recording_id == replace_recording_id),
+            len(context.recordings),
+        )
+        self._file_number = index + 1
+        self._file_base = sum(1 + len(r.segments) for r in context.recordings[:index])
+        if index < len(context.recordings):
+            count = 1 + len(context.recordings[index].segments)
+            del rows[self._file_base : self._file_base + count]
+        self._file_context = replace(
+            context,
+            recordings=tuple(
+                r for r in context.recordings if r.recording_id != replace_recording_id
+            ),
+        )
+        self._fill_rows(rows)
+        self._file_summary = _("Transcribing… · {model}").format(model=recording.model_id)
+        self.stack.set_visible(True)
+        self.stack.set_visible_child_name("transcript")
+        self.update_file_transcription(FileTranscriptSnapshot())
+
+    def update_file_transcription(self, snapshot: FileTranscriptSnapshot) -> None:
+        if self._file_recording is None or self._file_context is None:
+            return
+        self._file_snapshot = snapshot
+        self._file_rows = self._render_stream(
+            snapshot,
+            self._file_recording,
+            self._file_number,
+            self._file_summary,
+            self._file_rows,
+            self._file_base,
+            self._file_context,
+        )
+
+    def end_file_transcription(self) -> None:
+        if self._file_recording is None:
+            return
+        note = self._file_base_note
+        self._file_recording = None
+        self._file_rows = []
+        self._file_context = None
+        self._file_base_note = None
+        self._note = note
+        self._fill_rows(_rows(note) if note else [])
+        segments = tuple(s for r in note.recordings for s in r.segments) if note else ()
+        self._has_speakers = any(s.speaker_id is not None for s in segments)
+        self._has_timestamps = any(s.start is not None or s.end is not None for s in segments)
+        self.stack.set_visible_child_name(
+            "transcript" if note and note.recordings else "no-recordings"
+        )
+        self._rebind()
+
+    def _render_stream(
+        self,
+        snapshot: FileTranscriptSnapshot,
+        recording: Recording,
+        number: int,
+        summary: str,
+        previous_rows: list[TranscriptItem],
+        base: int,
+        context: Note,
+    ) -> list[TranscriptItem]:
+        existing = [s for r in resolved_note(context).recordings for s in r.segments]
         all_segments = (*snapshot.segments, *snapshot.preview)
         order = speaker_order((*existing, *all_segments))
-        numbers = live_speaker_numbers(self._note, all_segments)
+        numbers = live_speaker_numbers(context, all_segments)
         previous_columns = self._has_speakers, self._has_timestamps
         self._has_speakers = bool(order)
         self._has_timestamps = any(
@@ -360,22 +472,18 @@ class NoteView(Adw.BreakpointBin):
         )
         if previous_columns != (self._has_speakers, self._has_timestamps):
             self._rebind()
-        number = len(self._note.recordings) + 1
-        summary = _("{status} · {summary}").format(
-            status=statuses[snapshot.state], summary=self._live_summary
-        )
-        rows = [TranscriptItem(self._live, number, live_summary=summary)]
+        rows = [TranscriptItem(recording, number, live_summary=summary)]
         for index, segment in enumerate(all_segments):
             speaker = segment.speaker_id
             name = (
-                self._note.speaker_name(speaker)
+                context.speaker_name(speaker)
                 or _("Speaker {number}").format(number=numbers[speaker])
                 if speaker
                 else None
             )
             color = (numbers[speaker] - 1) % SPEAKER_COLOR_COUNT if speaker else None
             preview = index >= len(snapshot.segments)
-            old = self._live_rows[index + 1] if index + 1 < len(self._live_rows) else None
+            old = previous_rows[index + 1] if index + 1 < len(previous_rows) else None
             if old is not None and (old.segment, old.preview, old.speaker_name, old.color_slot) == (
                 segment,
                 preview,
@@ -385,26 +493,30 @@ class NoteView(Adw.BreakpointBin):
                 rows.append(old)
             else:
                 rows.append(
-                    TranscriptItem(self._live, number, segment, name, color, preview=preview)
+                    TranscriptItem(recording, number, segment, name, color, preview=preview)
                 )
         adjustment = self.transcript_scroll.get_vadjustment()
         follow = adjustment.get_upper() - adjustment.get_value() - adjustment.get_page_size() < 48
         prefix = 0
-        for old, new in zip(self._live_rows, rows, strict=False):
-            if (old.segment, old.preview, old.live_summary) != (
+        for old, new in zip(previous_rows, rows, strict=False):
+            if (old.segment, old.preview, old.live_summary, old.speaker_name, old.color_slot) != (
                 new.segment,
                 new.preview,
                 new.live_summary,
+                new.speaker_name,
+                new.color_slot,
             ):
                 break
             prefix += 1
-        base = sum(1 + len(recording.segments) for recording in self._note.recordings)
-        self._items.splice(base + prefix, len(self._live_rows) - prefix, rows[prefix:])
-        self._live_rows = rows
+        self._items.splice(base + prefix, len(previous_rows) - prefix, rows[prefix:])
         if follow:
             GLib.idle_add(self._follow_live)
 
+        return rows
+
     def _follow_live(self) -> bool:
+        if self._live is None and self._file_recording is None:
+            return False
         adjustment = self.transcript_scroll.get_vadjustment()
         adjustment.set_value(max(0, adjustment.get_upper() - adjustment.get_page_size()))
         return False

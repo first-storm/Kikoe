@@ -14,7 +14,13 @@ from pydantic import BaseModel
 
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.transcription import TranscriptEvent
-from kikoe.providers.base import RealtimeSession, TranscriptionOptions, UploadLimits, close_stack
+from kikoe.providers.base import (
+    FileTranscriptCallback,
+    RealtimeSession,
+    TranscriptionOptions,
+    UploadLimits,
+    close_stack,
+)
 from kikoe.providers.errors import sdk_error
 from kikoe.providers.parsing import entries, fields, parse_words
 from kikoe.providers.worker import run_sdk_worker
@@ -61,7 +67,12 @@ class GeminiClient:
         return UploadLimits(duration=timedelta(minutes=30 if annotated else 60))
 
     async def transcribe_file(
-        self, audio: Path, model: ModelSpec, options: TranscriptionOptions
+        self,
+        audio: Path,
+        model: ModelSpec,
+        options: TranscriptionOptions,
+        *,
+        on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         # The SDK's resumable-upload retry path uses blocking sleeps internally.
         # Isolate its loop so a malformed server response cannot freeze GTK.

@@ -56,6 +56,14 @@ def scope_speakers(segments: tuple[Segment, ...], scope: str) -> tuple[Segment, 
 
 
 @dataclass(frozen=True, slots=True)
+class FileTranscriptSnapshot:
+    """File previews are presentation data; only a successful request can be saved."""
+
+    segments: tuple[Segment, ...] = ()
+    preview: tuple[Segment, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class TranscriptEvent:
     """A replacement for one utterance; only final events survive recording recovery."""
 

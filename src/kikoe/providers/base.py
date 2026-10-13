@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -10,9 +10,11 @@ from pathlib import Path
 from typing import Protocol
 
 from kikoe.core.models import ModelSpec, Segment, TimestampGranularity
-from kikoe.core.transcription import TranscriptEvent
+from kikoe.core.transcription import FileTranscriptSnapshot, TranscriptEvent
 
 log = logging.getLogger(__name__)
+
+type FileTranscriptCallback = Callable[[FileTranscriptSnapshot], None]
 
 
 async def close_stack(stack: AsyncExitStack) -> None:
@@ -71,7 +73,12 @@ class TranscriptionProvider(Protocol):
         ...
 
     async def transcribe_file(
-        self, audio: Path, model: ModelSpec, options: TranscriptionOptions
+        self,
+        audio: Path,
+        model: ModelSpec,
+        options: TranscriptionOptions,
+        *,
+        on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         """Upload a finished recording and return its transcript."""
         ...
