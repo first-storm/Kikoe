@@ -219,9 +219,9 @@ def test_provider_upload_settings_survive_restart_and_legacy_files_use_defaults(
     upload = UploadSettings(4, 120, 2_000_000, AudioFormat.FLAC)
     store.save((replace(PROVIDER, upload=upload),))
     assert store.load()[0].upload == upload
-    data = json.loads((tmp_path / "settings.json").read_text())
+    data = json.loads((tmp_path / "settings.json").read_text(encoding="utf-8"))
     data["providers"][0].pop("upload")
-    (tmp_path / "settings.json").write_text(json.dumps(data))
+    (tmp_path / "settings.json").write_text(json.dumps(data), encoding="utf-8")
     assert store.load()[0].upload == UploadSettings()
 
 
@@ -242,8 +242,8 @@ def test_damaged_upload_settings_are_refused(tmp_path: Path, upload: dict[str, o
     path = tmp_path / "settings.json"
     store = SettingsStore(path)
     store.save((PROVIDER,))
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     data["providers"][0]["upload"] = upload
-    path.write_text(json.dumps(data))
+    path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(SettingsError):
         store.load()
