@@ -1,14 +1,24 @@
 """Template translation uses the same Python catalog on every platform."""
 
 import gettext
+import locale
 import shutil
 import subprocess
 import xml.etree.ElementTree as ET
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
 from kikoe import i18n
+
+
+@pytest.fixture(autouse=True)
+def _restore_locale() -> Iterator[None]:
+    """``i18n.setup()`` changes the process locale, which would leak into later tests."""
+    saved = locale.setlocale(locale.LC_ALL)
+    yield
+    locale.setlocale(locale.LC_ALL, saved)
 
 
 class Catalog(gettext.NullTranslations):
