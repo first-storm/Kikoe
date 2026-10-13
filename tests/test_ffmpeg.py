@@ -1,3 +1,4 @@
+import asyncio
 import sys
 from pathlib import Path
 
@@ -111,3 +112,20 @@ def test_playback_decoder_seeks_and_bounds_pcm(tmp_path: Path) -> None:
     except ffmpeg.FFmpegNotFoundError:
         pytest.skip("ffmpeg not installed")
     asyncio.run(run())
+
+
+def test_spawn_passes_creation_flags_to_hide_console(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured: dict[str, object] = {}
+
+    async def fake_exec(*cmd: str, **kwargs: object) -> object:
+        captured.update(kwargs)
+        return object()
+
+    monkeypatch.setattr(ffmpeg, "_CREATION_FLAGS", 0x08000000)
+    monkeypatch.setattr(ffmpeg.asyncio, "create_subprocess_exec", fake_exec)
+
+    asyncio.run(ffmpeg._spawn("ffmpeg", "-version"))  # pyright: ignore[reportPrivateUsage]
+
+    assert captured["creationflags"] == 0x08000000
