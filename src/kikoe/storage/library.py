@@ -255,10 +255,13 @@ class Library:
         destination = self._audio_dir / f"{recording_id}{source.suffix.lower()}"
         try:
             self._audio_dir.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(source, destination)
-            with destination.open("rb") as audio:
-                os.fsync(audio.fileno())
+            # fsync on the writable handle: Windows rejects it on a read-only one (EBADF).
+            with source.open("rb") as origin, destination.open("wb") as copy:
+                shutil.copyfileobj(origin, copy)
+                copy.flush()
+                os.fsync(copy.fileno())
         except OSError as error:
+            self.discard_audio(destination)
             raise LibraryError(
                 _("Could not copy the audio file into the library: {error}").format(error=error)
             ) from error

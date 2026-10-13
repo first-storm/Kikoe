@@ -1,7 +1,7 @@
 """The single gateway to the ffmpeg executable.
 
-Lookup order: ``$KIKOE_FFMPEG``, a copy bundled next to a frozen (PyInstaller)
-executable, then ``PATH``. Always call ffmpeg through :func:`run`.
+Lookup order: ``$KIKOE_FFMPEG``, a copy bundled in a frozen (PyInstaller) build,
+then ``PATH``. Always call ffmpeg through :func:`run`.
 """
 
 import asyncio
@@ -28,6 +28,20 @@ class FFmpegNotFoundError(FFmpegError):
     """No usable ffmpeg executable; nothing about the input file is known yet."""
 
 
+def _bundle_dirs() -> list[Path]:
+    """Directories a frozen build may keep ffmpeg in.
+
+    PyInstaller 6 puts collected binaries in ``sys._MEIPASS`` (``_internal`` or, in a
+    macOS app, ``Contents/Frameworks``), not next to the executable.
+    """
+    if not getattr(sys, "frozen", False):
+        return []
+    dirs = [Path(sys.executable).resolve().parent]
+    if meipass := getattr(sys, "_MEIPASS", None):
+        dirs.insert(0, Path(meipass))
+    return dirs
+
+
 def find_ffmpeg() -> Path:
     """Return the ffmpeg executable to use, or raise :class:`FFmpegError`."""
     if override := os.environ.get("KIKOE_FFMPEG"):
@@ -37,8 +51,8 @@ def find_ffmpeg() -> Path:
         msg = _("KIKOE_FFMPEG points to a missing file: {path}").format(path=path)
         raise FFmpegNotFoundError(msg)
 
-    if getattr(sys, "frozen", False):
-        bundled = Path(sys.executable).resolve().parent / _EXE_NAME
+    for directory in _bundle_dirs():
+        bundled = directory / _EXE_NAME
         if bundled.is_file():
             return bundled
 

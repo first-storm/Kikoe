@@ -35,6 +35,23 @@ def test_bundled_copy_next_to_frozen_executable(
     assert ffmpeg.find_ffmpeg() == bundled
 
 
+def test_bundled_copy_in_pyinstaller_data_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    macos = tmp_path / "Kikoe.app" / "Contents"
+    (macos / "MacOS").mkdir(parents=True)
+    (macos / "Frameworks").mkdir()
+    bundled = macos / "Frameworks" / ("ffmpeg.exe" if sys.platform == "win32" else "ffmpeg")
+    bundled.touch()
+    monkeypatch.delenv("KIKOE_FFMPEG", raising=False)
+    monkeypatch.setenv("PATH", "")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "_MEIPASS", str(macos / "Frameworks"), raising=False)
+    monkeypatch.setattr(sys, "executable", str(macos / "MacOS" / "Kikoe"))
+
+    assert ffmpeg.find_ffmpeg() == bundled
+
+
 def test_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("KIKOE_FFMPEG", raising=False)
     monkeypatch.setenv("PATH", "")

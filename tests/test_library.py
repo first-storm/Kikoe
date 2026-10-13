@@ -1,3 +1,4 @@
+import os
 import sqlite3
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -194,6 +195,43 @@ def test_migrating_twice_is_harmless(library: Library) -> None:
 def test_copying_a_missing_file_is_a_library_error(tmp_path: Path, library: Library) -> None:
     with pytest.raises(LibraryError, match="Could not copy"):
         library.store_audio(tmp_path / "missing.wav", "r1")
+
+
+def test_stored_audio_is_synced_through_a_writable_handle(
+    tmp_path: Path, library: Library, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Windows raises EBADF when fsync gets a descriptor opened read-only; a zero-byte
+    # write fails the same way on a read-only descriptor everywhere.
+    synced: list[int] = []
+
+    def fsync(fd: int) -> None:
+        os.write(fd, b"")
+        synced.append(fd)
+
+    source = tmp_path / "original.wav"
+    source.write_bytes(b"audio")
+    monkeypatch.setattr(os, "fsync", fsync)
+
+    stored = library.store_audio(source, "r1")
+
+    assert len(synced) == 1
+    assert stored.read_bytes() == b"audio"
+
+
+def test_failed_copy_leaves_no_partial_file(
+    tmp_path: Path, library: Library, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def fail(_fd: int) -> None:
+        raise OSError("disk full")
+
+    source = tmp_path / "original.wav"
+    source.write_bytes(b"audio")
+    monkeypatch.setattr(os, "fsync", fail)
+
+    with pytest.raises(LibraryError, match="Could not copy"):
+        library.store_audio(source, "r1")
+
+    assert not (tmp_path / "audio" / "r1.wav").exists()
 
 
 @run_async
