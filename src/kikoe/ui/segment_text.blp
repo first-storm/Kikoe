@@ -1,0 +1,21 @@
+using Gtk 4.0;
+
+template $KikoeSegmentText: TextView {
+  valign: start;
+  wrap-mode: word_char;
+  accepts-tab: false;
+  pixels-inside-wrap: 4;
+  top-margin: 6;
+  bottom-margin: 6;
+  left-margin: 8;
+  right-margin: 8;
+
+  accessibility {
+    label: _("Transcript Text");
+  }
+
+  styles [
+    "segment-text",
+    "transcript-text",
+  ]
+}

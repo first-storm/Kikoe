@@ -21,6 +21,7 @@ from kikoe.core.validation import SegmentEditError, validate_segment_edit
 from kikoe.i18n import _
 from kikoe.ui.items import TranscriptItem
 from kikoe.ui.labels import recording_meta
+from kikoe.ui.segment_text import SegmentText
 from kikoe.ui.tasks import show_notice
 from kikoe.ui.templates import ui_file
 
@@ -57,14 +58,16 @@ class TranscriptRow(Gtk.Box):
     end_row: Gtk.Entry = Gtk.Template.Child()
     times_error_label: Gtk.Label = Gtk.Template.Child()
     text_stack: Gtk.Stack = Gtk.Template.Child()
-    text_scroll: Gtk.ScrolledWindow = Gtk.Template.Child()
-    text_view: Gtk.TextView = Gtk.Template.Child()
+    text_slot: Adw.Bin = Gtk.Template.Child()
     text_label: Gtk.Label = Gtk.Template.Child()
 
     def __init__(self) -> None:
         super().__init__()
+        self.text_view = SegmentText()
+        self.text_slot.set_child(self.text_view)
         self._preview_text: str | None = None
         self._caret_visible: bool | None = None
+        self._pulse = 0
         self._color_slot: int | None = None
         self._dark: bool | None = None
         self._key: tuple[str, int] | None = None
@@ -89,7 +92,6 @@ class TranscriptRow(Gtk.Box):
         self.text_view.add_controller(focus)
         self.text_view.connect("keynav-failed", self._on_text_keynav_failed)
         self.text_view.connect("preedit-changed", self._on_text_preedit_changed)
-        self.add_tick_callback(self._pulse_caret)
 
     __gsignals__ = {  # noqa: RUF012  # PyGObject reads this class attribute once
         # The text changed and should be saved.
@@ -103,10 +105,9 @@ class TranscriptRow(Gtk.Box):
     }
 
     def _pulse_caret(self, _widget: Gtk.Widget, clock: Gdk.FrameClock) -> bool:
-        self._update_speaker_color()
-        self._fit_text_height()
         if self._preview_text is None:
-            return True
+            self._pulse = 0
+            return False
         animations = bool(self.get_settings().get_property("gtk-enable-animations"))
         visible = not animations or clock.get_frame_time() % 1_000_000 < 500_000
         if visible != self._caret_visible:
@@ -144,22 +145,28 @@ class TranscriptRow(Gtk.Box):
         if live:
             self._key = None
             self.text_label.set_text(segment.text)
-            self._preview_text = segment.text if item.preview else None
-            self._caret_visible = None
+            self._set_preview(segment.text if item.preview else None)
             if item.preview:
                 self.text_label.add_css_class("dimmed")
             else:
                 self.text_label.remove_css_class("dimmed")
             return
-        self._preview_text = None
+        self._set_preview(None)
         assert item.position is not None
         self._bind_text((item.recording.recording_id, item.position), segment.text)
         self.text_view.set_editable(editable)
         self.text_view.set_cursor_visible(editable)
 
+    def _set_preview(self, text: str | None) -> None:
+        """Pulse a caret after realtime preview text; other rows need no frame callback."""
+        self._preview_text = text
+        self._caret_visible = None
+        if text is not None and not self._pulse:
+            self._pulse = self.add_tick_callback(self._pulse_caret)
+
     def _bind_header(self, item: TranscriptItem) -> None:
         self._key = None
-        self._preview_text = None
+        self._set_preview(None)
         self.title_label.set_label(_("Recording {number}").format(number=item.number))
         self.meta_label.set_label(
             item.live_summary or recording_meta(item.recording, datetime.now().astimezone())
@@ -220,7 +227,7 @@ class TranscriptRow(Gtk.Box):
         self.speaker_label.set_label(item.speaker_name or "")
         self._color_slot = item.color_slot
         self._dark = None
-        self._update_speaker_color()
+        self.update_speaker_color()
         span = format_timestamp_range(segment.start, segment.end)
         live = item.position is None or item.preview or item.recording.recording_id == "live"
         self.timestamp_button.set_visible(show_timestamps and (bool(span) or not live))
@@ -411,21 +418,8 @@ class TranscriptRow(Gtk.Box):
         if (start, end) != (segment.start, segment.end):
             self.emit("times-committed", _to_ms(start), _to_ms(end))
 
-    def _fit_text_height(self) -> None:
-        """Re-measure after the text is rewrapped at a new width.
-
-        A text view only learns its wrapped height after it is allocated, and inside a
-        scrolled window it does not ask for a new size by itself, so the list would keep
-        the row's old height after the window is resized.
-        """
-        width = self.text_view.get_width()
-        if width <= 0 or self.text_stack.get_visible_child_name() != "edit":
-            return
-        needed, _natural, _, _ = self.text_view.measure(Gtk.Orientation.VERTICAL, width)
-        if needed != self.text_scroll.get_height():
-            self.text_scroll.queue_resize()
-
-    def _update_speaker_color(self) -> None:
+    def update_speaker_color(self) -> None:
+        """Follow a switch between the light and dark style."""
         dark = Adw.StyleManager.get_default().get_dark()
         if dark == self._dark:
             return

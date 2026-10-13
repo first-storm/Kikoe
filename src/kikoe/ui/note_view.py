@@ -60,6 +60,10 @@ class NoteView(Adw.BreakpointBin):
         factory.connect("unbind", self._on_factory_unbind)
         self.transcript_list.set_factory(factory)
         self.transcript_list.set_model(Gtk.NoSelection(model=self._items))
+        self._style_handler = Adw.StyleManager.get_default().connect(
+            "notify::dark", self._on_style_dark_changed
+        )
+        self.connect("destroy", self._on_destroy)
 
     __gsignals__ = {  # noqa: RUF012  # PyGObject reads this class attribute once
         # (recording id, position, text): a segment's text was typed over.
@@ -350,6 +354,13 @@ class NoteView(Adw.BreakpointBin):
         self._playing = recording_id
         for row, item in self._bound.items():
             row.set_playing(item.segment is None and item.recording.recording_id == recording_id)
+
+    def _on_style_dark_changed(self, _style: Adw.StyleManager, _spec: GObject.ParamSpec) -> None:
+        for row in self._bound:
+            row.update_speaker_color()
+
+    def _on_destroy(self, _view: Gtk.Widget) -> None:
+        Adw.StyleManager.get_default().disconnect(self._style_handler)
 
     def _bind_row(self, row: TranscriptRow, data: TranscriptItem) -> None:
         display = self._note.display if self._note else None

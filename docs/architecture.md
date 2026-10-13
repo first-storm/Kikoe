@@ -204,8 +204,10 @@ Added only when the feature using them lands (see AGENTS.md, "Dependencies"):
   content: a `Gtk.Stack` with the welcome page, the empty state and the note view, with
   the bottom bar below). Collapses below 640 sp.
 - `ui/note_view.py`: a `Gtk.ListView` over a flat list of recording headers and segments
-  (`ui/transcript_row.py`), so only visible rows get widgets. Segment text is edited in
-  place; rows commit text after a pause, on focus loss and when recycled. Saves of
+  (`ui/transcript_row.py`), so only visible rows get widgets. Segment text is a text
+  view (`ui/segment_text.py`) that reports its height for any width, which
+  `Gtk.TextView` itself does not, so no row needs a frame callback. Segment text is
+  edited in place; rows commit text after a pause, on focus loss and when recycled. Saves of
   only segment contents update rows in place so the caret survives. The window owns
   the note-wide Undo/Redo history (`core/edit_history.py`) and serializes saves.
 - `ui/bottom_bar.py`: model button, Import Audio, Record/Append Recording, upload progress
