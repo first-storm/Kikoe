@@ -44,7 +44,7 @@
     <control>touch</control>
   </supports>
   <releases>
-    <release version="0.1.0" date="2026-10-12">
+    <release version="0.1.0" date="2026-10-13">
       <description>
         <p>Record or import audio, transcribe with cloud services, and export notes or subtitles.</p>
         <ul>
