@@ -29,6 +29,12 @@ listview.transcript-list > row {
   padding: 0;
 }
 
+/* Space after the last row. A margin on the list would shrink its viewport and clip
+   the text above the bottom bar instead; padding scrolls with the rows. */
+listview.transcript-list {
+  padding-bottom: 32px;
+}
+
 /* Timestamps share the meta column with speaker names: keep the button compact and
    pull it out by its padding so the digits line up with the name above. */
 menubutton.timestamp-button > button {
