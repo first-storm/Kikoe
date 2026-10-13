@@ -19,6 +19,9 @@ from kikoe.providers.errors import sdk_error
 from kikoe.providers.parsing import entries, fields, parse_words
 from kikoe.providers.worker import run_sdk_worker
 
+FLUSH_GRACE_SECONDS = 2
+"""How long a flush waits for speech the server has not announced yet."""
+
 
 class _LiveSession(Protocol):
     async def send_realtime_input(
@@ -159,6 +162,7 @@ class GeminiSession:
         self._stack = stack
         self._drained = asyncio.Event()
         self._dirty = False
+        self._active = False
         self._closed = False
         self._id = 0
 
@@ -172,8 +176,23 @@ class GeminiSession:
         if self._dirty:
             self._drained.clear()
             await self._session.send_realtime_input(audio_stream_end=True)
-            await self._drained.wait()
+            await self._wait_drained()
             self._dirty = False
+
+    async def _wait_drained(self) -> None:
+        """Wait for the final transcript, unless the server has nothing left to finish.
+
+        The server detects speech itself and finishes each utterance on its own, so the
+        stream end of a silent or already finished stretch is never answered.
+        """
+        if self._active:
+            await self._drained.wait()
+            return
+        try:
+            async with asyncio.timeout(FLUSH_GRACE_SECONDS):
+                await self._drained.wait()
+        except TimeoutError:
+            pass
 
     async def keep_alive(self) -> None:
         pass  # WebSocket ping/pong is maintained by the SDK.
@@ -185,6 +204,12 @@ class GeminiSession:
     async def events(self) -> AsyncGenerator[TranscriptEvent]:
         while not self._closed:
             async for response in self._session.receive():
+                if (
+                    response.voice_activity
+                    and response.voice_activity.voice_activity_type
+                    == types.VoiceActivityType.ACTIVITY_START
+                ):
+                    self._active = True
                 content = response.server_content
                 if content is None:
                     if response.go_away:
@@ -197,5 +222,12 @@ class GeminiSession:
                 if final and final.text:
                     yield TranscriptEvent(str(self._id), (Segment(final.text),), True)
                     self._id += 1
-                if content.turn_complete or content.interaction_status == "IDLE":
+                # The transcribe-live model ends a flush with generation_complete and never
+                # sends turn_complete, so waiting only for that made every stop time out.
+                if (
+                    content.generation_complete
+                    or content.turn_complete
+                    or content.interaction_status == "IDLE"
+                ):
+                    self._active = False
                     self._drained.set()

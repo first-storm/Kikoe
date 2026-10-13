@@ -166,6 +166,59 @@ async def test_gemini_restarts_receive_after_each_completed_turn() -> None:
     await session.close()
 
 
+class GeminiTranscribeSocket(GeminiSocket):
+    """Mimics gemini-3.5-transcribe-live, which ends a flush with generation_complete only."""
+
+    async def receive(self) -> AsyncIterator[types.LiveServerMessage]:
+        yield types.LiveServerMessage(
+            server_content=types.LiveServerContent(
+                input_transcription=types.Transcription(text="Done", finished=True)
+            )
+        )
+        yield types.LiveServerMessage(
+            server_content=types.LiveServerContent(generation_complete=True)
+        )
+        await asyncio.Event().wait()
+
+
+@run_async
+async def test_gemini_flush_completes_on_generation_complete() -> None:
+    session = GeminiSession(GeminiTranscribeSocket(), AsyncExitStack())
+    texts: list[str] = []
+
+    async def collect() -> None:
+        async for event in session.events():
+            texts.append(event.segments[0].text)
+
+    receiver = asyncio.create_task(collect())
+    await session.send(b"\0\0")
+    async with asyncio.timeout(2):
+        await session.flush()
+    assert texts == ["Done"]
+    receiver.cancel()
+    await session.close()
+
+
+class SilentGeminiSocket(GeminiSocket):
+    """The server already finished its utterance, so the stream end gets no reply."""
+
+    async def receive(self) -> AsyncIterator[types.LiveServerMessage]:
+        await asyncio.Event().wait()
+        yield types.LiveServerMessage()
+
+
+@run_async
+async def test_gemini_flush_returns_when_server_has_nothing_to_finish(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("kikoe.providers.gemini.FLUSH_GRACE_SECONDS", 0.05)
+    session = GeminiSession(SilentGeminiSocket(), AsyncExitStack())
+    await session.send(b"\0\0")
+    async with asyncio.timeout(2):
+        await session.flush()
+    await session.close()
+
+
 @run_async
 async def test_sdk_worker_cancellation_waits_for_remote_cleanup() -> None:
     started = asyncio.Event()
