@@ -1,9 +1,10 @@
 """User defaults and validation independent of the desktop toolkit."""
 
 import re
+from collections.abc import Sequence
 from dataclasses import dataclass
 
-from kikoe.core.models import ModelKey
+from kikoe.core.models import ModelKey, Provider
 
 
 @dataclass(frozen=True, slots=True)
@@ -15,6 +16,20 @@ class Preferences:
     language: str | None = None
     input_device: str | None = None
     output_device: str | None = None
+
+
+def default_provider(preferences: Preferences, providers: Sequence[Provider]) -> Provider | None:
+    """The provider the next transcription most likely uses: the default model's, else the last.
+
+    A removed provider counts as absent, so a stale preference never selects anything.
+    """
+    for key in (preferences.default_model, preferences.recent_model):
+        if key is None:
+            continue
+        provider = next((p for p in providers if p.provider_id == key[0]), None)
+        if provider is not None:
+            return provider
+    return None
 
 
 MIN_WINDOW_WIDTH = 360

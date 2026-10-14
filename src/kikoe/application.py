@@ -1,6 +1,7 @@
 """The Adw.Application: app-wide actions, styling and window management."""
 
 import asyncio
+import gc
 import logging
 from collections.abc import Callable
 from functools import partial
@@ -9,9 +10,10 @@ from pathlib import Path
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
 from kikoe.constants import APP_ID, APP_NAME, ISSUE_URL, VERSION, WEBSITE
-from kikoe.core.preferences import WindowState
+from kikoe.core.preferences import WindowState, default_provider
 from kikoe.i18n import _, is_right_to_left
 from kikoe.paths import data_dir, log_dir
+from kikoe.services.prewarm import prewarm_provider
 from kikoe.storage.library import Library, audio_dir, database_path
 from kikoe.storage.model_catalog import load_catalog
 from kikoe.storage.notes import NoteRepository
@@ -80,6 +82,15 @@ class Application(Adw.Application):
         """Providers are announced first, then the defaults that choose among them."""
         await self.providers.load()
         await self.preferences.load()
+        await self._prewarm_default_provider()
+
+    async def _prewarm_default_provider(self) -> None:
+        """Load the SDK the next transcription will need while the user is still looking around."""
+        provider = default_provider(self.preferences.current, self.providers.providers)
+        if provider is not None:
+            await prewarm_provider(provider)
+        # The SDK objects just loaded live as long as the process; see ``main``.
+        gc.freeze()
 
     def _saved_window_state(self) -> WindowState | None:
         """Read synchronously: the size must be known before the first frame is shown."""

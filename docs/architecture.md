@@ -47,6 +47,14 @@ Top-level helpers (`constants`, `paths`, `i18n`) are importable from any layer.
 - **Errors** from lower layers are typed exceptions (`TranscriptionError`,
   `FFmpegError`, …) with user-presentable messages. The UI catches them at the point
   where it started the task and shows an `Adw.Toast` or dialog.
+- **Startup stays light.** The provider SDKs (OpenAI, Groq, Mistral, Gemini, …) and
+  `keyring` take hundreds of milliseconds to import, so no module loaded at startup may
+  import them at the top level. `providers/factory.py` imports each client when it builds
+  it, `providers/errors.py` and `storage/secrets.py` import their SDK inside the function
+  that uses it, and `tests/test_lazy_imports.py` fails if that regresses. After the
+  settings load, `services/prewarm.py` builds a client for the default provider
+  (`core.preferences.default_provider`) in a worker thread, so the first transcription does
+  not pay for the import; other providers load on first use.
 
 ## Data
 
