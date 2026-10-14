@@ -1,395 +1,413 @@
 # UI design specification
 
-This is the reference for Kikoe's user interface. It was transcribed from the HTML
-design draft `Kikoe.html` (Chinese UI; available locally, not committed, as
-the visual reference for layout and spacing); strings here are the English source
-strings. Follow the GNOME HIG and use stock libadwaita widgets wherever possible. The
-"Widgets" lines are suggestions, not requirements.
+Kikoe presents audio and transcripts as editable notes. The interface keeps
+recording, transcription and review in one window, with provider configuration
+in Preferences. This document defines the interface behavior and layout; the
+[architecture reference](architecture.md) describes its implementation.
 
-Layout details from the draft that the implementation follows:
-- Content pane on the view background (white), the sidebar on the sidebar background.
-- Transcript column at most 760 px wide. Recording header on one line: bold
-  "Recording N", then the dimmed meta line, then (later) the recording buttons, with a
-  separator below. Each segment has a left column with the speaker name (bold, colored)
-  above the timestamp (small tabular digits, dimmed), and the text on the right in slightly
-  larger type. The left column disappears when both timestamps and speakers are hidden.
-- Bottom bar (below the content pane only, libadwaita `toolbar` style, flat buttons):
-  model button with a cloud icon, the model name in bold and the provider dimmed; then
-  right-aligned "Import Audio…" (folder icon) and the primary "Append Recording"
-  (`suggested-action`, mic icon). No pill buttons and no custom chip styling.
-- "Add Provider"/"Add Model" header buttons are ordinary buttons with a + icon; removal
-  is a full-width destructive row at the end of the page.
+Use native GTK 4 and libadwaita controls, system fonts and theme colors. Layouts
+must remain usable at 360 px wide, with keyboard navigation, translated labels
+and right-to-left text. Dimensions below describe the normal desktop layout;
+smaller windows adapt rather than removing essential actions.
 
-Sample data used throughout: speakers "Kobayashi" (blue `#1c71d8`), "Joe" (orange
-`#b34700`); unmatched speakers get "Speaker 3" (green `#2b7a4b`), "Speaker 4"
-(purple `#813d9c`). Speaker colors come from the GNOME palette. Persistent person numbers determine colors;
-renaming and confidently preserving an identity keep its color.
+## Terms
 
-## Concepts
+| Term | Meaning |
+| --- | --- |
+| Note | A sidebar item containing one or more recordings in order |
+| Recording | Recorded or imported audio, its retained original and its transcript |
+| Segment | A transcript passage with optional timestamps and a speaker |
+| Provider | A configured cloud service with a name, API type, URL, key and models |
+| Model | A provider's transcription model, with separate file and realtime capabilities |
 
-- **Note**: the unit in the sidebar. Holds one or more **recordings**, shown in order.
-  Recording more into an existing note *appends* a recording.
-- **Recording**: one piece of recorded or imported audio, plus its transcript. The
-  original audio is kept so it can be re-transcribed or exported.
-- **Segment**: a line of transcript, optionally with a timestamp and a speaker.
-- **Provider**: a configured cloud service (name, API type, base URL, API key) holding
-  one or more **models**.
-- **Model capabilities**: declared per mode. *File transcription* (timestamps, word
-  timestamps, speaker diarization, streaming preview) and *realtime transcription* (text
-  appears while recording; timestamps, speaker diarization). A bundled preset catalog
-  fills these in for known models and marks what an endpoint rejects; the user can change
-  everything else, and the UI disables what a model cannot do.
+File capabilities include timestamps, word timestamps, speaker detection and
+streaming previews. Realtime capabilities describe text appearing during capture,
+with optional timestamps and speakers. Bundled presets supply defaults for known
+models and disable options an endpoint rejects. Other options remain editable.
 
-## 1. Main window — note with appended recording
+Appending audio adds a recording to a note. Speaker labels from independent
+recordings or recognition connections require explicit matching; identical
+provider numbers do not establish identity.
 
-Default size 1180×780. Two panes.
+## Main window
 
-**Sidebar** (≈260 px, "Notes"):
-- Header: app title "Kikoe"; buttons *New Note*, *Search Notes*, *Main Menu*.
-- When the window controls are at the start (macOS, or a left button layout on Linux),
-  *New Note* joins Search and Main Menu at the end and the sidebar title is hidden,
-  so the app's buttons never crowd the window controls.
-- List rows: note title + subtitle with date and length, e.g.
-  - "Podcast Topics" — "Today 15:12 · 2 recordings"
-  - "Group Meeting" — "Yesterday · 42:10"
-  - "Interview Material" — "Oct 9 · Imported audio · 26:31"
-  - "Voice Memo" — "Oct 8 · 0:47"
+The default window is 1180×780, with an approximately 260 px sidebar and a content
+pane. The sidebar uses the theme's sidebar background; the content uses its view
+background. Transcript width is limited to 760 px for comfortable reading.
 
-**Content header**: note title ("Podcast Topics") with subtitle "2 recordings · 1:39".
-Header buttons: *Undo* and *Redo* at the start (icon buttons, transcript edits only);
-at the end:
-- *Display Options* (menu): check items "Show Timestamps" and "Show Speakers". They
-  only change how this note is shown and exported; the transcript is not modified.
-- *Note Menu*: "Rename…", "Copy All Text", "Export…", "Delete Note" (destructive).
-  Export is a menu item rather than its own header button so the header still fits
-  at 360 px with Undo and Redo.
+### Sidebar and search
 
-**Banner** (when an appended recording has unmatched speakers):
-"Recording 2 was appended and its speakers are not yet matched with Recording 1" with
-button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
+The sidebar header contains Kikoe, New Note, Search Notes and Main Menu. When
+system window controls occupy the start of the header, New Note moves alongside
+the other application controls at the end, and the title hides to avoid crowding.
+New Note is unavailable until a provider exists.
 
-**Recordings**, each as a section:
-- Header, two lines: "Recording 1" (heading) with flat circular *Play This Recording*
-  and *Recording Menu* buttons, then the dimmed meta line "Today 14:30 · 0:58 ·
-  Deepgram nova-3 · Timestamps, Speakers"; appended ones say "Today 15:12 appended ·
-  0:41 · …". No separator; spacing separates recordings. *Recording Menu*:
-  "Re-transcribe…", "Export Original Audio…", "Match Speakers…", "Delete Recording".
-- Segments: a meta column (speaker name, colored, clickable → "Rename Speaker"; below
-  it the time range, tabular digits) and the text. Speaker/timestamp columns hide per
-  display options. Below 520 sp the meta column moves above the text on one line.
-- The transcript is edited in place, like a document: segment text is a borderless
-  text view that tints on hover and, while it holds the caret, with the accent color.
-  There is no edit button or dialog. Edits save themselves after a short pause in
-  typing and whenever the caret leaves the segment; empty text is not saved (toast
-  "Segment text cannot be empty", the text reverts).
-  - Enter moves to the next segment, Shift+Enter inserts a line break, Escape reverts
-    typing not saved yet, Up/Down on the first/last line move between segments. While
-    an input method is composing, these keys belong to it.
-  - The time range is a flat button ("Add Time" when a segment has none) opening a
-    compact popover with *Start* and *End* labels beside standard entry fields.
-    Labels have mnemonics; Tab moves from Start to End. The hint explains MM:SS,
-    H:MM:SS and optional decimal seconds (for example, 00:26.860); empty clears a time.
-    Valid changes apply when it closes or on Enter, including Escape/outside click.
-    Invalid fields show an error style and a specific explanation; Enter keeps the
-    popover open and focuses the first invalid field. Closing with invalid input
-    restores the saved times and shows a toast explaining that changes were not saved.
-  - Undo (Ctrl+Z) and Redo (Ctrl+Shift+Z, Ctrl+Y) cover text and time edits across
-    the whole note; quick successive saves of one segment are one step. History is
-    cleared when another note opens or recordings are added, removed or re-transcribed.
-    Undo/Redo scroll to the segment and put the caret in it.
-  - While recording, importing or recovering, the text is read-only and Undo/Redo are
-    disabled. Live rows from realtime transcription are never editable.
+Rows show the note title and a concise subtitle with date, duration or recording
+count. New recordings appear at the top with a Recording status. Secondary click
+or long press offers Rename… and Delete Note without opening the note. The target
+row stays highlighted while its menu is open; closing the menu preserves the
+selected note.
 
-**Bottom bar** (recording controls):
-- *Transcription Model* button showing "nova-3 · Deepgram" (`win.choose-model`) opens
-  the *Transcription Model* dialog (`Adw.Dialog`, 440 px wide, changes apply at once):
-  - One group per provider, titled with its name: one radio row per model, title = model
-    name, subtitle = capability summary ("Realtime · Timestamps · Speakers", or "Text
-    only"). Initial focus is on the current model.
-  - Group "Options", description "Transcribes while recording" or "Transcribes after
-    recording": switch rows "Timestamps" and "Speakers" (whether the next recording
-    requests them). For models with word timestamps, while Timestamps is on, a combo row
-    "Timestamp Detail" offers "Segments", "Words", "Segments and Words". If the model
-    lacks a capability, its switch is disabled with the subtitle "Not supported by
-    this model"; the earlier choice comes back with a model that supports it.
-    When a transcription language is set and the next upload would drop it (Mistral
-    cannot combine a language with timestamps or speakers), a dimmed caption under the
-    rows says the language is detected automatically; it shows only for uploads and
-    disappears when both options are off.
-  - Button row "Manage Providers and Models…" closes the dialog and opens Preferences.
-  The button's tooltip repeats the model, provider and the hint, including "· This
-  model does not support <list>" when relevant.
-- Buttons: "Import Audio…" and the primary "Append Recording" (on an empty note,
-  "Record").
-- The bar is always a single line and keeps the same height whenever it is shown.
-  It is hidden when no note is selected; it appears once a note is opened. As its own
-  width shrinks (breakpoints on the bar, not the window): below 600 sp the provider name
-  hides and Import Audio becomes icon-only (tooltip and accessible name kept). The
-  primary Record/Append Recording button always keeps its label.
+Search Notes toggles a search bar; typing in the list also starts search when no
+capture or import is running. Search matches literal, case-insensitive substrings
+in titles and transcripts. An empty query restores all notes. Filtering preserves
+the open note, and Escape closes search. No matches show No Matching Notes with
+`edit-find-symbolic`. Search is disabled during capture and transcription so
+narrow layouts retain access to Stop.
 
-**Implementation status**:
-- Implemented: sidebar list with *New Note* (disabled until a provider exists);
-  content header with title and subtitle; *Display Options*; *Note Menu* with "Rename…",
-  "Copy All Text" and "Delete Note"; *Export* with an Adw.Dialog choosing format and
-  options (timestamps, speakers), followed by a save dialog, with subtitle options
-  disabled when the note has no timestamps; recordings and segments
-  with speaker colors (unnamed speakers show as "Speaker N"); recording header menu
-  with "Export Original Audio…"; the bottom bar’s model dialog with its Timestamps/Speakers
-  options (they set what the next transcription requests) and hint text, and "Import Audio…", which
-  adds to the open note or creates one named after the file, with progress, Cancel and a
-  failure dialog; Record/Append Recording, pause/resume, Stop, live level meter, batch
-  transcription after stopping, retained-audio retry, and startup recovery.
-- M6 implemented: unmatched-speaker banner; recording playback/stop; clickable colored
-  speaker names with Rename Speaker and Match Speakers; reversible many-to-one matching
-  with quoted samples and playback; Re-transcribe with an independent model/options picker.
-- M7 implemented: Search Notes opens a sidebar search bar; title and transcript matches
-  are case-insensitive literal substrings. Empty queries restore all notes; no matches
-  show "No Matching Notes". Filtering preserves the open note. Escape closes search.
-  The sidebar is approximately 260 px at desktop sizes; search precedes the main menu.
-- At 360 px the idle bar stays on one line: model name, icon-only Import Audio, and the
-  labeled primary button. Model and import tooltips retain their explanations. Import
-  Audio is also available in the main menu without a selected note.
-- Models with the Streaming Preview capability display text while transcribing imports, stopped recordings,
-  retries and re-transcriptions. Imports append a temporary recording section; imports
-  without an open note show a temporary page titled after the file, with progress and Cancel.
-  No note or sidebar entry is created until the import succeeds. Retry and Re-transcribe
-  preview new text in the original recording's position, keeping neighboring recordings.
-  Completed segments use normal text; unfinished text is dimmed with the existing blinking
-  caret. Temporary rows cannot be edited, played or used to match speakers. Scrolling follows
-  the bottom only when the reader was already there. Cancel or failure removes previews and
-  restores existing text; success replaces it with the saved result. Cancel is disabled
-  during the final save. Whisper and compatible APIs retain their existing file requests.
-- Not yet: "Delete This Recording" (outside M7).
+### Content header and menus
 
-## 2. Recording in progress
+The content header shows the note title and a subtitle such as
+“2 recordings · 1:39”. Undo and Redo appear at the start; Display Options and
+Note Menu appear at the end.
 
-- New note appears at top of the sidebar as "Oct 12 15:40 Recording" with subtitle
-  "Recording" (red dot).
-- Content header shows the note title and "Recording".
-- Section "Recording 1", meta "In progress · Deepgram nova-3 · Timestamps, Speakers".
-- **Realtime model**: segments stream in ("Speaker 1 00:02 …"); the last line is
-  partial (shown dimmed with an inline accent-colored blinking caret until finalized).
-  Existing recordings and live rows share one virtualized list. Updates follow the
-  bottom only while the user is already there; reading older text preserves scrolling.
-  The metadata line shows connecting, reconnecting and catch-up states.
-- **M4 batch mode**: centered 88 px circle containing a microphone icon, "Recording"
-  heading, and "Kikoe will upload the audio to {model} and transcribe it automatically
-  after you stop. The text will appear here." Existing recordings remain above the
-  appended recording section. Models without effective realtime support use this branch.
-  Deepgram, OpenAI, Gemini and Mistral native live endpoints use the realtime branch.
-- Bottom bar follows the HTML's order: 10 px red recording indicator, elapsed time
-  `00:31` (tabular digits), 28 live level bars (3 px wide, up to 28 px high),
-  model/options summary, round icon-only "Pause Recording" button, and a
-  `suggested-action` "Stop" button with stop icon (Stop saves, so it is not styled
-  destructive). The normal model/import/record controls are replaced.
-- Pause changes the central heading and header/sidebar subtitle to "Paused", freezes
-  the timer, clears the meter, and switches the pause control to "Resume Recording".
-  The red indicator dims while paused. Resume appends audio to the same recording.
-- The recording bar is always one line. Below 600 sp the summary hides; below 480 sp
-  the meter hides too, so the timer, pause/resume and the labeled Stop fit at 360 px. Below 480 sp, the content
-  header keeps only Close, on the side the system puts window controls, so all app
-  controls still fit. Colors
-  follow the Adwaita theme. The red recording dot pulses while animations are enabled.
-- During recording/saving/transcription, starting another capture, importing, changing
-  notes and deleting the target note are disabled; exporting is disabled. Display
-  options remain available. The selected model/options are fixed for the session.
-- Stop saves original FLAC. Batch models then upload it automatically. Live models
-  drain their final response for at most ten seconds and save the streamed transcript
-  without another upload. Partial live text and audio are retained on failure, with a
-  "Transcription incomplete" message and the existing "Retry Transcription" button.
-- File-only retry uses the current model/options and replaces the same recording after
-  success; cancellation or failure preserves its existing text. Microphone-only models
-  disable Import Audio and Retry Transcription; their import tooltip explains that a
-  file model is required. No model is substituted automatically.
-- Pause drains the accepted audio and closes the live connection. Resume opens another
-  connection and sends only the unsent local samples. The microphone timer excludes
-  the pause. A new recognition connection does not assume its speaker IDs match the old
-  one. Closing or quitting cancels network work before finalizing local audio.
-- Closing or quitting stops and saves audio; pending transcription can be retried later.
-  Startup offers "Recover" or "Later" for interrupted captures. Recovery only restores
-  audio and the note; uploading requires an explicit retry. Failed conversion leaves
-  files intact so startup recovery can be attempted again.
+Display Options contains Show Timestamps and Show Speakers. These affect display
+and export, without altering stored transcript data. Note Menu contains Rename…,
+Copy All Text, Export… and destructive Delete Note. Keeping Export in the menu
+leaves room for editing controls at narrow widths.
 
-## 3. First run (no providers, no notes)
+Export opens a dialog with four formats and options for timestamps and speaker
+labels, then a save dialog. Subtitle formats are unavailable when the note has
+no timestamps. Export waits for pending edits.
 
-- Sidebar empty state: compact status page "No Notes Yet" (icon `document-edit-symbolic`;
-  "No Matching Notes" with `edit-find-symbolic` while searching).
-- Content: status page with app icon, title "Welcome to Kikoe", description "Kikoe
-  turns speech into text using cloud services. Add a provider and a model first, then
-  record or import audio.", suggested pill button "Add Provider".
-- **Implemented** (`ui/window.blp`).
+### Recordings and transcript rows
 
-## 3b. No note selected (providers exist)
+Each recording has a heading, Play This Recording control and Recording Menu,
+with a dimmed metadata line beneath. Metadata includes date, duration, provider,
+model and transcription options; appended recordings indicate that they were
+appended. Spacing separates sections without an extra separator.
 
-- Content: status page with the symbolic `document-edit-symbolic` icon (the app icon is
-  reserved for the welcome page), title "No Note Selected", description "Create
-  a note, then record or import audio into it.", suggested pill button "New Note"
-  (creates a blank note, same as the sidebar button and `Ctrl+N`).
-- The bottom bar is hidden in this state; it appears once a note is opened.
+Recording Menu offers Re-transcribe…, Export Original Audio…, Match Speakers…
+and Delete Recording. Playback controls switch between play and stop. Only one
+recording or sample plays at a time.
 
-## 4. Dialog: Match Speakers (≈520×520)
+Each segment places a bold, colored speaker name above a small, dimmed timestamp
+in a metadata column, with transcript text on the right. Speaker names open
+Rename Speaker. Hiding both speakers and timestamps removes the metadata column.
+Below 520 sp, metadata moves above the text on one line. Timestamps use tabular
+digits through the `numeric` style class.
 
-- Header: "Cancel" · title "Match Speakers" · suggested "Apply".
-- Intro: "Recording 2 was appended later and its speakers were numbered again, so they
-  may not match the people in Recording 1. Listen to the samples and choose who they are."
-- One row per new speaker: colored name ("Speaker 3"), a quoted sample sentence, a
-  *Play sample* button ("Play Speaker 3's sample"), and a dropdown "Who is Speaker 3?"
-  with options: section "People in Recording 1" → each existing speaker (colored);
-  then "Keep as New Speaker".
-- Footnote: "Two numbers can map to the same person. You can rename or re-match a
-  speaker at any time by clicking their name in the note."
-- Implemented with `Adw.Dialog` and model-bound `Adw.ActionRow`s: playback button on the
-  left, colored bold name and dimmed quoted sample in the middle, and a colored selection
-  menu with check marks on the right, matching the HTML row order. The candidate heading
-  is “Existing Speakers” because more than two recordings and named old identities from
-  re-transcription are supported. Menus include “Keep as New Speaker”.
-- New labels default to “New Speaker”; Apply confirms every choice, including keeping
-  independent identities. Cancel writes nothing. The banner shows the first recording
-  needing a decision and advances when its choices are confirmed.
-- Samples use the first nonempty turn with reliable timing, capped at ten seconds and
-  bounded by the next timestamp or recording end when needed. Without reliable timing,
-  the quote remains visible, playback is disabled, and manual matching is available.
-- Dialogs scroll at narrow widths. Playing a sample stops the previous playback; clicking
-  it again stops. Closing the dialog stops playback.
+Speaker colors use four GNOME palette slots, assigned by persistent person
+number. Renaming or confidently preserving an identity retains its color.
+Unnamed people appear as Speaker N. Color supplements the name rather than
+being the only way to distinguish a person.
 
-## 5. Dialog: Re-transcribe (≈480×520)
+### Editing text and timestamps
 
-- Header: "Cancel" · title "Re-transcribe" · suggested "Transcribe".
-- Intro: "Re-transcribe "Recording 1" (0:58) from the kept original audio. Timestamps
-  or speaker detection that were off during transcription can be added this way."
-- Group: "Model" row (value "Deepgram · nova-3", opens model picker), then the same
-  "Options" group as the Transcription Model dialog ("Timestamps", "Timestamp Detail",
-  "Speakers"), using the selected model's file capabilities.
-- Warning: "The text of this recording will be replaced, including any manual edits.
-  Other recordings in the note are not affected. Speaker names are kept where possible."
+Segment text is a borderless text view with a subtle hover tint and an accent
+tint while it holds the caret. Editing happens in place. Text saves after a short
+typing pause and when focus leaves the segment. Empty text is rejected: the saved
+text returns and a toast explains that segment text cannot be empty.
 
-M6 implementation behavior:
-- The picker starts with the bottom bar's current model only when it supports files.
-  Live-only models require an explicit file-model choice. Switches initially reflect
-  the current transcript and use the selected model's file capabilities.
-- Only a fully successful transcription replaces this recording. Failed/cancelled work
-  keeps its previous text, identities, original audio and completion state. Progress and
-  Cancel use the existing bottom bar; conflicting recording/import/edit actions are disabled.
-  Cancel is disabled during the final atomic save; closing waits for that save to finish.
-- Names are preserved only with strong time-overlap evidence (80% coverage and twice the
-  runner-up score). Uncertain identities require manual matching. Provider numbering is
-  never treated as evidence of identity, and unmatched people remain unmatched on retry.
-- The warning uses theme colors, the header contains Cancel/Transcribe, and content scrolls
-  so the 480×520 dialog also works at 360 px.
+| Key | Behavior while editing |
+| --- | --- |
+| Enter | Save and move to the next segment |
+| Shift+Enter | Insert a line break |
+| Escape | Revert typing that has not been saved |
+| Up/Down at the first/last line | Move between segments |
 
-## 6. Preferences — Providers (≈640×600)
+An active input-method composition owns these keys until composition ends.
 
-- `Adw.PreferencesDialog` with pages "General" and "Providers". General follows the
-  same standard grouped-row styling; the HTML reference does not specify its contents.
-- Providers page: group "Providers", description "Transcription happens in the cloud.
-  A provider can offer several models.", header button "Add Provider".
-- Rows (navigate to detail): avatar initial + name + subtitle "<API type> API · N
-  model(s)", e.g. "Deepgram — Deepgram API · 1 model", "OpenAI — OpenAI API · 2
-  models", "Groq — Groq API · 1 model".
-- **Implemented** (`ui/preferences.blp`), including the General page below.
+The timestamp is a flat button, labeled Add Time when absent. It opens a compact
+popover with Start and End entries, mnemonic labels and a format hint. Accepted
+forms include MM:SS, H:MM:SS and decimal seconds such as `00:26.860`; an empty
+entry clears that time. Tab moves between fields.
 
-## 7. Preferences — Provider detail (≈640×780)
+Valid times apply on Enter or when the popover closes, including Escape or an
+outside click. Invalid entries show an error style and a specific explanation.
+Enter keeps the popover open and focuses the first invalid field. Closing with
+invalid input restores saved times and reports that the changes were not saved.
 
-Pushed as a subpage (back button) titled with the provider name.
-- Group "Connection": entry "Name"; combo "API Type" (Deepgram / OpenAI /
-  OpenAI-compatible / OpenRouter / Gemini AI Studio / MiMo / Groq); entry "Base URL" (e.g. `https://api.groq.com`);
-  password entry "API Key" with *Show Key* toggle. Description: "The API type decides
-  the request format. Most providers offer an "OpenAI-compatible" API."
-- Group "Models", description "What each model can do is set when you add it.", header
-  button "Add Model". Rows: model name + capability tags, *Edit Model* button.
-- Group "File Transcription" before Models: SpinRows for Parallel Requests (1–32,
-  default 2), Chunk Length (Minutes), and Chunk Size (MB), plus an Audio Format ComboRow
-  and Reset Transcription Defaults ButtonRow. Limits and defaults depend on the API;
-  Gemini additionally enforces its 30-minute metadata limit at request time. See
-  [Provider upload settings](upload-settings.md) for official sources and exact defaults.
-  Rows apply immediately; content scrolls at 360 px and inherits Adwaita styling.
-- Destructive button "Remove Provider" at the bottom.
-- No Save button: changes to an existing provider apply when a field is confirmed
-  (Enter or the row's apply button) or the API type changes. Adding a new provider uses
-  an "Add" button in the header.
-- Widgets: `Adw.NavigationPage` inside the dialog, `Adw.EntryRow`,
-  `Adw.PasswordEntryRow`, `Adw.ComboRow`, `Adw.ButtonRow`.
+Undo and Redo cover text and time edits across the note. Quick successive saves
+of one segment form one step. History clears on a note change or when recordings
+are added, removed or re-transcribed. Undo and Redo scroll to the affected segment
+and place the caret there. Recording, import and recovery make transcript text
+read-only and disable history actions. Live preview rows are never editable.
 
-## 8. Dialog: Add Model (≈480×600)
+### Idle bottom bar
 
-- Header: "Cancel" · title "Add Model" · suggested "Add".
-- Entries: "Model ID", "Display Name".
-- Group "What This Model Supports", description "Known models are filled in
-  automatically. Options the provider rejects for this model are unavailable.":
-  - Expander row with switch "Transcribe Files" — "Imported files, and recordings
-    uploaded after they stop." Check rows: "Timestamps", "Word Timestamps", "Speaker
-    Detection", "Streaming Preview" ("Text appears while a file is transcribed.").
-  - Expander row with switch "Transcribe While Recording" — "Text appears while
-    recording. If off, the whole recording is uploaded after it stops." Check rows:
-    "Timestamps", "Speaker Detection".
-- Typing a model ID applies the preset from `storage/model_presets.json` until the user
-  changes an option; editing never replaces saved options. Options the preset marks
-  unsupported are disabled with the tooltip "This model does not support this option.";
-  a mode the model lacks is disabled, and the other mode then has no switch (always on).
-  Saving with both modes off shows "Turn on file or realtime transcription."
-- Provider/model summaries and bottom-bar hints use the same stored capabilities.
+The bottom bar belongs to the content pane and appears only when a note is open.
+It uses the libadwaita `toolbar` style and remains one line at a stable height.
 
-## Visual notes
+At the start, Transcription Model shows a service icon, bold model name and dimmed
+provider name. At the end are flat Import Audio… and the primary microphone
+button: Record for an empty note, Append Recording otherwise. Toolbar buttons
+use standard styling without custom chips.
 
-- Fonts in the mock: Cantarell for UI, Source Code Pro for timestamps. In GTK, use the
-  system font and the `numeric` style class (tabular digits) instead of hardcoding fonts.
-- Accent blue `#1c71d8`, destructive red: use libadwaita's accent/destructive colors,
-  not literal values.
-- All popovers and dialogs close on Escape and on outside click (stock behavior).
+Below 600 sp, the provider name hides and Import Audio becomes icon-only, retaining
+its tooltip and accessibility name. The primary recording button keeps its label
+at 360 px. Import Audio is also available through the main menu when no note is
+selected; invoking it opens the content pane to show progress and Cancel.
 
+## Empty states
 
-## 9. Preferences — General (M7)
+| State | Content and next action |
+| --- | --- |
+| No notes | Sidebar status No Notes Yet with `document-edit-symbolic` |
+| No providers and no notes | Welcome to Kikoe, app icon, explanation of cloud transcription, primary Add Provider |
+| Providers exist, no note selected | No Note Selected, `document-edit-symbolic`, instruction to create a note and primary New Note |
+| Search finds no notes | No Matching Notes with `edit-find-symbolic` |
 
-- "Transcription" group: Default Model combo (provider and model name), then Transcription
-  Language entry with an apply button. Empty means automatic detection; the group description gives
-  `zh`, `en` and `ja` examples (not a tooltip, so touch users see it). Invalid codes show an error state and are not saved.
-- "Audio" group: Microphone (used for new recordings) and Audio Output (used for playback)
-  combo rows. The first item is "System Default", which is also the initial choice. The
-  choice is saved by device name; a saved device that is unplugged stays listed as
-  "<name> (Unavailable)" and the system default is used until it returns. A running
-  recording keeps the device it started with.
-- "Storage" group: Data Folder row showing the current path; activating opens the
-  folder. This release does not move the library or change its location.
-- "Troubleshooting" group: Log Folder row opening local diagnostics. The description
-  states that logs stay on this device and users can attach them when reporting problems.
-- Most recently selected model takes priority on restart, followed by the default model,
-  then the first configured model. Missing models fall back in that order. Changing the
-  default selects it when idle; running tasks keep the model/language captured at start.
-- Interface language follows the system. English and 14 translations are included:
-  Simplified Chinese (`zh-Hans`), Traditional Chinese (`zh-Hant`), Spanish, French,
-  German, Japanese, Korean, Brazilian Portuguese (`pt-BR`), Russian, Italian, Arabic,
-  Hindi, Indonesian and Turkish. Chinese regional system locales remain supported;
-  Arabic uses a right-to-left layout. This is separate from the transcription language hint.
+The welcome message explains that a provider and model are needed before recording
+or importing. The app icon is reserved for the welcome page. Empty-state primary
+actions may use the standard suggested pill style. The bottom bar stays hidden
+until a note opens.
 
-## 10. Keyboard and accessibility (M7)
+## Model selection and transcription options
 
-The main menu offers Keyboard Shortcuts. New Note uses Ctrl+N, Search Notes Ctrl+F,
-Import Audio Ctrl+O, Rename Note F2, Export Note Ctrl+Shift+E, Undo Ctrl+Z, Redo
-Ctrl+Shift+Z/Ctrl+Y, Preferences Ctrl+comma, shortcut help Ctrl+?, and
-Quit Ctrl+Q (Command replaces Ctrl on macOS). Escape closes search; it never stops a
-recording. Shortcuts share action availability with buttons, including busy-state guards.
-Search is disabled while capturing/transcribing so it cannot hide narrow-window Stop
-controls. Import from the sidebar opens the content pane to show progress and Cancel.
+Transcription Model opens an approximately 440 px dialog. Changes apply
+immediately. Each provider has a group of model radio rows, showing a model name
+and capability summary such as “Realtime · Timestamps · Speakers” or “Text only”.
+Initial focus is on the current model.
 
-Icon-only application controls have translated accessibility labels; pause/resume and
-play/stop labels change with their actions. Dialogs remain keyboard navigable and
-scroll at 360 px. Visible error states have explanatory text in addition to color.
+The Options group explains whether transcription happens during or after
+recording. Timestamps and Speakers switches request those features for the next
+session. A model without a capability disables its switch and explains “Not
+supported by this model”; the earlier choice returns with a supporting model.
+When word timestamps are available and timestamps are enabled, Timestamp Detail
+offers Segments, Words, and Segments and Words.
 
-HIG audit follow-ups:
-- Search Notes is a toggle button bound to the search bar (no separate close button), and
-  typing in the notes list starts a search unless a capture or import is running.
-- Export is an `Adw.Dialog` choosing from four formats with options for timestamps and
-  speaker labels before opening a save dialog (hence the ellipsis); subtitle formats are
-  disabled when the note has no timestamps.
-- Keyboard Shortcuts is an `Adw.ShortcutsDialog`; Ctrl+W closes the window (the same
-  save-then-close path as Quit).
-- Secondary click or long press on a sidebar note offers Rename… and Delete Note without
-  opening the note. The target row stays highlighted while its context menu is open,
-  regardless of pointer position; closing the menu restores its normal hover/selection
-  appearance without changing the selected note.
-- Rename Speaker and Add/Edit Model ask “Discard Changes?” when closed with
-  Escape or a click outside while they hold unsaved input; Cancel discards immediately.
-- Failures the user must read (transcription, re-transcription, capture) use a dialog;
-  small self-explanatory ones (a missing folder or file, playback problems) use a toast.
-  Toast text stays short; details go in dialogs.
-- The window size and maximized state are remembered between launches.
+If an upload must omit a configured language because Mistral cannot combine it
+with timestamps or speakers, a visible caption explains automatic language
+detection. It disappears when both options are off and does not apply to live
+recording. Manage Providers and Models… closes the picker and opens Preferences.
+The model button's tooltip includes the model, provider and capability restrictions.
+
+Most recently selected model takes priority on restart, followed by the default
+model and then the first configured model. Missing choices fall back in that
+order. Changing the default selects it when idle. Running tasks retain the model,
+language and options captured at their start.
+
+## Importing and file transcription
+
+Import Audio… appends to the open note or creates a note named after the file.
+Progress and Cancel appear in the bottom bar; failures that need explanation use
+a dialog.
+
+Models with Streaming Preview show temporary text during imports, stopped
+recording uploads, retries and re-transcription. Completed segments use normal
+text; unfinished text is dimmed with an accent-colored blinking caret. Scrolling
+follows new text only when the reader is already at the bottom.
+
+An import into an existing note appends a temporary recording section. Without
+an open note, it shows a temporary page named after the file. The sidebar gains
+no note until import succeeds. Retry and re-transcription show new text in the
+original recording's position, preserving neighboring recordings.
+
+Preview rows cannot be edited, played or used for speaker matching. Failure or
+cancellation removes them and restores existing text; success displays the saved
+result. Cancel is disabled during the final atomic save. Models without file
+streaming continue to use ordinary file requests.
+
+## Recording
+
+Starting capture creates or appends a recording. The header and sidebar show
+Recording, and the section metadata identifies the model, options and current
+connection state.
+
+Realtime models show segments while capturing. The last, unfinished line is
+dimmed with a blinking caret. Existing and live recordings share the transcript
+list, preserving the reader's scroll position. Metadata indicates connecting,
+reconnecting or catching up.
+
+File-only models show a centered microphone icon in an 88 px circle, a Recording
+heading, and an explanation that Kikoe will upload and transcribe after Stop.
+Existing recordings remain above this section. Native live endpoints for OpenAI,
+Deepgram, Gemini and Mistral use the realtime view when the selected model supports
+it.
+
+### Capture controls
+
+The recording bar replaces idle controls with, in order, a recording indicator,
+elapsed time, 28 live level bars, model/options summary, icon-only Pause Recording,
+and a labeled Stop button. The 10 px recording indicator pulses when animations
+are enabled. Level bars are 3 px wide and up to 28 px high, driven by actual audio.
+Stop uses `suggested-action` because it saves the recording.
+
+Pause freezes the timer, clears the meter, dims the indicator and changes status
+to Paused. Its button becomes Resume Recording. Resume continues the same local
+recording, excluding paused time from both duration and audio.
+
+The bar stays one line. Below 600 sp the summary hides; below 480 sp the meter
+also hides, leaving timer, pause/resume and labeled Stop usable at 360 px. During
+capture below 480 sp, the content header retains only the system-side Close
+control. Theme colors remain authoritative.
+
+During capture, saving and transcription, conflicting actions are unavailable:
+new capture, import, note changes, deletion of the target note and export. Display
+Options remains available. Session model and options cannot change mid-capture.
+
+### Stop, interruption and recovery
+
+Stop retains original FLAC. File models then upload it automatically; live models
+wait up to ten seconds for final text and save without a second upload. Incomplete
+live sessions retain audio and confirmed text, show Transcription incomplete, and
+offer Retry Transcription.
+
+Retry uses the current file model and options, replacing the same recording only
+on success. Failure or cancellation preserves existing text. Live-only models
+disable import and retry and explain that a file model is required; Kikoe never
+substitutes one automatically.
+
+Pause drains accepted audio and closes the live connection. Resume starts a new
+connection from the confirmed audio position. Its independent speaker labels do
+not automatically match earlier ones.
+
+Closing or quitting cancels network work and saves local audio. On startup,
+Recover or Later is offered for interrupted captures. Recovery restores audio and
+confirmed text to the note without uploading; transcription requires explicit
+retry. Failed conversion leaves recovery files available for another attempt.
+
+## Speaker matching and re-transcription
+
+An unmatched-speaker banner identifies the first appended recording needing a
+decision and offers Match Speakers…. Confirming that recording advances the banner
+to the next one.
+
+### Match Speakers
+
+The approximately 520×520 dialog has Cancel, Match Speakers and suggested Apply
+in its header. Its introduction explains that independent recordings number
+speakers separately and asks the user to listen and choose identities.
+
+Each row contains a sample playback button, colored speaker name and dimmed
+quotation, then a selection menu with check marks. Existing Speakers lists
+note-wide candidates, including named identities retained after re-transcription.
+Keep as New Speaker preserves an independent identity. New labels initially show
+New Speaker; Apply confirms all choices, including keeping them separate. Cancel
+writes nothing. Multiple labels may map to one person and can be separated later.
+
+Samples use the first nonempty turn with reliable timing, last at most ten seconds,
+and stop at the next timestamp or recording end when needed. Without reliable
+times, the quote remains available and matching works, but playback is disabled.
+Playing a sample stops previous playback; activating it again stops it. Closing
+the dialog stops audio. Content scrolls at narrow widths.
+
+### Re-transcribe
+
+The approximately 480×520 dialog has Cancel, Re-transcribe and suggested Transcribe
+in its header. It identifies the recording and duration, explains use of retained
+original audio, and warns that replacement includes manual edits. Other recordings
+remain intact, and speaker names are preserved where possible.
+
+A Model row opens the picker. Timestamps, Timestamp Detail and Speakers use the
+selected model's file capabilities. The picker starts with the bottom bar's model
+only if it supports files; live-only selections require an explicit file model.
+Initial option switches reflect the current transcript.
+
+Only complete success replaces text, model information and speaker bindings.
+Failure or cancellation preserves the old recording, identities, audio and status.
+Progress uses the bottom bar and conflicting edit, import and capture actions are
+disabled. Cancel is disabled during the final save; closing waits for that save.
+
+Names are preserved only with strong timing evidence: 80% speech overlap and a
+score at least twice the runner-up. Provider numbers are not identity evidence.
+Uncertain or previously unconfirmed matches still require a decision. Warnings
+use theme colors, and dialog content scrolls at 360 px.
+
+## Preferences
+
+Preferences uses an approximately 640×600 `Adw.PreferencesDialog` with General
+and Providers pages and standard grouped rows.
+
+### General
+
+| Group | Controls and behavior |
+| --- | --- |
+| Transcription | Default Model and Transcription Language; empty language means automatic detection; visible examples include `zh`, `en` and `ja`; invalid codes are not saved |
+| Audio | Microphone and Audio Output; System Default is first and initially selected |
+| Storage | Data Folder shows and opens the current location; relocating the library is unavailable |
+| Troubleshooting | Log Folder opens local diagnostics and explains that users choose what to attach to reports |
+
+Device choices are saved by name. An unplugged selection remains listed as
+“<name> (Unavailable)” while the system default is used. A running recording keeps
+its starting device.
+
+Interface language follows the system, independently of the transcription
+language. English and 14 translations are included: Simplified and Traditional
+Chinese, Spanish, French, German, Japanese, Korean, Brazilian Portuguese, Russian,
+Italian, Arabic, Hindi, Indonesian and Turkish. Regional Chinese locales map to
+the appropriate script; Arabic uses right-to-left layout.
+
+### Providers and connection details
+
+The Providers group explains cloud transcription and that each provider can offer
+several models. Add Provider is a standard header button with a plus icon. Provider
+rows show an initial avatar, name, API type and model count, and navigate to detail.
+
+Provider detail is a scrollable navigation subpage titled with the provider name,
+normally about 640×780. Its groups are:
+
+- **Connection:** Name, API Type, Base URL and a masked API Key with Show Key.
+  API types include OpenAI, OpenAI-compatible, OpenRouter, Deepgram, Gemini AI
+  Studio, MiMo, Groq and Mistral. API type determines request format; Base URL
+  identifies the endpoint.
+- **File Transcription:** Parallel Requests, Chunk Length (Minutes), Chunk Size
+  (MB), Audio Format and Reset Transcription Defaults. Defaults and maximums
+  depend on the API; Gemini applies its shorter metadata duration limit at
+  request time. See [Provider upload settings](upload-settings.md).
+- **Models:** Model names and capability summaries, an Add Model header button
+  and Edit Model controls.
+
+Remove Provider is a full-width destructive row at the end. Existing connection
+fields apply on confirmation, such as Enter or the row's apply button; changing
+API type also applies immediately. Upload-setting rows apply immediately. New
+providers use Add in the header to commit their configuration.
+
+Use stock `Adw.NavigationPage`, `Adw.EntryRow`, `Adw.PasswordEntryRow`,
+`Adw.ComboRow`, `Adw.SpinRow` and `Adw.ButtonRow` controls.
+
+### Add or edit a model
+
+The approximately 480×600 Add Model dialog has Cancel and suggested Add, Model ID
+and Display Name entries, and a What This Model Supports group. File transcription
+and transcription while recording use expander rows with mode switches.
+
+File options are Timestamps, Word Timestamps, Speaker Detection and Streaming
+Preview. Realtime options are Timestamps and Speaker Detection. Explanations
+clarify that file transcription includes imports and audio uploaded after Stop,
+whereas realtime shows text during capture.
+
+Typing a model ID applies bundled presets until the user changes an option.
+Editing an existing model retains saved choices. Unsupported options are disabled
+with an explanation. When a model lacks one mode, that mode is disabled and the
+other remains on without a switch. Both modes off cannot be saved. Provider
+summaries and model-picker hints use the same capabilities.
+
+Rename Speaker and Add/Edit Model ask Discard Changes? when Escape or an outside
+click would close a dialog with unsaved input. Cancel discards immediately.
+
+## Keyboard, accessibility and feedback
+
+Shortcuts use the same actions and availability rules as buttons. Command replaces
+Ctrl on macOS.
+
+| Action | Shortcut |
+| --- | --- |
+| New Note | Ctrl+N |
+| Search Notes | Ctrl+F |
+| Import Audio | Ctrl+O |
+| Rename Note | F2 |
+| Export Note | Ctrl+Shift+E |
+| Undo | Ctrl+Z |
+| Redo | Ctrl+Shift+Z or Ctrl+Y |
+| Preferences | Ctrl+comma |
+| Keyboard Shortcuts | Ctrl+? |
+| Close Window | Ctrl+W |
+| Quit | Ctrl+Q |
+
+Keyboard Shortcuts opens `Adw.ShortcutsDialog`. Close and Quit use the same local
+save path. Escape closes search and standard dialogs; it never stops recording.
+Timestamp popovers apply the validation behavior described above, and unsaved
+form dialogs require a discard decision.
+
+Icon-only controls have translated accessibility names and tooltips. Play/Stop
+and Pause/Resume names track their current actions. Dialogs are keyboard navigable
+and scroll at narrow widths. Visible errors include explanatory text alongside
+color.
+
+Use dialogs for capture and transcription failures requiring explanation, and
+short toasts for playback problems or missing files and folders. Dialogs carry
+longer details. The window remembers size and maximized state. Use system fonts,
+semantic style classes and Adwaita accent/destructive colors rather than fixed
+fonts or color values.

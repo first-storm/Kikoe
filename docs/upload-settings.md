@@ -1,69 +1,104 @@
 # Provider upload settings
 
-Preferences → Providers → a provider → File Transcription sets parallel requests,
-maximum chunk length in minutes, maximum encoded chunk size in decimal MB, and audio
-format. These settings apply to imports, batch microphone transcription, retry, and
-re-transcription. Live microphone transcription is unchanged. Changes apply immediately;
-new providers keep them when Add is pressed. Reset Transcription Defaults restores all
-four values. Running jobs keep the snapshot taken when they started.
+Use **Preferences → Providers → select a provider → File Transcription** to
+control how Kikoe uploads audio. The settings apply to imports, microphone audio
+transcribed after Stop, retries and re-transcription. Live microphone sessions
+use their realtime connection settings instead.
 
-Defaults and endpoint limits were checked against official documentation on 2026-10-13:
+## Controls and when changes apply
 
-| API | Default / maximum encoded chunk size | Default / maximum chunk length | Default format |
+| Setting | Meaning | Default and range |
+| --- | --- | --- |
+| Parallel Requests | Maximum concurrent uploads for this configured provider | 2; range 1–32; 1 processes chunks sequentially |
+| Chunk Length (Minutes) | Maximum duration of an uploaded chunk | API default, or 0 for automatic sizing; custom values up to 24 hours where the API permits, with 0.1-minute precision |
+| Chunk Size (MB) | Maximum encoded size of an uploaded chunk | API default; minimum 0.1 decimal MB |
+| Audio Format | Encoding used for uploads | Ogg Opus, FLAC or WAV, subject to API support |
+
+Existing-provider changes apply immediately. A new provider saves them when Add
+is pressed. Reset Transcription Defaults restores all four values. Running jobs
+retain the configuration snapshot taken at their start.
+
+Parallelism is an application setting, not a service quota. Account and model
+rate limits still apply, with existing retry handling for HTTP 429 responses.
+Simultaneous jobs share request slots for the same configured provider; other
+providers have independent queues.
+
+## API defaults and limits
+
+Sizes below use decimal MB and refer to encoded audio before upload, except where
+the MiMo Base64 limit is called out. Kikoe uses the smaller of the configured
+limit and the applicable endpoint or model limit.
+
+| API | Default encoded-size limit | Default duration limit | Default format |
 | --- | --- | --- | --- |
 | OpenAI | 25 MB | Automatic, governed by size | WAV |
-| Groq multipart STT | 25 MB attachment cap | Automatic, governed by size | Ogg Opus |
+| Groq multipart speech-to-text | 25 MB attachment cap | Automatic, governed by size | Ogg Opus |
 | OpenAI-compatible | 25 MB compatibility default | Automatic, governed by size | Ogg Opus |
-| OpenRouter multipart STT | 25 MB | Automatic, governed by size | Ogg Opus |
+| OpenRouter multipart speech-to-text | 25 MB | Automatic, governed by size | Ogg Opus |
 | Deepgram pre-recorded | 2,000 MB | Automatic, governed by size | Ogg Opus |
-| Gemini Files + Transcribe | 2,000 MB | 60 minutes; effectively 30 with timestamps or speakers | Ogg Opus |
+| Gemini Files + Transcribe | 2,000 MB | 60 minutes; 30 with timestamps or speakers | Ogg Opus |
 | Mistral transcription | 500 MB | 60 minutes | Ogg Opus |
-| MiMo ASR | 7.5 MB raw audio = 10 MB Base64 | Automatic, governed by size | WAV |
+| MiMo ASR | 7.5 MB audio, corresponding to 10 MB Base64 | Automatic, governed by size | WAV |
 
-Groq limits were checked on 2026-10-14. Its multipart attachment cap is 25 MB;
-the larger dev-tier URL limit does not apply to local file uploads.
+Defaults and endpoint limits were checked against official documentation on
+13 October 2026, with Groq and Mistral checked on 14 October 2026. These dates
+record the source review; provider policies and account quotas can change.
 
-Mistral limits were checked on 2026-10-14. Its limits page lists 500 MB and 60 minutes
-for audio, while the audio overview says recordings up to three hours; Kikoe uses the
-stricter limits page, which only costs an extra split.
+### How to interpret provider limits
 
-Sources: [Mistral known limitations](https://docs.mistral.ai/resources/known-limitations),
-[Mistral speech to text](https://docs.mistral.ai/studio/audio/speech_to_text/offline_transcription),
-[Groq speech to text](https://console.groq.com/docs/speech-to-text),
-[OpenAI file transcription](https://developers.openai.com/api/docs/guides/speech-to-text),
-[OpenAI supported file types](https://platform.openai.com/docs/api-reference/audio/createTranscription),
-[OpenRouter multipart STT](https://openrouter.ai/docs/guides/overview/multimodal/stt),
-[Deepgram pre-recorded limits](https://developers.deepgram.com/docs/pre-recorded-audio),
-[Gemini Files API](https://ai.google.dev/gemini-api/docs/files?hl=en),
-[Gemini Transcribe limits](https://ai.google.dev/gemini-api/docs/transcribe), and
-[MiMo ASR](https://mimo.mi.com/docs/en-US/quick-start/usage-guide/audio/Speech-Recognition).
+- **OpenAI-compatible:** this is a protocol, not a single service. The 25 MB
+  default follows Kikoe's adapter and is not a universal server maximum. Lower
+  it when a custom endpoint requires smaller uploads.
+- **Groq:** local multipart attachments use the 25 MB cap. Larger development-tier
+  limits for URL-based audio do not apply to this upload path.
+- **OpenRouter:** Kikoe uses multipart transcription. Larger limits for JSON or
+  URL inputs do not apply.
+- **Gemini:** Kikoe uses uploaded files, so inline-request limits and general
+  audio-understanding duration limits do not apply. Transcribe permits 60 minutes,
+  reduced to 30 when requesting timestamps or speakers.
+- **Mistral:** the limits page specifies 500 MB and 60 minutes, while the audio
+  overview describes recordings up to three hours. Kikoe uses the stricter
+  60-minute limit, splitting longer audio as needed.
+- **Deepgram:** a processing timeout is not an audio-duration cap.
+- **MiMo:** the 10 MB limit applies to Base64, leaving a 7.5 MB audio budget.
+  Its API accepts WAV and MP3; Kikoe offers WAV because the bundled ffmpeg does
+  not encode MP3.
 
-OpenAI-compatible is a protocol, so no single official maximum applies to all custom
-servers. Its 25 MB default follows the existing adapter. Lower it when a server requires
-smaller files. OpenRouter uses multipart, so larger JSON/URL limits do not apply. Gemini
-uses uploaded files, so inline request size limits and general audio-understanding
-length limits do not apply. Deepgram's processing timeout is not an audio-duration cap.
+OpenAI defaults to WAV, while its API also accepts Ogg and FLAC. Available formats
+use Kikoe's bundled encoders at 16 kHz mono. Upload conversion leaves retained
+original audio unchanged.
 
-Parallelism defaults to **2**, with an application range of **1–32**; this is an app
-choice, not a claimed universal service quota. Account/model rate limits still apply;
-429 errors keep the existing retry behavior. A value of 1 is sequential. Request slots
-are shared across simultaneous jobs for the same configured provider. Other providers
-have independent queues. Without a documented audio-duration cap, length defaults to 0
-(automatic); custom length is limited to 24 hours by the application. The UI permits
-0.1 MB minimum sizes and 0.1-minute increments. Persisted limits are positive integers in
-bytes/seconds; missing values mean provider defaults, so existing settings files load
-without migration or losing models, preferences, or credentials.
+## Chunking, ordering and failure behavior
 
-Ogg Opus, FLAC, and WAV use existing bundled encoders, at 16 kHz mono. MiMo offers WAV
-because its API only accepts WAV/MP3 and the bundled ffmpeg does not encode MP3. OpenAI
-uses WAV by default; its API reference also accepts Ogg and FLAC. Original audio is kept
-unchanged. Chunk planning takes the smaller user/API size and duration bounds, prefers
-silence boundaries, and leaves a 10% margin when splitting. Every encoded part is checked
-again and split further if it still exceeds a bound. An impossibly small budget reports
-an error before uploading.
+Kikoe combines size and duration restrictions before encoding. The stricter
+budget wins. Chunk planning prefers silence boundaries and reserves a 10% size
+margin for bitrate variation. Every encoded part is checked again and split
+further if necessary. A budget too small to produce valid audio reports an error
+before upload.
 
-Workers may finish out of order; final text, times, and speaker scopes follow source
-order. Streaming previews only expose the contiguous prefix, so later completed chunks
-cannot appear ahead of earlier speech. Progress counts completed chunks. Failure or
-cancellation stops and drains workers before temporary files are deleted; SQLite only
-receives a recording after every chunk succeeds.
+Parallel workers can finish out of order. The final transcript, timestamps and
+speaker scopes still follow source order. Streaming previews expose only the
+contiguous completed prefix, preventing later speech from appearing before earlier
+chunks. Progress counts completed chunks.
+
+Failure or cancellation stops and drains workers before deleting temporary files.
+Database changes commit only after all chunks succeed. Failed imports remove
+their copied originals; failed microphone uploads retain recorded FLAC for retry;
+failed re-transcription preserves the previous transcript and recording state.
+See [Architecture](architecture.md#file-transcription) for the commit lifecycle.
+
+Settings store limits as positive integer bytes and seconds. Missing values mean
+provider defaults, so older settings remain compatible without losing models,
+preferences or credentials.
+
+## Official references
+
+| API | Source |
+| --- | --- |
+| OpenAI | [Speech-to-text guide](https://developers.openai.com/api/docs/guides/speech-to-text), [transcription API and file types](https://platform.openai.com/docs/api-reference/audio/createTranscription) |
+| Groq | [Speech-to-text](https://console.groq.com/docs/speech-to-text) |
+| OpenRouter | [Multipart speech-to-text](https://openrouter.ai/docs/guides/overview/multimodal/stt) |
+| Deepgram | [Pre-recorded audio](https://developers.deepgram.com/docs/pre-recorded-audio) |
+| Gemini | [Files API](https://ai.google.dev/gemini-api/docs/files?hl=en), [Transcribe](https://ai.google.dev/gemini-api/docs/transcribe) |
+| Mistral | [Known limitations](https://docs.mistral.ai/resources/known-limitations), [offline transcription](https://docs.mistral.ai/studio/audio/speech_to_text/offline_transcription) |
+| MiMo | [Speech recognition](https://mimo.mi.com/docs/en-US/quick-start/usage-guide/audio/Speech-Recognition) |
