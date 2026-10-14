@@ -782,6 +782,10 @@ class Window(Adw.ApplicationWindow):
         note_id = self._note.note_id
 
         def submit(choice: ModelChoice, options: TranscriptionOptions) -> None:
+            if self._import_task is not None:
+                # Starting another task would replace the handle that cancel and close rely on.
+                self.add_toast(Adw.Toast(title=_("Wait for the current transcription to finish.")))
+                return
             choices = available_models(self._providers.providers)
             refreshed = next((c for c in choices if c.key == choice.key), None)
             if refreshed is None or refreshed.model.capabilities.file is None:
