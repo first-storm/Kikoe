@@ -12,10 +12,9 @@ from kikoe.core.formatting import (
     parse_timestamp,
     relative_day,
     speaker_order,
-    transcript_features,
 )
 from kikoe.core.models import Segment
-from kikoe.core.validation import Capability, SegmentEditError, validate_segment_edit
+from kikoe.core.validation import SegmentEditError, validate_segment_edit
 
 
 @pytest.mark.parametrize(
@@ -50,19 +49,6 @@ def test_relative_day_uses_the_local_calendar_date() -> None:
     assert relative_day(datetime(2026, 10, 11, 12, 0, tzinfo=UTC), now) is RelativeDay.YESTERDAY
     assert relative_day(datetime(2026, 1, 2, 12, 0, tzinfo=UTC), now) is RelativeDay.THIS_YEAR
     assert relative_day(datetime(2025, 12, 31, 12, 0, tzinfo=UTC), now) is RelativeDay.OLDER
-
-
-def test_transcript_features_reflect_what_segments_contain() -> None:
-    plain = Segment("Hello")
-    timed = Segment("Hi", start=timedelta(seconds=1))
-    spoken = Segment("Hey", speaker_id="1")
-
-    assert transcript_features([plain]) == ()
-    assert transcript_features([plain, timed]) == (Capability.TIMESTAMPS,)
-    assert transcript_features([spoken, timed]) == (
-        Capability.TIMESTAMPS,
-        Capability.DIARIZATION,
-    )
 
 
 def test_speakers_are_numbered_by_first_appearance() -> None:

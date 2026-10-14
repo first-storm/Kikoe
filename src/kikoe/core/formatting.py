@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 from enum import StrEnum
 
 from kikoe.core.models import Segment
-from kikoe.core.validation import Capability
 
 
 class RelativeDay(StrEnum):
@@ -105,16 +104,6 @@ def relative_day(when: datetime, now: datetime) -> RelativeDay:
     if day.year == today.year:
         return RelativeDay.THIS_YEAR
     return RelativeDay.OLDER
-
-
-def transcript_features(segments: Iterable[Segment]) -> tuple[Capability, ...]:
-    """What a finished transcript actually contains, in display order."""
-    has_times = has_speakers = False
-    for segment in segments:
-        has_times = has_times or segment.start is not None
-        has_speakers = has_speakers or segment.speaker_id is not None
-    pairs = ((has_times, Capability.TIMESTAMPS), (has_speakers, Capability.DIARIZATION))
-    return tuple(capability for present, capability in pairs if present)
 
 
 def _split(total_seconds: int) -> tuple[int, int, int]:

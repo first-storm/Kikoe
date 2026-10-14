@@ -7,7 +7,10 @@ from kikoe.core.models import Note, Segment
 
 
 def transcript_columns(segments: Iterable[Segment]) -> tuple[bool, bool]:
-    """Whether any segment has a time, and whether any has a speaker."""
+    """Whether any segment has a time (start or end), and whether any has a speaker.
+
+    Decides the note view's columns, the export options and a recording's summary.
+    """
     has_times = has_speakers = False
     for segment in segments:
         has_times = has_times or segment.start is not None or segment.end is not None

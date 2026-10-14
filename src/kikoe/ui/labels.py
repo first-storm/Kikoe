@@ -6,12 +6,7 @@ from gi.repository import GLib
 
 from kikoe.core.choice import ModelChoice, unsupported_features
 from kikoe.core.export import ExportFormat
-from kikoe.core.formatting import (
-    RelativeDay,
-    format_duration,
-    relative_day,
-    transcript_features,
-)
+from kikoe.core.formatting import RelativeDay, format_duration, relative_day
 from kikoe.core.models import (
     ApiKind,
     Capabilities,
@@ -22,6 +17,7 @@ from kikoe.core.models import (
 )
 from kikoe.core.provider_registry import ProviderDescriptor, UploadHint, descriptor
 from kikoe.core.recording import CaptureState
+from kikoe.core.transcript_rows import transcript_columns
 from kikoe.core.transcription import LiveState
 from kikoe.core.validation import Capability, ModelError, ProviderError, capability_list
 from kikoe.i18n import _, ngettext
@@ -179,8 +175,10 @@ def recording_meta(recording: Recording, now: datetime) -> str:
         format_duration(recording.duration),
         f"{recording.provider_name} {recording.model_id}",
     ]
-    if features := transcript_features(recording.segments):
-        parts.append(", ".join(capability_label(feature) for feature in features))
+    has_times, has_speakers = transcript_columns(recording.segments)
+    features = ((has_times, Capability.TIMESTAMPS), (has_speakers, Capability.DIARIZATION))
+    if present := [capability_label(feature) for found, feature in features if found]:
+        parts.append(", ".join(present))
     return " · ".join(parts)
 
 

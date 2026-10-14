@@ -5,9 +5,8 @@ from collections.abc import Callable
 from gi.repository import Adw, GObject, Gtk
 
 from kikoe.core.export import ExportFormat
-from kikoe.core.formatting import transcript_features
 from kikoe.core.models import DisplayOptions, Note
-from kikoe.core.validation import Capability
+from kikoe.core.transcript_rows import transcript_columns
 from kikoe.i18n import _
 from kikoe.ui.templates import ui_file
 
@@ -33,11 +32,12 @@ class ExportDialog(Adw.Dialog):
     ) -> None:
         super().__init__()
         self._on_export = on_export
-        features = {f for r in note.recordings for f in transcript_features(r.segments)}
-        self._has_timestamps = Capability.TIMESTAMPS in features
+        self._has_timestamps, has_speakers = transcript_columns(
+            s for r in note.recordings for s in r.segments
+        )
         self._user_show_timestamps = note.display.show_timestamps
 
-        if Capability.DIARIZATION in features:
+        if has_speakers:
             self.speakers_row.set_active(note.display.show_speakers)
         else:
             self.speakers_row.set_active(False)

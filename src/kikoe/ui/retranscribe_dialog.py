@@ -7,6 +7,7 @@ from gi.repository import Adw, GObject, Gtk
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models
 from kikoe.core.formatting import format_duration
 from kikoe.core.models import ModeCapabilities, Recording
+from kikoe.core.transcript_rows import transcript_columns
 from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.storage.preferences import PreferencesRepository
@@ -41,10 +42,7 @@ class RetranscribeDialog(Adw.Dialog):
         self._options = OptionsGroup()
         self.options_slot.append(self._options)
         self._choice = current if current and current.model.capabilities.file is not None else None
-        wanted = RequestedFeatures(
-            timestamps=any(s.start is not None for s in recording.segments),
-            diarization=any(s.speaker_id is not None for s in recording.segments),
-        )
+        wanted = RequestedFeatures(*transcript_columns(recording.segments))
         self.intro_group.set_description(
             _(
                 "Re-transcribe “Recording {number}” ({duration}) from the kept original audio. "
