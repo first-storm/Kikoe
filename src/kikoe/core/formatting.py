@@ -3,6 +3,7 @@
 Translated wording (“Today”, “2 recordings”) is added by the UI on top of these.
 """
 
+import re
 from collections.abc import Iterable
 from datetime import datetime, timedelta
 from enum import StrEnum
@@ -74,33 +75,23 @@ def parse_timestamp(value: str) -> timedelta | None:
     """Parse ``SS``, ``MM:SS`` or ``H:MM:SS`` with an optional fractional part.
 
     Empty text means the timestamp is cleared and returns None. Raises
-    :class:`TimestampParseError` for anything else unparseable.
+    :class:`TimestampParseError` for anything else, including what ``float``
+    alone would accept (``nan``, ``1e1``, ``+5``).
     """
     text = value.strip().replace(",", ".")
     if not text:
         return None
-    if text.startswith("-"):
+    match = _TIMESTAMP.fullmatch(text)
+    if match is None:
         raise TimestampParseError(f"Cannot parse timestamp: {value!r}.")
-    parts = text.split(":")
-    if len(parts) > 3 or any(not part for part in parts):
-        raise TimestampParseError(f"Cannot parse timestamp: {value!r}.")
-    try:
-        *head, last = parts
-        seconds = float(last)
-        numbers = [int(part) for part in head] + [seconds]
-    except ValueError:
-        raise TimestampParseError(f"Cannot parse timestamp: {value!r}.") from None
-    if any(number < 0 for number in numbers):
-        raise TimestampParseError(f"Cannot parse timestamp: {value!r}.")
-    if len(numbers) == 3:
-        hours, minutes, seconds = numbers
-    elif len(numbers) == 2:
-        hours, minutes, seconds = 0, numbers[0], numbers[1]
-    else:
-        hours, minutes, seconds = 0, 0, numbers[0]
+    hours, minutes, seconds = int(match[1] or 0), int(match[2] or 0), float(match[3])
     if minutes >= 60 or seconds >= 60:
         raise TimestampParseError(f"Cannot parse timestamp: {value!r}.")
     return timedelta(hours=hours, minutes=minutes, seconds=seconds)
+
+
+_TIMESTAMP = re.compile(r"(?:(?:(\d+):)?(\d+):)?(\d+(?:\.\d*)?|\.\d+)")
+"""Optional hours and minutes, then seconds with an optional fraction."""
 
 
 def relative_day(when: datetime, now: datetime) -> RelativeDay:

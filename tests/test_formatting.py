@@ -111,14 +111,26 @@ def test_timestamp_input_keeps_milliseconds_when_present() -> None:
         ("01:02:03.500", timedelta(hours=1, minutes=2, seconds=3, milliseconds=500)),
         ("1:02:03,500", timedelta(hours=1, minutes=2, seconds=3, milliseconds=500)),
         ("1:02:03", timedelta(hours=1, minutes=2, seconds=3)),
+        ("9.", timedelta(seconds=9)),
+        (".5", timedelta(seconds=0.5)),
+        ("100:00:00", timedelta(hours=100)),
     ],
 )
 def test_parse_timestamp_accepts_clock_styles(text: str, expected: timedelta | None) -> None:
     assert parse_timestamp(text) == expected
 
 
-@pytest.mark.parametrize("text", ["abc", "12:99", "-1:00", "1:2:3:4", ":", "1::2", "--5", "1:-2"])
+@pytest.mark.parametrize(
+    "text",
+    ["abc", "12:99", "-1:00", "1:2:3:4", ":", "1::2", "--5", "1:-2", "75", "60:00", "."],
+)
 def test_parse_timestamp_rejects_garbage(text: str) -> None:
+    with pytest.raises(TimestampParseError):
+        parse_timestamp(text)
+
+
+@pytest.mark.parametrize("text", ["nan", "inf", "1e1", "+5", "1_0", "1:nan", "+1:00"])
+def test_parse_timestamp_rejects_what_only_float_would_accept(text: str) -> None:
     with pytest.raises(TimestampParseError):
         parse_timestamp(text)
 
