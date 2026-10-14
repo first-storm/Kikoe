@@ -212,7 +212,10 @@ async def _transcribe_parts(
         await asyncio.gather(*tasks)
     finally:
         for task in tasks:
-            task.cancel()
+            # gather already cancels workers when its owner is cancelled. A second
+            # cancellation would interrupt the SDK's asynchronous resource cleanup.
+            if not task.done() and not task.cancelling():
+                task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
     return tuple(segment for result in results if result is not None for segment in result)
 

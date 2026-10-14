@@ -610,3 +610,54 @@ async def test_provider_format_and_size_override_apply_to_every_part(
     await transcribe_audio(source, MODEL, client=client, provider=provider, work_dir=tmp_path)
     assert len(client.uploads) >= 2
     assert {path.suffix for path in client.uploads} == {".flac"}
+
+
+@run_async
+async def test_cancel_waits_for_slow_request_cleanup(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, source: Path
+) -> None:
+    use_converter(monkeypatch, FakeConverter(s(12), size=100))
+    started: asyncio.Queue[int] = asyncio.Queue()
+    cleaned: list[int] = []
+
+    class SlowCleanup(FakeClient):
+        async def transcribe_file(
+            self,
+            audio: Path,
+            model: ModelSpec,
+            options: TranscriptionOptions,
+            *,
+            on_update: FileTranscriptCallback | None = None,
+        ) -> tuple[Segment, ...]:
+            number = len(self.uploads)
+            self.uploads.append(audio)
+            started.put_nowait(number)
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                if number == 1:
+                    await asyncio.sleep(0.02)
+                assert await asyncio.to_thread(audio.exists)
+                cleaned.append(number)
+                raise
+            return ()
+
+    client = SlowCleanup(max_upload_bytes=None)
+    provider = replace(PROVIDER, upload=UploadSettings(parallelism=2, chunk_seconds=5))
+    async with asyncio.timeout(5):
+        task = asyncio.create_task(
+            transcribe_audio(
+                source,
+                MODEL,
+                client=client,
+                provider=provider,
+                work_dir=tmp_path / "work",
+            )
+        )
+        await started.get()
+        await started.get()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    assert sorted(cleaned) == [0, 1]
+    assert not any(path.exists() for path in client.uploads)
