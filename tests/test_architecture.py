@@ -22,22 +22,14 @@ OVERSIZED_MODULES = {
 }
 """Modules above MAX_MODULE_LINES today; each one is scheduled to be split."""
 
-API_KIND_USERS = {
-    "core/choice.py",
-    "core/model_catalog.py",
-    "core/models.py",
-    "core/upload.py",
-    "core/validation.py",
+API_KIND_MEMBER_USERS = {
+    "core/provider_registry.py",
     "providers/factory.py",
     "providers/mistral.py",
     "services/realtime.py",
-    "storage/providers.py",
-    "storage/settings.py",
-    "ui/labels.py",
-    "ui/options_group.py",
-    "ui/provider_page.py",
 }
-"""Modules that name ``ApiKind``. Provider-specific rules belong in the provider registry."""
+"""Modules that name a specific ``ApiKind.MEMBER``. Provider-specific rules belong in the
+provider registry or the provider's own client, not in callers."""
 
 
 def _modules() -> list[Path]:
@@ -125,14 +117,16 @@ def test_module_size_stays_bounded() -> None:
     assert OVERSIZED_MODULES - oversized == set(), "shrunk below the limit: remove its entry"
 
 
-def test_api_kind_is_named_only_where_allowed() -> None:
-    users = {
-        _relative(p)
-        for p in _modules()
-        if any(
-            isinstance(node, ast.Name) and node.id == "ApiKind"
-            for node in ast.walk(ast.parse(p.read_text(encoding="utf-8")))
-        )
-    }
-    assert users - API_KIND_USERS == set(), "new ApiKind user: use the provider registry"
-    assert API_KIND_USERS - users == set(), "no longer uses ApiKind: remove its entry"
+def _names_api_kind_member(path: Path) -> bool:
+    return any(
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Name)
+        and node.value.id == "ApiKind"
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8")))
+    )
+
+
+def test_api_kind_members_are_named_only_where_allowed() -> None:
+    users = {_relative(p) for p in _modules() if _names_api_kind_member(p)}
+    assert users - API_KIND_MEMBER_USERS == set(), "new ApiKind user: use the provider registry"
+    assert API_KIND_MEMBER_USERS - users == set(), "no longer names a member: remove its entry"

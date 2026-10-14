@@ -10,19 +10,26 @@ import asyncio
 from gi.repository import Adw, Gio, GObject, Gtk
 
 from kikoe.core.models import ApiKind, ModelSpec, Provider, UploadSettings
+from kikoe.core.provider_registry import PROVIDERS, descriptor, is_default_base_url
 from kikoe.core.upload import MAX_CHUNK_SECONDS, MAX_PARALLELISM, upload_policy
-from kikoe.core.validation import DEFAULT_BASE_URLS, effective_base_url, validate_provider
+from kikoe.core.validation import effective_base_url, validate_provider
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.dialogs import confirm_destructive
 from kikoe.ui.items import ModelItem
-from kikoe.ui.labels import capability_summary, provider_error_message
+from kikoe.ui.labels import (
+    api_label,
+    capability_summary,
+    chunk_length_subtitle,
+    chunk_size_subtitle,
+    provider_error_message,
+)
 from kikoe.ui.model_dialog import ModelDialog
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
 
-_API_ORDER = tuple(ApiKind)
-"""Matches the order of the strings in provider_page.blp."""
+_API_ORDER = tuple(PROVIDERS)
+"""The order of the API type rows, filled from the same registry."""
 
 
 @Gtk.Template(filename=ui_file("provider_page"))
@@ -53,6 +60,7 @@ class ProviderPage(Adw.NavigationPage):
         self._provider_id = provider_id
         self._models: Gio.ListStore[ModelItem] = Gio.ListStore(item_type=ModelItem)
         self.models_list.bind_model(self._models, self._create_model_row)
+        self.api_row.set_model(Gtk.StringList.new([api_label(api) for api in _API_ORDER]))
         self._disconnect = lambda: None
         self._key_loaded = provider_id is None
         """Saving waits for the stored key, so an empty field cannot erase it by accident."""
@@ -137,8 +145,8 @@ class ProviderPage(Adw.NavigationPage):
             self._upload_api = api
             self._show_upload(UploadSettings())
         current = self.base_url_row.get_text().strip()
-        if not current or current in DEFAULT_BASE_URLS.values():
-            self.base_url_row.set_text(DEFAULT_BASE_URLS.get(api, ""))
+        if not current or is_default_base_url(current):
+            self.base_url_row.set_text(descriptor(api).default_base_url)
         self._apply_changes()
 
     @Gtk.Template.Callback()
@@ -209,21 +217,9 @@ class ProviderPage(Adw.NavigationPage):
         self.chunk_length_row.set_value((settings.chunk_seconds or policy.seconds or 0) / 60)
         self.chunk_size_row.get_adjustment().set_upper(policy.bytes / 1_000_000)
         self.chunk_size_row.set_value((settings.chunk_bytes or policy.bytes) / 1_000_000)
-        self.chunk_size_row.set_subtitle(
-            _("Maximum {size:g} MB per chunk").format(size=policy.bytes / 1_000_000)
-        )
-        if self._upload_api == ApiKind.GEMINI:
-            self.chunk_length_row.set_subtitle(
-                _("Maximum 60 minutes, or 30 with timestamps or speaker detection")
-            )
-        else:
-            self.chunk_length_row.set_subtitle(
-                _("0 uses the provider limit; chunks also respect the size limit")
-            )
-        if self._upload_api == ApiKind.OPENAI_COMPATIBLE:
-            self.chunk_size_row.set_subtitle(
-                _("Defaults to 25 MB; your server may require smaller chunks")
-            )
+        provider = descriptor(self._upload_api)
+        self.chunk_size_row.set_subtitle(chunk_size_subtitle(provider, policy.bytes / 1_000_000))
+        self.chunk_length_row.set_subtitle(chunk_length_subtitle(provider))
         self.upload_format_row.set_model(
             Gtk.StringList.new([format.value.upper() for format in policy.formats])
         )

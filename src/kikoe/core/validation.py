@@ -10,6 +10,7 @@ from enum import StrEnum
 from urllib.parse import urlsplit
 
 from kikoe.core.models import ApiKind, Capabilities
+from kikoe.core.provider_registry import descriptor
 
 
 class ProviderError(StrEnum):
@@ -34,24 +35,12 @@ class Capability(StrEnum):
     STREAMING = "streaming"
 
 
-DEFAULT_BASE_URLS: dict[ApiKind, str] = {
-    ApiKind.DEEPGRAM: "https://api.deepgram.com/v1",
-    ApiKind.OPENAI: "https://api.openai.com/v1",
-    ApiKind.OPENROUTER: "https://openrouter.ai/api/v1",
-    ApiKind.GEMINI: "https://generativelanguage.googleapis.com",
-    ApiKind.MIMO: "https://api.xiaomimimo.com/v1",
-    ApiKind.GROQ: "https://api.groq.com",
-    ApiKind.MISTRAL: "https://api.mistral.ai",
-}
-"""Hosted APIs with one well-known endpoint; OpenAI-compatible services have none."""
-
-
 def validate_provider(name: str, api: ApiKind, base_url: str) -> ProviderError | None:
     """Check the connection fields; an empty URL is fine when the API has a default."""
     if not name.strip():
         return ProviderError.EMPTY_NAME
     if not base_url.strip():
-        return None if api in DEFAULT_BASE_URLS else ProviderError.EMPTY_BASE_URL
+        return None if descriptor(api).default_base_url else ProviderError.EMPTY_BASE_URL
     parts = urlsplit(base_url.strip())
     if parts.scheme not in ("http", "https") or not parts.hostname:
         return ProviderError.INVALID_BASE_URL
@@ -61,7 +50,7 @@ def validate_provider(name: str, api: ApiKind, base_url: str) -> ProviderError |
 def effective_base_url(api: ApiKind, base_url: str) -> str:
     """The URL to store: trimmed input, or the API's default when left empty."""
     stripped = base_url.strip().rstrip("/")
-    return stripped or DEFAULT_BASE_URLS.get(api, "")
+    return stripped or descriptor(api).default_base_url
 
 
 def validate_model(

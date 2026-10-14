@@ -3,7 +3,8 @@
 from dataclasses import dataclass
 from datetime import timedelta
 
-from kikoe.core.models import ApiKind, AudioFormat, UploadSettings
+from kikoe.core.models import ApiKind, AudioFormat, UploadPolicy, UploadSettings
+from kikoe.core.provider_registry import descriptor
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,31 +55,9 @@ def effective_upload_limits(
     return UploadLimits(size, duration, UPLOAD_FORMATS[settings.format or policy.format])
 
 
-@dataclass(frozen=True, slots=True)
-class UploadPolicy:
-    """Known endpoint caps; no duration cap means file size governs automatic splitting."""
-
-    bytes: int
-    seconds: int | None = None
-    format: AudioFormat = AudioFormat.OGG
-    formats: tuple[AudioFormat, ...] = tuple(AudioFormat)
-
-
 def upload_policy(api: ApiKind) -> UploadPolicy:
     """Use the documented limits of the endpoint Kikoe actually calls."""
-    match api:
-        case ApiKind.DEEPGRAM:
-            return UploadPolicy(2_000_000_000)
-        case ApiKind.GEMINI:
-            return UploadPolicy(2_000_000_000, 3600)
-        case ApiKind.MIMO:
-            return UploadPolicy(7_500_000, format=AudioFormat.WAV, formats=(AudioFormat.WAV,))
-        case ApiKind.OPENAI:
-            return UploadPolicy(25_000_000, format=AudioFormat.WAV)
-        case ApiKind.MISTRAL:
-            return UploadPolicy(500_000_000, 3600)
-        case ApiKind.OPENROUTER | ApiKind.OPENAI_COMPATIBLE | ApiKind.GROQ:
-            return UploadPolicy(25_000_000)
+    return descriptor(api).upload
 
 
 def validate_upload(settings: UploadSettings, api: ApiKind) -> None:

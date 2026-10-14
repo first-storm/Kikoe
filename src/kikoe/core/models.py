@@ -85,6 +85,16 @@ class AudioFormat(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class UploadPolicy:
+    """Known endpoint caps; no duration cap means file size governs automatic splitting."""
+
+    bytes: int
+    seconds: int | None = None
+    format: AudioFormat = AudioFormat.OGG
+    formats: tuple[AudioFormat, ...] = tuple(AudioFormat)
+
+
+@dataclass(frozen=True, slots=True)
 class Provider:
     """A configured transcription service. The API key lives in the OS keyring, not here."""
 

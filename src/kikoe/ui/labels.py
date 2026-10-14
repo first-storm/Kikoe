@@ -20,29 +20,27 @@ from kikoe.core.models import (
     Recording,
     RecordingSource,
 )
+from kikoe.core.provider_registry import ProviderDescriptor, UploadHint, descriptor
 from kikoe.core.validation import Capability, ModelError, ProviderError, capability_list
 from kikoe.i18n import _, ngettext
 from kikoe.services.importer import ImportStage
 
 
 def api_label(api: ApiKind) -> str:
-    match api:
-        case ApiKind.DEEPGRAM:
-            return _("Deepgram")
-        case ApiKind.OPENAI:
-            return _("OpenAI")
-        case ApiKind.OPENROUTER:
-            return _("OpenRouter")
-        case ApiKind.GEMINI:
-            return _("Gemini AI Studio")
-        case ApiKind.MIMO:
-            return _("MiMo")
-        case ApiKind.GROQ:
-            return _("Groq")
-        case ApiKind.MISTRAL:
-            return _("Mistral")
-        case ApiKind.OPENAI_COMPATIBLE:
-            return _("OpenAI-compatible")
+    provider = descriptor(api)
+    return _("OpenAI-compatible") if provider.generic else provider.display_name
+
+
+def chunk_length_subtitle(provider: ProviderDescriptor) -> str:
+    if UploadHint.DURATION_DEPENDS_ON_OPTIONS in provider.upload_hints:
+        return _("Maximum 60 minutes, or 30 with timestamps or speaker detection")
+    return _("0 uses the provider limit; chunks also respect the size limit")
+
+
+def chunk_size_subtitle(provider: ProviderDescriptor, limit_megabytes: float) -> str:
+    if UploadHint.SERVER_MAY_LIMIT_SIZE in provider.upload_hints:
+        return _("Defaults to 25 MB; your server may require smaller chunks")
+    return _("Maximum {size:g} MB per chunk").format(size=limit_megabytes)
 
 
 def capability_label(capability: Capability) -> str:
