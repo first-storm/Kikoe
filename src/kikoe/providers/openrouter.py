@@ -7,28 +7,20 @@ import httpx
 from openrouter import OpenRouter
 
 from kikoe.core.models import ModelSpec, Segment
-from kikoe.core.upload import UploadLimits
-from kikoe.i18n import _
 from kikoe.providers.base import (
     FileOnlyClient,
     FileTranscriptCallback,
-    TranscriptionError,
     TranscriptionOptions,
     file_capabilities,
 )
 from kikoe.providers.errors import sdk_error
 from kikoe.providers.parsing import parse_segments, parse_words
 
-MAX_UPLOAD_BYTES = 25_000_000
-
 
 class OpenRouterClient(FileOnlyClient[httpx.AsyncBaseTransport]):
     """Request STT metadata through the SDK's multipart endpoint."""
 
     name = "OpenRouter"
-
-    def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-        return UploadLimits(MAX_UPLOAD_BYTES)
 
     async def transcribe_file(
         self,
@@ -39,8 +31,6 @@ class OpenRouterClient(FileOnlyClient[httpx.AsyncBaseTransport]):
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         content = await asyncio.to_thread(audio.read_bytes)
-        if len(content) > 25_000_000:
-            raise TranscriptionError(_("The audio file is too large to upload to this provider."))
         caps = file_capabilities(model)
         features = options.allowed_by(caps)
         timed, diarize = features.timestamps, features.diarization

@@ -135,7 +135,9 @@ speaker scopes and includes earlier completed chunks in each snapshot. Results a
 ordered by original chunk index, even when requests complete out of order.
 Per-provider upload settings combine with endpoint/model bounds before conversion;
 `core.upload.UploadLimits` and the pure `effective_upload_limits` function describe
-this intersection. Without provider settings the client's limits apply unchanged.
+this intersection. Endpoint caps and formats come only from the registry's `UploadPolicy`;
+a client's `upload_limits()` adds model/option-dependent bounds (Gemini's duration) and
+returns no limit otherwise. Without provider settings the client's limits apply unchanged.
 Encoded chunks are checked again against both limits. A bounded worker pool shares
 provider slots through `services.upload_queue`, drains cancelled/failed requests before
 cleanup, and publishes only the contiguous prefix of parallel streaming previews.
@@ -167,7 +169,8 @@ and removes scheduled updates when a job ends.
    except OpenAI/MiMo use WAV. ffmpeg's `-progress` output gives the length, so ffprobe
    is not needed.
 4. **Split at the effective upload limit**: `UploadLimits` combines file size with
-   model/option-dependent duration. OpenAI, OpenRouter and Groq use 25 MB; Mistral uses
+   model/option-dependent duration. Per `core.provider_registry`, OpenAI, OpenRouter and
+   Groq use 25 MB; Mistral uses
    500 MB and 60 minutes; Deepgram uses 2 GB; MiMo uses WAV and 7.5 MB, since its 10 MB limit applies to Base64;
    Gemini Files accepts 2 GB and Transcribe accepts 60 minutes, or 30 minutes with
    word timestamps/speakers. Per-provider settings can lower these bounds.

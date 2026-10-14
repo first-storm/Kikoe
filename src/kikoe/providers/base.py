@@ -82,6 +82,10 @@ class HttpClient[T]:
         self._transport = transport
         """Tests substitute a mock transport; None uses the network."""
 
+    def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
+        """Endpoint caps live in the provider registry; override only for option limits."""
+        return UploadLimits()
+
     def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
         return RealtimeProfile()
 
@@ -109,7 +113,11 @@ class TranscriptionProvider(Protocol):
         *,
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
-        """Upload a finished recording and return its transcript."""
+        """Upload a finished recording and return its transcript.
+
+        Callers split audio to ``upload_limits`` combined with the registry's
+        ``UploadPolicy``, so clients do not check the size again.
+        """
         ...
 
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits: ...

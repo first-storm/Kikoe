@@ -76,6 +76,7 @@ _DESCRIPTORS = (
     ProviderDescriptor(
         ApiKind.MIMO,
         "MiMo",
+        # 10 MB of Base64 holds at most 7.5 MB of raw audio.
         UploadPolicy(7_500_000, format=AudioFormat.WAV, formats=(AudioFormat.WAV,)),
         "https://api.xiaomimimo.com/v1",
     ),
@@ -89,7 +90,7 @@ _DESCRIPTORS = (
     ProviderDescriptor(
         ApiKind.MISTRAL,
         "Mistral",
-        UploadPolicy(500_000_000, 3600),
+        UploadPolicy(500_000_000, 3600),  # Its limits page says 60 minutes, the overview 3 hours.
         "https://api.mistral.ai",
         language_excludes_timestamps=True,
         sdk_loggers=("mistralai",),

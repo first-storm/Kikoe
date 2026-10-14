@@ -6,7 +6,6 @@ import pytest
 from kikoe.core.models import ApiKind, AudioFormat, UploadSettings
 from kikoe.core.upload import (
     FLAC,
-    MP3,
     WAV,
     UploadLimits,
     effective_upload_limits,
@@ -62,7 +61,7 @@ def test_boolean_limits_are_rejected(field: str) -> None:
         (
             ApiKind.MIMO,
             UploadSettings(),
-            UploadLimits(format=MP3),
+            UploadLimits(format=FLAC),
             UploadLimits(7_500_000, format=WAV),
         ),
         (

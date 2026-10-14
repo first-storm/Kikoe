@@ -21,9 +21,6 @@ _SPEECH = ("-vn", "-ac", "1", "-ar", "16000")
 OGG_OPUS = UploadFormat(".ogg", "audio/ogg", (*_SPEECH, "-c:a", "libopus", "-b:a", "32k"))
 """Default: about 1¾ hours in 25 MB; accepted by OpenAI, Groq and most compatible servers."""
 
-MP3 = UploadFormat(".mp3", "audio/mpeg", (*_SPEECH, "-c:a", "libmp3lame", "-b:a", "32k"))
-"""For services that accept only WAV or MP3, such as MiMo."""
-
 FLAC = UploadFormat(".flac", "audio/flac", (*_SPEECH, "-c:a", "flac"))
 WAV = UploadFormat(".wav", "audio/wav", (*_SPEECH, "-c:a", "pcm_s16le"))
 
@@ -34,7 +31,11 @@ MAX_CHUNK_SECONDS = 24 * 60 * 60
 
 @dataclass(frozen=True, slots=True)
 class UploadLimits:
-    """Model and option limits, including the encoding accepted by the endpoint."""
+    """Size, duration and encoding for upload chunks.
+
+    Clients report only model or option limits; endpoint caps come from the registry's
+    ``UploadPolicy`` and are combined by :func:`effective_upload_limits`.
+    """
 
     bytes: int | None = None
     duration: timedelta | None = None

@@ -10,7 +10,7 @@ from openai import APIError
 from openai.types.chat import ChatCompletionMessageParam
 
 from kikoe.core.models import ModelSpec, Segment
-from kikoe.core.upload import MP3, WAV, UploadLimits
+from kikoe.core.upload import WAV
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileOnlyClient,
@@ -21,9 +21,6 @@ from kikoe.providers.base import (
 from kikoe.providers.errors import openai_error
 from kikoe.providers.openai import openai_sdk
 
-MAX_UPLOAD_BYTES = 7_500_000
-"""10 MB of Base64 holds at most 7.5 MB of raw audio."""
-
 
 def asr_language(tag: str | None) -> str:
     """MiMo knows Chinese and English; anything else is left to automatic detection."""
@@ -32,12 +29,9 @@ def asr_language(tag: str | None) -> str:
 
 
 class MiMoClient(FileOnlyClient[httpx.AsyncBaseTransport]):
-    """Send one MP3 per request and return its plain text; MiMo gives no timestamps."""
+    """Send one WAV per request and return its plain text; MiMo gives no timestamps."""
 
     name = "MiMo"
-
-    def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-        return UploadLimits(MAX_UPLOAD_BYTES, format=MP3)
 
     async def transcribe_file(
         self,
@@ -47,11 +41,9 @@ class MiMoClient(FileOnlyClient[httpx.AsyncBaseTransport]):
         *,
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
-        if (await asyncio.to_thread(audio.stat)).st_size > MAX_UPLOAD_BYTES:
-            raise TranscriptionError(_("The audio file is too large to upload to this provider."))
         content = await asyncio.to_thread(audio.read_bytes)
-        mime = WAV.mime if audio.suffix.lower() == WAV.suffix else MP3.mime
-        data = f"data:{mime};base64,{base64.b64encode(content).decode('ascii')}"
+        # WAV is the only upload format the provider registry allows for MiMo.
+        data = f"data:{WAV.mime};base64,{base64.b64encode(content).decode('ascii')}"
         try:
             async with openai_sdk(self._url, self._key, self._transport) as sdk:
                 completion = await sdk.chat.completions.create(

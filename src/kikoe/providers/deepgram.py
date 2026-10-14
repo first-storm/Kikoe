@@ -14,7 +14,6 @@ from pydantic import BaseModel
 
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.transcription import CheckpointStrategy, RealtimeProfile, TranscriptEvent
-from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileTranscriptCallback,
@@ -27,8 +26,6 @@ from kikoe.providers.base import (
 )
 from kikoe.providers.errors import sdk_error
 from kikoe.providers.parsing import entries, fields, parse_words, seconds
-
-MAX_UPLOAD_BYTES = 2_000_000_000
 
 
 class _Socket(Protocol):
@@ -87,9 +84,6 @@ class DeepgramClient(HttpClient[httpx.AsyncBaseTransport]):
             ),
         )
         return cast(_Listen, sdk.listen.v1)
-
-    def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-        return UploadLimits(MAX_UPLOAD_BYTES)
 
     async def transcribe_file(
         self,

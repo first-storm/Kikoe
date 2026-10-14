@@ -19,15 +19,11 @@ from kikoe.core.models import (
     TimestampGranularity,
 )
 from kikoe.core.transcription import FileTranscriptSnapshot
-from kikoe.core.upload import OGG_OPUS, UploadLimits, upload_policy
+from kikoe.core.upload import OGG_OPUS, UploadLimits, effective_upload_limits, upload_policy
 from kikoe.core.validation import effective_base_url, validate_provider
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
 from kikoe.providers.factory import create_client
-from kikoe.providers.mistral import (
-    MAX_UPLOAD_BYTES,
-    MAX_UPLOAD_SECONDS,
-    MistralClient,
-)
+from kikoe.providers.mistral import MistralClient
 from kikoe.storage.settings import Settings, SettingsStore
 
 MODEL = ModelSpec("voxtral-mini-latest", "Voxtral Mini", file_caps())
@@ -332,20 +328,6 @@ async def test_network_failures_are_retryable(audio: Path, is_timeout: bool) -> 
 
 
 @run_async
-async def test_oversized_audio_is_rejected_before_upload(audio: Path) -> None:
-    with audio.open("r+b") as stream:
-        stream.truncate(MAX_UPLOAD_BYTES + 1)
-
-    def respond(request: httpx.Request) -> httpx.Response:
-        pytest.fail("Oversized audio must not be uploaded")
-
-    with pytest.raises(TranscriptionError, match="too large"):
-        await client_for(httpx.MockTransport(respond)).transcribe_file(
-            audio, MODEL, TranscriptionOptions()
-        )
-
-
-@run_async
 async def test_cancelling_upload_closes_transport(audio: Path) -> None:
     started = asyncio.Event()
     closed = asyncio.Event()
@@ -383,11 +365,11 @@ def test_mistral_configuration_roundtrips_and_uses_official_adapter(tmp_path: Pa
     assert store.load_state().providers == (provider,)
     assert isinstance(create_client(provider, "secret"), MistralClient)
     policy = upload_policy(ApiKind.MISTRAL)
-    assert (policy.bytes, policy.seconds) == (MAX_UPLOAD_BYTES, MAX_UPLOAD_SECONDS)
+    assert (policy.bytes, policy.seconds) == (500_000_000, 3600)
     assert policy.format is AudioFormat.OGG
-    assert client_for().upload_limits(MODEL, TranscriptionOptions()) == UploadLimits(
-        MAX_UPLOAD_BYTES, timedelta(seconds=MAX_UPLOAD_SECONDS), format=OGG_OPUS
-    )
+    assert effective_upload_limits(
+        client_for().upload_limits(MODEL, TranscriptionOptions()), provider.upload, ApiKind.MISTRAL
+    ) == UploadLimits(500_000_000, timedelta(hours=1), format=OGG_OPUS)
 
 
 STREAMING = ModelSpec(

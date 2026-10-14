@@ -5,7 +5,6 @@ import json
 import mimetypes
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
-from datetime import timedelta
 from pathlib import Path
 from typing import Literal
 
@@ -18,7 +17,6 @@ from mistralai.extra.exceptions import RealtimeTranscriptionException
 
 from kikoe.core.choice import RequestedFeatures, language_dropped
 from kikoe.core.models import ApiKind, ModelSpec, Segment, TimestampGranularity
-from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileTranscriptCallback,
@@ -35,9 +33,6 @@ from kikoe.providers.mistral_parsing import parse_mistral
 from kikoe.providers.mistral_realtime import MistralSession
 from kikoe.providers.parsing import fields
 
-MAX_UPLOAD_BYTES = 500_000_000
-MAX_UPLOAD_SECONDS = 3600
-"""Mistral's limits page says 60 minutes, its audio overview up to 3 hours; use the former."""
 REQUEST_TIMEOUT_MS = 900_000
 REALTIME_SAMPLE_RATE = 16000
 REALTIME_CONNECT_TIMEOUT_MS = 30_000
@@ -63,9 +58,6 @@ class _Request:
 class MistralClient(HttpClient[httpx.AsyncBaseTransport]):
     """Keep multipart encoding and transport lifetime inside the official SDK."""
 
-    def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-        return UploadLimits(MAX_UPLOAD_BYTES, timedelta(seconds=MAX_UPLOAD_SECONDS))
-
     async def transcribe_file(
         self,
         audio: Path,
@@ -74,8 +66,6 @@ class MistralClient(HttpClient[httpx.AsyncBaseTransport]):
         *,
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
-        if (await asyncio.to_thread(audio.stat)).st_size > MAX_UPLOAD_BYTES:
-            raise TranscriptionError(_("The audio file is too large to upload to this provider."))
         content = await asyncio.to_thread(audio.read_bytes)
         caps = file_capabilities(model)
         features = options.allowed_by(caps)

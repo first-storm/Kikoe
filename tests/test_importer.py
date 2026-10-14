@@ -19,7 +19,7 @@ from kikoe.core.models import (
     UploadSettings,
 )
 from kikoe.core.transcription import FileTranscriptSnapshot, RealtimeProfile
-from kikoe.core.upload import MP3, OGG_OPUS, UploadFormat, UploadLimits
+from kikoe.core.upload import FLAC, OGG_OPUS, UploadFormat, UploadLimits
 from kikoe.media import transcode
 from kikoe.providers.base import (
     FileTranscriptCallback,
@@ -340,16 +340,16 @@ async def test_duration_limit_splits_even_small_compressed_files(
 async def test_provider_chosen_format_is_used_for_every_part(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, notes: NoteRepository, source: Path
 ) -> None:
-    class Mp3Client(FakeClient):
+    class FlacClient(FakeClient):
         def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-            return UploadLimits(1000, format=MP3)
+            return UploadLimits(1000, format=FLAC)
 
     use_converter(monkeypatch, FakeConverter(s(120), size=1500))
     await notes.load()
-    client = Mp3Client()
+    client = FlacClient()
     await transcribe_audio(source, MODEL, client=client, work_dir=tmp_path)
     assert len(client.uploads) >= 2
-    assert {path.suffix for path in client.uploads} == {".mp3"}
+    assert {path.suffix for path in client.uploads} == {".flac"}
 
 
 @run_async

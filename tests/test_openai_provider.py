@@ -8,7 +8,7 @@ from helpers import file_caps, run_async
 from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider, Segment
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
 from kikoe.providers.factory import create_client
-from kikoe.providers.openai import MAX_UPLOAD_BYTES, OpenAIClient
+from kikoe.providers.openai import OpenAIClient
 
 BASE_URL = "https://api.groq.com/openai/v1/"
 WHISPER = ModelSpec("whisper-large-v3", "Whisper", file_caps(timestamps=True))
@@ -175,18 +175,6 @@ async def test_connection_failure_names_the_host(audio: Path) -> None:
 
     with pytest.raises(TranscriptionError, match=r"Could not reach api\.groq\.com"):
         await failing.transcribe_file(audio, WHISPER, TranscriptionOptions())
-
-
-@run_async
-async def test_oversize_file_is_refused_before_upload(tmp_path: Path) -> None:
-    big = tmp_path / "big.ogg"
-    with big.open("wb") as file:
-        file.truncate(MAX_UPLOAD_BYTES + 1)
-    handler = Recorder(httpx.Response(200, json={"text": "never"}))
-
-    with pytest.raises(TranscriptionError, match="too large"):
-        await client(handler).transcribe_file(big, WHISPER, TranscriptionOptions())
-    assert handler.requests == []
 
 
 def test_factory_supports_openai_style_apis() -> None:

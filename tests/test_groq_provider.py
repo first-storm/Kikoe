@@ -16,11 +16,11 @@ from kikoe.core.models import (
     Segment,
     TimestampGranularity,
 )
-from kikoe.core.upload import OGG_OPUS, UploadLimits, upload_policy
+from kikoe.core.upload import OGG_OPUS, UploadLimits, effective_upload_limits, upload_policy
 from kikoe.core.validation import effective_base_url, validate_provider
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
 from kikoe.providers.factory import create_client
-from kikoe.providers.groq import MAX_UPLOAD_BYTES, GroqClient
+from kikoe.providers.groq import GroqClient
 from kikoe.storage.model_catalog import load_catalog
 from kikoe.storage.settings import Settings, SettingsStore
 
@@ -172,19 +172,6 @@ async def test_network_failures_are_retryable(audio: Path, is_timeout: bool) -> 
 
 
 @run_async
-async def test_oversized_audio_is_rejected_before_upload(audio: Path) -> None:
-    with audio.open("r+b") as stream:
-        stream.truncate(MAX_UPLOAD_BYTES + 1)
-
-    def respond(request: httpx.Request) -> httpx.Response:
-        pytest.fail("Oversized audio must not be uploaded")
-
-    client = GroqClient("https://api.groq.com", "secret", httpx.MockTransport(respond))
-    with pytest.raises(TranscriptionError, match="too large"):
-        await client.transcribe_file(audio, MODEL, TranscriptionOptions())
-
-
-@run_async
 async def test_cancelling_upload_closes_transport(audio: Path) -> None:
     started = asyncio.Event()
     closed = asyncio.Event()
@@ -225,10 +212,12 @@ def test_groq_configuration_roundtrips_and_uses_official_adapter(tmp_path: Path)
     assert store.load_state().providers == (provider,)
     assert isinstance(create_client(provider, "secret"), GroqClient)
     policy = upload_policy(ApiKind.GROQ)
-    assert policy.bytes == MAX_UPLOAD_BYTES and policy.format is AudioFormat.OGG
-    assert GroqClient(provider.base_url, "secret").upload_limits(
-        MODEL, TranscriptionOptions()
-    ) == UploadLimits(MAX_UPLOAD_BYTES, format=OGG_OPUS)
+    assert policy.bytes == 25_000_000 and policy.format is AudioFormat.OGG
+    assert effective_upload_limits(
+        GroqClient(provider.base_url, "secret").upload_limits(MODEL, TranscriptionOptions()),
+        provider.upload,
+        ApiKind.GROQ,
+    ) == UploadLimits(25_000_000, format=OGG_OPUS)
 
 
 @pytest.mark.parametrize("model_id", ["whisper-large-v3", "whisper-large-v3-turbo"])

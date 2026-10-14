@@ -18,7 +18,6 @@ from pydantic import BaseModel
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.recording import pcm_level
 from kikoe.core.transcription import RealtimeProfile, SpeechBoundary, TranscriptEvent
-from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileTranscriptCallback,
@@ -32,8 +31,6 @@ from kikoe.providers.base import (
 from kikoe.providers.errors import openai_error
 from kikoe.providers.openai_file_stream import OpenAIFileTranscript
 from kikoe.providers.parsing import parse_segments
-
-MAX_UPLOAD_BYTES = 25_000_000
 
 
 def openai_sdk(
@@ -61,9 +58,6 @@ class OpenAIClient(HttpClient[httpx.AsyncBaseTransport]):
         # Compatible local servers may deliberately have no key.
         return openai_sdk(self._url, self._key, self._transport, require_key=False)
 
-    def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-        return UploadLimits(MAX_UPLOAD_BYTES)
-
     async def transcribe_file(
         self,
         audio: Path,
@@ -72,8 +66,6 @@ class OpenAIClient(HttpClient[httpx.AsyncBaseTransport]):
         *,
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
-        if (await asyncio.to_thread(audio.stat)).st_size > MAX_UPLOAD_BYTES:
-            raise TranscriptionError(_("The audio file is too large to upload to this provider."))
         content = await asyncio.to_thread(audio.read_bytes)
         caps = file_capabilities(model)
         features = options.allowed_by(caps)
