@@ -144,28 +144,25 @@ class ProviderRepository:
         """Replace connection details; an empty ``api_key`` removes the stored key."""
         if upload is not None:
             validate_upload(upload, api)
-        current = self.get(provider_id)
+        self.get(provider_id)
         if api_key:
             await asyncio.to_thread(self._secrets.set, provider_id, api_key)
         else:
             await asyncio.to_thread(self._secrets.delete, provider_id)
-        updated = replace(current, name=name.strip(), api=api, base_url=base_url)
-        await self._commit(
-            lambda: self._replace_provider(
+
+        def change() -> tuple[Provider, ...]:
+            current = self.get(provider_id)
+            return self._replace_provider(
                 replace(
-                    self.get(provider_id),
-                    name=updated.name,
-                    api=updated.api,
-                    base_url=updated.base_url,
-                    upload=upload
-                    or (
-                        self.get(provider_id).upload
-                        if self.get(provider_id).api == api
-                        else UploadSettings()
-                    ),
+                    current,
+                    name=name.strip(),
+                    api=api,
+                    base_url=base_url,
+                    upload=upload or (current.upload if current.api == api else UploadSettings()),
                 )
             )
-        )
+
+        await self._commit(change)
 
     async def update_upload(self, provider_id: str, upload: UploadSettings) -> None:
         """Merge upload edits under the writer lock without touching credentials or models."""

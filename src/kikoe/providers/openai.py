@@ -116,20 +116,12 @@ class OpenAIClient:
                         language=options.language or omit,
                         extra_headers={"Authorization": omit} if not self._key else None,
                     )
-                elif timed:
-                    result = await sdk.audio.transcriptions.create(
-                        file=(audio.name, content, mime),
-                        model=model.model_id,
-                        response_format="verbose_json",
-                        timestamp_granularities=["segment"],
-                        language=options.language or omit,
-                        extra_headers={"Authorization": omit} if not self._key else None,
-                    )
                 else:
                     result = await sdk.audio.transcriptions.create(
                         file=(audio.name, content, mime),
                         model=model.model_id,
-                        response_format="json",
+                        response_format="verbose_json" if timed else "json",
+                        timestamp_granularities=["segment"] if timed else omit,
                         language=options.language or omit,
                         extra_headers={"Authorization": omit} if not self._key else None,
                     )

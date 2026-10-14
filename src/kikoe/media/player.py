@@ -103,8 +103,6 @@ async def play_audio(
                     data = samples.tobytes()
                 await _device_call(partial(stream.write, data))
         finished = True
-    except asyncio.CancelledError:
-        raise
     except Exception as error:
         raise PlaybackError(
             _("Could not play the audio. Check your output device. ({detail})").format(detail=error)

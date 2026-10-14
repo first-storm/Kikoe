@@ -95,7 +95,8 @@ def test_ffmpeg_runs_without_console_window_on_windows(
 
 
 @pytest.mark.parametrize("output_rate", [16000, 24000])
-def test_streaming_resampler_drains_all_audio(output_rate: int) -> None:
+@pytest.mark.parametrize("blocks", [0, 4])
+def test_streaming_resampler_drains_all_audio(output_rate: int, blocks: int) -> None:
     import asyncio
     import struct
 
@@ -103,7 +104,7 @@ def test_streaming_resampler_drains_all_audio(output_rate: int) -> None:
         stream = await ffmpeg.PCMStream.start(48000, output_rate)
 
         async def feed() -> None:
-            for _ in range(4):
+            for _ in range(blocks):
                 await stream.feed(struct.pack("<h", 1000) * 12000)
             await stream.finish()
 
@@ -111,7 +112,7 @@ def test_streaming_resampler_drains_all_audio(output_rate: int) -> None:
         try:
             audio = b"".join([chunk async for chunk in stream.chunks()])
             await writer
-            assert abs(len(audio) - output_rate * 2) <= 2
+            assert abs(len(audio) - output_rate * 2 * blocks // 4) <= 2
             assert len(audio) % 2 == 0
         finally:
             writer.cancel()

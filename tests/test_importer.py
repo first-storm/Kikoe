@@ -52,6 +52,7 @@ class Stages(list[tuple[ImportStage, int, int]]):
 
 class FakeClient:
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
+        self.options.append(options)
         return UploadLimits(self.max_upload_bytes)
 
     async def open_realtime(
@@ -64,6 +65,7 @@ class FakeClient:
     def __init__(self, max_upload_bytes: int | None = 1000, fail: bool = False) -> None:
         self.max_upload_bytes = max_upload_bytes
         self.uploads: list[Path] = []
+        self.options: list[TranscriptionOptions] = []
         self._fail = fail
 
     async def transcribe_file(
@@ -75,6 +77,7 @@ class FakeClient:
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         self.uploads.append(audio)
+        self.options.append(options)
         if self._fail:
             raise TranscriptionError("Invalid API Key")
         return (Segment(f"part {len(self.uploads)}", s(1), s(2)),)
@@ -122,6 +125,26 @@ def source(tmp_path: Path) -> Path:
 def use_converter(monkeypatch: pytest.MonkeyPatch, converter: FakeConverter) -> None:
     monkeypatch.setattr(transcode, "to_upload", converter.to_upload)
     monkeypatch.setattr(transcode, "find_silences", converter.find_silences)
+
+
+@pytest.mark.parametrize("options", [None, TranscriptionOptions(False, False, language="zh")])
+@run_async
+async def test_upload_limits_and_transcription_receive_the_requested_options(
+    options: TranscriptionOptions | None,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    source: Path,
+) -> None:
+    use_converter(monkeypatch, FakeConverter(s(42), size=500))
+    client = FakeClient()
+
+    duration, segments = await transcribe_audio(
+        source, MODEL, client=client, options=options, work_dir=tmp_path / "work"
+    )
+
+    assert client.options == [options or TranscriptionOptions()] * 2
+    assert duration == s(42)
+    assert segments == (Segment("part 1", s(1), s(2)),)
 
 
 @run_async

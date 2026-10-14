@@ -117,12 +117,13 @@ async def transcribe_audio(
     work_dir: Path | None = None,
 ) -> tuple[timedelta, tuple[Segment, ...]]:
     """Share conversion and chunk offsets without deciding who owns the original audio."""
+    options = options or TranscriptionOptions()
     directory = work_dir or await asyncio.to_thread(paths.cache_dir)
     await asyncio.to_thread(directory.mkdir, parents=True, exist_ok=True)
     job = _Job(uuid.uuid4().hex, directory, on_progress)
     on_progress(ImportStage.CONVERTING, 1, 1)
     try:
-        limits = client.upload_limits(model, options or TranscriptionOptions())
+        limits = client.upload_limits(model, options)
         settings = provider.upload if provider else UploadSettings(parallelism=1)
         if provider is not None:
             limits = effective_upload_limits(limits, settings, provider.api)
@@ -131,7 +132,7 @@ async def transcribe_audio(
             parts,
             model,
             client,
-            options or TranscriptionOptions(),
+            options,
             settings.parallelism,
             on_progress,
             on_update,

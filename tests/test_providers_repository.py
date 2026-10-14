@@ -280,3 +280,43 @@ async def test_failed_window_save_keeps_state_and_does_not_notify(
         await repo.update_window(WindowState(900, 700, False))
     assert repo.window == original
     assert calls == []
+
+
+@run_async
+async def test_provider_edit_keeps_upload_and_models_changed_while_saving_the_key(
+    repo: ProviderRepository, secrets: FakeSecrets, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import asyncio
+    import threading
+
+    from kikoe.core.models import UploadSettings
+
+    provider = await repo.add_provider("Cloud", ApiKind.OPENAI_COMPATIBLE, URL, "")
+    started = threading.Event()
+    release = threading.Event()
+
+    def save_key(provider_id: str, api_key: str) -> None:
+        started.set()
+        if not release.wait(5):
+            raise TimeoutError("Provider edit did not release the key write")
+        secrets.items[provider_id] = api_key
+
+    monkeypatch.setattr(secrets, "set", save_key)
+    edit = asyncio.create_task(
+        repo.update_provider(provider.provider_id, " Renamed ", provider.api, URL, "new-key")
+    )
+    upload = UploadSettings(parallelism=3, chunk_seconds=60)
+    model = ModelSpec("custom", "Custom", file_caps())
+    try:
+        assert await asyncio.to_thread(started.wait, 5)
+        await repo.update_upload(provider.provider_id, upload)
+        await repo.save_model(provider.provider_id, model)
+    finally:
+        release.set()
+        await edit
+
+    updated = repo.get(provider.provider_id)
+    assert updated.name == "Renamed"
+    assert updated.upload == upload
+    assert updated.models == (model,)
+    assert secrets.items[provider.provider_id] == "new-key"

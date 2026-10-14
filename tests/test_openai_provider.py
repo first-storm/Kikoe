@@ -78,6 +78,9 @@ async def test_timestamped_model_gets_segments(audio: Path) -> None:
     assert form_field(request, "model") == "whisper-large-v3"
     assert form_field(request, "response_format") == "verbose_json"
     assert form_field(request, "timestamp_granularities[]") == "segment"
+    assert form_field(request, "chunking_strategy") is None
+    assert form_field(request, "stream") is None
+    assert form_field(request, "language") is None
     assert b'filename="upload.ogg"' in request.content
     assert b"Content-Type: audio/ogg" in request.content
 
@@ -91,6 +94,8 @@ async def test_text_only_model_gets_one_untimed_segment(audio: Path) -> None:
     assert segments == (Segment("Just text."),)
     assert form_field(handler.requests[0], "response_format") == "json"
     assert form_field(handler.requests[0], "timestamp_granularities[]") is None
+    assert form_field(handler.requests[0], "chunking_strategy") is None
+    assert form_field(handler.requests[0], "stream") is None
 
 
 @run_async
@@ -228,6 +233,31 @@ async def test_diarization_uses_official_format_without_requesting_verbose_json(
     assert form_field(handler.requests[0], "response_format") == "diarized_json"
     assert form_field(handler.requests[0], "chunking_strategy") == "auto"
     assert form_field(handler.requests[0], "timestamp_granularities[]") is None
+    assert form_field(handler.requests[0], "stream") == "false"
+
+
+@run_async
+async def test_diarizing_model_uses_structured_times_without_requesting_speakers(
+    audio: Path,
+) -> None:
+    model = ModelSpec("diarize", "Diarize", file_caps(timestamps=True, diarization=True))
+    handler = Recorder(
+        httpx.Response(
+            200,
+            json={"segments": [{"text": "Hello.", "start": 0, "end": 1, "speaker": "A"}]},
+        )
+    )
+
+    result = await client(handler).transcribe_file(
+        audio, model, TranscriptionOptions(True, False, language="en")
+    )
+
+    assert result == (Segment("Hello.", timedelta(), timedelta(seconds=1)),)
+    request = handler.requests[0]
+    assert form_field(request, "response_format") == "diarized_json"
+    assert form_field(request, "chunking_strategy") == "auto"
+    assert form_field(request, "timestamp_granularities[]") is None
+    assert form_field(request, "language") == "en"
 
 
 @run_async

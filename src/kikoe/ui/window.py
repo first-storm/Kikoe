@@ -10,7 +10,7 @@ from pathlib import Path
 
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango
 
-from kikoe.core.choice import ModelChoice, available_models
+from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models
 from kikoe.core.edit_history import SegmentFields
 from kikoe.core.export import ExportFormat, export_filename, export_note
 from kikoe.core.models import (
@@ -1030,6 +1030,15 @@ class Window(Adw.ApplicationWindow):
         if self._import_task is not None and not self._committing_transcription:
             self._import_task.cancel()
 
+    def _transcription_options(self, features: RequestedFeatures) -> TranscriptionOptions:
+        """Capture the current language with the entry point's selected features."""
+        return TranscriptionOptions(
+            timestamps=features.timestamps,
+            diarization=features.diarization,
+            language=self._providers.preferences.language,
+            timestamp_granularities=features.timestamp_granularities,
+        )
+
     async def _pick_and_import(self) -> None:
         path = await self._pick_audio_file()
         choice = self.bottom_bar.choice
@@ -1041,13 +1050,7 @@ class Window(Adw.ApplicationWindow):
         ):
             return
         note_id = self._note.note_id if self._note else None
-        features = self.bottom_bar.file_features
-        options = TranscriptionOptions(
-            timestamps=features.timestamps,
-            diarization=features.diarization,
-            language=self._providers.preferences.language,
-            timestamp_granularities=features.timestamp_granularities,
-        )
+        options = self._transcription_options(self.bottom_bar.file_features)
         task = asyncio.ensure_future(self._import(path, note_id, choice, options))
         self._import_task = task
         self._update_import_actions()
@@ -1182,13 +1185,7 @@ class Window(Adw.ApplicationWindow):
         choice = self.bottom_bar.choice
         if choice is None or self._recording_task is not None or self._import_task is not None:
             return
-        features = self.bottom_bar.requested_features
-        options = TranscriptionOptions(
-            timestamps=features.timestamps,
-            diarization=features.diarization,
-            language=self._providers.preferences.language,
-            timestamp_granularities=features.timestamp_granularities,
-        )
+        options = self._transcription_options(self.bottom_bar.requested_features)
         note_id = self._note.note_id if self._note else None
         self._recording_task = run_task(self._record(note_id, choice, options), self)
         self._update_import_actions()
@@ -1348,13 +1345,7 @@ class Window(Adw.ApplicationWindow):
         recording = next((r for r in note.recordings if r.recording_id == param.get_string()), None)
         if recording is None or recording.transcription_state is TranscriptionState.READY:
             return
-        features = self.bottom_bar.file_features
-        options = TranscriptionOptions(
-            timestamps=features.timestamps,
-            diarization=features.diarization,
-            language=self._providers.preferences.language,
-            timestamp_granularities=features.timestamp_granularities,
-        )
+        options = self._transcription_options(self.bottom_bar.file_features)
         self._recording_task = run_task(
             self._retry_recording(note.note_id, recording, choice, options), self
         )

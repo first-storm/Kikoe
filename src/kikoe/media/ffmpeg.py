@@ -115,7 +115,14 @@ class PCMStream:
     """Resample bounded PCM buffers while keeping native audio in the durable journal."""
 
     def __init__(self, process: asyncio.subprocess.Process, output_rate: int) -> None:
+        # start() creates all three pipes; their presence is a construction invariant.
+        assert process.stdin is not None
+        assert process.stdout is not None
+        assert process.stderr is not None
         self._process = process
+        self._stdin = process.stdin
+        self._stdout = process.stdout
+        self._stderr = process.stderr
         self._rate = output_rate
         self._errors = asyncio.create_task(self._read_errors())
 
@@ -153,26 +160,19 @@ class PCMStream:
         return cls(process, output_rate)
 
     async def feed(self, pcm: bytes) -> None:
-        stdin = self._process.stdin
-        if stdin is None:
-            raise FFmpegError(_("The audio converter has no input stream."))
         try:
-            stdin.write(pcm)
-            await stdin.drain()
+            self._stdin.write(pcm)
+            await self._stdin.drain()
         except (BrokenPipeError, ConnectionResetError) as error:
             raise FFmpegError(_("The audio converter stopped unexpectedly.")) from error
 
     async def finish(self) -> None:
-        if self._process.stdin is not None:
-            self._process.stdin.close()
+        self._stdin.close()
 
     async def chunks(self) -> AsyncIterator[bytes]:
-        stdout = self._process.stdout
-        if stdout is None:
-            raise FFmpegError(_("The audio converter has no output stream."))
         while True:
             try:
-                yield await stdout.readexactly(self._rate // 10 * 2)
+                yield await self._stdout.readexactly(self._rate // 10 * 2)
             except asyncio.IncompleteReadError as error:
                 if error.partial:
                     yield error.partial
@@ -189,11 +189,8 @@ class PCMStream:
         await self._errors
 
     async def _read_errors(self) -> str:
-        stderr = self._process.stderr
-        if stderr is None:
-            return ""
         tail = b""
-        while chunk := await stderr.read(4096):
+        while chunk := await self._stderr.read(4096):
             tail = (tail + chunk)[-4096:]
         return tail.decode(errors="replace")
 

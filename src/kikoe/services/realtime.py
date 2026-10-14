@@ -82,8 +82,6 @@ class RealtimeRecording:
                 if self.capture.finished and self._exhausted:
                     self.complete = True
                     return
-            except asyncio.CancelledError:
-                raise
             except Exception as error:
                 failure = sdk_error(error)
                 log.warning("Realtime connection failed (%s)", type(error).__name__)
