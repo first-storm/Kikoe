@@ -81,7 +81,12 @@ class RetranscribeDialog(Adw.Dialog):
         file = self._choice.model.capabilities.file if self._choice else None
         self.transcribe_button.set_sensitive(file is not None)
         self._options.set_sensitive(file is not None)
-        self._options.set_options(file or ModeCapabilities(), wanted)
+        self._options.set_options(
+            file or ModeCapabilities(),
+            wanted,
+            self._choice.provider.api if self._choice else None,
+            self._providers.preferences.language,
+        )
 
     @Gtk.Template.Callback()
     def _on_cancel_button_clicked(self, _button: Gtk.Button) -> None:

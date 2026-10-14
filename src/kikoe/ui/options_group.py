@@ -4,8 +4,8 @@ from dataclasses import replace
 
 from gi.repository import Adw, GObject, Gtk
 
-from kikoe.core.choice import RequestedFeatures, normalize_granularities
-from kikoe.core.models import ModeCapabilities, TimestampGranularity
+from kikoe.core.choice import RequestedFeatures, language_dropped, normalize_granularities
+from kikoe.core.models import ApiKind, ModeCapabilities, TimestampGranularity
 from kikoe.ui.labels import unsupported_option_subtitle
 from kikoe.ui.templates import ui_file
 
@@ -26,11 +26,14 @@ class OptionsGroup(Adw.PreferencesGroup):
     timestamps_row: Adw.SwitchRow = Gtk.Template.Child()
     granularity_row: Adw.ComboRow = Gtk.Template.Child()
     speakers_row: Adw.SwitchRow = Gtk.Template.Child()
+    language_notice: Gtk.Label = Gtk.Template.Child()
 
     def __init__(self) -> None:
         super().__init__()
         self._capabilities = ModeCapabilities()
         self._wanted = RequestedFeatures()
+        self._api: ApiKind | None = None
+        self._language: str | None = None
         self._updating = False
 
     @GObject.Signal
@@ -47,9 +50,18 @@ class OptionsGroup(Adw.PreferencesGroup):
         """What a request with the current model will actually ask for."""
         return self._wanted.allowed_by(self._capabilities)
 
-    def set_options(self, capabilities: ModeCapabilities, wanted: RequestedFeatures) -> None:
+    def set_options(
+        self,
+        capabilities: ModeCapabilities,
+        wanted: RequestedFeatures,
+        api: ApiKind | None = None,
+        language: str | None = None,
+    ) -> None:
+        """``api`` and ``language`` describe an upload, so the language notice can be shown."""
         self._capabilities = capabilities
         self._wanted = wanted
+        self._api = api
+        self._language = language
         self._refresh()
 
     def _refresh(self) -> None:
@@ -64,6 +76,9 @@ class OptionsGroup(Adw.PreferencesGroup):
                 row.set_sensitive(supported)
                 row.set_active(active)
                 row.set_subtitle("" if supported else unsupported_option_subtitle())
+            self.language_notice.set_visible(
+                self._api is not None and language_dropped(self._api, allowed, self._language)
+            )
             self.granularity_row.set_visible(capabilities.word_timestamps and allowed.timestamps)
             wanted = normalize_granularities(self._wanted.timestamp_granularities)
             self.granularity_row.set_selected(

@@ -112,6 +112,10 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
     "Timestamp Detail" offers "Segments", "Words", "Segments and Words". If the model
     lacks a capability, its switch is disabled with the subtitle "Not supported by
     this model"; the earlier choice comes back with a model that supports it.
+    When a transcription language is set and the next upload would drop it (Mistral
+    cannot combine a language with timestamps or speakers), a dimmed caption under the
+    rows says the language is detected automatically; it shows only for uploads and
+    disappears when both options are off.
   - Button row "Manage Providers and Models…" closes the dialog and opens Preferences.
   The button's tooltip repeats the model, provider and the hint, including "· This
   model does not support <list>" when relevant.

@@ -26,8 +26,10 @@ class TranscriptionDialog(Adw.Dialog):
         current: ModelChoice | None,
         wanted: RequestedFeatures,
         on_change: Callable[[ModelChoice, RequestedFeatures], None],
+        language: str | None = None,
     ) -> None:
         super().__init__()
+        self._language = language
         self._choice = current
         self._wanted = wanted
         self._on_change = on_change
@@ -92,7 +94,14 @@ class TranscriptionDialog(Adw.Dialog):
             return
         capabilities = choice.model.capabilities
         self._options.set_description(transcription_mode(capabilities))
-        self._options.set_options(capabilities.recording, self._wanted)
+        # Only uploads send the language; live sessions have their own rules.
+        uploads = capabilities.realtime is None
+        self._options.set_options(
+            capabilities.recording,
+            self._wanted,
+            choice.provider.api if uploads else None,
+            self._language,
+        )
 
     def _on_options_group_changed(self, group: OptionsGroup) -> None:
         self._wanted = group.wanted

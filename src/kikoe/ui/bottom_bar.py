@@ -171,8 +171,13 @@ class BottomBar(Adw.Bin):
     def present_transcription_dialog(self) -> None:
         """Let the user pick the model and options for the next transcription."""
         providers = self._repository.providers if self._repository else ()
+        language = self._repository.preferences.language if self._repository else None
         TranscriptionDialog(
-            available_models(providers), self._choice, self._wanted, self._on_dialog_changed
+            available_models(providers),
+            self._choice,
+            self._wanted,
+            self._on_dialog_changed,
+            language,
         ).present(self)
 
     def _on_dialog_changed(self, choice: ModelChoice, wanted: RequestedFeatures) -> None:

@@ -29,4 +29,19 @@ template $KikoeOptionsGroup: Adw.PreferencesGroup {
     use-underline: true;
     notify::active => $_on_option_row_notify_active();
   }
+
+  Label language_notice {
+    label: _(
+      "The transcription language is not used while timestamps or speakers are on. The language is detected automatically."
+    );
+    wrap: true;
+    xalign: 0;
+    margin-top: 6;
+    visible: false;
+
+    styles [
+      "dimmed",
+      "caption",
+    ]
+  }
 }
