@@ -71,8 +71,8 @@ flatpak install --user kikoe io.github.first_storm.Kikoe
   `.flatpakref` and an index page. The site is rebuilt from the published release only,
   so older versions are not kept and nothing accumulates between releases.
 - The workflow also runs by hand (`workflow_dispatch`) with a release tag; the release
-  needs `.flatpak` assets built from a manifest that uses the `stable` branch (v0.2.0 and
-  older use `master`, so they cannot be published this way).
+  needs `.flatpak` assets built from a manifest that uses the `stable` branch (v0.2.0
+  and later; v0.1.x used `master`, so they cannot be published this way).
 - One-time setup: in the repository settings, set Pages → Source to **GitHub Actions**,
   and add the secret `FLATPAK_GPG_PRIVATE_KEY` with an armored private key without a
   passphrase:
