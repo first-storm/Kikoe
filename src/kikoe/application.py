@@ -3,6 +3,8 @@
 import asyncio
 import logging
 from collections.abc import Callable
+from functools import partial
+from pathlib import Path
 
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
@@ -43,14 +45,14 @@ class Application(Adw.Application):
         self.window_state = WindowStateStore(writer)
         self.notes = NoteRepository(Library(database_path(), audio_dir()))
         self._add_action("quit", self._on_quit, ["<primary>q"])
-        self._add_action("preferences", self._on_preferences, ["<primary>comma"])
-        self._add_action("add-provider", self._on_add_provider)
-        self._add_action("manage-providers", self._on_manage_providers)
+        self._add_action("preferences", self._present_preferences, ["<primary>comma"])
+        self._add_action("add-provider", partial(self._present_preferences, add_provider=True))
+        self._add_action("manage-providers", partial(self._present_preferences, "providers"))
         self._add_action("about", self._on_about)
         self._add_action("shortcuts", self._on_shortcuts, ["<primary>question"])
         self.set_accels_for_action("window.close", ["<primary>w"])
-        self._add_action("open-data-folder", self._on_open_data_folder)
-        self._add_action("open-log-folder", self._on_open_log_folder)
+        self._add_action("open-data-folder", partial(self._open_folder, data_dir))
+        self._add_action("open-log-folder", partial(self._open_folder, log_dir))
 
     def do_startup(self) -> None:
         Adw.Application.do_startup(self)
@@ -85,13 +87,15 @@ class Application(Adw.Application):
             return None
 
     def _add_action(
-        self,
-        name: str,
-        callback: Callable[[Gio.SimpleAction, GLib.Variant | None], None],
-        accels: list[str] | None = None,
+        self, name: str, callback: Callable[[], None], accels: list[str] | None = None
     ) -> None:
+        """Add ``app.<name>``; none of the app actions take a parameter."""
         action = Gio.SimpleAction.new(name, None)
-        action.connect("activate", callback)
+
+        def activate(_action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+            callback()
+
+        action.connect("activate", activate)
         self.add_action(action)
         if accels:
             self.set_accels_for_action(f"app.{name}", accels)
@@ -109,41 +113,31 @@ class Application(Adw.Application):
             display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
         )
 
-    def _on_quit(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+    def _on_quit(self) -> None:
         window = self.get_active_window()
         if window is not None:
             window.close()
         else:
             self.quit()
 
-    def _on_preferences(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        PreferencesDialog(self.providers, self.preferences).present(self.get_active_window())
-
-    def _on_manage_providers(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+    def _present_preferences(self, page: str | None = None, add_provider: bool = False) -> None:
         dialog = PreferencesDialog(self.providers, self.preferences)
-        dialog.set_visible_page_name("providers")
+        if page is not None:
+            dialog.set_visible_page_name(page)
         dialog.present(self.get_active_window())
+        if add_provider:
+            dialog.start_add_provider()
 
-    def _on_add_provider(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        dialog = PreferencesDialog(self.providers, self.preferences)
-        dialog.present(self.get_active_window())
-        dialog.start_add_provider()
-
-    def _on_shortcuts(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+    def _on_shortcuts(self) -> None:
         create_shortcuts_dialog().present(self.get_active_window())
 
-    def _on_open_data_folder(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+    def _open_folder(self, folder: Callable[[], Path]) -> None:
         window = self.get_active_window()
         if window is not None:
-            run_task(self._open_folder(logs=False), window)
+            run_task(self._launch_folder(folder), window)
 
-    def _on_open_log_folder(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        window = self.get_active_window()
-        if window is not None:
-            run_task(self._open_folder(logs=True), window)
-
-    async def _open_folder(self, *, logs: bool) -> None:
-        path = await asyncio.to_thread(log_dir if logs else data_dir)
+    async def _launch_folder(self, folder: Callable[[], Path]) -> None:
+        path = await asyncio.to_thread(folder)
         launcher = Gtk.FileLauncher.new(Gio.File.new_for_path(str(path)))
         future: asyncio.Future[None] = asyncio.get_running_loop().create_future()
 
@@ -165,7 +159,7 @@ class Application(Adw.Application):
             if window is not None:
                 show_notice(window, str(error))
 
-    def _on_about(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+    def _on_about(self) -> None:
         about = Adw.AboutDialog(
             application_name=APP_NAME,
             application_icon=APP_ID,
