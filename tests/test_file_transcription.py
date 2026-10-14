@@ -14,6 +14,7 @@ from kikoe.core.models import (
     Provider,
     Recording,
     RecordingSource,
+    Segment,
     TranscriptionState,
 )
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions, TranscriptionProvider
@@ -28,7 +29,13 @@ CHOICE = ModelChoice(PROVIDER, MODEL)
 OPTIONS = TranscriptionOptions(timestamps=False, diarization=False)
 NOTE = Note("n1", "Meeting", datetime.now(UTC))
 RECORDING = Recording(
-    "r1", datetime.now(UTC), timedelta(seconds=3), RecordingSource.RECORDED, "OpenAI", "whisper-1"
+    "r1",
+    datetime.now(UTC),
+    timedelta(seconds=3),
+    RecordingSource.RECORDED,
+    "OpenAI",
+    "whisper-1",
+    audio_path=Path("r1.flac"),
 )
 
 
@@ -55,9 +62,9 @@ class Clients:
 
 
 class Calls:
-    """Replaces the two service functions and records their arguments."""
+    """Replaces the importer's functions and records their arguments."""
 
-    def __init__(self, error: Exception | None = None) -> None:
+    def __init__(self, error: BaseException | None = None) -> None:
         self.error = error
         self.imports: list[dict[str, object]] = []
         self.transcriptions: list[dict[str, object]] = []
@@ -68,10 +75,22 @@ class Calls:
             raise self.error
         return NOTE
 
-    async def transcribe_recording(self, *args: object, **kwargs: object) -> Note:
+    async def transcribe_audio(
+        self, *args: object, **kwargs: object
+    ) -> tuple[timedelta, tuple[Segment, ...]]:
         self.transcriptions.append({"args": args, **kwargs})
         if self.error:
             raise self.error
+        return timedelta(seconds=3), (Segment("Hello"),)
+
+
+class Marks(list[TranscriptionState]):
+    """Stands in for ``NoteRepository.update_transcription`` and records each state."""
+
+    async def __call__(
+        self, _note_id: str, _recording_id: str, state: TranscriptionState, **_kwargs: object
+    ) -> Note:
+        self.append(state)
         return NOTE
 
 
@@ -80,9 +99,16 @@ def notes(tmp_path: Path) -> NoteRepository:
     return NoteRepository(Library(tmp_path / "library.sqlite3", tmp_path / "audio"))
 
 
+@pytest.fixture
+def marks(notes: NoteRepository, monkeypatch: pytest.MonkeyPatch) -> Marks:
+    marks = Marks()
+    monkeypatch.setattr(notes, "update_transcription", marks)
+    return marks
+
+
 def install(monkeypatch: pytest.MonkeyPatch, calls: Calls) -> None:
     monkeypatch.setattr(file_transcription, "import_audio", calls.import_audio)
-    monkeypatch.setattr(file_transcription, "transcribe_recording", calls.transcribe_recording)
+    monkeypatch.setattr(file_transcription, "transcribe_audio", calls.transcribe_audio)
 
 
 def no_progress(*_args: object) -> None:
@@ -107,96 +133,74 @@ async def test_import_builds_the_client_from_the_providers_stored_key(
 
 
 @run_async
-async def test_retranscription_keeps_the_existing_text_when_it_fails(
-    notes: NoteRepository, monkeypatch: pytest.MonkeyPatch
+async def test_retranscription_commits_only_the_result(
+    marks: Marks, notes: NoteRepository, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    calls = Calls()
+    calls, clients = Calls(), Clients()
     install(monkeypatch, calls)
-    workflow = FileTranscriptionWorkflow(Keys(), notes, Clients())
+    workflow = FileTranscriptionWorkflow(Keys(), notes, clients)
     await workflow.retranscribe(
         "n1", RECORDING, CHOICE, OPTIONS, on_progress=no_progress, on_update=no_progress
     )
-    assert calls.transcriptions[0]["preserve_on_failure"] is True
+    assert calls.transcriptions[0]["client"] is clients.client
+    assert calls.transcriptions[0]["options"] is OPTIONS
+    assert marks == [TranscriptionState.READY]
+
+
+@pytest.mark.parametrize("error", [TranscriptionError("Invalid API key"), RuntimeError("bug")])
+@run_async
+async def test_retranscription_keeps_the_existing_state_when_it_fails(
+    error: Exception, marks: Marks, notes: NoteRepository, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    install(monkeypatch, Calls(error))
+    workflow = FileTranscriptionWorkflow(Keys(), notes, Clients())
+    with pytest.raises(type(error)):
+        await workflow.retranscribe(
+            "n1", RECORDING, CHOICE, OPTIONS, on_progress=no_progress, on_update=no_progress
+        )
+    assert marks == []
 
 
 @run_async
-async def test_pending_transcription_does_not_preserve_old_text(
-    notes: NoteRepository, monkeypatch: pytest.MonkeyPatch
+async def test_a_pending_transcription_is_marked_pending_then_ready(
+    marks: Marks, notes: NoteRepository, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    calls = Calls()
-    install(monkeypatch, calls)
+    install(monkeypatch, Calls())
     workflow = FileTranscriptionWorkflow(Keys(), notes, Clients())
     await workflow.transcribe_pending(
         "n1", RECORDING, CHOICE, OPTIONS, on_progress=no_progress, on_update=no_progress
     )
-    assert "preserve_on_failure" not in calls.transcriptions[0]
+    assert marks == [TranscriptionState.PENDING, TranscriptionState.READY]
 
 
+@pytest.mark.parametrize("error", [TranscriptionError("Invalid API key"), RuntimeError("bug")])
 @run_async
-async def test_a_failed_pending_transcription_marks_the_recording_failed_and_reraises(
-    notes: NoteRepository, monkeypatch: pytest.MonkeyPatch
+async def test_a_failed_pending_transcription_is_marked_failed_once_and_reraises(
+    error: Exception, marks: Marks, notes: NoteRepository, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    marked: list[tuple[str, str, TranscriptionState]] = []
-
-    async def update_transcription(
-        note_id: str, recording_id: str, state: TranscriptionState, **_kwargs: object
-    ) -> Note:
-        marked.append((note_id, recording_id, state))
-        return NOTE
-
-    monkeypatch.setattr(notes, "update_transcription", update_transcription)
-    install(monkeypatch, Calls(TranscriptionError("Invalid API key")))
+    install(monkeypatch, Calls(error))
     workflow = FileTranscriptionWorkflow(Keys(), notes, Clients())
-    with pytest.raises(TranscriptionError, match="Invalid API key"):
+    with pytest.raises(type(error)):
         await workflow.transcribe_pending(
             "n1", RECORDING, CHOICE, OPTIONS, on_progress=no_progress, on_update=no_progress
         )
-    assert marked == [("n1", "r1", TranscriptionState.FAILED)]
+    assert marks == [TranscriptionState.PENDING, TranscriptionState.FAILED]
 
 
 @run_async
-async def test_a_missing_key_store_error_before_the_service_runs_also_marks_failure(
-    notes: NoteRepository, monkeypatch: pytest.MonkeyPatch
+async def test_a_key_store_error_before_uploading_also_marks_failure(
+    marks: Marks, notes: NoteRepository, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    marked: list[TranscriptionState] = []
-
-    async def update_transcription(
-        _note_id: str, _recording_id: str, state: TranscriptionState, **_kwargs: object
-    ) -> Note:
-        marked.append(state)
-        return NOTE
-
     class BrokenKeys:
         async def get_api_key(self, provider_id: str) -> str:
             raise TranscriptionError(f"No key for {provider_id}")
 
-    monkeypatch.setattr(notes, "update_transcription", update_transcription)
-    install(monkeypatch, Calls())
+    calls = Calls()
+    install(monkeypatch, calls)
     workflow = FileTranscriptionWorkflow(BrokenKeys(), notes, Clients())
     with pytest.raises(TranscriptionError):
         await workflow.transcribe_pending(
             "n1", RECORDING, CHOICE, OPTIONS, on_progress=no_progress, on_update=no_progress
         )
-    assert marked == [TranscriptionState.FAILED]
-
-
-@run_async
-async def test_unexpected_errors_are_not_recorded_as_provider_failures(
-    notes: NoteRepository, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    marked: list[TranscriptionState] = []
-
-    async def update_transcription(
-        _note_id: str, _recording_id: str, state: TranscriptionState, **_kwargs: object
-    ) -> Note:
-        marked.append(state)
-        return NOTE
-
-    monkeypatch.setattr(notes, "update_transcription", update_transcription)
-    install(monkeypatch, Calls(RuntimeError("bug")))
-    workflow = FileTranscriptionWorkflow(Keys(), notes, Clients())
-    with pytest.raises(RuntimeError):
-        await workflow.transcribe_pending(
-            "n1", RECORDING, CHOICE, OPTIONS, on_progress=no_progress, on_update=no_progress
-        )
-    assert marked == []
+    assert calls.transcriptions == []
+    assert marks == [TranscriptionState.PENDING, TranscriptionState.FAILED]

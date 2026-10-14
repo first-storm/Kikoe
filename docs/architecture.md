@@ -100,9 +100,13 @@ Input and output devices are saved in `Preferences` by name (`None` = system def
 prefers the `pipewire`/`pulse`/`default` ALSA aliases because PortAudio's own default is the
 first hardware device, not the desktop's choice. A missing saved device falls back to that.
 
-File and realtime microphone transcription are implemented. File import and retained
-recording retry share `services.importer.transcribe_audio` for conversion, splitting
-and timestamps. `services.realtime.RealtimeRecording` owns live connections.
+File and realtime microphone transcription are implemented. File import
+(`services.importer.import_audio`) and retained recordings share
+`services.importer.transcribe_audio` for conversion, splitting and timestamps;
+`services.file_transcription.FileTranscriptionWorkflow` owns the API key and client and
+decides what a failure leaves behind. `transcribe_pending` marks the recording pending, then
+failed on any error or cancellation; `retranscribe` never changes its state.
+`services.realtime.RealtimeRecording` owns live connections.
 
 ### Model capabilities and presets
 
