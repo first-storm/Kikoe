@@ -138,7 +138,7 @@ then returns its result or raises its failure. Upload workers already cancelling
 without cancelling them again, so SDK cleanup finishes before temporary audio is removed.
 The note view overlays temporary rows at the target recording, or appends them for imports,
 without changing the saved note. Its virtualized renderer is shared with microphone live
-text. The window coalesces text deltas every 50 ms, immediately renders completed segments,
+text. The file transcription display coalesces text deltas every 50 ms, immediately renders completed segments,
 and removes scheduled updates when a job ends.
 
 1. **Capture**: `media.recorder.SoundDeviceRecorder` implements the async `Recorder`
@@ -252,6 +252,17 @@ Added only when the feature using them lands (see AGENTS.md, "Dependencies"):
 - `ui/window.py` + `window.blp`: `Adw.NavigationSplitView` (sidebar: notes list;
   content: a `Gtk.Stack` with the welcome page, the empty state and the note view, with
   the bottom bar below). Collapses below 640 sp.
+- The window delegates edits to `services.editing.EditingSession`, which owns optimistic
+  segment values, Undo/Redo history and serial writes. Saved-note callbacks carry the note
+  identity so old writes cannot replace a newly selected note. Exports and shutdown wait
+  for pending writes. `services.playback.Playback` owns output tasks and device cleanup;
+  the output device is captured when playback is requested. The window retains actions,
+  dialogs and coordination between workflows.
+- `ui.search.NoteSearch` owns request cancellation and stale-result rejection; SearchEntry
+  retains its debounce. `ui.file_transcription.FileTranscriptionDisplay` owns the target
+  note, temporary snapshots and 50 ms preview refresh scheduling. Returning to the target
+  note restores its latest preview; ending the job removes scheduled updates. These helpers
+  own no widget layout.
 - `ui/note_view.py`: a `Gtk.ListView` over a flat list of recording headers and segments
   (`ui/transcript_row.py`), so only visible rows get widgets. The list keeps widgets for
   about 200 rows and would rebuild all of them if its items were replaced, so opening a
@@ -263,7 +274,7 @@ Added only when the feature using them lands (see AGENTS.md, "Dependencies"):
   its height for any width, which `Gtk.TextView` itself does not, so no row needs a
   frame callback. Segment text is edited in place; rows commit text after a pause, on
   focus loss and when recycled. Saves of only segment contents update rows in place so
-  the caret survives. The window owns the note-wide Undo/Redo history
+  the caret survives. The editing session owns the note-wide Undo/Redo history
   (`core/edit_history.py`) and serializes saves.
 - `ui/bottom_bar.py`: model button, Import Audio, Record/Append Recording, upload progress
   and the recording controls. `Adw.WrapBox` keeps controls usable at 360 px.

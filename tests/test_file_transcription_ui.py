@@ -165,3 +165,53 @@ def test_stream_does_not_follow_bottom_when_user_is_reading_older_text(
     adjustment.set_value(900)
     view.update_file_transcription(FileTranscriptSnapshot(preview=(Segment("Partial text"),)))
     assert len(scheduled) == 1
+
+
+def test_display_restores_latest_preview_when_returning_to_target(view: NoteView) -> None:
+    from kikoe.ui.file_transcription import FileTranscriptionDisplay
+
+    original = note()
+    display = FileTranscriptionDisplay(view)
+    view.show_note(original)
+    display.begin(original, recording("target"), replacing=True)
+    other = replace(original, note_id="other")
+    display.hide_if_other(other)
+    view.show_note(other)
+    display.update(FileTranscriptSnapshot((Segment("New", speaker_id="A"),)))
+    assert texts(view) == ["Before", "Original", "After"]
+    view.show_note(original)
+    display.show(original)
+    assert texts(view) == ["Before", "New", "After"]
+    display.end()
+    assert texts(view) == ["Before", "Original", "After"]
+    assert not display.active
+
+
+def test_display_ending_job_cancels_pending_preview_refresh(
+    view: NoteView, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from collections.abc import Callable
+
+    from gi.repository import GLib
+
+    from kikoe.ui.file_transcription import FileTranscriptionDisplay
+
+    scheduled: list[Callable[[], bool]] = []
+    removed: list[int] = []
+
+    def schedule(_milliseconds: int, callback: Callable[[], bool]) -> int:
+        scheduled.append(callback)
+        return 42
+
+    original = note()
+    display = FileTranscriptionDisplay(view)
+    view.show_note(original)
+    display.begin(original, recording("target"), replacing=True)
+    monkeypatch.setattr(GLib, "timeout_add", schedule)
+    monkeypatch.setattr(GLib, "source_remove", removed.append)
+    display.update(FileTranscriptSnapshot(preview=(Segment("Partial"),)))
+    assert scheduled
+    display.end()
+    assert removed == [42]
+    scheduled[0]()
+    assert texts(view) == ["Before", "Original", "After"]

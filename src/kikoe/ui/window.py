@@ -3,7 +3,6 @@
 import asyncio
 import logging
 import shutil
-import time
 from collections.abc import Callable
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -12,7 +11,7 @@ from pathlib import Path
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango
 
 from kikoe.core.choice import ModelChoice, available_models
-from kikoe.core.edit_history import EditHistory, SegmentChange, SegmentFields
+from kikoe.core.edit_history import SegmentFields
 from kikoe.core.export import ExportFormat, export_filename, export_note
 from kikoe.core.models import (
     DisplayOptions,
@@ -28,15 +27,16 @@ from kikoe.core.speakers import identity_for
 from kikoe.core.transcription import (
     FileTranscriptSnapshot,
     LiveSnapshot,
-    scope_speakers,
 )
 from kikoe.i18n import _
 from kikoe.media.ffmpeg import find_ffmpeg
-from kikoe.media.player import PlaybackError, play_audio
+from kikoe.media.player import PlaybackError
 from kikoe.media.recorder import SoundDeviceRecorder
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.providers.factory import create_client
+from kikoe.services.editing import EditingSession
 from kikoe.services.importer import ImportStage, import_audio
+from kikoe.services.playback import Playback
 from kikoe.services.realtime import RealtimeRecording
 from kikoe.services.recording import RecordingSession, recover_recording, transcribe_recording
 from kikoe.storage.captures import CaptureStore, capture_dir
@@ -45,6 +45,7 @@ from kikoe.storage.providers import ProviderRepository
 from kikoe.storage.settings import SettingsError
 from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.export_dialog import ExportDialog
+from kikoe.ui.file_transcription import FileTranscriptionDisplay
 from kikoe.ui.items import NoteItem
 from kikoe.ui.labels import (
     export_format_label,
@@ -55,6 +56,7 @@ from kikoe.ui.labels import (
 )
 from kikoe.ui.note_view import NoteView
 from kikoe.ui.retranscribe_dialog import RetranscribeDialog
+from kikoe.ui.search import NoteSearch
 from kikoe.ui.speaker_dialog import SpeakerDialog
 from kikoe.ui.speaker_editor import SpeakerEditor
 from kikoe.ui.tasks import USER_FACING_ERRORS, run_task, show_error, show_notice
@@ -115,16 +117,18 @@ class Window(Adw.ApplicationWindow):
         self.note_view.connect("text-edited", self._on_note_view_text_edited)
         self.note_view.connect("times-edited", self._on_note_view_times_edited)
         self.note_view.connect("segment-left", self._on_note_view_segment_left)
-        self._history = EditHistory()
-        self._edited: dict[tuple[str, int], SegmentFields] = {}
-        """Segment values already sent to storage, which may be ahead of ``self._note``."""
-        self._edit_lock = asyncio.Lock()
-        self._edit_saves: set[asyncio.Task[None]] = set()
+        self._editing = EditingSession(
+            notes, lambda coro: run_task(coro, self), self._on_edit_saved
+        )
         self._edits_blocked = False
         self.bottom_bar = BottomBar()
         self.bottom_bar_slot.set_child(self.bottom_bar)
-        self._search_generation = 0
-        self._search_task: asyncio.Task[None] | None = None
+        self._search = NoteSearch(
+            notes,
+            lambda coro: run_task(coro, self),
+            self.search_entry.get_text,
+            self._refresh_note_list,
+        )
         self.search_bar.connect_entry(self.search_entry)
         self.search_bar.set_key_capture_widget(self.notes_list)
         self._add_action("search-notes", self._on_search_notes)
@@ -161,17 +165,7 @@ class Window(Adw.ApplicationWindow):
         self._add_action("cancel-import", self._on_cancel_import)
         self._import_task: asyncio.Task[None] | None = None
         self._committing_transcription = False
-        self._file_transcription = False
-        self._file_recording_id = ""
-        self._file_note_id: str | None = None
-        """The note being transcribed into; None while a new note is imported."""
-        self._file_recording: Recording | None = None
-        self._file_replacing = False
-        self._file_shown = False
-        """Whether the transcription overlay is on screen (not while another note is open)."""
-        self._file_update_timeout = 0
-        self._file_pending: FileTranscriptSnapshot | None = None
-        self._file_rendered = FileTranscriptSnapshot()
+        self._file_display = FileTranscriptionDisplay(self.note_view)
         self._recording_task: asyncio.Task[None] | None = None
         self._live: RealtimeRecording | None = None
         self._session: RecordingSession | None = None
@@ -186,9 +180,9 @@ class Window(Adw.ApplicationWindow):
         self._add_action("resume-recording", self._on_resume_recording)
         self._add_action("stop-recording", self._on_stop_recording)
         self._add_action("retry-recording", self._on_retry_recording, GLib.VariantType.new("s"))
-        self._playback_task: asyncio.Task[None] | None = None
-        self._playback_lock = asyncio.Lock()
-        self._playback_key: tuple[str, float, float | None] | None = None
+        self._playback = Playback(
+            lambda coro: run_task(coro, self), self.note_view.set_playing, self._on_playback_error
+        )
         self._add_action("play-recording", self._on_play_recording, GLib.VariantType.new("s"))
         self._add_action("play-sample", self._on_play_sample, GLib.VariantType.new("(sdd)"))
         self._add_action("edit-speaker", self._on_edit_speaker, GLib.VariantType.new("(ss)"))
@@ -307,19 +301,7 @@ class Window(Adw.ApplicationWindow):
         self._start_search()
 
     def _start_search(self) -> None:
-        self._search_generation += 1
-        if self._search_task is not None:
-            self._search_task.cancel()
-        query = self.search_entry.get_text().strip()
-        if not query:
-            self._refresh_note_list(self._notes.notes)
-            return
-        self._search_task = run_task(self._search_notes(query, self._search_generation), self)
-
-    async def _search_notes(self, query: str, generation: int) -> None:
-        matches = await self._notes.search(query)
-        if generation == self._search_generation and query == self.search_entry.get_text().strip():
-            self._refresh_note_list(matches)
+        self._search.refresh()
 
     def _refresh_note_list(self, notes: tuple[NoteSummary, ...]) -> None:
         self._selecting = True
@@ -458,7 +440,7 @@ class Window(Adw.ApplicationWindow):
         """Whether the note on screen is the one a running transcription writes to."""
         if self._import_task is None:
             return False
-        return self._note is None or self._note.note_id == self._file_note_id
+        return self._note is None or self._note.note_id == self._file_display.note_id
 
     def _on_notes_changed(self, note_id: str | None) -> None:
         if not self._recovery_checked:
@@ -496,18 +478,14 @@ class Window(Adw.ApplicationWindow):
             self._show_note(note)
 
     def _show_note(self, note: Note | None) -> None:
-        overlay_here = (
-            self._file_transcription and note is not None and note.note_id == self._file_note_id
-        )
-        if self._file_shown and not overlay_here:
-            self.note_view.end_file_transcription()
-            self._file_shown = False
+        self._file_display.hide_if_other(note)
         if self._note is not None and (note is None or self._note.note_id != note.note_id):
-            self._stop_playback()
+            self._playback.stop()
             # Saved under the note being left, so this must run before it is replaced.
             self.note_view.flush_edits()
             self._forget_edits()
         self._note = note
+        self._editing.set_note(note)
         self.note_menu_button.set_visible(note is not None)
         self.display_options_button.set_visible(note is not None)
         for name in _NOTE_ACTIONS:
@@ -524,14 +502,7 @@ class Window(Adw.ApplicationWindow):
             self._set_display_action_state("show-speakers", note.display.show_speakers)
             if self.note_view.show_note(note):
                 self._forget_edits()
-            if overlay_here and not self._file_shown and self._file_recording is not None:
-                self.note_view.begin_file_transcription(
-                    note,
-                    self._file_recording,
-                    replace_recording_id=self._file_recording_id if self._file_replacing else None,
-                )
-                self.note_view.update_file_transcription(self._file_rendered)
-                self._file_shown = True
+            self._file_display.show(note)
             self.bottom_bar.set_note(bool(note.recordings))
             if self._session is not None and self._session.state is not CaptureState.STOPPED:
                 self.note_view.show_recording(
@@ -547,7 +518,7 @@ class Window(Adw.ApplicationWindow):
         self._update_import_actions()
 
     def _update_content(self) -> None:
-        if self._note is not None or self._file_transcription:
+        if self._note is not None or self._file_display.active:
             page = "note"
         elif not self._providers_loaded:
             page = "loading"
@@ -639,7 +610,7 @@ class Window(Adw.ApplicationWindow):
             self.add_toast(Adw.Toast(title=_("This recording is no longer available.")))
             return
         number = note.recordings.index(recording) + 1
-        self._stop_playback()
+        self._playback.stop()
         dialog = Adw.AlertDialog(
             heading=_("Delete Recording {number}?").format(number=number),
             body=_("Its transcript and original audio will be deleted. This cannot be undone."),
@@ -684,59 +655,17 @@ class Window(Adw.ApplicationWindow):
         if recording is None or recording.audio_path is None:
             self.add_toast(Adw.Toast(title=_("The original audio is not available.")))
             return
-        key = recording_id, start, end
-        old = self._playback_task
-        same = key == self._playback_key
-        self._stop_playback()
-        if same:
-            return
-        self._playback_key = key
-        self.note_view.set_playing(recording_id if end is None else None)
-        self._playback_task = run_task(self._play(recording.audio_path, key, old), self)
+        self._playback.play(
+            recording.audio_path,
+            recording_id,
+            start,
+            end,
+            self._providers.preferences.output_device,
+        )
 
-    def _stop_playback(self) -> None:
-        if self._playback_task is not None and not self._playback_task.cancelling():
-            self._playback_task.cancel()
-        self._playback_key = None
-        self.note_view.set_playing(None)
-
-    async def _play(
-        self, path: Path, key: tuple[str, float, float | None], previous: asyncio.Task[None] | None
-    ) -> None:
-        try:
-            if previous is not None:
-                try:
-                    await asyncio.shield(previous)
-                except asyncio.CancelledError:
-                    if not previous.cancelled():
-                        raise
-            async with self._playback_lock:
-                await play_audio(
-                    path,
-                    start=timedelta(seconds=key[1]),
-                    end=timedelta(seconds=key[2]) if key[2] is not None else None,
-                    device=self._providers.preferences.output_device,
-                )
-        except PlaybackError as error:
-            log.warning("Playback failed: %s", error)
-            self.add_toast(Adw.Toast(title=str(error)))
-        finally:
-            if self._playback_task is asyncio.current_task():
-                self._playback_key = None
-                self.note_view.set_playing(None)
-
-    async def _finish_playback(self) -> None:
-        """Finish output-device cleanup before capture or transcription begins."""
-        self._stop_playback()
-        previous = self._playback_task
-        if previous is not None:
-            try:
-                await asyncio.shield(previous)
-            except asyncio.CancelledError:
-                if not previous.cancelled():
-                    raise
-        async with self._playback_lock:
-            pass
+    def _on_playback_error(self, error: PlaybackError) -> None:
+        log.warning("Playback failed: %s", error)
+        self.add_toast(Adw.Toast(title=str(error)))
 
     def _on_edit_speaker(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
         if self._note is None or param is None:
@@ -768,7 +697,7 @@ class Window(Adw.ApplicationWindow):
         dialog.present(self)
 
     def _on_audio_dialog_closed(self, _dialog: Adw.Dialog) -> None:
-        self._stop_playback()
+        self._playback.stop()
 
     def _on_retranscribe_recording(
         self, _action: Gio.SimpleAction, param: GLib.Variant | None
@@ -787,7 +716,7 @@ class Window(Adw.ApplicationWindow):
             if refreshed is None or refreshed.model.capabilities.file is None:
                 self.add_toast(Adw.Toast(title=_("Choose an available file transcription model.")))
                 return
-            self._stop_playback()
+            self._playback.stop()
             self._import_task = run_task(
                 self._retranscribe(note_id, recording, refreshed, options), self
             )
@@ -809,7 +738,7 @@ class Window(Adw.ApplicationWindow):
     ) -> None:
         self._begin_file_transcription(recording, choice, replacing=True)
         try:
-            await self._finish_playback()
+            await self._playback.finish()
             key = await self._providers.get_api_key(choice.provider.provider_id)
             note = await transcribe_recording(
                 note_id,
@@ -859,7 +788,7 @@ class Window(Adw.ApplicationWindow):
         )
 
     def _on_note_view_segment_left(self, _view: NoteView) -> None:
-        self._history.seal()
+        self._editing.history.seal()
 
     def _edit_segment(
         self,
@@ -867,80 +796,37 @@ class Window(Adw.ApplicationWindow):
         position: int,
         change: Callable[[SegmentFields], SegmentFields],
     ) -> None:
-        before = self._segment_fields(recording_id, position)
-        if before is None or self._edits_blocked:
+        if self._edits_blocked:
             return
-        after = change(before)
-        if after == before:
-            return
-        self._history.record(SegmentChange(recording_id, position, before, after, time.monotonic()))
-        self._write_segment(recording_id, position, after)
-
-    def _segment_fields(self, recording_id: str, position: int) -> SegmentFields | None:
-        edited = self._edited.get((recording_id, position))
-        if edited is not None:
-            return edited
-        recording = self._recording_by_id(recording_id)
-        if recording is None or not 0 <= position < len(recording.segments):
-            return None
-        segment = recording.segments[position]
-        return SegmentFields(segment.text, segment.start, segment.end)
-
-    def _write_segment(self, recording_id: str, position: int, fields: SegmentFields) -> None:
-        if self._note is None:
-            return
-        self._edited[recording_id, position] = fields
-        task = run_task(
-            self._save_segment(self._note.note_id, recording_id, position, fields), self
-        )
-        self._edit_saves.add(task)
-        task.add_done_callback(self._edit_saves.discard)
+        self._editing.edit(recording_id, position, change)
         self._update_history_actions()
 
-    async def _save_segment(
-        self, note_id: str, recording_id: str, position: int, fields: SegmentFields
-    ) -> None:
-        # One at a time, so a quick Undo cannot overtake the save it reverts.
-        async with self._edit_lock:
-            note = await self._notes.update_segment(
-                note_id,
-                recording_id,
-                position,
-                text=fields.text,
-                start_ms=_to_ms(fields.start),
-                end_ms=_to_ms(fields.end),
-            )
-        if self._note is not None and self._note.note_id == note_id:
+    def _on_edit_saved(self, note: Note) -> None:
+        if self._note is not None and self._note.note_id == note.note_id:
             self._show_note(note)
 
-    async def _edits_saved(self) -> None:
-        """Wait for pending segment saves so exports and copies include them."""
-        if self._edit_saves:
-            await asyncio.wait(list(self._edit_saves))
-
     def _forget_edits(self) -> None:
-        self._history.clear()
-        self._edited.clear()
+        self._editing.reset()
         self._update_history_actions()
 
     def _update_history_actions(self) -> None:
         enabled = not self._edits_blocked and self._note is not None
-        self._set_action_enabled("undo", enabled and self._history.can_undo)
-        self._set_action_enabled("redo", enabled and self._history.can_redo)
+        self._set_action_enabled("undo", enabled and self._editing.history.can_undo)
+        self._set_action_enabled("redo", enabled and self._editing.history.can_redo)
 
     def _on_undo(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         self.note_view.flush_edits()
-        change = self._history.undo()
+        change = self._editing.undo()
         if change is not None:
-            self._write_segment(change.recording_id, change.position, change.before)
             self.note_view.focus_segment(change.recording_id, change.position)
+        self._update_history_actions()
 
     def _on_redo(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         self.note_view.flush_edits()
-        change = self._history.redo()
+        change = self._editing.redo()
         if change is not None:
-            self._write_segment(change.recording_id, change.position, change.after)
             self.note_view.focus_segment(change.recording_id, change.position)
+        self._update_history_actions()
 
     # Export
 
@@ -949,7 +835,7 @@ class Window(Adw.ApplicationWindow):
         run_task(self._present_export(), self)
 
     async def _present_export(self) -> None:
-        await self._edits_saved()
+        await self._editing.wait_saved()
         note = self._note
         if note is None:
             return
@@ -963,7 +849,7 @@ class Window(Adw.ApplicationWindow):
         run_task(self._copy_all_text(), self)
 
     async def _copy_all_text(self) -> None:
-        await self._edits_saved()
+        await self._editing.wait_saved()
         note = self._note
         if note is None:
             return
@@ -1086,7 +972,7 @@ class Window(Adw.ApplicationWindow):
         )
         locked = self._switch_locked() or self._viewing_transcription()
         if locked:
-            self._stop_playback()
+            self._playback.stop()
         for name in (
             "play-recording",
             "play-sample",
@@ -1224,7 +1110,7 @@ class Window(Adw.ApplicationWindow):
         )
         self._begin_file_transcription(recording, choice, title=path.stem)
         try:
-            await self._finish_playback()
+            await self._playback.finish()
             api_key = await self._providers.get_api_key(choice.provider.provider_id)
             note = await import_audio(
                 path,
@@ -1256,20 +1142,11 @@ class Window(Adw.ApplicationWindow):
         replacing: bool = False,
         title: str = "",
     ) -> None:
-        self._file_transcription = True
-        self._file_recording_id = recording.recording_id
-        self._file_note_id = self._note.note_id if self._note else None
-        self._file_replacing = replacing
-        self._file_recording = replace(
-            recording, provider_name=choice.provider.name, model_id=choice.model.model_id
-        )
-        self._file_rendered = FileTranscriptSnapshot()
-        self.note_view.begin_file_transcription(
+        self._file_display.begin(
             self._note,
-            self._file_recording,
-            replace_recording_id=recording.recording_id if replacing else None,
+            replace(recording, provider_name=choice.provider.name, model_id=choice.model.model_id),
+            replacing=replacing,
         )
-        self._file_shown = True
         if self._note is None:
             self.content_page.set_title(title)
             self.window_title.set_title(title)
@@ -1283,43 +1160,13 @@ class Window(Adw.ApplicationWindow):
         self.bottom_bar.set_progress(import_stage_label(stage, part, parts))
 
     def _on_file_update(self, snapshot: FileTranscriptSnapshot) -> None:
-        if not self._file_transcription:
-            return
-        self._file_pending = FileTranscriptSnapshot(
-            scope_speakers(snapshot.segments, self._file_recording_id),
-            scope_speakers(snapshot.preview, self._file_recording_id),
-        )
-        if self._file_pending.segments != self._file_rendered.segments or not snapshot.preview:
-            if self._file_update_timeout:
-                GLib.source_remove(self._file_update_timeout)
-                self._file_update_timeout = 0
-            self._render_file_update()
-        elif not self._file_update_timeout:
-            self._file_update_timeout = GLib.timeout_add(50, self._render_file_update)
-
-    def _render_file_update(self) -> bool:
-        self._file_update_timeout = 0
-        if self._file_transcription and self._file_pending is not None:
-            self._file_rendered = self._file_pending
-            self._file_pending = None
-            if self._file_shown:
-                self.note_view.update_file_transcription(self._file_rendered)
-        return False
+        self._file_display.update(snapshot)
 
     def _end_file_transcription(self) -> None:
-        if not self._file_transcription:
+        if not self._file_display.active:
             return
-        if self._file_update_timeout:
-            GLib.source_remove(self._file_update_timeout)
-            self._file_update_timeout = 0
-        self._file_pending = None
-        self._file_transcription = False
+        self._file_display.end()
         self._committing_transcription = False
-        self._file_note_id = None
-        self._file_recording = None
-        if self._file_shown:
-            self.note_view.end_file_transcription()
-            self._file_shown = False
         if self._note is None:
             self.content_page.set_title(_("Kikoe"))
             self.window_title.set_title("")
@@ -1352,7 +1199,7 @@ class Window(Adw.ApplicationWindow):
         live_task: asyncio.Task[None] | None = None
         realtime = choice.model.capabilities.realtime is not None
         try:
-            await self._finish_playback()
+            await self._playback.finish()
             await asyncio.to_thread(find_ffmpeg)
             # Validate the batch backend before opening the microphone.
             client = create_client(
@@ -1617,18 +1464,16 @@ class Window(Adw.ApplicationWindow):
     def _on_window_close_request(self, _window: Gtk.Window) -> bool:
         if self._closing:
             return True
-        self._stop_playback()
+        self._playback.stop()
         self.note_view.flush_edits()
-        if self._search_task is not None:
-            self._search_generation += 1
-            self._search_task.cancel()
+        self._search.close()
         recovery_pending = self._recovery_task is not None and not self._recovery_task.done()
         if (
             self._recording_task is None
             and self._import_task is None
             and not recovery_pending
-            and (self._playback_task is None or self._playback_task.done())
-            and not self._edit_saves
+            and not self._playback.pending
+            and not self._editing.pending
         ):
             return False
         self._closing = True
@@ -1637,8 +1482,8 @@ class Window(Adw.ApplicationWindow):
 
     async def _save_and_close(self) -> None:
         try:
-            await self._edits_saved()
-            await self._finish_playback()
+            await self._editing.wait_saved()
+            await self._playback.finish()
             task = self._recording_task
             if self._session is not None:
                 await self._session.stop()
@@ -1671,7 +1516,3 @@ class Window(Adw.ApplicationWindow):
 
 def _from_ms(value: int) -> timedelta | None:
     return None if value == NO_TIME else timedelta(milliseconds=value)
-
-
-def _to_ms(value: timedelta | None) -> int | None:
-    return None if value is None else round(value / timedelta(milliseconds=1))

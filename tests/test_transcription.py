@@ -5,6 +5,7 @@ from datetime import timedelta
 from kikoe.core.models import Segment
 from kikoe.core.transcript_words import TranscriptWord, group_words
 from kikoe.core.transcription import (
+    FileTranscriptSnapshot,
     LiveTranscript,
     SpeechBoundary,
     TranscriptEvent,
@@ -57,3 +58,12 @@ def test_manual_commit_limits_unbroken_speech_to_fifteen_seconds() -> None:
     boundary = SpeechBoundary()
     assert not boundary.feed(timedelta(seconds=14), 1)
     assert boundary.feed(timedelta(seconds=1), 1)
+
+
+def test_file_snapshot_scopes_final_and_preview_without_mutating_source() -> None:
+    snapshot = FileTranscriptSnapshot(
+        (Segment("Final", speaker_id="0"),), (Segment("Preview", speaker_id="0"),)
+    )
+    result = snapshot.scoped("recording")
+    assert result.segments[0].speaker_id == result.preview[0].speaker_id == "recording:0"
+    assert snapshot.segments[0].speaker_id == "0"

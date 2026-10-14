@@ -22,6 +22,12 @@ class FileTranscriptSnapshot:
     segments: tuple[Segment, ...] = ()
     preview: tuple[Segment, ...] = ()
 
+    def scoped(self, scope: str) -> FileTranscriptSnapshot:
+        """Keep preview speaker labels consistent with the committed recording."""
+        return FileTranscriptSnapshot(
+            scope_speakers(self.segments, scope), scope_speakers(self.preview, scope)
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class TranscriptEvent:
