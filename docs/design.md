@@ -46,6 +46,9 @@ Default size 1180×780. Two panes.
 
 **Sidebar** (≈260 px, "Notes"):
 - Header: app title "Kikoe"; buttons *New Note*, *Search Notes*, *Main Menu*.
+- When the window controls are at the start (macOS, or a left button layout on Linux),
+  *New Note* joins Search and Main Menu at the end and the sidebar title is hidden,
+  so the app's buttons never crowd the window controls.
 - List rows: note title + subtitle with date and length, e.g.
   - "Podcast Topics" — "Today 15:12 · 2 recordings"
   - "Group Meeting" — "Yesterday · 42:10"
@@ -180,7 +183,8 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   The red indicator dims while paused. Resume appends audio to the same recording.
 - The recording bar is always one line. Below 600 sp the summary hides; below 480 sp
   the meter hides too, so the timer, pause/resume and the labeled Stop fit at 360 px. Below 480 sp, the content
-  header keeps only the close window decoration so all app controls still fit. Colors
+  header keeps only Close, on the side the system puts window controls, so all app
+  controls still fit. Colors
   follow the Adwaita theme. The red recording dot pulses while animations are enabled.
 - During recording/saving/transcription, starting another capture, importing, changing
   notes and deleting the target note are disabled; exporting is disabled. Display

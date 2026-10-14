@@ -11,6 +11,7 @@ from pathlib import Path
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango
 
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models
+from kikoe.core.decoration_layout import DecorationLayout
 from kikoe.core.edit_history import SegmentChange, SegmentFields
 from kikoe.core.export import ExportFormat, export_filename, export_note
 from kikoe.core.models import (
@@ -82,7 +83,11 @@ class Window(Adw.ApplicationWindow):
     __gtype_name__ = "KikoeWindow"
 
     toast_overlay: Adw.ToastOverlay = Gtk.Template.Child()
+    compact_breakpoint: Adw.Breakpoint = Gtk.Template.Child()
     split_view: Adw.NavigationSplitView = Gtk.Template.Child()
+    sidebar_header: Adw.HeaderBar = Gtk.Template.Child()
+    new_note_button: Gtk.Button = Gtk.Template.Child()
+    content_header: Adw.HeaderBar = Gtk.Template.Child()
     notes_list: Gtk.ListBox = Gtk.Template.Child()
     content_page: Adw.NavigationPage = Gtk.Template.Child()
     window_title: Adw.WindowTitle = Gtk.Template.Child()
@@ -200,6 +205,15 @@ class Window(Adw.ApplicationWindow):
         notes.connect_changed(self._on_notes_changed)
         self.bottom_bar.connect("choice-changed", self._on_bottom_bar_choice_changed)
         self.bottom_bar.bind_providers(providers)
+        self._new_note_at_end = False
+        self._gtk_settings = Gtk.Settings.get_default()
+        self._layout_handler = 0
+        if self._gtk_settings is not None:
+            self._layout_handler = self._gtk_settings.connect(
+                "notify::gtk-decoration-layout", self._on_decoration_layout_changed
+            )
+            self.connect("destroy", self._on_destroy)
+        self._sync_window_controls()
 
     @property
     def note(self) -> Note | None:
@@ -277,6 +291,47 @@ class Window(Adw.ApplicationWindow):
         )
         if options != self._note.display:
             run_task(self._notes.set_display_options(self._note.note_id, options), self)
+
+    # Window controls
+
+    def _on_destroy(self, _window: Gtk.Window) -> None:
+        """GTK settings outlive the window, so their handler must not."""
+        if self._gtk_settings is not None:
+            self._gtk_settings.disconnect(self._layout_handler)
+
+    def _on_decoration_layout_changed(
+        self, _settings: Gtk.Settings, _spec: GObject.ParamSpec
+    ) -> None:
+        self._sync_window_controls()
+
+    @Gtk.Template.Callback()
+    def _on_window_notify_current_breakpoint(
+        self, _window: Adw.ApplicationWindow, _spec: GObject.ParamSpec
+    ) -> None:
+        self._sync_window_controls()
+
+    def _sync_window_controls(self) -> None:
+        """Keep the app's buttons on the side away from the window controls.
+
+        With macOS-style controls at the start, the narrow sidebar header cannot hold them,
+        New Note and a centered title, so New Note joins the end buttons and the title,
+        already shown by the window, makes way.
+        """
+        settings = self._gtk_settings
+        layout = DecorationLayout.parse(
+            (settings.props.gtk_decoration_layout or "") if settings is not None else ""
+        )
+        at_end = layout.controls_at_start
+        if at_end != self._new_note_at_end:
+            self._new_note_at_end = at_end
+            self.sidebar_header.remove(self.new_note_button)
+            if at_end:
+                self.sidebar_header.pack_end(self.new_note_button)
+            else:
+                self.sidebar_header.pack_start(self.new_note_button)
+        self.sidebar_header.set_show_title(not at_end)
+        compact = self.get_current_breakpoint() is self.compact_breakpoint
+        self.content_header.set_decoration_layout(layout.close_only() if compact else None)
 
     # Sidebar
 

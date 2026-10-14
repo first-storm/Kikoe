@@ -8,6 +8,7 @@ template $KikoeWindow: Adw.ApplicationWindow {
   width-request: 360;
   height-request: 294;
   close-request => $_on_window_close_request();
+  notify::current-breakpoint => $_on_window_notify_current_breakpoint();
 
   Adw.Breakpoint {
     condition ("max-width: 640sp")
@@ -19,12 +20,12 @@ template $KikoeWindow: Adw.ApplicationWindow {
 
   // Not redundant with the breakpoint above: libadwaita checks each breakpoint on its own
   // when computing the minimum width, so this one must collapse the split view as well.
-  Adw.Breakpoint {
+  // The window reduces the content header to Close while this one applies.
+  Adw.Breakpoint compact_breakpoint {
     condition ("max-width: 480sp")
 
     setters {
       split_view.collapsed: true;
-      content_header.decoration-layout: ":close";
     }
   }
 
@@ -38,9 +39,9 @@ template $KikoeWindow: Adw.ApplicationWindow {
 
         child: Adw.ToolbarView {
           [top]
-          Adw.HeaderBar {
+          Adw.HeaderBar sidebar_header {
             [start]
-            Button {
+            Button new_note_button {
               icon-name: "list-add-symbolic";
               tooltip-text: _("New Note");
 
