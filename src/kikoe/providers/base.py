@@ -10,7 +10,7 @@ from typing import ClassVar, Protocol
 from urllib.parse import urlsplit
 
 from kikoe.core.choice import RequestedFeatures
-from kikoe.core.models import ModeCapabilities, ModelSpec, Segment, TimestampGranularity
+from kikoe.core.models import ModeCapabilities, ModelSpec, Segment
 from kikoe.core.transcription import FileTranscriptSnapshot, RealtimeProfile, TranscriptEvent
 from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
@@ -30,23 +30,11 @@ async def close_stack(stack: AsyncExitStack) -> None:
 
 
 @dataclass(frozen=True, slots=True)
-class TranscriptionOptions:
+class TranscriptionOptions(RequestedFeatures):
     """Per-request switches. Only honoured when the model's Capabilities allow them."""
 
-    timestamps: bool = True
-    diarization: bool = True
-    language: str | None = None
+    language: str | None = field(default=None, kw_only=True)
     """BCP 47 tag, or None to let the service detect it."""
-    timestamp_granularities: tuple[TimestampGranularity, ...] = field(
-        default=(TimestampGranularity.SEGMENT,), kw_only=True
-    )
-    """Timestamp detail; honoured only when the model has word timestamps."""
-
-    def allowed_by(self, capabilities: ModeCapabilities) -> RequestedFeatures:
-        """Apply the same capability constraints as the model options UI."""
-        return RequestedFeatures(
-            self.timestamps, self.diarization, self.timestamp_granularities
-        ).allowed_by(capabilities)
 
 
 def file_capabilities(model: ModelSpec) -> ModeCapabilities:

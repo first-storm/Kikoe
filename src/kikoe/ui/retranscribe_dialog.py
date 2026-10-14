@@ -9,7 +9,6 @@ from kikoe.core.formatting import format_duration
 from kikoe.core.models import ModeCapabilities, Recording
 from kikoe.core.transcript_rows import transcript_columns
 from kikoe.i18n import _
-from kikoe.providers.base import TranscriptionOptions
 from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.labels import model_choice_label
@@ -34,7 +33,7 @@ class RetranscribeDialog(Adw.Dialog):
         recording: Recording,
         number: int,
         current: ModelChoice | None,
-        submit: Callable[[ModelChoice, TranscriptionOptions], None],
+        submit: Callable[[ModelChoice, RequestedFeatures], None],
     ) -> None:
         super().__init__()
         self._updating = True
@@ -96,14 +95,5 @@ class RetranscribeDialog(Adw.Dialog):
     def _on_transcribe_button_clicked(self, _button: Gtk.Button) -> None:
         if self._choice is None:
             return
-        allowed = self._options.allowed
-        self._submit(
-            self._choice,
-            TranscriptionOptions(
-                timestamps=allowed.timestamps,
-                diarization=allowed.diarization,
-                language=self._preferences.current.language,
-                timestamp_granularities=allowed.timestamp_granularities,
-            ),
-        )
+        self._submit(self._choice, self._options.allowed)
         self.close()

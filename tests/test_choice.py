@@ -21,6 +21,7 @@ from kikoe.core.models import (
     TimestampGranularity,
 )
 from kikoe.core.validation import Capability
+from kikoe.providers.base import TranscriptionOptions
 
 WHISPER = ModelSpec("whisper-1", "Whisper", file_caps(timestamps=True))
 GPT = ModelSpec("gpt-4o-transcribe", "GPT-4o", Capabilities())
@@ -103,6 +104,12 @@ def test_allowed_by_keeps_granularity_only_with_word_timestamps() -> None:
     assert wanted.allowed_by(ModeCapabilities()).timestamp_granularities == (
         TimestampGranularity.SEGMENT,
     )
+
+
+def test_request_options_are_limited_like_the_features_they_extend() -> None:
+    options = TranscriptionOptions(True, True, (TimestampGranularity.WORD,), language="zh")
+
+    assert options.allowed_by(ModeCapabilities(diarization=True)) == RequestedFeatures(False, True)
 
 
 def test_normalize_granularities_dedupes_orders_and_falls_back() -> None:

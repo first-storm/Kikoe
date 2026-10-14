@@ -65,10 +65,10 @@ class TranscriptionController:
     def transcription_options(self, features: RequestedFeatures) -> TranscriptionOptions:
         """Capture the current language with the entry point's selected features."""
         return TranscriptionOptions(
-            timestamps=features.timestamps,
-            diarization=features.diarization,
+            features.timestamps,
+            features.diarization,
+            features.timestamp_granularities,
             language=self._preferences.current.language,
-            timestamp_granularities=features.timestamp_granularities,
         )
 
     # Import
@@ -161,7 +161,7 @@ class TranscriptionController:
             return
         note_id = note.note_id
 
-        def submit(choice: ModelChoice, options: TranscriptionOptions) -> None:
+        def submit(choice: ModelChoice, features: RequestedFeatures) -> None:
             choices = available_models(self._providers.providers)
             refreshed = next((c for c in choices if c.key == choice.key), None)
             if refreshed is None or refreshed.model.capabilities.file is None:
@@ -170,6 +170,7 @@ class TranscriptionController:
                 )
                 return
             self._playback.stop()
+            options = self.transcription_options(features)
             self._work.import_task = run_task(
                 self._retranscribe(note_id, recording, refreshed, options), self._window
             )
