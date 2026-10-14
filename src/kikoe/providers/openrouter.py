@@ -6,15 +6,14 @@ from pathlib import Path
 import httpx
 from openrouter import OpenRouter
 
-from kikoe.core.choice import normalize_granularities
-from kikoe.core.models import ModelSpec, Segment, TimestampGranularity
+from kikoe.core.models import ModelSpec, Segment
+from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileTranscriptCallback,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
-    UploadLimits,
     file_capabilities,
 )
 from kikoe.providers.errors import sdk_error
@@ -48,13 +47,9 @@ class OpenRouterClient:
         if len(content) > 25_000_000:
             raise TranscriptionError(_("The audio file is too large to upload to this provider."))
         caps = file_capabilities(model)
-        timed = options.timestamps and caps.timestamps
-        diarize = options.diarization and caps.diarization
-        granularities = (
-            normalize_granularities(options.timestamp_granularities)
-            if caps.word_timestamps
-            else (TimestampGranularity.SEGMENT,)
-        )
+        features = options.allowed_by(caps)
+        timed, diarize = features.timestamps, features.diarization
+        granularities = features.timestamp_granularities
         try:
             async with (
                 httpx.AsyncClient(transport=self._transport) as http,

@@ -19,14 +19,13 @@ from kikoe.core.models import (
     UploadSettings,
 )
 from kikoe.core.transcription import FileTranscriptSnapshot
-from kikoe.core.upload import MP3, OGG_OPUS, UploadFormat
+from kikoe.core.upload import MP3, OGG_OPUS, UploadFormat, UploadLimits
 from kikoe.media import transcode
 from kikoe.providers.base import (
     FileTranscriptCallback,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
-    UploadLimits,
 )
 from kikoe.services.importer import ImportStage, import_audio, transcribe_audio
 from kikoe.storage.library import Library

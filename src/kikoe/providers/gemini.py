@@ -14,11 +14,11 @@ from pydantic import BaseModel
 
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.transcription import TranscriptEvent
+from kikoe.core.upload import UploadLimits
 from kikoe.providers.base import (
     FileTranscriptCallback,
     RealtimeSession,
     TranscriptionOptions,
-    UploadLimits,
     close_stack,
     file_capabilities,
 )
@@ -62,9 +62,8 @@ class GeminiClient:
         )
 
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-        annotated = (options.timestamps and file_capabilities(model).timestamps) or (
-            options.diarization and file_capabilities(model).diarization
-        )
+        features = options.allowed_by(file_capabilities(model))
+        annotated = features.timestamps or features.diarization
         return UploadLimits(duration=timedelta(minutes=30 if annotated else 60))
 
     async def transcribe_file(
@@ -83,8 +82,8 @@ class GeminiClient:
         self, audio: Path, model: ModelSpec, options: TranscriptionOptions
     ) -> tuple[Segment, ...]:
         caps = file_capabilities(model)
-        timed = options.timestamps and caps.timestamps
-        diarize = options.diarization and caps.diarization
+        features = options.allowed_by(caps)
+        timed, diarize = features.timestamps, features.diarization
         try:
             async with self._sdk().aio as sdk:
                 uploaded = await sdk.files.upload(file=audio)

@@ -14,13 +14,13 @@ from pydantic import BaseModel
 
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.transcription import TranscriptEvent
+from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileTranscriptCallback,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
-    UploadLimits,
     close_stack,
     file_capabilities,
 )
@@ -106,6 +106,7 @@ class DeepgramClient:
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         content = await asyncio.to_thread(audio.read_bytes)
+        features = options.allowed_by(file_capabilities(model))
         try:
             async with httpx.AsyncClient(timeout=900, transport=self._transport) as http:
                 result = await self._listen(http).media.transcribe_file(
@@ -115,14 +116,12 @@ class DeepgramClient:
                     detect_language=options.language is None,
                     smart_format=True,
                     utterances=True,
-                    diarize_model="latest"
-                    if options.diarization and file_capabilities(model).diarization
-                    else None,
+                    diarize_model="latest" if features.diarization else None,
                 )
                 return parse_deepgram(
                     result.model_dump(),
-                    options.timestamps and file_capabilities(model).timestamps,
-                    options.diarization and file_capabilities(model).diarization,
+                    features.timestamps,
+                    features.diarization,
                 )
         except Exception as error:
             raise sdk_error(error) from error

@@ -20,7 +20,7 @@ from kikoe.core.models import (
     UploadSettings,
 )
 from kikoe.core.transcription import FileTranscriptSnapshot, scope_speakers
-from kikoe.core.upload import UPLOAD_FORMATS, UploadFormat, upload_policy, validate_upload
+from kikoe.core.upload import UploadFormat, UploadLimits, effective_upload_limits
 from kikoe.i18n import _
 from kikoe.media import transcode
 from kikoe.providers.base import (
@@ -28,8 +28,8 @@ from kikoe.providers.base import (
     TranscriptionError,
     TranscriptionOptions,
     TranscriptionProvider,
-    UploadLimits,
 )
+from kikoe.services.commits import finish_commit
 from kikoe.services.upload_queue import request_slot
 from kikoe.storage.notes import NoteRepository
 
@@ -97,11 +97,7 @@ async def import_audio(
             segments=scope_speakers(segments, recording_id),
             audio_path=original,
         )
-        commit = asyncio.create_task(notes.add_recording(note_id, source.stem, recording))
-        try:
-            note = await asyncio.shield(commit)
-        except asyncio.CancelledError:
-            note = await commit
+        note = await finish_commit(notes.add_recording(note_id, source.stem, recording))
     except BaseException:
         await notes.discard_audio(original)
         raise
@@ -129,16 +125,7 @@ async def transcribe_audio(
         limits = client.upload_limits(model, options or TranscriptionOptions())
         settings = provider.upload if provider else UploadSettings(parallelism=1)
         if provider is not None:
-            validate_upload(settings, provider.api)
-            policy = upload_policy(provider.api)
-            size = min(settings.chunk_bytes or policy.bytes, limits.bytes or policy.bytes)
-            seconds = settings.chunk_seconds or policy.seconds
-            duration_limit = timedelta(seconds=seconds) if seconds else limits.duration
-            if limits.duration is not None:
-                duration_limit = min(duration_limit or limits.duration, limits.duration)
-            limits = UploadLimits(
-                size, duration_limit, UPLOAD_FORMATS[settings.format or policy.format]
-            )
+            limits = effective_upload_limits(limits, settings, provider.api)
         duration, parts = await job.prepare(source, limits)
         segments = await _transcribe_parts(
             parts,

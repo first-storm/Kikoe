@@ -12,12 +12,12 @@ from kikoe.core.choice import ModelChoice
 from kikoe.core.models import ApiKind, ModelSpec, Provider, Segment
 from kikoe.core.recording import CaptureState
 from kikoe.core.transcription import LiveSnapshot, LiveState, TranscriptEvent
+from kikoe.core.upload import UploadLimits
 from kikoe.providers.base import (
     FileTranscriptCallback,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
-    UploadLimits,
 )
 from kikoe.services import realtime
 from kikoe.services.realtime import RealtimeRecording

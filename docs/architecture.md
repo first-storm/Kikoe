@@ -125,12 +125,17 @@ provider callbacks flow through the shared file service, which adds chunk offset
 speaker scopes and includes earlier completed chunks in each snapshot. Results are
 ordered by original chunk index, even when requests complete out of order.
 Per-provider upload settings combine with endpoint/model bounds before conversion;
-encoded chunks are checked again against both limits. A bounded worker pool shares
+`core.upload.UploadLimits` and the pure `effective_upload_limits` function describe
+this intersection. Without provider settings the client's limits apply unchanged.
+Encoded chunks are checked again against both limits. A bounded worker pool shares
 provider slots through `services.upload_queue`, drains cancelled/failed requests before
 cleanup, and publishes only the contiguous prefix of parallel streaming previews.
 See [Provider upload settings](upload-settings.md) for defaults and official sources.
 SQLite is updated only after every chunk succeeds. Imports and retained recording updates shield
 the final commit so cancellation cannot leave saved text pointing to discarded audio.
+`services.commits.finish_commit` waits through repeated cancellation until the write finishes,
+then returns its result or raises its failure. Upload workers already cancelling are drained
+without cancelling them again, so SDK cleanup finishes before temporary audio is removed.
 The note view overlays temporary rows at the target recording, or appends them for imports,
 without changing the saved note. Its virtualized renderer is shared with microphone live
 text. The window coalesces text deltas every 50 ms, immediately renders completed segments,

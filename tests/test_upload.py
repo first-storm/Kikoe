@@ -1,9 +1,18 @@
 from dataclasses import replace
+from datetime import timedelta
 
 import pytest
 
 from kikoe.core.models import ApiKind, AudioFormat, UploadSettings
-from kikoe.core.upload import upload_policy, validate_upload
+from kikoe.core.upload import (
+    FLAC,
+    MP3,
+    WAV,
+    UploadLimits,
+    effective_upload_limits,
+    upload_policy,
+    validate_upload,
+)
 
 
 @pytest.mark.parametrize("api", list(ApiKind))
@@ -32,3 +41,44 @@ def test_gemini_duration_and_mimo_format_are_bounded() -> None:
 def test_boolean_limits_are_rejected(field: str) -> None:
     with pytest.raises(ValueError):
         validate_upload(replace(UploadSettings(), **{field: True}), ApiKind.OPENAI)
+
+
+@pytest.mark.parametrize(
+    ("api", "settings", "model", "expected"),
+    [
+        (ApiKind.OPENAI, UploadSettings(), UploadLimits(), UploadLimits(25_000_000, format=WAV)),
+        (
+            ApiKind.GEMINI,
+            UploadSettings(chunk_bytes=100, chunk_seconds=120, format=AudioFormat.FLAC),
+            UploadLimits(80, timedelta(seconds=60)),
+            UploadLimits(80, timedelta(seconds=60), FLAC),
+        ),
+        (
+            ApiKind.GEMINI,
+            UploadSettings(),
+            UploadLimits(duration=timedelta(minutes=30)),
+            UploadLimits(2_000_000_000, timedelta(minutes=30)),
+        ),
+        (
+            ApiKind.MIMO,
+            UploadSettings(),
+            UploadLimits(format=MP3),
+            UploadLimits(7_500_000, format=WAV),
+        ),
+        (
+            ApiKind.DEEPGRAM,
+            UploadSettings(chunk_seconds=10),
+            UploadLimits(),
+            UploadLimits(2_000_000_000, timedelta(seconds=10)),
+        ),
+    ],
+)
+def test_effective_limits_preserve_endpoint_and_model_bounds(
+    api: ApiKind, settings: UploadSettings, model: UploadLimits, expected: UploadLimits
+) -> None:
+    assert effective_upload_limits(model, settings, api) == expected
+
+
+def test_effective_limits_reject_invalid_settings() -> None:
+    with pytest.raises(ValueError, match="size"):
+        effective_upload_limits(UploadLimits(), UploadSettings(chunk_bytes=0), ApiKind.OPENAI)

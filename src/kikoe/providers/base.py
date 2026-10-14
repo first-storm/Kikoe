@@ -5,13 +5,13 @@ import logging
 from collections.abc import AsyncIterator, Callable
 from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
-from datetime import timedelta
 from pathlib import Path
 from typing import Protocol
 
+from kikoe.core.choice import RequestedFeatures
 from kikoe.core.models import ModeCapabilities, ModelSpec, Segment, TimestampGranularity
 from kikoe.core.transcription import FileTranscriptSnapshot, TranscriptEvent
-from kikoe.core.upload import OGG_OPUS, UploadFormat
+from kikoe.core.upload import UploadLimits
 
 log = logging.getLogger(__name__)
 
@@ -40,6 +40,12 @@ class TranscriptionOptions:
     )
     """Timestamp detail; honoured only when the model has word timestamps."""
 
+    def allowed_by(self, capabilities: ModeCapabilities) -> RequestedFeatures:
+        """Apply the same capability constraints as the model options UI."""
+        return RequestedFeatures(
+            self.timestamps, self.diarization, self.timestamp_granularities
+        ).allowed_by(capabilities)
+
 
 def file_capabilities(model: ModelSpec) -> ModeCapabilities:
     """Upload options; a live-only model requests nothing beyond plain text."""
@@ -52,16 +58,6 @@ class TranscriptionError(Exception):
     def __init__(self, message: str, *, retryable: bool = False) -> None:
         super().__init__(message)
         self.retryable = retryable
-
-
-@dataclass(frozen=True, slots=True)
-class UploadLimits:
-    """Limits depend on the model and requested metadata, not only the provider."""
-
-    bytes: int | None = None
-    duration: timedelta | None = None
-    format: UploadFormat = OGG_OPUS
-    """Encoding the service accepts; split parts are converted to the same one."""
 
 
 class RealtimeSession(Protocol):

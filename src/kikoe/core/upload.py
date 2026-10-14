@@ -1,6 +1,7 @@
 """Audio encodings a provider can ask for before upload."""
 
 from dataclasses import dataclass
+from datetime import timedelta
 
 from kikoe.core.models import ApiKind, AudioFormat, UploadSettings
 
@@ -28,6 +29,29 @@ WAV = UploadFormat(".wav", "audio/wav", (*_SPEECH, "-c:a", "pcm_s16le"))
 UPLOAD_FORMATS = {AudioFormat.OGG: OGG_OPUS, AudioFormat.FLAC: FLAC, AudioFormat.WAV: WAV}
 MAX_PARALLELISM = 32
 MAX_CHUNK_SECONDS = 24 * 60 * 60
+
+
+@dataclass(frozen=True, slots=True)
+class UploadLimits:
+    """Model and option limits, including the encoding accepted by the endpoint."""
+
+    bytes: int | None = None
+    duration: timedelta | None = None
+    format: UploadFormat = OGG_OPUS
+
+
+def effective_upload_limits(
+    limits: UploadLimits, settings: UploadSettings, api: ApiKind
+) -> UploadLimits:
+    """Intersect user settings with endpoint and model limits before conversion."""
+    validate_upload(settings, api)
+    policy = upload_policy(api)
+    size = min(settings.chunk_bytes or policy.bytes, limits.bytes or policy.bytes)
+    seconds = settings.chunk_seconds or policy.seconds
+    duration = timedelta(seconds=seconds) if seconds else limits.duration
+    if limits.duration is not None:
+        duration = min(duration or limits.duration, limits.duration)
+    return UploadLimits(size, duration, UPLOAD_FORMATS[settings.format or policy.format])
 
 
 @dataclass(frozen=True, slots=True)

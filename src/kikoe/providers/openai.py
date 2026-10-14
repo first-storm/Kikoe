@@ -19,13 +19,13 @@ from pydantic import BaseModel
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.recording import pcm_level
 from kikoe.core.transcription import SpeechBoundary, TranscriptEvent
+from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileTranscriptCallback,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
-    UploadLimits,
     close_stack,
     file_capabilities,
 )
@@ -77,8 +77,8 @@ class OpenAIClient:
             raise TranscriptionError(_("The audio file is too large to upload to this provider."))
         content = await asyncio.to_thread(audio.read_bytes)
         caps = file_capabilities(model)
-        timed = options.timestamps and caps.timestamps
-        diarize = options.diarization and caps.diarization
+        features = options.allowed_by(caps)
+        timed, diarize = features.timestamps, features.diarization
         # Diarizing models return speakers and times only in diarized_json.
         structured = caps.diarization and (diarize or timed)
         mime = mimetypes.guess_type(audio.name)[0] or "application/octet-stream"

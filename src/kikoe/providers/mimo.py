@@ -11,14 +11,13 @@ from openai import APIConnectionError, APIError, APIStatusError, APITimeoutError
 from openai.types.chat import ChatCompletionMessageParam
 
 from kikoe.core.models import ModelSpec, Segment
-from kikoe.core.upload import MP3, WAV
+from kikoe.core.upload import MP3, WAV, UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileTranscriptCallback,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
-    UploadLimits,
 )
 from kikoe.providers.errors import detail_of, status_error
 

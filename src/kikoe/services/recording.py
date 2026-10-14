@@ -19,6 +19,7 @@ from kikoe.providers.base import (
     TranscriptionOptions,
     TranscriptionProvider,
 )
+from kikoe.services.commits import finish_commit
 from kikoe.services.importer import ImportStage, ProgressCallback, transcribe_audio
 from kikoe.storage.captures import CaptureJournal, CaptureStore
 from kikoe.storage.library import NoteNotFoundError
@@ -204,7 +205,7 @@ async def transcribe_recording(
             work_dir=work_dir,
         )
         on_progress(ImportStage.SAVING, 1, 1)
-        commit = asyncio.create_task(
+        return await finish_commit(
             notes.update_transcription(
                 note_id,
                 recording.recording_id,
@@ -214,12 +215,6 @@ async def transcribe_recording(
                 model_id=choice.model.model_id,
             )
         )
-        try:
-            return await asyncio.shield(commit)
-        except asyncio.CancelledError:
-            # A worker-thread transaction cannot be cancelled after it starts. Finish
-            # it before closing, rather than report cancellation while it writes text.
-            return await commit
     except BaseException:
         if not preserve_on_failure:
             await notes.update_transcription(

@@ -20,7 +20,7 @@ from kikoe.core.models import (
 )
 from kikoe.core.recording import CaptureProgress, CaptureState, pcm_level
 from kikoe.core.transcription import FileTranscriptSnapshot
-from kikoe.core.upload import OGG_OPUS, UploadFormat
+from kikoe.core.upload import OGG_OPUS, UploadFormat, UploadLimits
 from kikoe.media import transcode
 from kikoe.media.recorder import RecorderError
 from kikoe.providers.base import (
@@ -28,7 +28,6 @@ from kikoe.providers.base import (
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
-    UploadLimits,
 )
 from kikoe.services.recording import RecordingSession, recover_recording, transcribe_recording
 from kikoe.storage.captures import CaptureJournal, CaptureStore, CaptureStoreError
