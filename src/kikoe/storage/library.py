@@ -54,8 +54,8 @@ def audio_dir() -> Path:
 class Library:
     def __init__(self, database: Path, audio_dir: Path) -> None:
         self._database = database
-        self._audio_dir = audio_dir
-        self._audio = AudioFiles(audio_dir)
+        self.audio = AudioFiles(audio_dir)
+        """The retained originals that recordings point to."""
 
     def migrate(self) -> None:
         """Bring the schema up to date. Call once before anything else."""
@@ -165,7 +165,7 @@ class Library:
             cursor = connection.execute("DELETE FROM notes WHERE id = ?", (note_id,))
             require_found(cursor.rowcount)
         for name in files:
-            self.discard_audio(self._audio_dir / name)
+            self.audio.discard(self.audio.directory / name)
 
     def delete_recording(self, note_id: str, recording_id: str) -> Note:
         """Delete one recording, its transcript and its retained audio file."""
@@ -182,16 +182,8 @@ class Library:
                 raise LibraryError(_("This recording no longer exists."))
             note = self._read_note(connection, note_id)
         if row is not None and row[0] is not None:
-            self.discard_audio(self._audio_dir / row[0])
+            self.audio.discard(self.audio.directory / row[0])
         return note
-
-    def store_audio(self, source: Path, recording_id: str) -> Path:
-        """Copy an original into the library so it outlives the file the user picked."""
-        return self._audio.store(source, recording_id)
-
-    def discard_audio(self, path: Path) -> None:
-        """Remove a retained audio file; failure only costs disk space, so it is logged."""
-        self._audio.discard(path)
 
     def add_recording(self, note_id: str | None, title: str, recording: Recording) -> Note:
         """Append ``recording`` to a note, or to a new note called ``title`` if ``note_id`` is None.
@@ -215,7 +207,7 @@ class Library:
     ) -> None:
         audio_file = None
         if recording.audio_path is not None:
-            audio_file = recording.audio_path.relative_to(self._audio_dir).as_posix()
+            audio_file = recording.audio_path.relative_to(self.audio.directory).as_posix()
         connection.execute(
             """
             INSERT INTO recordings (id, note_id, position, created_at, duration_ms, source,
@@ -404,7 +396,7 @@ class Library:
         )
 
     def _read_note(self, connection: sqlite3.Connection, note_id: str) -> Note:
-        return read_note(connection, note_id, self._audio_dir)
+        return read_note(connection, note_id, self.audio.directory)
 
     @contextmanager
     def _connect(self) -> Generator[sqlite3.Connection]:

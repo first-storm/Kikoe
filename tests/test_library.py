@@ -35,7 +35,7 @@ def recording(
     if library is not None and tmp_path is not None:
         original = tmp_path / "Original.MP3"
         original.write_bytes(b"audio")
-        audio = library.store_audio(original, recording_id)
+        audio = library.audio.store(original, recording_id)
     return Recording(
         recording_id,
         WHEN,
@@ -196,7 +196,7 @@ def test_migrating_twice_is_harmless(library: Library) -> None:
 
 def test_copying_a_missing_file_is_a_library_error(tmp_path: Path, library: Library) -> None:
     with pytest.raises(LibraryError, match="Could not copy"):
-        library.store_audio(tmp_path / "missing.wav", "r1")
+        library.audio.store(tmp_path / "missing.wav", "r1")
 
 
 def test_stored_audio_is_synced_through_a_writable_handle(
@@ -214,7 +214,7 @@ def test_stored_audio_is_synced_through_a_writable_handle(
     source.write_bytes(b"audio")
     monkeypatch.setattr(os, "fsync", fsync)
 
-    stored = library.store_audio(source, "r1")
+    stored = library.audio.store(source, "r1")
 
     assert len(synced) == 1
     assert stored.read_bytes() == b"audio"
@@ -231,7 +231,7 @@ def test_failed_copy_leaves_no_partial_file(
     monkeypatch.setattr(os, "fsync", fail)
 
     with pytest.raises(LibraryError, match="Could not copy"):
-        library.store_audio(source, "r1")
+        library.audio.store(source, "r1")
 
     assert not (tmp_path / "audio" / "r1.wav").exists()
 

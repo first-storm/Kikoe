@@ -99,10 +99,10 @@ class NoteRepository:
         return await self._change(note_id, self._library.delete_recording, note_id, recording_id)
 
     async def store_audio(self, source: Path, recording_id: str) -> Path:
-        return await asyncio.to_thread(self._library.store_audio, source, recording_id)
+        return await asyncio.to_thread(self._library.audio.store, source, recording_id)
 
     async def discard_audio(self, path: Path) -> None:
-        await asyncio.to_thread(self._library.discard_audio, path)
+        await asyncio.to_thread(self._library.audio.discard, path)
 
     async def add_recording(self, note_id: str | None, title: str, recording: Recording) -> Note:
         """Append to ``note_id``, or create a note called ``title`` when it is None."""
