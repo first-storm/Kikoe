@@ -10,20 +10,24 @@ from kikoe.providers.factory import create_client
 MODEL = ModelSpec("live", "Live", LIVE_ONLY)
 
 
-@pytest.mark.parametrize(
-    ("api", "profile"),
-    [
-        (ApiKind.OPENAI, RealtimeProfile(sample_rate=24000)),
-        (ApiKind.OPENAI_COMPATIBLE, RealtimeProfile(sample_rate=24000)),
-        (ApiKind.DEEPGRAM, RealtimeProfile(checkpoint=CheckpointStrategy.AUDIO_END)),
-        (ApiKind.GEMINI, RealtimeProfile(max_session=timedelta(seconds=540))),
-        (ApiKind.MISTRAL, RealtimeProfile()),
-        (ApiKind.GROQ, RealtimeProfile()),
-        (ApiKind.MIMO, RealtimeProfile()),
-        (ApiKind.OPENROUTER, RealtimeProfile()),
-    ],
-)
-def test_clients_report_the_realtime_profile_the_service_used_to_hardcode(
+PROFILES = [
+    (ApiKind.OPENAI, RealtimeProfile(sample_rate=24000)),
+    (ApiKind.OPENAI_COMPATIBLE, RealtimeProfile(sample_rate=24000)),
+    (ApiKind.DEEPGRAM, RealtimeProfile(checkpoint=CheckpointStrategy.AUDIO_END)),
+    (ApiKind.GEMINI, RealtimeProfile(max_session=timedelta(seconds=540))),
+    (ApiKind.MISTRAL, RealtimeProfile()),
+    (ApiKind.GROQ, RealtimeProfile()),
+    (ApiKind.MIMO, RealtimeProfile()),
+    (ApiKind.OPENROUTER, RealtimeProfile()),
+]
+
+
+def test_every_api_kind_declares_a_profile() -> None:
+    assert {api for api, _profile in PROFILES} == set(ApiKind)
+
+
+@pytest.mark.parametrize(("api", "profile"), PROFILES)
+def test_each_client_reports_its_own_realtime_profile(
     api: ApiKind, profile: RealtimeProfile
 ) -> None:
     client = create_client(Provider("p", "Test", api, "https://example.test"), "key")

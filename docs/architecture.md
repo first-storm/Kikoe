@@ -69,12 +69,15 @@ Top-level helpers (`constants`, `paths`, `i18n`) are importable from any layer.
   `language` is a common BCP 47 tag or null for automatic detection. Version-one files
   retain their providers and gain empty defaults. An optional `window` object (`width`, `height`, `maximized`; core `WindowState`)
   restores the main window's size; unusable values are ignored, not reported. The frozen `Settings` and core
-  `Preferences` types describe one snapshot; `ProviderRepository` owns both kinds of
-  settings and serializes writes with an asyncio lock. Field changes merge against
-  the latest snapshot; failed writes do not publish state or notify listeners. Provider, preference and window
-  changes share one private settings writer, with notification kept at each caller. Mutations
-  require a successful settings read, so a failed startup cannot overwrite a damaged file. A file with
-  a newer `version` or damaged content is reported to the user, not overwritten silently.
+  `Preferences` types describe one snapshot. `storage.settings_writer.SettingsWriter` holds the
+  snapshot and is the only code that writes the file: it serializes read-modify-write cycles
+  with an asyncio lock, merges each field change against the latest snapshot, and never
+  publishes state after a failed write. Mutations require a successful settings read, so a
+  failed startup cannot overwrite a damaged file. A file with a newer `version` or damaged
+  content is reported to the user, not overwritten silently. Three stores share the writer and
+  each has one reason to change: `storage.providers.ProviderRepository` (providers, models,
+  API keys), `storage.preferences.PreferencesRepository` (defaults, devices) and
+  `storage.window_state.WindowStateStore` (window size). Each notifies only its own listeners.
   GSettings is avoided because it needs compiled schemas on
   every platform.
 - Secrets (API keys): the OS credential store via `keyring` (service = app ID, username =
@@ -82,8 +85,13 @@ Top-level helpers (`constants`, `paths`, `i18n`) are importable from any layer.
   logs. If no backend is available the user gets an error; there is no plain-text fallback.
   Behavior inside Flatpak (Secret Service over D-Bus needs `--talk-name=org.freedesktop.secrets`)
   is still to be verified.
-- `storage.providers.ProviderRepository` combines both, keeps the provider list in memory and
-  notifies listeners (window, preferences) after each persisted change.
+- `ProviderRepository` keeps the provider list in memory and notifies listeners after each
+  persisted change. At startup the application loads providers first and then preferences, so
+  listeners see the providers before the defaults that choose among them.
+- The library database is split by reason to change: `storage.schema` (the migration list and
+  `SCHEMA_VERSION`), `storage.audio_files` (copying and removing retained audio),
+  `storage.note_rows` (reading rows into notes) and `storage.library` (queries and writes).
+  `storage.errors` holds `LibraryError` and `NoteNotFoundError`.
 
 ## Audio pipeline
 
@@ -107,8 +115,8 @@ realtime recording (`None` when the model lacks that mode). Microphone recording
 fallback entry, and ordered rules (exact `ids` or `prefixes`, first match wins) override
 fields for known models. Every field is `on`/`off` (default, user may change) or
 `unsupported` (hard limit). `core.model_catalog` parses and validates it;
-`storage.model_catalog.load_catalog` reads the packaged file. `ProviderRepository` clamps
-every model on load and on every save, including API-type changes, so the rest of the app
+`storage.model_catalog.load_catalog` reads the packaged file. `SettingsWriter` clamps
+every stored model on load and `ProviderRepository` on every save, including API-type changes, so the rest of the app
 trusts `ModelSpec.capabilities`. To support a new model, add a rule to the JSON and a row
 to `tests/test_model_catalog.py`.
 
@@ -219,8 +227,11 @@ existing recordings defaulting to READY.
 ## Realtime recording
 
 Native PCM is journaled before the independent sender reads it. A streaming ffmpeg
-process converts bounded buffers to mono little-endian int16: 24 kHz for OpenAI,
-16 kHz for Deepgram/Gemini. The network cannot backpressure the capture writer.
+process converts bounded buffers to mono little-endian int16 at the rate the provider asks
+for. Each client declares this in `realtime_profile()` (`core.transcription.RealtimeProfile`:
+sample rate, how replay checkpoints are found, and the longest a connection may live), so
+`services.realtime` never names a provider. Today: 24 kHz for OpenAI, 16 kHz for the rest.
+The network cannot backpressure the capture writer.
 The original recording remains at the device's native sample rate.
 
 `core.transcription` models interim/final events.
@@ -240,7 +251,8 @@ stop retries. Unconfirmed ranges are replayed from the local journal at no more 
 1.25 times realtime. The previously shown final text remains until the replay catches
 up, then its replacement is committed. OpenAI/Gemini flush boundaries establish replay
 checkpoints; Deepgram final-event audio ranges do so without exposing unwanted display
-timestamps. Gemini rotates connections after nine minutes. A rotation must not mark
+timestamps. Gemini declares a nine-minute connection lifetime, after which the service
+rotates the connection. A rotation must not mark
 unsent audio complete merely because microphone capture has already stopped.
 
 Pause drains the resampler and finishes the SDK connection, then waits for resume;
@@ -272,13 +284,34 @@ Added only when the feature using them lands (see AGENTS.md, "Dependencies"):
 
 - `ui/window.py` + `window.blp`: `Adw.NavigationSplitView` (sidebar: notes list;
   content: a `Gtk.Stack` with the welcome page, the empty state and the note view, with
-  the bottom bar below). Collapses below 640 sp.
-- The window delegates edits to `services.editing.EditingSession`, which owns optimistic
-  segment values, Undo/Redo history and serial writes. Saved-note callbacks carry the note
-  identity so old writes cannot replace a newly selected note. Exports and shutdown wait
-  for pending writes. `services.playback.Playback` owns output tasks and device cleanup;
-  the output device is captured when playback is requested. The window retains actions,
-  dialogs and coordination between workflows.
+  the bottom bar below). Collapses below 640 sp. The window creates the views, creates one
+  controller per kind of work, registers the `win.*` actions and wires them together; it does
+  not run workflows itself. Controllers are plain classes without layout (the window's
+  template supplies their widgets) and reach the window only through the `ui.window_host`
+  protocol:
+  - `ui.note_sidebar.NoteSidebar`: list, search (`NoteSearch`), row menu and selection.
+  - `ui.note_actions.NoteActions`: create, rename and delete notes and recordings.
+  - `ui.segment_editor.SegmentEditor`: in-place edits, Undo and Redo over
+    `services.editing.EditingSession`, which owns optimistic segment values, history and
+    serial writes. Saved-note callbacks carry the note identity so old writes cannot replace
+    a newly selected note. Exports and shutdown wait for pending writes.
+  - `ui.export_controller.ExportController` and `ui.file_dialogs`: export, copy and save-as.
+  - `ui.speaker_controller.SpeakerController`: playback samples, speaker naming and matching
+    (`services.playback.Playback` owns output tasks; the device is captured when playback is
+    requested).
+  - `ui.transcription_controller.TranscriptionController`: import, retry and re-transcription
+    through `services.file_transcription.FileTranscriptionWorkflow`, plus the preview overlay
+    (`ui.file_transcription.FileTranscriptionDisplay`).
+  - `ui.recording_controller.RecordingController`: Start, Pause, Resume, Stop and startup
+    recovery, over `services.recording_workflow.RecordingWorkflow` and
+    `services.recovery.recover_all`.
+  - `ui.window_chrome`: `GeometryKeeper` (debounced size saving) and `HeaderLayout`.
+- What the window may do at any moment follows from one snapshot: `core.activity.Activity`
+  describes the running work and `core.activity.action_availability` maps it to the enabled
+  `win.*` actions. `services.activity.ActivityTracker` owns the import, recording and
+  recovery tasks and winds them down in a fixed order when the window closes (edits saved,
+  playback finished, microphone stopped, import cancelled, a recovery already writing audio
+  allowed to finish).
 - `ui.search.NoteSearch` owns request cancellation and stale-result rejection; SearchEntry
   retains its debounce. `ui.file_transcription.FileTranscriptionDisplay` owns the target
   note, temporary snapshots and 50 ms preview refresh scheduling. Returning to the target
@@ -296,7 +329,10 @@ Added only when the feature using them lands (see AGENTS.md, "Dependencies"):
   frame callback. Segment text is edited in place; rows commit text after a pause, on
   focus loss and when recycled. Saves of only segment contents update rows in place so
   the caret survives. The editing session owns the note-wide Undo/Redo history
-  (`core/edit_history.py`) and serializes saves.
+  (`core/edit_history.py`) and serializes saves. Which rows change is decided in
+  `core.transcript_rows` (columns, in-place updates, where an overlay sits); `ui.transcript_rows`
+  builds the rows and writes a streaming transcript into the list, and `ui.row_focus` moves
+  the caret between rows.
 - `ui/bottom_bar.py`: model button, Import Audio, Record/Append Recording, upload progress
   and the recording controls. `Adw.WrapBox` keeps controls usable at 360 px.
 - `ui/transcription_dialog.py`: the bottom bar's model and options dialog; the bar
@@ -376,3 +412,19 @@ exception types, redacts other dynamic values and omits third-party message bodi
 Tracebacks keep module filenames/line numbers/functions without source text, exception
 messages or locals. Unexpected background and uncaught errors are recorded locally.
 No report is uploaded; users open the log folder and choose what to attach themselves.
+
+## Adding a provider
+
+A new API should need one descriptor, one client and the model presets; no caller branches on
+`ApiKind`. `tests/test_architecture.py` fails when a module outside the registry names an
+`ApiKind` member, and the completeness tests fail when a step below is missing.
+
+1. `core.models.ApiKind`: add the member (its value is stored in `settings.json`; never rename).
+2. `core.provider_registry`: add a `ProviderDescriptor` (display name, default base URL, upload
+   limits, whether a language excludes timestamps, extra upload hints, SDK logger names).
+3. `providers/<name>.py`: implement `TranscriptionProvider`, including `realtime_profile()`
+   (the default `RealtimeProfile()` for file-only services), and register the class in
+   `providers.factory.CLIENTS`.
+4. `storage/model_presets.json`: add the API's fallback entry and any model rules.
+5. Tests: a client test against recorded or fake responses; the registry, factory and profile
+   tests cover the rest. Run `uv run scripts/i18n.py update` only if a new UI string appeared.
