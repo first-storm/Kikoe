@@ -27,7 +27,6 @@ class BottomBar(Adw.Bin):
     model_label: Gtk.Label = Gtk.Template.Child()
     provider_label: Gtk.Label = Gtk.Template.Child()
     state_stack: Gtk.Stack = Gtk.Template.Child()
-    record_button: Gtk.Button = Gtk.Template.Child()
     record_content: Adw.ButtonContent = Gtk.Template.Child()
     elapsed_label: Gtk.Label = Gtk.Template.Child()
     recording_dot: Gtk.Image = Gtk.Template.Child()
@@ -36,7 +35,6 @@ class BottomBar(Adw.Bin):
     meter_slot: Adw.Bin = Gtk.Template.Child()
     progress_label: Gtk.Label = Gtk.Template.Child()
     import_button: Gtk.Button = Gtk.Template.Child()
-    cancel_button: Gtk.Button = Gtk.Template.Child()
 
     def __init__(self) -> None:
         super().__init__()

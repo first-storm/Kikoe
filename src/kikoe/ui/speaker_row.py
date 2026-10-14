@@ -42,7 +42,6 @@ class SpeakerRow(Adw.ActionRow):
     choice_button: Gtk.MenuButton = Gtk.Template.Child()
     choice_popover: Gtk.Popover = Gtk.Template.Child()
     choices_list: Gtk.ListBox = Gtk.Template.Child()
-    keep_button: Gtk.Button = Gtk.Template.Child()
     keep_check: Gtk.Image = Gtk.Template.Child()
     target_label: Gtk.Label = Gtk.Template.Child()
 

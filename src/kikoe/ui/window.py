@@ -7,11 +7,7 @@ from collections.abc import Callable, Coroutine
 from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
 from kikoe.core.activity import Activity, action_availability
-from kikoe.core.models import (
-    DisplayOptions,
-    Note,
-    Recording,
-)
+from kikoe.core.models import DisplayOptions, Note
 from kikoe.core.preferences import WindowState
 from kikoe.core.recording import CaptureState
 from kikoe.i18n import _
@@ -25,9 +21,7 @@ from kikoe.storage.providers import ProviderRepository
 from kikoe.storage.window_state import WindowStateStore
 from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.export_controller import ExportController
-from kikoe.ui.labels import (
-    note_title_subtitle,
-)
+from kikoe.ui.labels import note_title_subtitle
 from kikoe.ui.note_actions import NoteActions
 from kikoe.ui.note_sidebar import NoteSidebar
 from kikoe.ui.note_view import NoteView
@@ -433,10 +427,7 @@ class Window(Adw.ApplicationWindow):
         self.content_stack.set_visible_child_name(page)
         self.bottom_bar_slot.set_visible(page == "note")
 
-    # Speaker identities and playback
-
-    def _recording_by_id(self, recording_id: str) -> Recording | None:
-        return self._note.recording(recording_id) if self._note else None
+    # Playback
 
     def _on_playback_error(self, error: PlaybackError) -> None:
         log.warning("Playback failed: %s", error)
