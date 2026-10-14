@@ -10,6 +10,7 @@ from pathlib import Path
 
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango
 
+from kikoe.core.activity import Activity, action_availability
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models
 from kikoe.core.decoration_layout import DecorationLayout
 from kikoe.core.edit_history import SegmentChange, SegmentFields
@@ -474,11 +475,28 @@ class Window(Adw.ApplicationWindow):
             run_task(self._open_note(item.summary.note_id), self)
             self.split_view.set_show_content(True)
 
+    def _activity(self) -> Activity:
+        """What the window is doing right now; every action state follows from it."""
+        choice = self.bottom_bar.choice
+        session = self._session
+        return Activity(
+            importing=self._import_task is not None,
+            recording=self._recording_task is not None,
+            recovering=self._recovery_busy,
+            committing=self._committing_transcription,
+            closing=self._closing,
+            capture_state=session.state if session is not None else CaptureState.STOPPED,
+            has_note=self._note is not None,
+            viewing_transcription=self._viewing_transcription(),
+            has_model=choice is not None,
+            model_transcribes_files=choice is not None
+            and choice.model.capabilities.file is not None,
+            has_providers=bool(self._providers.providers),
+        )
+
     def _switch_locked(self) -> bool:
         """Whether the open note must stay put; transcription alone never pins it."""
-        return self._recovery_busy or (
-            self._recording_task is not None and self._import_task is None
-        )
+        return self._activity().switch_locked
 
     def _viewing_transcription(self) -> bool:
         """Whether the note on screen is the one a running transcription writes to."""
@@ -506,7 +524,7 @@ class Window(Adw.ApplicationWindow):
         # Matches the first-run design: nothing to transcribe with, so no new notes yet.
         self._set_action_enabled("new-note", bool(self._providers.providers))
         self._update_content()
-        self._update_import_actions()
+        self._update_actions()
 
     def _set_action_enabled(self, name: str, enabled: bool) -> None:
         action = self.lookup_action(name)
@@ -553,7 +571,7 @@ class Window(Adw.ApplicationWindow):
                 self.note_view.recording_view.set_state(self._session.state)
                 self.window_title.set_subtitle(_capture_label(self._session.state))
         self._update_content()
-        self._update_import_actions()
+        self._update_actions()
 
     def _set_titles(self, page: str, title: str, subtitle: str) -> None:
         self.content_page.set_title(page)
@@ -742,7 +760,7 @@ class Window(Adw.ApplicationWindow):
                 self._retranscribe(note_id, recording, refreshed, options), self
             )
             self.bottom_bar.set_progress(_("Transcribing…"))
-            self._update_import_actions()
+            self._update_actions()
 
         dialog = RetranscribeDialog(
             self._providers,
@@ -788,7 +806,7 @@ class Window(Adw.ApplicationWindow):
             self._committing_transcription = False
             self._import_task = None
             self.bottom_bar.set_progress(None)
-            self._update_import_actions()
+            self._update_actions()
 
     # In-place editing
 
@@ -988,59 +1006,20 @@ class Window(Adw.ApplicationWindow):
     # Import
 
     def _on_bottom_bar_choice_changed(self, _bar: BottomBar) -> None:
-        self._update_import_actions()
+        self._update_actions()
 
-    def _update_import_actions(self) -> None:
-        busy = (
-            self._import_task is not None or self._recording_task is not None or self._recovery_busy
-        )
-        locked = self._switch_locked() or self._viewing_transcription()
-        if locked:
+    def _update_actions(self) -> None:
+        activity = self._activity()
+        if activity.locked:
             self._playback.stop()
-        for name in (
-            "play-recording",
-            "play-sample",
-            "edit-speaker",
-            "match-speakers",
-            "retranscribe-recording",
-            "delete-recording",
-            "delete-note",
-            "rename-note",
-            "export",
-            "export-audio",
-        ):
-            self._set_action_enabled(name, not locked and self._note is not None)
-        for name in ("search-notes", "rename-note-row", "delete-note-row"):
-            self._set_action_enabled(name, not busy)
-        available = self.bottom_bar.choice is not None and not busy
-        choice = self.bottom_bar.choice
-        file_available = (
-            available and choice is not None and choice.model.capabilities.file is not None
-        )
-        self._set_action_enabled("import-audio", file_available)
-        self._set_action_enabled("start-recording", available)
-        self._set_action_enabled("retry-recording", file_available and self._note is not None)
-        self._set_action_enabled(
-            "cancel-import", self._import_task is not None and not self._committing_transcription
-        )
-        session = self._session
-        state = session.state if session is not None else CaptureState.STOPPED
-        self._set_action_enabled(
-            "pause-recording", state is CaptureState.RECORDING and not self._closing
-        )
-        self._set_action_enabled(
-            "resume-recording", state is CaptureState.PAUSED and not self._closing
-        )
-        self._set_action_enabled(
-            "stop-recording", state is not CaptureState.STOPPED and not self._closing
-        )
-        self.notes_list.set_can_target(not self._switch_locked())
-        self.search_button.set_sensitive(not busy)
+        for name, enabled in action_availability(activity).items():
+            self._set_action_enabled(name, enabled)
+        self.notes_list.set_can_target(not activity.switch_locked)
+        self.search_button.set_sensitive(not activity.busy)
         # Typing in the list starts a search, which must not hide the Stop controls.
-        self.search_bar.set_key_capture_widget(None if busy else self.notes_list)
-        self._set_action_enabled("new-note", not busy and bool(self._providers.providers))
-        self._edits_blocked = locked
-        self.note_view.set_editable(not locked)
+        self.search_bar.set_key_capture_widget(None if activity.busy else self.notes_list)
+        self._edits_blocked = activity.locked
+        self.note_view.set_editable(not activity.locked)
         self._update_history_actions()
 
     def _on_choose_model(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
@@ -1076,7 +1055,7 @@ class Window(Adw.ApplicationWindow):
         options = self._transcription_options(self.bottom_bar.file_features)
         task = asyncio.ensure_future(self._import(path, note_id, choice, options))
         self._import_task = task
-        self._update_import_actions()
+        self._update_actions()
         self.bottom_bar.set_progress(import_stage_label(ImportStage.CONVERTING, 1, 1))
         self.split_view.set_show_content(True)
         try:
@@ -1088,7 +1067,7 @@ class Window(Adw.ApplicationWindow):
         finally:
             self._import_task = None
             self.bottom_bar.set_progress(None)
-            self._update_import_actions()
+            self._update_actions()
 
     async def _pick_audio_file(self) -> Path | None:
         """Ask for an audio or video file; None if the dialog was dismissed."""
@@ -1187,7 +1166,7 @@ class Window(Adw.ApplicationWindow):
         options = self._transcription_options(self.bottom_bar.requested_features)
         note_id = self._note.note_id if self._note else None
         self._recording_task = run_task(self._record(note_id, choice, options), self)
-        self._update_import_actions()
+        self._update_actions()
 
     async def _record(
         self, note_id: str | None, choice: ModelChoice, options: TranscriptionOptions
@@ -1249,7 +1228,7 @@ class Window(Adw.ApplicationWindow):
                 await asyncio.gather(live_task, return_exceptions=True)
             self.note_view.hide_recording()
             self.bottom_bar.set_progress(_("Saving recording…"))
-            self._update_import_actions()
+            self._update_actions()
             saved = await session.save()
             if saved is not None:
                 self._show_note(saved)
@@ -1306,7 +1285,7 @@ class Window(Adw.ApplicationWindow):
         self.note_view.recording_view.set_state(progress.state)
         if progress.state is not CaptureState.STOPPED:
             self.window_title.set_subtitle(_capture_label(progress.state))
-        self._update_import_actions()
+        self._update_actions()
 
     def _on_pause_recording(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         if self._session is not None:
@@ -1346,7 +1325,7 @@ class Window(Adw.ApplicationWindow):
         self._recording_task = run_task(
             self._retry_recording(note.note_id, recording, choice, options), self
         )
-        self._update_import_actions()
+        self._update_actions()
 
     async def _retry_recording(
         self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
@@ -1356,7 +1335,7 @@ class Window(Adw.ApplicationWindow):
         finally:
             self._recording_task = None
             self.bottom_bar.set_progress(None)
-            self._update_import_actions()
+            self._update_actions()
 
     async def _begin_recording_upload(
         self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
@@ -1367,7 +1346,7 @@ class Window(Adw.ApplicationWindow):
             self._upload_recording(note_id, recording, choice, options), self
         )
         self.bottom_bar.set_progress(_("Transcribing…"))
-        self._update_import_actions()
+        self._update_actions()
         try:
             await self._import_task
         except asyncio.CancelledError:
@@ -1436,7 +1415,7 @@ class Window(Adw.ApplicationWindow):
             return
         self._recovery_busy = True
         self.bottom_bar.set_progress(_("Recovering recordings…"))
-        self._update_import_actions()
+        self._update_actions()
         try:
             for journal in journals:
                 note = await recover_recording(journal, store, self._notes)
@@ -1447,7 +1426,7 @@ class Window(Adw.ApplicationWindow):
         finally:
             self._recovery_busy = False
             self.bottom_bar.set_progress(None)
-            self._update_import_actions()
+            self._update_actions()
 
     @Gtk.Template.Callback()
     def _on_window_close_request(self, _window: Gtk.Window) -> bool:
@@ -1499,7 +1478,7 @@ class Window(Adw.ApplicationWindow):
             self.destroy()
         except USER_FACING_ERRORS:
             self._closing = False
-            self._update_import_actions()
+            self._update_actions()
             raise
 
 
