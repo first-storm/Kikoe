@@ -1,13 +1,14 @@
 """Translate SDK failures without leaking authentication URLs or headers."""
 
-from typing import cast
-
-import groq
-import openai
+from typing import TYPE_CHECKING, cast
 
 from kikoe.core.http_status import StatusKind, classify_status, is_retryable
 from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionError
+
+if TYPE_CHECKING:
+    import groq
+    import openai
 
 _DETAIL_LIMIT = 200
 
@@ -112,6 +113,10 @@ def openai_error(error: openai.APIError | groq.APIError, host: str, key: str) ->
 
     Their ``message`` embeds the raw response body, so the body's own message comes first.
     """
+    # Imported here so that loading this module at startup does not load both SDKs.
+    import groq
+    import openai
+
     match error:
         case openai.APIStatusError() | groq.APIStatusError():
             message = body_detail(error.body) or error.message
