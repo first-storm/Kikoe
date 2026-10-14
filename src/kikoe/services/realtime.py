@@ -11,9 +11,10 @@ from kikoe.core.chunking import offset_segments
 from kikoe.core.models import ApiKind, Segment
 from kikoe.core.recording import CaptureState
 from kikoe.core.transcription import LiveSnapshot, LiveState, LiveTranscript, scope_speakers
-from kikoe.media.ffmpeg import PCMStream
+from kikoe.media.ffmpeg import FFmpegError, PCMStream
 from kikoe.providers.base import (
     RealtimeSession,
+    TranscriptionError,
     TranscriptionOptions,
     TranscriptionProvider,
 )
@@ -22,6 +23,13 @@ from kikoe.services.recording import RecordingSession
 
 log = logging.getLogger(__name__)
 GEMINI_SESSION_SECONDS = 540
+
+
+def _failure(error: Exception) -> TranscriptionError:
+    """Reconnecting cannot repair a local converter, so its failures are never retried."""
+    if isinstance(error, FFmpegError):
+        return TranscriptionError(str(error))
+    return sdk_error(error)
 
 
 class RealtimeRecording:
@@ -85,7 +93,7 @@ class RealtimeRecording:
             except asyncio.CancelledError:
                 raise
             except Exception as error:
-                failure = sdk_error(error)
+                failure = _failure(error)
                 log.warning("Realtime connection failed (%s)", type(error).__name__)
                 self._replay_until = max(self._replay_until, self._sent)
                 self._notify(LiveState.RECONNECTING if failure.retryable else LiveState.INCOMPLETE)

@@ -12,6 +12,7 @@ from kikoe.core.choice import ModelChoice
 from kikoe.core.models import ApiKind, ModelSpec, Provider, Segment
 from kikoe.core.recording import CaptureState
 from kikoe.core.transcription import LiveSnapshot, LiveState, TranscriptEvent
+from kikoe.media.ffmpeg import FFmpegNotFoundError
 from kikoe.providers.base import (
     FileTranscriptCallback,
     RealtimeSession,
@@ -229,6 +230,28 @@ async def test_rejected_credentials_leave_recording_available_without_retry_loop
     assert snapshots[-1].state is LiveState.INCOMPLETE
     assert recorded.journal is not None
     assert recorded.store.pcm_path(recorded.journal).read_bytes() == PCM
+
+
+class MissingFFmpeg:
+    """Stands in for a converter that cannot start because ffmpeg is not installed."""
+
+    @classmethod
+    async def start(cls, input_rate: int, output_rate: int) -> MissingFFmpeg:
+        raise FFmpegNotFoundError("ffmpeg was not found")
+
+
+@run_async
+async def test_missing_local_converter_stops_live_recording_without_reconnecting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(realtime, "PCMStream", MissingFFmpeg)
+    recorded = capture(tmp_path, finished=False)
+    snapshots: list[LiveSnapshot] = []
+    job = RealtimeRecording(recorded, CHOICE, Client(), TranscriptionOptions(), snapshots.append)
+    # A reconnect loop would wait on the stopped event forever; the timeout catches that.
+    await asyncio.wait_for(job.run(), timeout=2)
+    assert snapshots[-1].state is LiveState.INCOMPLETE
+    assert not job.complete
 
 
 @run_async
