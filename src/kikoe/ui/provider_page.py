@@ -148,6 +148,8 @@ class ProviderPage(Adw.NavigationPage):
     def _on_add_button_clicked(self, _button: Gtk.Button) -> None:
         fields = self._valid_fields()
         if fields is not None:
+            # Disabled while saving so a double click cannot add the same provider twice.
+            self.add_button.set_sensitive(False)
             run_task(self._add(*fields), self)
 
     def _apply_changes(self) -> None:
@@ -172,7 +174,12 @@ class ProviderPage(Adw.NavigationPage):
         return name, api, effective_base_url(api, base_url), api_key
 
     async def _add(self, name: str, api: ApiKind, base_url: str, api_key: str) -> None:
-        await self._repository.add_provider(name, api, base_url, api_key, self._upload_settings())
+        try:
+            await self._repository.add_provider(
+                name, api, base_url, api_key, self._upload_settings()
+            )
+        finally:
+            self.add_button.set_sensitive(True)
         self._pop()
 
     async def _update(

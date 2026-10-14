@@ -219,6 +219,8 @@ class ModelDialog(Adw.Dialog):
         spec = ModelSpec(
             model_id, self.display_name_row.get_text().strip() or model_id, capabilities
         )
+        # Disabled while saving so a double click cannot save the same model twice.
+        self.confirm_button.set_sensitive(False)
         run_task(self._save(spec, editing_id), self)
 
     @Gtk.Template.Callback()
@@ -227,7 +229,10 @@ class ModelDialog(Adw.Dialog):
             run_task(self._remove(self._model.model_id), self)
 
     async def _save(self, spec: ModelSpec, replacing_id: str | None) -> None:
-        await self._repository.save_model(self._provider_id, spec, replacing_id)
+        try:
+            await self._repository.save_model(self._provider_id, spec, replacing_id)
+        finally:
+            self.confirm_button.set_sensitive(True)
         self.force_close()
 
     async def _remove(self, model_id: str) -> None:
