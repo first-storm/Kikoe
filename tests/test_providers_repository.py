@@ -5,7 +5,7 @@ import pytest
 from helpers import file_caps, run_async
 from kikoe.core.models import ApiKind, Capabilities, ModeCapabilities, ModelSpec, Provider
 from kikoe.storage.providers import ProviderNotFoundError, ProviderRepository
-from kikoe.storage.settings import SettingsStore
+from kikoe.storage.settings import Settings, SettingsStore
 
 URL = "https://api.groq.com/openai/v1"
 
@@ -140,7 +140,7 @@ async def test_failed_defaults_save_does_not_notify_or_change_memory(
 ) -> None:
     from dataclasses import replace
 
-    from kikoe.storage.settings import Settings, SettingsError
+    from kikoe.storage.settings import SettingsError
 
     calls: list[str] = []
     repo.connect_preferences_changed(lambda: calls.append("changed"))
@@ -227,7 +227,7 @@ async def test_loading_clamps_models_saved_by_an_older_catalog(
     path = tmp_path / "settings.json"
     model = ModelSpec("gpt-live-transcribe", "Live", file_caps(timestamps=True))
     provider = Provider("p", "OpenAI", ApiKind.OPENAI, URL, (model,))
-    SettingsStore(path).save((provider,))
+    SettingsStore(path).save_state(Settings((provider,)))
     repository = ProviderRepository(SettingsStore(path), secrets)
 
     await repository.load()
@@ -264,7 +264,7 @@ async def test_failed_window_save_keeps_state_and_does_not_notify(
     repo: ProviderRepository, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from kikoe.core.preferences import WindowState
-    from kikoe.storage.settings import Settings, SettingsError
+    from kikoe.storage.settings import SettingsError
 
     await repo.load()
     original = repo.window

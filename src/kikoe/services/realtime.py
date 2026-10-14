@@ -100,9 +100,7 @@ class RealtimeRecording:
                     continue
 
     async def _connection(self) -> None:
-        journal = self.capture.journal
-        if journal is None:
-            raise RuntimeError("Capture journal is required before streaming")
+        journal = self.capture.require_journal()
         start = self._confirmed
         self._generation += 1
         self._sent = start
@@ -151,9 +149,7 @@ class RealtimeRecording:
                 await session.close()
 
     async def _feed(self, converter: PCMStream, start: int) -> None:
-        journal = self.capture.journal
-        if journal is None:
-            raise RuntimeError("Missing capture journal")
+        journal = self.capture.require_journal()
         offset = start
         while True:
             self.capture.audio_changed.clear()
@@ -170,9 +166,7 @@ class RealtimeRecording:
     async def _send(
         self, session: RealtimeSession, converter: PCMStream, start: int, rate: int
     ) -> None:
-        journal = self.capture.journal
-        if journal is None:
-            raise RuntimeError("Missing capture journal")
+        journal = self.capture.require_journal()
         loop = asyncio.get_running_loop()
         connected = loop.time()
         checkpoint = connected
@@ -213,9 +207,7 @@ class RealtimeRecording:
         self._notify(LiveState.LIVE)
 
     async def _receive(self, session: RealtimeSession, start: int) -> None:
-        journal = self.capture.journal
-        if journal is None:
-            raise RuntimeError("Missing capture journal")
+        journal = self.capture.require_journal()
         offset = timedelta(seconds=start / (journal.sample_rate * 2))
         scope = f"{journal.recording_id}:{self._generation}"
         async for event in session.events():

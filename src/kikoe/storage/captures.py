@@ -48,6 +48,9 @@ class CaptureStore:
     def flac_path(self, journal: CaptureJournal) -> Path:
         return self.directory / f"{journal.recording_id}.flac"
 
+    def transcript_path(self, journal: CaptureJournal) -> Path:
+        return self.directory / f"{journal.recording_id}.transcript"
+
     def create(self, journal: CaptureJournal) -> None:
         """Persist metadata before accepting PCM so every audio block has a recovery target."""
         try:
@@ -56,12 +59,7 @@ class CaptureStore:
             data["created_at"] = journal.created_at.isoformat()
             data["version"] = 1
             destination = self.directory / f"{journal.recording_id}.json"
-            temporary = destination.with_suffix(".tmp")
-            with temporary.open("w", encoding="utf-8") as file:
-                json.dump(data, file)
-                file.flush()
-                os.fsync(file.fileno())
-            temporary.replace(destination)
+            _write_json(destination, destination.with_suffix(".tmp"), data)
         except OSError as error:
             raise _storage_error(error) from error
 
@@ -91,8 +89,7 @@ class CaptureStore:
 
     def checkpoint(self, journal: CaptureJournal, segments: tuple[Segment, ...]) -> None:
         """Only final text is atomically synced; recovery must never promote a preview."""
-        path = self.directory / f"{journal.recording_id}.transcript"
-        temporary = path.with_suffix(".transcript.tmp")
+        path = self.transcript_path(journal)
         data = {
             "version": 1,
             "segments": [
@@ -106,17 +103,13 @@ class CaptureStore:
             ],
         }
         try:
-            with temporary.open("w", encoding="utf-8") as file:
-                json.dump(data, file)
-                file.flush()
-                os.fsync(file.fileno())
-            temporary.replace(path)
+            _write_json(path, path.with_suffix(".transcript.tmp"), data)
         except OSError as error:
             raise _storage_error(error) from error
 
     def transcript(self, journal: CaptureJournal) -> tuple[Segment, ...]:
         """Existing M4 journals have no transcript sidecar and remain recoverable."""
-        path = self.directory / f"{journal.recording_id}.transcript"
+        path = self.transcript_path(journal)
         try:
             data: object = json.loads(path.read_text(encoding="utf-8"))
             if not isinstance(data, dict):
@@ -209,12 +202,22 @@ class CaptureStore:
         try:
             self.pcm_path(journal).unlink(missing_ok=True)
             self.flac_path(journal).unlink(missing_ok=True)
-            (self.directory / f"{journal.recording_id}.transcript").unlink(missing_ok=True)
-            (self.directory / f"{journal.recording_id}.transcript.tmp").unlink(missing_ok=True)
+            transcript = self.transcript_path(journal)
+            transcript.unlink(missing_ok=True)
+            transcript.with_suffix(".transcript.tmp").unlink(missing_ok=True)
             (self.directory / f"{journal.recording_id}.json").unlink(missing_ok=True)
             self._last_sync.pop(journal.recording_id, None)
         except OSError as error:
             raise _storage_error(error) from error
+
+
+def _write_json(path: Path, temporary: Path, data: object) -> None:
+    """Sync to a temporary file first so a crash never leaves half a journal."""
+    with temporary.open("w", encoding="utf-8") as file:
+        json.dump(data, file)
+        file.flush()
+        os.fsync(file.fileno())
+    temporary.replace(path)
 
 
 def _text(fields: dict[str, object], key: str) -> str:

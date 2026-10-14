@@ -5,7 +5,7 @@ API keys are never written here; they live in the OS keyring (see ``secrets``).
 
 import json
 import logging
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
 
@@ -51,12 +51,8 @@ class SettingsStore:
     def __init__(self, path: Path) -> None:
         self._path = path
 
-    def load(self) -> tuple[Provider, ...]:
-        """Return the saved providers; a missing file means a first run."""
-        return self.load_state().providers
-
     def load_state(self) -> Settings:
-        """Upgrade version-one provider files with default general preferences."""
+        """Upgrade version-one provider files with default preferences; missing means first run."""
         try:
             text = self._path.read_text(encoding="utf-8")
         except FileNotFoundError:
@@ -69,7 +65,7 @@ class SettingsStore:
             data = json.loads(text)
             top = _as_dict(data, "the top level")
             return Settings(
-                _decode(data),
+                _decode(top),
                 _decode_preferences(top.get("preferences", {})),
                 _decode_window(top.get("window")),
             )
@@ -80,12 +76,8 @@ class SettingsStore:
                 )
             ) from error
 
-    def save(self, providers: tuple[Provider, ...]) -> None:
-        """Write atomically so a crash cannot leave a half-written file."""
-        self.save_state(replace(self.load_state(), providers=providers))
-
     def save_state(self, settings: Settings) -> None:
-        """Commit the complete snapshot atomically."""
+        """Write the complete snapshot atomically so a crash cannot leave a half-written file."""
         temporary = self._path.with_name(self._path.name + ".tmp")
         data = {
             "version": SETTINGS_VERSION,
@@ -157,8 +149,7 @@ def _as_list(value: object, what: str) -> list[object]:
     return cast(list[object], value)
 
 
-def _decode(data: object) -> tuple[Provider, ...]:
-    top = _as_dict(data, "the top level")
+def _decode(top: dict[str, object]) -> tuple[Provider, ...]:
     version = top.get("version")
     if type(version) is not int or not 1 <= version <= SETTINGS_VERSION:
         raise ValueError(f"unsupported settings version {version!r}")

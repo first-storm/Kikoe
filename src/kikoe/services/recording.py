@@ -75,7 +75,7 @@ class RecordingSession:
 
     async def capture(self, on_progress: Callable[[CaptureProgress], None]) -> RecorderError | None:
         """Write before notifying the UI; capture errors still leave a recoverable prefix."""
-        journal = self._require_journal()
+        journal = self.require_journal()
         self._on_progress = on_progress
         capture_error: RecorderError | None = None
         try:
@@ -123,9 +123,10 @@ class RecordingSession:
 
     async def save(self) -> Note | None:
         """Finalize this journal exactly as the startup recovery path would."""
-        return await recover_recording(self._require_journal(), self.store, self.notes)
+        return await recover_recording(self.require_journal(), self.store, self.notes)
 
-    def _require_journal(self) -> CaptureJournal:
+    def require_journal(self) -> CaptureJournal:
+        """The started recording's journal; streaming and saving need one."""
         if self.journal is None:
             raise RuntimeError("Recording has not started")
         return self.journal

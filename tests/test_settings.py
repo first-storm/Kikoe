@@ -18,25 +18,25 @@ PROVIDER = Provider(
 
 
 def test_missing_file_loads_as_no_providers(tmp_path: Path) -> None:
-    assert SettingsStore(tmp_path / "settings.json").load() == ()
+    assert SettingsStore(tmp_path / "settings.json").load_state().providers == ()
 
 
 def test_saved_providers_load_back_unchanged(tmp_path: Path) -> None:
     store = SettingsStore(tmp_path / "settings.json")
-    store.save((PROVIDER,))
-    assert store.load() == (PROVIDER,)
+    store.save_state(Settings((PROVIDER,)))
+    assert store.load_state().providers == (PROVIDER,)
 
 
 def test_saved_file_records_the_version_and_never_a_key(tmp_path: Path) -> None:
     path = tmp_path / "settings.json"
-    SettingsStore(path).save((PROVIDER,))
+    SettingsStore(path).save_state(Settings((PROVIDER,)))
     data = json.loads(path.read_text(encoding="utf-8"))
     assert data["version"] == 2
     assert "key" not in path.read_text(encoding="utf-8").lower()
 
 
 def test_save_leaves_no_temporary_file(tmp_path: Path) -> None:
-    SettingsStore(tmp_path / "settings.json").save((PROVIDER,))
+    SettingsStore(tmp_path / "settings.json").save_state(Settings((PROVIDER,)))
     assert [p.name for p in tmp_path.iterdir()] == ["settings.json"]
 
 
@@ -44,14 +44,14 @@ def test_damaged_file_is_reported_not_ignored(tmp_path: Path) -> None:
     path = tmp_path / "settings.json"
     path.write_text("{not json", encoding="utf-8")
     with pytest.raises(SettingsError, match="damaged"):
-        SettingsStore(path).load()
+        SettingsStore(path).load_state()
 
 
 def test_newer_settings_version_is_refused(tmp_path: Path) -> None:
     path = tmp_path / "settings.json"
     path.write_text('{"version": 99, "providers": []}', encoding="utf-8")
     with pytest.raises(SettingsError, match="version"):
-        SettingsStore(path).load()
+        SettingsStore(path).load_state()
 
 
 def test_unknown_api_kind_is_refused(tmp_path: Path) -> None:
@@ -59,7 +59,7 @@ def test_unknown_api_kind_is_refused(tmp_path: Path) -> None:
     entry = {"id": "p", "name": "X", "api": "bogus", "base_url": "https://x"}
     path.write_text(json.dumps({"version": 1, "providers": [entry]}), encoding="utf-8")
     with pytest.raises(SettingsError):
-        SettingsStore(path).load()
+        SettingsStore(path).load_state()
 
 
 @pytest.mark.parametrize("api", list(ApiKind))
@@ -68,15 +68,15 @@ def test_all_official_and_compatible_api_types_round_trip(tmp_path: Path, api: A
 
     provider = replace(PROVIDER, api=api)
     store = SettingsStore(tmp_path / "settings.json")
-    store.save((provider,))
-    assert store.load() == (provider,)
+    store.save_state(Settings((provider,)))
+    assert store.load_state().providers == (provider,)
 
 
 def test_version_one_upgrades_without_losing_providers(tmp_path: Path) -> None:
     from kikoe.core.preferences import Preferences
 
     path = tmp_path / "settings.json"
-    SettingsStore(path).save((PROVIDER,))
+    SettingsStore(path).save_state(Settings((PROVIDER,)))
     data = json.loads(path.read_text(encoding="utf-8"))
     data["version"] = 1
     data.pop("preferences")
@@ -98,34 +98,23 @@ def test_per_mode_capabilities_round_trip(tmp_path: Path) -> None:
     )
     provider = Provider("p", "P", ApiKind.DEEPGRAM, "https://example.test", (live, both))
     store = SettingsStore(tmp_path / "settings.json")
-    store.save((provider,))
-    assert store.load() == (provider,)
-
-
-def test_defaults_survive_legacy_provider_save(tmp_path: Path) -> None:
-    from kikoe.core.preferences import Preferences
-    from kikoe.storage.settings import Settings
-
-    store = SettingsStore(tmp_path / "settings.json")
-    preferences = Preferences(("p1", "whisper-large-v3"), ("p1", "whisper-large-v3"), "zh-CN")
-    store.save_state(Settings((PROVIDER,), preferences))
-    store.save(())
-    assert store.load_state() == Settings((), preferences)
+    store.save_state(Settings((provider,)))
+    assert store.load_state().providers == (provider,)
 
 
 def test_failed_atomic_replace_keeps_previous_settings(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     store = SettingsStore(tmp_path / "settings.json")
-    store.save((PROVIDER,))
+    store.save_state(Settings((PROVIDER,)))
 
     def fail_replace(self: Path, target: Path) -> Path:
         raise PermissionError("blocked")
 
     monkeypatch.setattr(Path, "replace", fail_replace)
     with pytest.raises(SettingsError, match="save"):
-        store.save(())
-    assert store.load() == (PROVIDER,)
+        store.save_state(Settings())
+    assert store.load_state().providers == (PROVIDER,)
 
 
 @pytest.mark.parametrize(
@@ -172,19 +161,17 @@ def test_malformed_audio_device_is_reported(tmp_path: Path, value: object) -> No
         SettingsStore(path).load_state()
 
 
-def test_window_state_round_trips_and_survives_provider_saves(tmp_path: Path) -> None:
+def test_window_state_round_trips(tmp_path: Path) -> None:
     store = SettingsStore(tmp_path / "settings.json")
     window = WindowState(900, 600, maximized=True)
     store.save_state(Settings((PROVIDER,), window=window))
-
-    store.save(())
 
     assert store.load_state().window == window
 
 
 def test_missing_window_state_loads_as_none(tmp_path: Path) -> None:
     store = SettingsStore(tmp_path / "settings.json")
-    store.save((PROVIDER,))
+    store.save_state(Settings((PROVIDER,)))
     assert store.load_state().window is None
 
 
@@ -217,12 +204,12 @@ def test_provider_upload_settings_survive_restart_and_legacy_files_use_defaults(
 
     store = SettingsStore(tmp_path / "settings.json")
     upload = UploadSettings(4, 120, 2_000_000, AudioFormat.FLAC)
-    store.save((replace(PROVIDER, upload=upload),))
-    assert store.load()[0].upload == upload
+    store.save_state(Settings((replace(PROVIDER, upload=upload),)))
+    assert store.load_state().providers[0].upload == upload
     data = json.loads((tmp_path / "settings.json").read_text(encoding="utf-8"))
     data["providers"][0].pop("upload")
     (tmp_path / "settings.json").write_text(json.dumps(data), encoding="utf-8")
-    assert store.load()[0].upload == UploadSettings()
+    assert store.load_state().providers[0].upload == UploadSettings()
 
 
 @pytest.mark.parametrize(
@@ -241,9 +228,9 @@ def test_provider_upload_settings_survive_restart_and_legacy_files_use_defaults(
 def test_damaged_upload_settings_are_refused(tmp_path: Path, upload: dict[str, object]) -> None:
     path = tmp_path / "settings.json"
     store = SettingsStore(path)
-    store.save((PROVIDER,))
+    store.save_state(Settings((PROVIDER,)))
     data = json.loads(path.read_text(encoding="utf-8"))
     data["providers"][0]["upload"] = upload
     path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(SettingsError):
-        store.load()
+        store.load_state()

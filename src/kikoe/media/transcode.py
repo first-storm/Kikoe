@@ -61,22 +61,18 @@ async def to_upload(
         trim += ["-ss", _seconds(start)]
     if end is not None:
         trim += ["-t", _seconds(end - (start or timedelta()))]
-    try:
-        output = await ffmpeg.run(
-            *trim,
-            "-i",
-            str(source),
-            *format.args,
-            "-progress",
-            "pipe:1",
-            "-nostats",
-            "-y",
-            str(destination),
-        )
-    except ffmpeg.FFmpegNotFoundError:
-        raise
-    except ffmpeg.FFmpegError as error:
-        raise _conversion_error(source, error) from error
+    output = await _run(
+        source,
+        *trim,
+        "-i",
+        str(source),
+        *format.args,
+        "-progress",
+        "pipe:1",
+        "-nostats",
+        "-y",
+        str(destination),
+    )
     duration = parse_progress_duration(output.stdout)
     if duration is None:
         raise ffmpeg.FFmpegError(_("“{name}” contains no audio.").format(name=source.name))
@@ -85,15 +81,20 @@ async def to_upload(
 
 async def find_silences(source: Path) -> tuple[TimeSpan, ...]:
     """Pauses in ``source``, used as cut points when it must be split."""
+    output = await _run(
+        source, "-i", str(source), "-vn", "-af", _SILENCE_FILTER, "-f", "null", "-", loglevel="info"
+    )
+    return parse_silences(output.stderr)
+
+
+async def _run(source: Path, *args: str, loglevel: str = "error") -> ffmpeg.FFmpegOutput:
+    """Run ffmpeg on ``source``; a missing ffmpeg is reported as is, other failures per file."""
     try:
-        output = await ffmpeg.run(
-            "-i", str(source), "-vn", "-af", _SILENCE_FILTER, "-f", "null", "-", loglevel="info"
-        )
+        return await ffmpeg.run(*args, loglevel=loglevel)
     except ffmpeg.FFmpegNotFoundError:
         raise
     except ffmpeg.FFmpegError as error:
         raise _conversion_error(source, error) from error
-    return parse_silences(output.stderr)
 
 
 def parse_progress_duration(progress: str) -> timedelta | None:
