@@ -108,7 +108,9 @@ File and realtime microphone transcription are implemented. File import
 `services.file_transcription.FileTranscriptionWorkflow` owns the API key and client and
 decides what a failure leaves behind. `transcribe_pending` marks the recording pending, then
 failed on any error or cancellation; `retranscribe` never changes its state.
-`services.realtime.RealtimeRecording` owns live connections.
+`services.realtime.RealtimeRecording` owns live connections. It reconnects after retryable
+failures and raises the rest (for example a service without a realtime endpoint), which
+`services.recording_workflow` reports while the microphone keeps capturing.
 
 ### Model capabilities and presets
 

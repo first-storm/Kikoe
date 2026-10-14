@@ -16,7 +16,7 @@ from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.core.transcription import LiveSnapshot
 from kikoe.media.ffmpeg import find_ffmpeg
 from kikoe.media.recorder import Recorder, RecorderError
-from kikoe.providers.base import TranscriptionOptions
+from kikoe.providers.base import TranscriptionError, TranscriptionOptions
 from kikoe.providers.factory import create_client
 from kikoe.services.file_transcription import ApiKeys, ClientFactory
 from kikoe.services.realtime import RealtimeRecording
@@ -47,7 +47,7 @@ class RecordingCallbacks:
     capture_failed: Callable[[RecorderError], None]
     """The microphone failed; the audio captured so far is still saved."""
     live_failed: Callable[[Exception], None]
-    """Live recognition raised something it could not handle itself."""
+    """Live recognition gave up (a failure reconnecting cannot fix, or a bug); capture goes on."""
     upload: Callable[[str, Recording], Awaitable[None]]
     """Transcribe a saved recording with the batch model."""
     finished: Callable[[], None]
@@ -128,6 +128,9 @@ class RecordingWorkflow:
     async def _run_live(self, live: RealtimeRecording) -> None:
         try:
             await live.run()
+        except TranscriptionError as error:
+            log.warning("Live recognition stopped: %s", error)
+            self._callbacks.live_failed(error)
         except Exception as error:
             log.exception("Live recognition failed")
             self._callbacks.live_failed(error)

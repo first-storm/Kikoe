@@ -29,6 +29,7 @@ from kikoe.media.recorder import RecorderError
 from kikoe.providers.base import (
     FileTranscriptCallback,
     RealtimeSession,
+    TranscriptionError,
     TranscriptionOptions,
     TranscriptionProvider,
 )
@@ -417,3 +418,26 @@ async def test_unhandled_live_failure_is_reported_and_the_recording_is_marked_fa
     assert [str(e) for e in screen.live_failures] == ["recognizer bug"]
     assert screen.saved[-1].recordings[0].transcription_state is TranscriptionState.FAILED
     assert screen.events[-1] == "finished"
+
+
+class RejectingLiveClient(LiveClient):
+    """A service that refuses live transcription outright."""
+
+    async def open_realtime(
+        self, model: ModelSpec, options: TranscriptionOptions
+    ) -> RealtimeSession:
+        raise TranscriptionError("No live transcription here")
+
+
+@run_async
+async def test_rejected_live_session_reports_its_reason_and_keeps_recording(
+    notes: NoteRepository, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(realtime, "PCMStream", IdentityConverter)
+    screen = Screen()
+    workflow = make_workflow(notes, tmp_path, screen, client=RejectingLiveClient())
+    await record_and_stop(notes, workflow, screen, LIVE_CHOICE)
+    assert [str(e) for e in screen.live_failures] == ["No live transcription here"]
+    final = screen.saved[-1].recordings[0]
+    assert final.duration == timedelta(seconds=1)
+    assert final.transcription_state is TranscriptionState.FAILED

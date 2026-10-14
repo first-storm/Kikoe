@@ -14,7 +14,9 @@ from openai import APIError, AsyncOpenAI, omit
 from openai.resources.realtime.realtime import AsyncRealtimeConnection
 from openai.types.realtime.audio_transcription_param import AudioTranscriptionParam
 from pydantic import BaseModel
+from websockets.exceptions import InvalidStatus
 
+from kikoe.core.http_status import StatusKind, classify_status
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.recording import pcm_level
 from kikoe.core.transcription import RealtimeProfile, SpeechBoundary, TranscriptEvent
@@ -28,7 +30,7 @@ from kikoe.providers.base import (
     close_stack,
     file_capabilities,
 )
-from kikoe.providers.errors import openai_error, unreadable
+from kikoe.providers.errors import openai_error, status_error, unreadable
 from kikoe.providers.openai_file_stream import OpenAIFileTranscript
 from kikoe.providers.parsing import parse_segments, parse_text
 
@@ -126,9 +128,12 @@ class OpenAIClient(HttpClient[httpx.AsyncBaseTransport]):
         stack = AsyncExitStack()
         try:
             sdk = await stack.enter_async_context(self._sdk())
-            connection = await stack.enter_async_context(
-                sdk.realtime.connect(extra_query={"intent": "transcription"}, max_retries=0)
-            )
+            try:
+                connection = await stack.enter_async_context(
+                    sdk.realtime.connect(extra_query={"intent": "transcription"}, max_retries=0)
+                )
+            except InvalidStatus as error:
+                raise self._handshake_error(error.response.status_code) from error
             transcription: AudioTranscriptionParam = {"model": model.model_id}
             if options.language:
                 if model.model_id == "gpt-live-transcribe":
@@ -165,6 +170,17 @@ class OpenAIClient(HttpClient[httpx.AsyncBaseTransport]):
         except BaseException:
             await close_stack(stack)
             raise
+
+    def _handshake_error(self, status: int) -> TranscriptionError:
+        """The model is only named after connecting, so a missing URL means no realtime API."""
+        if classify_status(status) is not StatusKind.NOT_FOUND:
+            return status_error(status, self._host)
+        # Translators: “Transcribe While Recording” is the model setting of that name.
+        message = _(
+            "{host} does not support transcription while recording. Turn off "
+            "“Transcribe While Recording” for this model in Preferences."
+        )
+        return TranscriptionError(message.format(host=self._host))
 
 
 class OpenAISession:

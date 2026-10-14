@@ -135,6 +135,7 @@ class Client:
         self.hang = hang
         self.reject = reject
         self.sessions: list[Session] = []
+        self.attempts = 0
         self.connected = asyncio.Event()
 
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
@@ -156,6 +157,7 @@ class Client:
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions
     ) -> RealtimeSession:
+        self.attempts += 1
         if self.reject:
             raise TranscriptionError("Bad key")
         session = Session(self.reconnect and not self.sessions, hang=self.hang)
@@ -228,17 +230,18 @@ async def test_reconnection_replays_disk_audio_and_replaces_old_recognition(
 
 
 @run_async
-async def test_rejected_credentials_leave_recording_available_without_retry_loop(
+async def test_rejected_credentials_are_raised_without_retry_and_keep_the_audio(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(realtime, "PCMStream", Converter)
     recorded = capture(tmp_path, finished=False)
     snapshots: list[LiveSnapshot] = []
-    job = RealtimeRecording(
-        recorded, CHOICE, Client(reject=True), TranscriptionOptions(), snapshots.append
-    )
-    await job.run()
+    client = Client(reject=True)
+    job = RealtimeRecording(recorded, CHOICE, client, TranscriptionOptions(), snapshots.append)
+    with pytest.raises(TranscriptionError, match="Bad key"):
+        await job.run()
     assert not job.complete
+    assert client.attempts == 1
     assert snapshots[-1].state is LiveState.INCOMPLETE
     assert recorded.journal is not None
     assert recorded.store.pcm_path(recorded.journal).read_bytes() == PCM

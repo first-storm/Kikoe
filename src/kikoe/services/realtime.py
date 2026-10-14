@@ -91,10 +91,16 @@ class RealtimeRecording:
                     return
             except Exception as error:
                 failure = sdk_error(error)
-                log.warning("Realtime connection failed (%s)", type(error).__name__)
                 self._replay_until = max(self._replay_until, self._sent)
-                self._notify(LiveState.RECONNECTING if failure.retryable else LiveState.INCOMPLETE)
-                if not failure.retryable or self.capture.finished:
+                if not failure.retryable:
+                    # Reconnecting cannot fix this, so the user must learn the reason.
+                    self._notify(LiveState.INCOMPLETE)
+                    if failure is error:
+                        raise
+                    raise failure from error
+                log.warning("Realtime connection failed (%s)", type(error).__name__)
+                self._notify(LiveState.RECONNECTING)
+                if self.capture.finished:
                     return
                 # Waiting ends immediately when capture stops; it never delays audio saving.
                 delay = min(15, 2 ** min(failures, 4))
