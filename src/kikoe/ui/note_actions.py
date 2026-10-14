@@ -5,7 +5,7 @@ from gi.repository import Adw, Gio, GLib, Gtk
 from kikoe.i18n import _
 from kikoe.services.playback import Playback
 from kikoe.storage.notes import NoteRepository
-from kikoe.ui.dialogs import confirm_destructive
+from kikoe.ui.dialogs import alert_dialog, confirm_destructive
 from kikoe.ui.tasks import run_task
 from kikoe.ui.window_host import WindowHost
 
@@ -47,23 +47,19 @@ class NoteActions:
     def _rename(self, note_id: str, current_title: str) -> None:
         entry = Gtk.Entry(text=current_title, activates_default=True)
         entry.update_property([Gtk.AccessibleProperty.LABEL], [_("Note Title")])
-        dialog = Adw.AlertDialog(heading=_("Rename Note"), extra_child=entry)
-        dialog.add_response("cancel", _("_Cancel"))
-        dialog.add_response("rename", _("_Rename"))
-        dialog.set_response_appearance("rename", Adw.ResponseAppearance.SUGGESTED)
-        dialog.set_default_response("rename")
-        dialog.set_close_response("cancel")
 
-        def update_enabled(_entry: Gtk.Entry) -> None:
-            dialog.set_response_enabled("rename", bool(entry.get_text().strip()))
-
-        def respond(_dialog: Adw.AlertDialog, response: str) -> None:
+        def rename() -> None:
             title = entry.get_text().strip()
-            if response == "rename" and title and title != current_title:
+            if title and title != current_title:
                 run_task(self._notes.rename_note(note_id, title), self._window)
 
+        dialog = alert_dialog(_("Rename Note"), "", _("_Cancel"), _("_Rename"), rename)
+        dialog.set_extra_child(entry)
+
+        def update_enabled(_entry: Gtk.Entry) -> None:
+            dialog.set_response_enabled("confirm", bool(entry.get_text().strip()))
+
         entry.connect("changed", update_enabled)
-        dialog.connect("response", respond)
         dialog.present(self._window)
         entry.grab_focus()
 
