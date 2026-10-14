@@ -29,7 +29,6 @@ from kikoe.providers.base import (
     TranscriptionOptions,
 )
 from kikoe.services.importer import ImportStage, import_audio, transcribe_audio
-from kikoe.storage.library import Library
 from kikoe.storage.notes import NoteRepository
 
 MODEL = ModelSpec("whisper-large-v3", "Whisper", file_caps(timestamps=True))
@@ -113,11 +112,6 @@ class FakeConverter:
 
     async def find_silences(self, source: Path) -> tuple[TimeSpan, ...]:
         return (TimeSpan(s(50), s(52)), TimeSpan(s(95), s(97)))
-
-
-@pytest.fixture
-def notes(tmp_path: Path) -> NoteRepository:
-    return NoteRepository(Library(tmp_path / "library.sqlite3", tmp_path / "audio"))
 
 
 @pytest.fixture

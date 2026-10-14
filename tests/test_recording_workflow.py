@@ -36,7 +36,6 @@ from kikoe.services import realtime
 from kikoe.services import recording_workflow as workflow_module
 from kikoe.services.recording_workflow import RecordingCallbacks, RecordingWorkflow
 from kikoe.storage.captures import CaptureStore
-from kikoe.storage.library import Library
 from kikoe.storage.notes import NoteRepository
 
 FILE_MODEL = ModelSpec("whisper-1", "Whisper", file_caps(timestamps=True))
@@ -211,11 +210,6 @@ class Screen:
     async def _upload(self, note_id: str, recording: Recording) -> None:
         self.events.append("upload")
         self.uploads.append((note_id, recording))
-
-
-@pytest.fixture
-def notes(tmp_path: Path) -> NoteRepository:
-    return NoteRepository(Library(tmp_path / "library.sqlite3", tmp_path / "audio"))
 
 
 @pytest.fixture(autouse=True)

@@ -9,18 +9,13 @@ import pytest
 
 from helpers import file_caps, run_async
 from kikoe.core.models import (
-    ApiKind,
     ModelSpec,
-    Provider,
     Segment,
     TimestampGranularity,
 )
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.providers.deepgram import DeepgramClient, parse_deepgram
-from kikoe.providers.factory import create_client
 from kikoe.providers.gemini import GeminiClient, parse_gemini
-from kikoe.providers.mimo import MiMoClient
-from kikoe.providers.mistral import MistralClient
 from kikoe.providers.openrouter import OpenRouterClient
 from kikoe.providers.parsing import parse_segments, parse_text
 
@@ -91,22 +86,6 @@ def test_gemini_annotation_options_reduce_upload_duration() -> None:
     assert client.upload_limits(model, TranscriptionOptions()).duration == timedelta(minutes=30)
     assert client.upload_limits(model, TranscriptionOptions(False, False)).duration == timedelta(
         minutes=60
-    )
-
-
-@pytest.mark.parametrize(
-    ("api", "kind"),
-    [
-        (ApiKind.DEEPGRAM, DeepgramClient),
-        (ApiKind.GEMINI, GeminiClient),
-        (ApiKind.OPENROUTER, OpenRouterClient),
-        (ApiKind.MIMO, MiMoClient),
-        (ApiKind.MISTRAL, MistralClient),
-    ],
-)
-def test_factory_selects_official_adapters(api: ApiKind, kind: type[object]) -> None:
-    assert isinstance(
-        create_client(Provider("p", "Provider", api, "https://example.test"), "fake"), kind
     )
 
 

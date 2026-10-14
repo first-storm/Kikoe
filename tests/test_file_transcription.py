@@ -20,7 +20,6 @@ from kikoe.core.models import (
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions, TranscriptionProvider
 from kikoe.services import file_transcription
 from kikoe.services.file_transcription import FileTranscriptionWorkflow
-from kikoe.storage.library import Library
 from kikoe.storage.notes import NoteRepository
 
 MODEL = ModelSpec("whisper-1", "Whisper", file_caps(timestamps=True))
@@ -92,11 +91,6 @@ class Marks(list[TranscriptionState]):
     ) -> Note:
         self.append(state)
         return NOTE
-
-
-@pytest.fixture
-def notes(tmp_path: Path) -> NoteRepository:
-    return NoteRepository(Library(tmp_path / "library.sqlite3", tmp_path / "audio"))
 
 
 @pytest.fixture

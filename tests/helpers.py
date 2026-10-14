@@ -4,6 +4,7 @@ import asyncio
 import functools
 from collections.abc import Callable, Coroutine
 from pathlib import Path
+from typing import Protocol
 
 from kikoe.core.models import Capabilities, ModeCapabilities
 from kikoe.storage.model_catalog import load_catalog
@@ -46,3 +47,20 @@ LIVE_ONLY = Capabilities(file=None, realtime=ModeCapabilities())
 def open_settings(path: Path) -> SettingsWriter:
     """The shared settings writer for a settings file, as the application builds it."""
     return SettingsWriter(SettingsStore(path), load_catalog())
+
+
+class SentRequest(Protocol):
+    """A recorded HTTP request; the SDKs use ``httpx`` or ``httpx2``, which share this shape."""
+
+    @property
+    def content(self) -> bytes: ...
+
+
+def form_field(request: SentRequest, name: str) -> str | None:
+    """Read a plain field from the multipart body (good enough for these small requests)."""
+    marker = f'name="{name}"\r\n\r\n'.encode()
+    body = request.content
+    if marker not in body:
+        return None
+    start = body.index(marker) + len(marker)
+    return body[start : body.index(b"\r\n", start)].decode()

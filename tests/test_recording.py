@@ -35,7 +35,6 @@ from kikoe.services.file_transcription import FileTranscriptionWorkflow
 from kikoe.services.recording import RecordingSession
 from kikoe.services.recovery import recover_all, recover_recording
 from kikoe.storage.captures import CaptureJournal, CaptureStore, CaptureStoreError
-from kikoe.storage.library import Library
 from kikoe.storage.notes import NoteRepository
 
 MODEL = ModelSpec("whisper-1", "Whisper", file_caps(timestamps=True))
@@ -133,11 +132,6 @@ def ignore(*_args: object) -> None:
 
 def is_empty(directory: Path) -> bool:
     return not any(directory.iterdir())
-
-
-@pytest.fixture
-def notes(tmp_path: Path) -> NoteRepository:
-    return NoteRepository(Library(tmp_path / "library.sqlite3", tmp_path / "audio"))
 
 
 @pytest.fixture
