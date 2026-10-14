@@ -8,6 +8,7 @@ from kikoe.core.validation import ModelError, validate_model
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.dialogs import confirm_discard
+from kikoe.ui.guard import Guard
 from kikoe.ui.labels import model_error_message
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
@@ -40,7 +41,7 @@ class ModelDialog(Adw.Dialog):
         self._repository = repository
         self._provider_id = provider_id
         self._model = model
-        self._updating = False
+        self._updating = Guard()
         self._touched = model is not None
         """Saved options are never replaced by a preset, even when the ID is edited."""
         self._subtitles = {
@@ -78,8 +79,7 @@ class ModelDialog(Adw.Dialog):
         return ModeCapabilities(**{field: check.get_active() for check, field in self._checks[row]})
 
     def _show_capabilities(self, capabilities: Capabilities) -> None:
-        self._updating = True
-        try:
+        with self._updating:
             for row, mode in (
                 (self.file_row, capabilities.file),
                 (self.realtime_row, capabilities.realtime),
@@ -88,8 +88,6 @@ class ModelDialog(Adw.Dialog):
                 for check, field in self._checks[row]:
                     active: bool = getattr(mode or ModeCapabilities(), field)
                     check.set_active(active)
-        finally:
-            self._updating = False
 
     def _fields(self) -> tuple[str, str, Capabilities]:
         return (
@@ -108,7 +106,7 @@ class ModelDialog(Adw.Dialog):
 
     @Gtk.Template.Callback()
     def _on_option_changed(self, _widget: Gtk.Widget, _spec: GObject.ParamSpec) -> None:
-        if not self._updating:
+        if not self._updating.active:
             self._touched = True
 
     def _preset(self) -> ModelPreset | None:
@@ -132,12 +130,9 @@ class ModelDialog(Adw.Dialog):
             )
         else:
             self._show_capabilities(preset.defaults())
-        self._updating = True
-        try:
+        with self._updating:
             self._limit_mode(self.file_row, preset.file, preset.realtime)
             self._limit_mode(self.realtime_row, preset.realtime, preset.file)
-        finally:
-            self._updating = False
 
     def _limit_mode(self, row: Adw.ExpanderRow, mode: ModePreset, other: ModePreset) -> None:
         """Disable what the endpoint rejects; a mode the model cannot lack is always on."""

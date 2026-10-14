@@ -14,6 +14,7 @@ from kikoe.media.devices import DeviceKind, list_devices
 from kikoe.paths import data_dir, log_dir
 from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
+from kikoe.ui.guard import Guard
 from kikoe.ui.items import ProviderItem
 from kikoe.ui.labels import api_label, model_choice_label
 from kikoe.ui.provider_page import ProviderPage
@@ -40,7 +41,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         super().__init__()
         self._repository = repository
         self._preferences = preferences
-        self._updating = False
+        self._updating = Guard()
         self._shown_language: str | None = None
         self._choices: tuple[ModelChoice, ...] = ()
         self._device_names: dict[DeviceKind, list[str]] = {"input": [], "output": []}
@@ -83,8 +84,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         return names
 
     def _refresh_devices(self) -> None:
-        self._updating = True
-        try:
+        with self._updating:
             for kind in ("input", "output"):
                 names = self._device_names[kind]
                 entries = self._device_entries(kind)
@@ -96,11 +96,9 @@ class PreferencesDialog(Adw.PreferencesDialog):
                 row.set_model(Gtk.StringList.new([_("System Default"), *labels]))
                 saved = self._saved_device(kind)
                 row.set_selected(entries.index(saved) + 1 if saved in entries else 0)
-        finally:
-            self._updating = False
 
     def _select_device(self, kind: DeviceKind) -> None:
-        if self._updating:
+        if self._updating.active:
             return
         index = self._device_row(kind).get_selected()
         entries = self._device_entries(kind)
@@ -128,8 +126,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         self._select_device("output")
 
     def _refresh_defaults(self) -> None:
-        self._updating = True
-        try:
+        with self._updating:
             self._choices = available_models(self._repository.providers)
             names = [
                 _("No Default Model"),
@@ -151,14 +148,12 @@ class PreferencesDialog(Adw.PreferencesDialog):
                 self.language_row.set_text(language or "")
                 self._shown_language = language
                 self._show_language_error(False)
-        finally:
-            self._updating = False
 
     @Gtk.Template.Callback()
     def _on_default_model_row_notify_selected(
         self, _row: Adw.ComboRow, _spec: GObject.ParamSpec
     ) -> None:
-        if self._updating:
+        if self._updating.active:
             return
         index = self.default_model_row.get_selected()
         if index > len(self._choices):

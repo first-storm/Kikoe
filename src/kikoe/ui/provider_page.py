@@ -16,6 +16,7 @@ from kikoe.core.validation import effective_base_url, validate_provider
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.dialogs import confirm_destructive
+from kikoe.ui.guard import Guard
 from kikoe.ui.items import ModelItem
 from kikoe.ui.labels import (
     api_label,
@@ -50,8 +51,8 @@ class ProviderPage(Adw.NavigationPage):
     models_list: Gtk.ListBox = Gtk.Template.Child()
     remove_group: Adw.PreferencesGroup = Gtk.Template.Child()
 
-    _populating = True
-    """True until the fields are filled, so template signals fired on load are ignored."""
+    _populating = Guard(1)
+    """Held until ``__init__`` gives the page its own guard: signals fired on load are ignored."""
 
     def __init__(self, repository: ProviderRepository, provider_id: str | None = None) -> None:
         super().__init__()
@@ -71,7 +72,7 @@ class ProviderPage(Adw.NavigationPage):
             self._show_provider(provider)
             self._disconnect = repository.connect_changed(self._refresh_models)
             run_task(self._load_api_key(provider.provider_id), self)
-        self._populating = False
+        self._populating = Guard()
         self._on_api_row_notify_selected(self.api_row, None)
 
     def _show_provider(self, provider: Provider) -> None:
@@ -138,7 +139,7 @@ class ProviderPage(Adw.NavigationPage):
         self, _row: Adw.ComboRow, _pspec: GObject.ParamSpec | None
     ) -> None:
         """Offer the default endpoint of hosted APIs, unless the user typed their own URL."""
-        if self._populating:
+        if self._populating.active:
             return
         api = _API_ORDER[self.api_row.get_selected()]
         if api != self._upload_api:
@@ -205,27 +206,29 @@ class ProviderPage(Adw.NavigationPage):
             self.set_title(name.strip())
 
     def _show_upload(self, settings: UploadSettings) -> None:
-        populating = self._populating
-        self._populating = True
-        policy = descriptor(self._upload_api).upload
-        for row in (self.parallel_row, self.chunk_length_row, self.chunk_size_row):
-            row.get_adjustment().set_step_increment(1)
-            row.get_adjustment().set_page_increment(1 if row is self.parallel_row else 10)
-        self.parallel_row.get_adjustment().set_upper(MAX_PARALLELISM)
-        self.parallel_row.set_value(settings.parallelism)
-        self.chunk_length_row.get_adjustment().set_upper((policy.seconds or MAX_CHUNK_SECONDS) / 60)
-        self.chunk_length_row.set_value((settings.chunk_seconds or policy.seconds or 0) / 60)
-        self.chunk_size_row.get_adjustment().set_upper(policy.bytes / 1_000_000)
-        self.chunk_size_row.set_value((settings.chunk_bytes or policy.bytes) / 1_000_000)
         provider = descriptor(self._upload_api)
-        self.chunk_size_row.set_subtitle(chunk_size_subtitle(provider, policy.bytes / 1_000_000))
-        self.chunk_length_row.set_subtitle(chunk_length_subtitle(provider))
-        self.upload_format_row.set_model(
-            Gtk.StringList.new([format.value.upper() for format in policy.formats])
-        )
-        self.upload_format_row.set_selected(policy.formats.index(settings.format or policy.format))
-        self.upload_format_row.set_sensitive(len(policy.formats) > 1)
-        self._populating = populating
+        policy = provider.upload
+        with self._populating:
+            for row in (self.parallel_row, self.chunk_length_row, self.chunk_size_row):
+                row.get_adjustment().set_step_increment(1)
+                row.get_adjustment().set_page_increment(1 if row is self.parallel_row else 10)
+            self.parallel_row.get_adjustment().set_upper(MAX_PARALLELISM)
+            self.parallel_row.set_value(settings.parallelism)
+            max_minutes = (policy.seconds or MAX_CHUNK_SECONDS) / 60
+            self.chunk_length_row.get_adjustment().set_upper(max_minutes)
+            self.chunk_length_row.set_value((settings.chunk_seconds or policy.seconds or 0) / 60)
+            self.chunk_size_row.get_adjustment().set_upper(policy.bytes / 1_000_000)
+            self.chunk_size_row.set_value((settings.chunk_bytes or policy.bytes) / 1_000_000)
+            self.chunk_size_row.set_subtitle(
+                chunk_size_subtitle(provider, policy.bytes / 1_000_000)
+            )
+            self.chunk_length_row.set_subtitle(chunk_length_subtitle(provider))
+            self.upload_format_row.set_model(
+                Gtk.StringList.new([format.value.upper() for format in policy.formats])
+            )
+            format_index = policy.formats.index(settings.format or policy.format)
+            self.upload_format_row.set_selected(format_index)
+            self.upload_format_row.set_sensitive(len(policy.formats) > 1)
 
     def _upload_settings(self) -> UploadSettings:
         policy = descriptor(self._upload_api).upload
@@ -241,7 +244,7 @@ class ProviderPage(Adw.NavigationPage):
 
     @Gtk.Template.Callback()
     def _on_upload_row_changed(self, _row: Adw.PreferencesRow, _pspec: GObject.ParamSpec) -> None:
-        if self._populating or self._provider_id is None:
+        if self._populating.active or self._provider_id is None:
             return
         run_task(self._save_upload(self._upload_settings()), self)
 

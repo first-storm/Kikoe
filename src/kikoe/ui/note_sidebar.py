@@ -13,6 +13,7 @@ from kikoe.core.models import NoteSummary
 from kikoe.core.recording import CaptureState
 from kikoe.i18n import _
 from kikoe.storage.notes import NoteRepository
+from kikoe.ui.guard import Guard
 from kikoe.ui.items import NoteItem
 from kikoe.ui.labels import capture_label, note_subtitle
 from kikoe.ui.search import NoteSearch
@@ -47,8 +48,8 @@ class NoteSidebar:
         self._locked = locked
         self._open_note = open_note
         self._search = NoteSearch(notes, start_task, search_entry.get_text, self.show)
-        self._selecting = False
-        """True while the selection is changed from code, not by the user."""
+        self._selecting = Guard()
+        """Active while the selection is changed from code, not by the user."""
         self._items: Gio.ListStore[NoteItem] = Gio.ListStore(item_type=NoteItem)
         self._list.bind_model(self._items, self._create_row)
         self._bar.connect_entry(search_entry)
@@ -80,16 +81,13 @@ class NoteSidebar:
         self._search.close()
 
     def show(self, notes: tuple[NoteSummary, ...]) -> None:
-        self._selecting = True
-        try:
+        with self._selecting:
             self._items.splice(0, self._items.get_n_items(), [NoteItem(s) for s in notes])
             searching = bool(self._entry.get_text().strip())
             self._placeholder.set_title(_("No Matching Notes") if searching else _("No Notes Yet"))
             self._placeholder.set_icon_name(
                 "edit-find-symbolic" if searching else "document-edit-symbolic"
             )
-        finally:
-            self._selecting = False
         self.select(self._current_note_id())
 
     def show_all_and_select(self, note_id: str) -> bool:
@@ -105,18 +103,15 @@ class NoteSidebar:
             (i for i, item in enumerate(self._items) if item.summary.note_id == note_id), None
         )
         row = self._list.get_row_at_index(index) if index is not None else None
-        self._selecting = True
-        try:
+        with self._selecting:
             if row is None:
                 self._list.unselect_all()
             else:
                 self._list.select_row(row)
-        finally:
-            self._selecting = False
         return row is not None
 
     def row_selected(self, row: Gtk.ListBoxRow | None) -> None:
-        if self._selecting or row is None:
+        if self._selecting.active or row is None:
             return
         if self._locked():
             self.select(self._current_note_id())

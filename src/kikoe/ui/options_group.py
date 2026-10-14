@@ -6,6 +6,7 @@ from gi.repository import Adw, GObject, Gtk
 
 from kikoe.core.choice import RequestedFeatures, language_dropped, normalize_granularities
 from kikoe.core.models import ApiKind, ModeCapabilities, TimestampGranularity
+from kikoe.ui.guard import Guard
 from kikoe.ui.labels import unsupported_option_subtitle
 from kikoe.ui.templates import ui_file
 
@@ -34,7 +35,7 @@ class OptionsGroup(Adw.PreferencesGroup):
         self._wanted = RequestedFeatures()
         self._api: ApiKind | None = None
         self._language: str | None = None
-        self._updating = False
+        self._updating = Guard()
 
     @GObject.Signal
     def changed(self) -> None:
@@ -67,8 +68,7 @@ class OptionsGroup(Adw.PreferencesGroup):
     def _refresh(self) -> None:
         capabilities = self._capabilities
         allowed = self.allowed
-        self._updating = True
-        try:
+        with self._updating:
             for row, supported, active in (
                 (self.timestamps_row, capabilities.timestamps, allowed.timestamps),
                 (self.speakers_row, capabilities.diarization, allowed.diarization),
@@ -84,12 +84,10 @@ class OptionsGroup(Adw.PreferencesGroup):
             self.granularity_row.set_selected(
                 _GRANULARITIES.index(wanted) if wanted in _GRANULARITIES else 0
             )
-        finally:
-            self._updating = False
 
     @Gtk.Template.Callback()
     def _on_option_row_notify_active(self, _row: Adw.SwitchRow, _spec: GObject.ParamSpec) -> None:
-        if self._updating:
+        if self._updating.active:
             return
         capabilities = self._capabilities
         self._wanted = replace(
@@ -109,7 +107,7 @@ class OptionsGroup(Adw.PreferencesGroup):
         self, row: Adw.ComboRow, _spec: GObject.ParamSpec
     ) -> None:
         index = row.get_selected()
-        if self._updating or index >= len(_GRANULARITIES):
+        if self._updating.active or index >= len(_GRANULARITIES):
             return
         self._wanted = replace(self._wanted, timestamp_granularities=_GRANULARITIES[index])
         self.emit("changed")
