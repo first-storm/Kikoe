@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kikoe 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
-"POT-Creation-Date: 2026-10-15 01:31+1100\n"
+"POT-Creation-Date: 2026-10-15 02:02+1100\n"
 "PO-Revision-Date: 2026-10-12 00:00+0000\n"
 "Last-Translator: first-storm\n"
 "Language-Team: Simplified Chinese\n"
@@ -235,12 +235,19 @@ msgstr "转录在完成前就结束了，请重试。"
 msgid "Mistral rejected realtime transcription: {message}"
 msgstr "Mistral 拒绝了实时转录：{message}"
 
-#: src/kikoe/providers/openai.py:160
+#: src/kikoe/providers/openai.py:165
 #, python-brace-format
 msgid "{host} rejected the realtime session: {message}"
 msgstr "{host} 拒绝了实时会话：{message}"
 
-#: src/kikoe/providers/openai.py:226
+#: src/kikoe/providers/openai.py:180
+#, python-brace-format
+msgid ""
+"{host} does not support transcription while recording. Turn off “Transcribe "
+"While Recording” for this model in Preferences."
+msgstr "{host} 不支持录音时转录。请在偏好设置中为此模型关闭“Transcribe While Recording”。"
+
+#: src/kikoe/providers/openai.py:242
 msgid "Realtime transcription failed. Your audio has been kept."
 msgstr "实时转录失败，已保留音频。"
 
