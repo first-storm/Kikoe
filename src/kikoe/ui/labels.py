@@ -21,6 +21,7 @@ from kikoe.core.models import (
     RecordingSource,
 )
 from kikoe.core.provider_registry import ProviderDescriptor, UploadHint, descriptor
+from kikoe.core.recording import CaptureState
 from kikoe.core.validation import Capability, ModelError, ProviderError, capability_list
 from kikoe.i18n import _, ngettext
 from kikoe.services.importer import ImportStage
@@ -41,6 +42,10 @@ def chunk_size_subtitle(provider: ProviderDescriptor, limit_megabytes: float) ->
     if UploadHint.SERVER_MAY_LIMIT_SIZE in provider.upload_hints:
         return _("Defaults to 25 MB; your server may require smaller chunks")
     return _("Maximum {size:g} MB per chunk").format(size=limit_megabytes)
+
+
+def capture_label(state: CaptureState) -> str:
+    return _("Paused") if state is CaptureState.PAUSED else _("Recording")
 
 
 def capability_label(capability: Capability) -> str:

@@ -7,7 +7,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango
+from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
 from kikoe.core.activity import Activity, action_availability
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models
@@ -51,17 +51,16 @@ from kikoe.ui.dialogs import confirm_destructive
 from kikoe.ui.export_controller import ExportController
 from kikoe.ui.file_dialogs import pick_audio_file
 from kikoe.ui.file_transcription import FileTranscriptionDisplay
-from kikoe.ui.items import NoteItem
 from kikoe.ui.labels import (
+    capture_label,
     import_stage_label,
-    note_subtitle,
     note_title_subtitle,
     recording_note_title,
 )
+from kikoe.ui.note_sidebar import NoteSidebar
 from kikoe.ui.note_view import NoteView
 from kikoe.ui.recovery_prompt import confirm_recovery
 from kikoe.ui.retranscribe_dialog import RetranscribeDialog
-from kikoe.ui.search import NoteSearch
 from kikoe.ui.speaker_dialog import SpeakerDialog
 from kikoe.ui.speaker_editor import SpeakerEditor
 from kikoe.ui.tasks import run_task, show_error
@@ -139,14 +138,19 @@ class Window(Adw.ApplicationWindow):
         )
         self.bottom_bar = BottomBar()
         self.bottom_bar_slot.set_child(self.bottom_bar)
-        self._search = NoteSearch(
-            notes,
-            lambda coro: run_task(coro, self),
-            self.search_entry.get_text,
-            self._refresh_note_list,
+        self._sidebar = NoteSidebar(
+            notes=notes,
+            notes_list=self.notes_list,
+            placeholder=self.notes_placeholder,
+            search_entry=self.search_entry,
+            search_bar=self.search_bar,
+            split_view=self.split_view,
+            start_task=lambda coro: run_task(coro, self),
+            current_note_id=lambda: self._note.note_id if self._note else None,
+            capture_state=self._sidebar_capture_state,
+            locked=self._switch_locked,
+            open_note=self._open_from_sidebar,
         )
-        self.search_bar.connect_entry(self.search_entry)
-        self.search_bar.set_key_capture_widget(self.notes_list)
         self._add_action("search-notes", self._on_search_notes)
         for action, keys in (
             ("new-note", ["<primary>n"]),
@@ -162,10 +166,6 @@ class Window(Adw.ApplicationWindow):
         self._notes = notes
         self._note: Note | None = None
         self._providers_loaded = False
-        self._selecting = False
-        """True while the sidebar selection is changed from code, not by the user."""
-        self._note_items: Gio.ListStore[NoteItem] = Gio.ListStore(item_type=NoteItem)
-        self.notes_list.bind_model(self._note_items, self._create_note_row)
         self._add_action("new-note", self._on_new_note)
         self._add_action("rename-note", self._on_rename_note)
         self._add_action("copy-all-text", self._export.on_copy_all_text)
@@ -260,10 +260,7 @@ class Window(Adw.ApplicationWindow):
 
     def select_note(self, note_id: str) -> None:
         """Select ``note_id`` in the sidebar and show it."""
-        self.search_bar.set_search_mode(False)
-        self.search_entry.set_text("")
-        self._refresh_note_list(self._notes.notes)
-        if self._select_row(note_id):
+        if self._sidebar.show_all_and_select(note_id):
             run_task(self._open_note(note_id), self)
             self.split_view.set_show_content(True)
 
@@ -350,143 +347,35 @@ class Window(Adw.ApplicationWindow):
     # Sidebar
 
     def _on_search_notes(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        self.split_view.set_show_content(False)
-        self.search_bar.set_search_mode(True)
-        self.search_entry.grab_focus()
+        self._sidebar.start_search()
 
     @Gtk.Template.Callback()
     def _on_search_entry_stop_search(self, _entry: Gtk.SearchEntry) -> None:
-        self.search_bar.set_search_mode(False)
+        self._sidebar.stop_search()
 
     @Gtk.Template.Callback()
     def _on_search_bar_notify_search_mode_enabled(
         self, _bar: Gtk.SearchBar, _spec: GObject.ParamSpec
     ) -> None:
-        if not self.search_bar.get_search_mode():
-            self.search_entry.set_text("")
-            self._search.refresh()
+        self._sidebar.search_mode_changed()
 
     @Gtk.Template.Callback()
     def _on_search_entry_search_changed(self, _entry: Gtk.SearchEntry) -> None:
-        self._search.refresh()
-
-    def _refresh_note_list(self, notes: tuple[NoteSummary, ...]) -> None:
-        self._selecting = True
-        try:
-            self._note_items.splice(0, self._note_items.get_n_items(), [NoteItem(s) for s in notes])
-            searching = bool(self.search_entry.get_text().strip())
-            self.notes_placeholder.set_title(
-                _("No Matching Notes") if searching else _("No Notes Yet")
-            )
-            self.notes_placeholder.set_icon_name(
-                "edit-find-symbolic" if searching else "document-edit-symbolic"
-            )
-        finally:
-            self._selecting = False
-        self._select_row(self._note.note_id if self._note else None)
-
-    def _create_note_row(self, item: GObject.Object) -> Gtk.Widget:
-        assert isinstance(item, NoteItem)
-        summary = item.summary
-        title = Gtk.Label(label=summary.title, xalign=0, ellipsize=Pango.EllipsizeMode.END)
-        state = (
-            self._session.state
-            if self._session is not None and summary.note_id == self._recording_note_id
-            else CaptureState.STOPPED
-        )
-        subtitle = Gtk.Label(
-            label=note_subtitle(summary, datetime.now().astimezone())
-            if state is CaptureState.STOPPED
-            else _capture_label(state),
-            xalign=0,
-            ellipsize=Pango.EllipsizeMode.END,
-            css_classes=["caption", "dimmed"],
-        )
-        box = Gtk.Box(
-            orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=6, margin_bottom=6
-        )
-        box.append(title)
-        if state is not CaptureState.STOPPED:
-            subtitle.remove_css_class("dimmed")
-            subtitle.add_css_class("recording-status")
-            indicator = Gtk.Image(icon_name="media-record-symbolic", pixel_size=7)
-            indicator.add_css_class("recording-indicator")
-            status = Gtk.Box(spacing=6)
-            status.append(indicator)
-            status.append(subtitle)
-            box.append(status)
-        else:
-            box.append(subtitle)
-
-        # Secondary click and long press offer Rename and Delete without opening the note.
-        def on_click(_gesture: Gtk.GestureClick, _n_press: int, x: float, y: float) -> None:
-            self._popup_note_row_menu(box, summary.note_id, x, y)
-
-        def on_long_press(_gesture: Gtk.GestureLongPress, x: float, y: float) -> None:
-            self._popup_note_row_menu(box, summary.note_id, x, y)
-
-        secondary = Gtk.GestureClick(button=Gdk.BUTTON_SECONDARY)
-        secondary.connect("pressed", on_click)
-        long_press = Gtk.GestureLongPress()
-        long_press.connect("pressed", on_long_press)
-        box.add_controller(secondary)
-        box.add_controller(long_press)
-        return box
-
-    def _popup_note_row_menu(self, box: Gtk.Widget, note_id: str, x: float, y: float) -> None:
-        row = box.get_ancestor(Gtk.ListBoxRow)
-        assert isinstance(row, Gtk.ListBoxRow)
-        target = GLib.Variant("s", note_id)
-        menu = Gio.Menu()
-        menu.append(_("_Rename…"), Gio.Action.print_detailed_name("win.rename-note-row", target))
-        menu.append(
-            _("_Delete Note"), Gio.Action.print_detailed_name("win.delete-note-row", target)
-        )
-        popover = Gtk.PopoverMenu.new_from_model(menu)
-        popover.set_parent(box)
-        popover.set_has_arrow(False)
-        popover.set_halign(Gtk.Align.START)
-        rect = Gdk.Rectangle()
-        rect.x, rect.y, rect.width, rect.height = round(x), round(y), 1, 1
-        popover.set_pointing_to(rect)
-
-        def release(_popover: Gtk.Popover) -> None:
-            row.remove_css_class("has-open-popup")
-            GLib.idle_add(popover.unparent)
-
-        popover.connect("closed", release)
-        # Keep the menu's target highlighted independently of pointer hover.
-        row.add_css_class("has-open-popup")
-        popover.popup()
-
-    def _select_row(self, note_id: str | None) -> bool:
-        """Select the row of ``note_id`` without reopening it; False if it is not listed."""
-        index = next(
-            (i for i, item in enumerate(self._note_items) if item.summary.note_id == note_id),
-            None,
-        )
-        row = self.notes_list.get_row_at_index(index) if index is not None else None
-        self._selecting = True
-        try:
-            if row is None:
-                self.notes_list.unselect_all()
-            else:
-                self.notes_list.select_row(row)
-        finally:
-            self._selecting = False
-        return row is not None
+        self._sidebar.refresh()
 
     @Gtk.Template.Callback()
     def _on_notes_list_row_selected(self, _list: Gtk.ListBox, row: Gtk.ListBoxRow | None) -> None:
-        if self._selecting or row is None:
-            return
-        if self._switch_locked():
-            self._select_row(self._note.note_id if self._note else None)
-            return
-        item = self._note_items.get_item(row.get_index())
-        if item is not None:
-            run_task(self._open_note(item.summary.note_id), self)
-            self.split_view.set_show_content(True)
+        self._sidebar.row_selected(row)
+
+    def _open_from_sidebar(self, note_id: str) -> None:
+        run_task(self._open_note(note_id), self)
+        self.split_view.set_show_content(True)
+
+    def _sidebar_capture_state(self, note_id: str) -> CaptureState:
+        session = self._session
+        if session is not None and note_id == self._recording_note_id:
+            return session.state
+        return CaptureState.STOPPED
 
     def _activity(self) -> Activity:
         """What the window is doing right now; every action state follows from it."""
@@ -521,7 +410,7 @@ class Window(Adw.ApplicationWindow):
         if not self._recovery_checked:
             self._recovery_checked = True
             self._work.recovery_task = run_task(self._offer_recovery(), self)
-        self._search.refresh()
+        self._sidebar.refresh()
         current = self._note.note_id if self._note else None
         if current is None:
             self._update_content()
@@ -582,7 +471,7 @@ class Window(Adw.ApplicationWindow):
                 if self._live is not None:
                     self.note_view.update_live(self._live.snapshot())
                 self.note_view.recording_view.set_state(self._session.state)
-                self.window_title.set_subtitle(_capture_label(self._session.state))
+                self.window_title.set_subtitle(capture_label(self._session.state))
         self._update_content()
         self._update_actions()
 
@@ -889,7 +778,7 @@ class Window(Adw.ApplicationWindow):
         self.notes_list.set_can_target(not activity.switch_locked)
         self.search_button.set_sensitive(not activity.busy)
         # Typing in the list starts a search, which must not hide the Stop controls.
-        self.search_bar.set_key_capture_widget(None if activity.busy else self.notes_list)
+        self._sidebar.allow_typing_to_search(not activity.busy)
         self._edits_blocked = activity.locked
         self.note_view.set_editable(not activity.locked)
         self._update_history_actions()
@@ -1099,8 +988,8 @@ class Window(Adw.ApplicationWindow):
         self._show_note(self._note)
 
     def _refresh_recording_sidebar(self) -> None:
-        self._search.refresh()
-        self._select_row(self._note.note_id if self._note else None)
+        self._sidebar.refresh()
+        self._sidebar.select(self._note.note_id if self._note else None)
 
     def _on_live_update(self, snapshot: LiveSnapshot) -> None:
         self.note_view.update_live(snapshot)
@@ -1109,7 +998,7 @@ class Window(Adw.ApplicationWindow):
         self.bottom_bar.update_recording(progress)
         self.note_view.recording_view.set_state(progress.state)
         if progress.state is not CaptureState.STOPPED:
-            self.window_title.set_subtitle(_capture_label(progress.state))
+            self.window_title.set_subtitle(capture_label(progress.state))
         self._update_actions()
 
     def _on_pause_recording(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
@@ -1219,7 +1108,7 @@ class Window(Adw.ApplicationWindow):
 
     def _show_recovered_note(self, note: Note) -> None:
         self._show_note(note)
-        self._select_row(note.note_id)
+        self._sidebar.select(note.note_id)
         self.split_view.set_show_content(True)
 
     @Gtk.Template.Callback()
@@ -1228,7 +1117,7 @@ class Window(Adw.ApplicationWindow):
             return True
         self._playback.stop()
         self.note_view.flush_edits()
-        self._search.close()
+        self._sidebar.close()
         if (
             not self._work.has_pending_work()
             and not self._playback.pending
@@ -1259,7 +1148,3 @@ class Window(Adw.ApplicationWindow):
 
 def _from_ms(value: int) -> timedelta | None:
     return None if value == NO_TIME else timedelta(milliseconds=value)
-
-
-def _capture_label(state: CaptureState) -> str:
-    return _("Paused") if state is CaptureState.PAUSED else _("Recording")
