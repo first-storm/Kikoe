@@ -44,6 +44,21 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.2.0" date="2026-10-15">
+      <description>
+        <p>Groq and Mistral transcription, 13 more languages, and a round of reliability fixes.</p>
+        <ul>
+          <li>Transcribe with Groq Whisper and Mistral Voxtral, including live microphone transcription with Mistral.</li>
+          <li>Complete Simplified Chinese translation and 13 additional languages.</li>
+          <li>Tell users when the transcription language is ignored by the selected options.</li>
+          <li>Explain why live transcription stops instead of failing silently.</li>
+          <li>Show the provider’s error message for failed Groq requests.</li>
+          <li>Keep header buttons clear of left-side window controls.</li>
+          <li>Fix speaker numbering for older notes, end-only timestamps, and non-numeric timestamps.</li>
+          <li>Fix audio removal racing with cancelled uploads.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.1.1" date="2026-10-14">
       <description>
         <p>Faster transcription of long recordings and fixes for packaged builds.</p>
