@@ -11,7 +11,6 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
 from kikoe.core.activity import Activity, action_availability
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models
-from kikoe.core.decoration_layout import DecorationLayout
 from kikoe.core.edit_history import SegmentChange, SegmentFields
 from kikoe.core.models import (
     DisplayOptions,
@@ -21,7 +20,7 @@ from kikoe.core.models import (
     RecordingSource,
     TranscriptionState,
 )
-from kikoe.core.preferences import WindowState, valid_window_state
+from kikoe.core.preferences import WindowState
 from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.core.transcription import (
     FileTranscriptSnapshot,
@@ -44,7 +43,6 @@ from kikoe.services.recovery import recover_all
 from kikoe.storage.captures import CaptureStore, capture_dir
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
-from kikoe.storage.settings import SettingsError
 from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.dialogs import confirm_destructive
 from kikoe.ui.export_controller import ExportController
@@ -64,6 +62,7 @@ from kikoe.ui.speaker_controller import SpeakerController
 from kikoe.ui.tasks import run_task, show_error
 from kikoe.ui.templates import ui_file
 from kikoe.ui.transcript_row import NO_TIME
+from kikoe.ui.window_chrome import GeometryKeeper, HeaderLayout
 
 log = logging.getLogger(__name__)
 
@@ -110,13 +109,7 @@ class Window(Adw.ApplicationWindow):
         window_state: WindowState | None = None,
     ) -> None:
         super().__init__(application=application)
-        self._geometry_timeout = 0
-        if window_state is not None:
-            self.set_default_size(window_state.width, window_state.height)
-            if window_state.maximized:
-                self.maximize()
-        for prop in ("default-width", "default-height", "maximized"):
-            self.connect(f"notify::{prop}", self._on_geometry_changed)
+        self._geometry = GeometryKeeper(self, providers, window_state)
         # Custom widgets are added from code: Blueprint's linter cannot inspect their types.
         self.note_view = NoteView()
         self.note_view_slot.set_child(self.note_view)
@@ -225,15 +218,13 @@ class Window(Adw.ApplicationWindow):
         notes.connect_changed(self._on_notes_changed)
         self.bottom_bar.connect("choice-changed", self._on_bottom_bar_choice_changed)
         self.bottom_bar.bind_providers(providers)
-        self._new_note_at_end = False
-        self._gtk_settings = Gtk.Settings.get_default()
-        self._layout_handler = 0
-        if self._gtk_settings is not None:
-            self._layout_handler = self._gtk_settings.connect(
-                "notify::gtk-decoration-layout", self._on_decoration_layout_changed
-            )
-            self.connect("destroy", self._on_destroy)
-        self._sync_window_controls()
+        self._header_layout = HeaderLayout(
+            self,
+            self.sidebar_header,
+            self.content_header,
+            self.new_note_button,
+            self.compact_breakpoint,
+        )
 
     @property
     def _session(self) -> RecordingSession | None:
@@ -247,27 +238,6 @@ class Window(Adw.ApplicationWindow):
     def note(self) -> Note | None:
         """The note shown in the content pane."""
         return self._note
-
-    def _on_geometry_changed(self, _window: Gtk.Window, _spec: GObject.ParamSpec) -> None:
-        """Save the size shortly after the user stops resizing, not on every frame."""
-        if self._geometry_timeout:
-            GLib.source_remove(self._geometry_timeout)
-        self._geometry_timeout = GLib.timeout_add(1000, self._start_geometry_save)
-
-    def _start_geometry_save(self) -> bool:
-        self._geometry_timeout = 0
-        run_task(self._save_geometry(), self)
-        return GLib.SOURCE_REMOVE
-
-    async def _save_geometry(self) -> None:
-        width, height = self.get_default_size()
-        state = WindowState(width, height, self.is_maximized())
-        if not valid_window_state(state):
-            return
-        try:
-            await self._providers.update_window(state)
-        except SettingsError as error:
-            log.warning("Could not remember the window size: %s", error)
 
     def add_toast(self, toast: Adw.Toast) -> None:
         self.toast_overlay.add_toast(toast)
@@ -317,46 +287,11 @@ class Window(Adw.ApplicationWindow):
         if options != self._note.display:
             run_task(self._notes.set_display_options(self._note.note_id, options), self)
 
-    # Window controls
-
-    def _on_destroy(self, _window: Gtk.Window) -> None:
-        """GTK settings outlive the window, so their handler must not."""
-        if self._gtk_settings is not None:
-            self._gtk_settings.disconnect(self._layout_handler)
-
-    def _on_decoration_layout_changed(
-        self, _settings: Gtk.Settings, _spec: GObject.ParamSpec
-    ) -> None:
-        self._sync_window_controls()
-
     @Gtk.Template.Callback()
     def _on_window_notify_current_breakpoint(
         self, _window: Adw.ApplicationWindow, _spec: GObject.ParamSpec
     ) -> None:
-        self._sync_window_controls()
-
-    def _sync_window_controls(self) -> None:
-        """Keep the app's buttons on the side away from the window controls.
-
-        With macOS-style controls at the start, the narrow sidebar header cannot hold them,
-        New Note and a centered title, so New Note joins the end buttons and the title,
-        already shown by the window, makes way.
-        """
-        settings = self._gtk_settings
-        layout = DecorationLayout.parse(
-            (settings.props.gtk_decoration_layout or "") if settings is not None else ""
-        )
-        at_end = layout.controls_at_start
-        if at_end != self._new_note_at_end:
-            self._new_note_at_end = at_end
-            self.sidebar_header.remove(self.new_note_button)
-            if at_end:
-                self.sidebar_header.pack_end(self.new_note_button)
-            else:
-                self.sidebar_header.pack_start(self.new_note_button)
-        self.sidebar_header.set_show_title(not at_end)
-        compact = self.get_current_breakpoint() is self.compact_breakpoint
-        self.content_header.set_decoration_layout(layout.close_only() if compact else None)
+        self._header_layout.sync()
 
     # Sidebar
 
