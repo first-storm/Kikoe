@@ -25,13 +25,15 @@ class SpeakerEditor(Adw.Dialog):
     ) -> None:
         super().__init__()
         self._notes, self._note, self._person, self._match = notes, note, person, match
-        self.name_row.set_text(speaker_label(note, person))
-        initial = self.name_row.get_text()
-        confirm_discard(self, lambda: self.name_row.get_text() != initial)
+        # The unnamed fallback label is pre-filled; saving it unchanged would make it a real name.
+        self._initial = speaker_label(note, person)
+        self.name_row.set_text(self._initial)
+        confirm_discard(self, lambda: self.name_row.get_text() != self._initial)
 
     @Gtk.Template.Callback()
     def _on_name_row_changed(self, _row: Adw.EntryRow) -> None:
-        self.save_button.set_sensitive(bool(self.name_row.get_text().strip()))
+        name = self.name_row.get_text().strip()
+        self.save_button.set_sensitive(bool(name) and name != self._initial.strip())
 
     @Gtk.Template.Callback()
     def _on_cancel_button_clicked(self, _button: Gtk.Button) -> None:
