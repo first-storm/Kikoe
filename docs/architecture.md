@@ -361,7 +361,9 @@ retains its independent `original_id`, so many labels can be matched to one pers
 later separated again. `Speaker.ordinal` is a persistent one-based number for default
 names and the four theme palette slots. Names are shared throughout a note. Schema
 version 3 adds these assignments and backfills older libraries without changing text.
-`core.speakers` resolves identities for the transcript and all export formats.
+`core.speakers` resolves identities for the transcript and all export formats, and
+`speaker_numbers` numbers them the same way everywhere: the ordinal, or first appearance
+for a legacy speaker whose ordinal is zero.
 
 The first recording establishes people. Later recordings containing independent labels
 require explicit matching when the note already contains speakers. Applying “Keep as

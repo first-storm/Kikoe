@@ -4,14 +4,13 @@ from collections.abc import Callable
 
 from gi.repository import Gio, GLib, Gtk
 
-from kikoe.core.formatting import SPEAKER_COLOR_COUNT, speaker_order
+from kikoe.core.formatting import SPEAKER_COLOR_COUNT
 from kikoe.core.models import Note, Recording
-from kikoe.core.speakers import identity_for, live_speaker_numbers, resolved_note
+from kikoe.core.speakers import identity_for, live_speaker_numbers, speaker_numbers
 from kikoe.core.transcript_rows import shared_prefix
 from kikoe.core.transcription import FileTranscriptSnapshot
 from kikoe.i18n import _
 from kikoe.ui.items import TranscriptItem
-from kikoe.ui.speaker_row import speaker_label
 
 _FOLLOW_DISTANCE = 48
 """How close to the end the view must be scrolled to keep following new text."""
@@ -19,8 +18,7 @@ _FOLLOW_DISTANCE = 48
 
 def build_rows(note: Note) -> list[TranscriptItem]:
     """A header row per recording, each followed by its segments."""
-    order = speaker_order(s for r in resolved_note(note).recordings for s in r.segments)
-    people = {s.speaker_id: s for s in note.speakers}
+    numbers = speaker_numbers(note)
     rows: list[TranscriptItem] = []
     for number, recording in enumerate(note.recordings, start=1):
         rows.append(TranscriptItem(recording, number))
@@ -30,15 +28,11 @@ def build_rows(note: Note) -> list[TranscriptItem]:
                 rows.append(TranscriptItem(recording, number, segment, position=position))
                 continue
             identity = identity_for(recording, speaker)
-            person = people.get(identity)
-            name = (
-                speaker_label(note, identity)
-                if person
-                else _("Speaker {number}").format(number=order[identity] + 1)
+            speaker_number = numbers[identity]
+            name = note.speaker_name(identity) or _("Speaker {number}").format(
+                number=speaker_number
             )
-            slot = (
-                (person.ordinal - 1) if person and person.ordinal else order[identity]
-            ) % SPEAKER_COLOR_COUNT
+            slot = (speaker_number - 1) % SPEAKER_COLOR_COUNT
             rows.append(TranscriptItem(recording, number, segment, name, slot, position=position))
     return rows
 

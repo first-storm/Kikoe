@@ -44,8 +44,8 @@ menubutton.timestamp-button > button {
 }
 
 /* Palette green-5 is only ~3.2:1 on the white view; speaker 2 darkens it for text. */
-/* Speaker colors from the GNOME palette, in order of first appearance (see
-   kikoe.core.formatting.speaker_order). Lighter shades keep contrast in dark mode. */
+/* Speaker colors from the GNOME palette, by speaker number (see
+   kikoe.core.speakers.speaker_numbers). Lighter shades keep contrast in dark mode. */
 .speaker-0 { color: var(--blue-4); }
 .speaker-1 { color: var(--orange-5); }
 .speaker-2 { color: color-mix(in srgb, var(--green-5), black 25%); }

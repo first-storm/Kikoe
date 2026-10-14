@@ -5,13 +5,14 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from kikoe.core.models import Note, Recording, RecordingSource, Segment, SpeakerBinding
+from kikoe.core.models import Note, Recording, RecordingSource, Segment, Speaker, SpeakerBinding
 from kikoe.core.speakers import (
     binding_choices,
     preserved_identities,
     resolved_note,
     sample_range,
     sample_segment,
+    speaker_numbers,
     unresolved_recordings,
 )
 
@@ -145,3 +146,33 @@ def test_live_preview_numbering_accounts_for_retained_old_people() -> None:
     assert numbers["alice"] == 1
     assert numbers["live0"] == 7
     assert numbers["live1"] == 8
+
+
+def test_speakers_without_ordinals_are_numbered_by_first_appearance() -> None:
+    segments = (*(segment(s, 0, 1) for s in ("b", "a", "b", "c")), Segment("no speaker"))
+    note = Note("note", "Meeting", datetime.now(UTC), (recording(segments),))
+
+    assert speaker_numbers(note) == {"b": 1, "a": 2, "c": 3}
+
+
+def test_stable_ordinals_win_and_legacy_zero_ordinals_are_not_shown() -> None:
+    segments = (segment("legacy", 0, 1), segment("alice", 1, 2))
+    note = Note(
+        "note",
+        "Meeting",
+        datetime.now(UTC),
+        (recording(segments),),
+        (Speaker("legacy", "", 0), Speaker("alice", "Alice", 5), Speaker("absent", "", 3)),
+    )
+
+    assert speaker_numbers(note) == {"legacy": 1, "alice": 5, "absent": 3}
+
+
+def test_speaker_numbers_follow_the_resolved_identity() -> None:
+    bound = replace(
+        recording((segment("0", 0, 1),)),
+        speaker_bindings=(SpeakerBinding("0", "alice", "0", True),),
+    )
+    note = Note("note", "Meeting", datetime.now(UTC), (bound,))
+
+    assert speaker_numbers(note) == {"alice": 1}

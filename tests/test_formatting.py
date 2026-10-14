@@ -11,9 +11,7 @@ from kikoe.core.formatting import (
     format_timestamp_range,
     parse_timestamp,
     relative_day,
-    speaker_order,
 )
-from kikoe.core.models import Segment
 from kikoe.core.validation import SegmentEditError, validate_segment_edit
 
 
@@ -49,13 +47,6 @@ def test_relative_day_uses_the_local_calendar_date() -> None:
     assert relative_day(datetime(2026, 10, 11, 12, 0, tzinfo=UTC), now) is RelativeDay.YESTERDAY
     assert relative_day(datetime(2026, 1, 2, 12, 0, tzinfo=UTC), now) is RelativeDay.THIS_YEAR
     assert relative_day(datetime(2025, 12, 31, 12, 0, tzinfo=UTC), now) is RelativeDay.OLDER
-
-
-def test_speakers_are_numbered_by_first_appearance() -> None:
-    order = ["b", "a", "b", "c"]
-    segments = [Segment("x", speaker_id=s) for s in order] + [Segment("no speaker")]
-
-    assert speaker_order(segments) == {"b": 0, "a": 1, "c": 2}
 
 
 @pytest.mark.parametrize(

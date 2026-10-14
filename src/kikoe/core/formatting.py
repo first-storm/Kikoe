@@ -4,11 +4,8 @@ Translated wording (“Today”, “2 recordings”) is added by the UI on top o
 """
 
 import re
-from collections.abc import Iterable
 from datetime import datetime, timedelta
 from enum import StrEnum
-
-from kikoe.core.models import Segment
 
 
 class RelativeDay(StrEnum):
@@ -107,16 +104,8 @@ _RANGE_SEPARATOR = "–"  # noqa: RUF001 -- en-dash shown in the UI; escaped for
 
 
 SPEAKER_COLOR_COUNT = 4
-"""Distinct speaker colors before they repeat (blue, orange, green, purple)."""
+"""Distinct speaker colors before they repeat (blue, orange, green, purple).
 
-
-def speaker_order(segments: Iterable[Segment]) -> dict[str, int]:
-    """Number speakers 0, 1, … by first appearance; unnamed ones are shown as “Speaker n+1”.
-
-    The color slot is the number modulo :data:`SPEAKER_COLOR_COUNT`, so colors stay stable.
-    """
-    order: dict[str, int] = {}
-    for segment in segments:
-        if segment.speaker_id is not None and segment.speaker_id not in order:
-            order[segment.speaker_id] = len(order)
-    return order
+A speaker's slot is its number from :func:`kikoe.core.speakers.speaker_numbers`, minus one,
+modulo this count, so colors stay stable.
+"""
