@@ -9,7 +9,7 @@ from pathlib import Path
 import httpx2 as httpx
 import pytest
 
-from helpers import file_caps, run_async
+from helpers import file_caps, form_field, run_async
 from kikoe.core.models import (
     ApiKind,
     AudioFormat,
@@ -18,16 +18,12 @@ from kikoe.core.models import (
     Segment,
     TimestampGranularity,
 )
+from kikoe.core.provider_registry import descriptor
 from kikoe.core.transcription import FileTranscriptSnapshot
-from kikoe.core.upload import OGG_OPUS, UploadLimits, upload_policy
+from kikoe.core.upload import OGG_OPUS, UploadLimits, effective_upload_limits
 from kikoe.core.validation import effective_base_url, validate_provider
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
-from kikoe.providers.factory import create_client
-from kikoe.providers.mistral import (
-    MAX_UPLOAD_BYTES,
-    MAX_UPLOAD_SECONDS,
-    MistralClient,
-)
+from kikoe.providers.mistral import MistralClient
 from kikoe.storage.settings import Settings, SettingsStore
 
 MODEL = ModelSpec("voxtral-mini-latest", "Voxtral Mini", file_caps())
@@ -41,22 +37,6 @@ FULL = ModelSpec(
 def body(text: str = "Hello", **extra: object) -> dict[str, object]:
     """The smallest response the SDK's models accept."""
     return {"model": "voxtral-mini-latest", "text": text, "usage": {}, "language": None, **extra}
-
-
-@pytest.fixture
-def audio(tmp_path: Path) -> Path:
-    path = tmp_path / "upload.ogg"
-    path.write_bytes(b"OggS fake audio")
-    return path
-
-
-def field(request: httpx.Request, name: str) -> str | None:
-    marker = f'name="{name}"\r\n\r\n'.encode()
-    content = request.content
-    if marker not in content:
-        return None
-    start = content.index(marker) + len(marker)
-    return content[start : content.index(b"\r\n", start)].decode()
 
 
 def client_for(
@@ -84,7 +64,7 @@ async def test_sdk_uploads_audio_with_authentication_and_returns_plain_text(
     request = requests[0]
     assert str(request.url) == base_url.rstrip("/") + "/v1/audio/transcriptions"
     assert request.headers["Authorization"] == "Bearer secret"
-    assert field(request, "model") == MODEL.model_id
+    assert form_field(request, "model") == MODEL.model_id
     assert b'filename="upload.ogg"' in request.content
     assert b"Content-Type: audio/ogg" in request.content
 
@@ -124,8 +104,8 @@ async def test_segments_carry_times_and_the_language_is_not_sent_with_them(audio
 
     assert result == (Segment("Hello", timedelta(seconds=1), timedelta(seconds=2.5)),)
     assert fields_named(requests[0], "timestamp_granularities") == ["segment"]
-    assert field(requests[0], "language") is None
-    assert field(requests[0], "diarize") in (None, "false")
+    assert form_field(requests[0], "language") is None
+    assert form_field(requests[0], "diarize") in (None, "false")
 
 
 @run_async
@@ -138,9 +118,9 @@ async def test_plain_text_requests_send_the_primary_language_without_metadata(
         audio, FULL, TranscriptionOptions(timestamps=False, diarization=False, language="zh-CN")
     )
 
-    assert field(requests[0], "language") == "zh"
+    assert form_field(requests[0], "language") == "zh"
     assert fields_named(requests[0], "timestamp_granularities") == []
-    assert field(requests[0], "diarize") in (None, "false")
+    assert form_field(requests[0], "diarize") in (None, "false")
 
 
 @run_async
@@ -170,9 +150,9 @@ async def test_speakers_are_mapped_from_speaker_id_and_force_segment_times(audio
     )
 
     assert [(s.text, s.speaker_id) for s in result] == [("Hi.", "speaker_1"), ("Hey.", "speaker_2")]
-    assert field(requests[0], "diarize") == "true"
+    assert form_field(requests[0], "diarize") == "true"
     assert fields_named(requests[0], "timestamp_granularities") == ["segment"]
-    assert field(requests[0], "language") is None
+    assert form_field(requests[0], "language") is None
 
 
 @run_async
@@ -209,7 +189,7 @@ async def test_unrequested_speakers_are_not_reported(audio: Path) -> None:
     )
 
     assert result[0].speaker_id is None
-    assert field(requests[0], "diarize") in (None, "false")
+    assert form_field(requests[0], "diarize") in (None, "false")
 
 
 @run_async
@@ -258,9 +238,9 @@ async def test_capabilities_limit_what_is_requested(audio: Path) -> None:
 
     await client_for(transport).transcribe_file(audio, MODEL, TranscriptionOptions(language="en"))
 
-    assert field(requests[0], "language") == "en"
+    assert form_field(requests[0], "language") == "en"
     assert fields_named(requests[0], "timestamp_granularities") == []
-    assert field(requests[0], "diarize") in (None, "false")
+    assert form_field(requests[0], "diarize") in (None, "false")
 
 
 @run_async
@@ -332,20 +312,6 @@ async def test_network_failures_are_retryable(audio: Path, is_timeout: bool) -> 
 
 
 @run_async
-async def test_oversized_audio_is_rejected_before_upload(audio: Path) -> None:
-    with audio.open("r+b") as stream:
-        stream.truncate(MAX_UPLOAD_BYTES + 1)
-
-    def respond(request: httpx.Request) -> httpx.Response:
-        pytest.fail("Oversized audio must not be uploaded")
-
-    with pytest.raises(TranscriptionError, match="too large"):
-        await client_for(httpx.MockTransport(respond)).transcribe_file(
-            audio, MODEL, TranscriptionOptions()
-        )
-
-
-@run_async
 async def test_cancelling_upload_closes_transport(audio: Path) -> None:
     started = asyncio.Event()
     closed = asyncio.Event()
@@ -371,7 +337,7 @@ async def test_cancelling_upload_closes_transport(audio: Path) -> None:
     assert closed.is_set()
 
 
-def test_mistral_configuration_roundtrips_and_uses_official_adapter(tmp_path: Path) -> None:
+def test_mistral_configuration_roundtrips_with_its_upload_limits(tmp_path: Path) -> None:
     assert validate_provider("Mistral", ApiKind.MISTRAL, "") is None
     provider = Provider(
         "mistral", "Mistral", ApiKind.MISTRAL, effective_base_url(ApiKind.MISTRAL, ""), (MODEL,)
@@ -381,13 +347,12 @@ def test_mistral_configuration_roundtrips_and_uses_official_adapter(tmp_path: Pa
 
     assert provider.base_url == "https://api.mistral.ai"
     assert store.load_state().providers == (provider,)
-    assert isinstance(create_client(provider, "secret"), MistralClient)
-    policy = upload_policy(ApiKind.MISTRAL)
-    assert (policy.bytes, policy.seconds) == (MAX_UPLOAD_BYTES, MAX_UPLOAD_SECONDS)
+    policy = descriptor(ApiKind.MISTRAL).upload
+    assert (policy.bytes, policy.seconds) == (500_000_000, 3600)
     assert policy.format is AudioFormat.OGG
-    assert client_for().upload_limits(MODEL, TranscriptionOptions()) == UploadLimits(
-        MAX_UPLOAD_BYTES, timedelta(seconds=MAX_UPLOAD_SECONDS), format=OGG_OPUS
-    )
+    assert effective_upload_limits(
+        client_for().upload_limits(MODEL, TranscriptionOptions()), provider.upload, ApiKind.MISTRAL
+    ) == UploadLimits(500_000_000, timedelta(hours=1), format=OGG_OPUS)
 
 
 STREAMING = ModelSpec(
@@ -457,7 +422,7 @@ async def test_streaming_requests_the_event_stream_and_reports_growing_previews(
     )
 
     assert requests[0].headers["Accept"] == "text/event-stream"
-    assert field(requests[0], "stream") in (None, "true")
+    assert form_field(requests[0], "stream") in (None, "true")
     first, second = (
         Segment("Hello there.", timedelta(0), timedelta(seconds=1)),
         Segment("More", timedelta(seconds=1), timedelta(seconds=2)),

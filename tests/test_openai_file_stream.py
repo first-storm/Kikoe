@@ -8,12 +8,12 @@ from pathlib import Path
 import httpx2 as httpx
 import pytest
 
-from helpers import file_caps, run_async
+from helpers import file_caps, form_field, run_async
 from kikoe.core.models import Capabilities, ModelSpec, Segment
 from kikoe.core.transcription import FileTranscriptSnapshot
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
 from kikoe.providers.openai import OpenAIClient
-from test_openai_provider import Recorder, form_field
+from test_openai_provider import Recorder
 
 TEXT = ModelSpec("gpt-4o-transcribe", "GPT-4o", file_caps(streaming=True))
 DIARIZE = ModelSpec(
@@ -84,13 +84,6 @@ def client(events: EventBytes) -> tuple[OpenAIClient, Recorder]:
         "secret",
         transport=httpx.MockTransport(recorder),
     ), recorder
-
-
-@pytest.fixture
-def audio(tmp_path: Path) -> Path:
-    path = tmp_path / "test.ogg"
-    path.write_bytes(b"OggS fake")
-    return path
 
 
 @run_async

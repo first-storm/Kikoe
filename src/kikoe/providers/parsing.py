@@ -60,10 +60,15 @@ def parse_segments(body: object, timed: bool, diarize: bool) -> tuple[Segment, .
         return tuple(result)
     if words := entries(data.get("words")):
         return parse_words(words, timed, diarize)
-    text = data.get("text")
-    if not isinstance(text, str):
+    return parse_text(data.get("text"))
+
+
+def parse_text(value: object) -> tuple[Segment, ...]:
+    """Plain transcript text as one segment; silence yields none."""
+    if not isinstance(value, str):
         raise TypeError("Missing transcript text")
-    return (Segment(text.strip()),) if text.strip() else ()
+    text = value.strip()
+    return (Segment(text),) if text else ()
 
 
 def parse_words(words: Iterable[object], timed: bool, diarize: bool) -> tuple[Segment, ...]:

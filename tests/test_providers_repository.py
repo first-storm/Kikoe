@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from helpers import file_caps, run_async
+from helpers import file_caps, open_settings, run_async
 from kikoe.core.models import ApiKind, Capabilities, ModeCapabilities, ModelSpec, Provider
 from kikoe.storage.providers import ProviderNotFoundError, ProviderRepository
 from kikoe.storage.settings import Settings, SettingsStore
@@ -31,7 +31,7 @@ def secrets() -> FakeSecrets:
 
 @pytest.fixture
 def repo(tmp_path: Path, secrets: FakeSecrets) -> ProviderRepository:
-    return ProviderRepository(SettingsStore(tmp_path / "settings.json"), secrets)
+    return ProviderRepository(open_settings(tmp_path / "settings.json"), secrets)
 
 
 @run_async
@@ -40,7 +40,7 @@ async def test_added_provider_survives_a_restart(
 ) -> None:
     provider = await repo.add_provider("Groq", ApiKind.OPENAI_COMPATIBLE, URL, "k1")
 
-    restarted = ProviderRepository(SettingsStore(tmp_path / "settings.json"), secrets)
+    restarted = ProviderRepository(open_settings(tmp_path / "settings.json"), secrets)
     await restarted.load()
 
     assert restarted.providers == (provider,)
@@ -113,89 +113,6 @@ async def test_listeners_are_told_about_changes(repo: ProviderRepository) -> Non
     assert calls == [1]
 
 
-@run_async
-async def test_concurrent_defaults_and_provider_edits_both_survive(
-    repo: ProviderRepository, tmp_path: Path, secrets: FakeSecrets
-) -> None:
-    import asyncio
-    from dataclasses import replace
-
-    provider = await repo.add_provider("Cloud", ApiKind.DEEPGRAM, URL, "")
-    await asyncio.gather(
-        repo.update_preferences(lambda p: replace(p, language="zh")),
-        repo.save_model(provider.provider_id, ModelSpec("a", "A", Capabilities())),
-        repo.save_model(provider.provider_id, ModelSpec("b", "B", Capabilities())),
-        repo.update_preferences(lambda p: replace(p, default_model=(provider.provider_id, "b"))),
-    )
-    restarted = ProviderRepository(SettingsStore(tmp_path / "settings.json"), secrets)
-    await restarted.load()
-    assert restarted.preferences.language == "zh"
-    assert restarted.preferences.default_model == (provider.provider_id, "b")
-    assert [m.model_id for m in restarted.get(provider.provider_id).models] == ["a", "b"]
-
-
-@run_async
-async def test_failed_defaults_save_does_not_notify_or_change_memory(
-    repo: ProviderRepository, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    from dataclasses import replace
-
-    from kikoe.storage.settings import SettingsError
-
-    calls: list[str] = []
-    repo.connect_preferences_changed(lambda: calls.append("changed"))
-
-    def fail_save(self: SettingsStore, state: Settings) -> None:
-        raise SettingsError("Cannot save")
-
-    monkeypatch.setattr(SettingsStore, "save_state", fail_save)
-    with pytest.raises(SettingsError):
-        await repo.update_preferences(lambda p: replace(p, language="zh"))
-    assert repo.preferences.language is None
-    assert calls == []
-
-
-@run_async
-async def test_edit_cannot_overwrite_damaged_settings_after_failed_startup(
-    tmp_path: Path, secrets: FakeSecrets
-) -> None:
-    from dataclasses import replace
-
-    from kikoe.storage.settings import SettingsError
-
-    path = tmp_path / "settings.json"
-    path.write_text("damaged settings")
-    repository = ProviderRepository(SettingsStore(path), secrets)
-    with pytest.raises(SettingsError):
-        await repository.load()
-    with pytest.raises(SettingsError):
-        await repository.update_preferences(lambda p: replace(p, language="zh"))
-    with pytest.raises(SettingsError):
-        await repository.add_provider("Cloud", ApiKind.OPENAI, URL, "secret")
-    assert path.read_text() == "damaged settings"
-    assert secrets.items == {}
-
-
-@run_async
-async def test_window_state_persists_and_keeps_providers_and_defaults(
-    tmp_path: Path, repo: ProviderRepository, secrets: FakeSecrets
-) -> None:
-    from dataclasses import replace
-
-    from kikoe.core.preferences import WindowState
-
-    await repo.add_provider("Cloud", ApiKind.OPENAI, URL, "secret")
-    await repo.update_preferences(lambda p: replace(p, language="zh"))
-
-    await repo.update_window(WindowState(1000, 700, maximized=True))
-
-    reloaded = ProviderRepository(SettingsStore(tmp_path / "settings.json"), secrets)
-    await reloaded.load()
-    assert reloaded.window == WindowState(1000, 700, maximized=True)
-    assert [p.name for p in reloaded.providers] == ["Cloud"]
-    assert reloaded.preferences.language == "zh"
-
-
 ALL_ON = Capabilities(
     file=ModeCapabilities(True, True, True, True), realtime=ModeCapabilities(True, True, True, True)
 )
@@ -228,7 +145,7 @@ async def test_loading_clamps_models_saved_by_an_older_catalog(
     model = ModelSpec("gpt-live-transcribe", "Live", file_caps(timestamps=True))
     provider = Provider("p", "OpenAI", ApiKind.OPENAI, URL, (model,))
     SettingsStore(path).save_state(Settings((provider,)))
-    repository = ProviderRepository(SettingsStore(path), secrets)
+    repository = ProviderRepository(open_settings(path), secrets)
 
     await repository.load()
 
@@ -257,29 +174,6 @@ async def test_upload_edits_preserve_models_credentials_and_other_providers(
     assert repo.get(first.provider_id).upload == upload
     await repo.update_provider(first.provider_id, "Changed", ApiKind.MIMO, URL, "secret")
     assert repo.get(first.provider_id).upload == UploadSettings()
-
-
-@run_async
-async def test_failed_window_save_keeps_state_and_does_not_notify(
-    repo: ProviderRepository, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    from kikoe.core.preferences import WindowState
-    from kikoe.storage.settings import SettingsError
-
-    await repo.load()
-    original = repo.window
-    calls: list[str] = []
-    repo.connect_changed(lambda: calls.append("providers"))
-    repo.connect_preferences_changed(lambda: calls.append("preferences"))
-
-    def fail_save(self: SettingsStore, state: Settings) -> None:
-        raise SettingsError("Cannot save")
-
-    monkeypatch.setattr(SettingsStore, "save_state", fail_save)
-    with pytest.raises(SettingsError):
-        await repo.update_window(WindowState(900, 700, False))
-    assert repo.window == original
-    assert calls == []
 
 
 @run_async

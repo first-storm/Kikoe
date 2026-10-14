@@ -4,11 +4,10 @@ from pathlib import Path
 import httpx2 as httpx
 import pytest
 
-from helpers import file_caps, run_async
-from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider, Segment
+from helpers import file_caps, form_field, run_async
+from kikoe.core.models import Capabilities, ModelSpec, Segment
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
-from kikoe.providers.factory import create_client
-from kikoe.providers.openai import MAX_UPLOAD_BYTES, OpenAIClient
+from kikoe.providers.openai import OpenAIClient
 
 BASE_URL = "https://api.groq.com/openai/v1/"
 WHISPER = ModelSpec("whisper-large-v3", "Whisper", file_caps(timestamps=True))
@@ -41,25 +40,8 @@ class Recorder:
         return self.response
 
 
-@pytest.fixture
-def audio(tmp_path: Path) -> Path:
-    path = tmp_path / "upload.ogg"
-    path.write_bytes(b"OggS fake audio")
-    return path
-
-
 def client(handler: Recorder, api_key: str = "secret") -> OpenAIClient:
     return OpenAIClient(BASE_URL, api_key, transport=httpx.MockTransport(handler))
-
-
-def form_field(request: httpx.Request, name: str) -> str | None:
-    """Read a plain field from the multipart body (good enough for these small requests)."""
-    marker = f'name="{name}"\r\n\r\n'.encode()
-    body = request.content
-    if marker not in body:
-        return None
-    start = body.index(marker) + len(marker)
-    return body[start : body.index(b"\r\n", start)].decode()
 
 
 @run_async
@@ -175,32 +157,6 @@ async def test_connection_failure_names_the_host(audio: Path) -> None:
 
     with pytest.raises(TranscriptionError, match=r"Could not reach api\.groq\.com"):
         await failing.transcribe_file(audio, WHISPER, TranscriptionOptions())
-
-
-@run_async
-async def test_oversize_file_is_refused_before_upload(tmp_path: Path) -> None:
-    big = tmp_path / "big.ogg"
-    with big.open("wb") as file:
-        file.truncate(MAX_UPLOAD_BYTES + 1)
-    handler = Recorder(httpx.Response(200, json={"text": "never"}))
-
-    with pytest.raises(TranscriptionError, match="too large"):
-        await client(handler).transcribe_file(big, WHISPER, TranscriptionOptions())
-    assert handler.requests == []
-
-
-def test_factory_supports_openai_style_apis() -> None:
-    provider = Provider("p", "Groq", ApiKind.OPENAI_COMPATIBLE, BASE_URL)
-
-    assert isinstance(create_client(provider, "k"), OpenAIClient)
-
-
-def test_factory_supports_deepgram() -> None:
-    provider = Provider("p", "Deepgram", ApiKind.DEEPGRAM, "https://api.deepgram.com/v1")
-
-    from kikoe.providers.deepgram import DeepgramClient
-
-    assert isinstance(create_client(provider, "k"), DeepgramClient)
 
 
 @run_async

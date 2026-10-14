@@ -11,7 +11,13 @@ from helpers import LIVE_ONLY, run_async
 from kikoe.core.choice import ModelChoice
 from kikoe.core.models import ApiKind, ModelSpec, Provider, Segment
 from kikoe.core.recording import CaptureState
-from kikoe.core.transcription import LiveSnapshot, LiveState, TranscriptEvent
+from kikoe.core.transcription import (
+    CheckpointStrategy,
+    LiveSnapshot,
+    LiveState,
+    RealtimeProfile,
+    TranscriptEvent,
+)
 from kikoe.core.upload import UploadLimits
 from kikoe.providers.base import (
     FileTranscriptCallback,
@@ -117,8 +123,14 @@ class Session:
 
 class Client:
     def __init__(
-        self, *, reconnect: bool = False, hang: bool = False, reject: bool = False
+        self,
+        *,
+        reconnect: bool = False,
+        hang: bool = False,
+        reject: bool = False,
+        profile: RealtimeProfile | None = None,
     ) -> None:
+        self.profile = profile or RealtimeProfile()
         self.reconnect = reconnect
         self.hang = hang
         self.reject = reject
@@ -137,6 +149,9 @@ class Client:
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         raise AssertionError("Live success must not upload the file again")
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return self.profile
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions
@@ -290,13 +305,12 @@ async def test_pause_flushes_and_resume_reads_only_new_audio(
 
 
 @run_async
-async def test_gemini_rotation_does_not_mark_unstreamed_tail_complete(
+async def test_session_rotation_does_not_mark_unstreamed_tail_complete(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(realtime, "PCMStream", Converter)
-    monkeypatch.setattr(realtime, "GEMINI_SESSION_SECONDS", 0)
     recorded = capture(tmp_path, finished=True)
-    client = Client()
+    client = Client(profile=RealtimeProfile(max_session=timedelta(0)))
     job = RealtimeRecording(
         recorded, CHOICE, client, TranscriptionOptions(False, False), lambda _s: None
     )
@@ -306,3 +320,31 @@ async def test_gemini_rotation_does_not_mark_unstreamed_tail_complete(
     assert b"".join(bytes(s.audio) for s in client.sessions) == PCM
     assert len(client.sessions) == 2
     assert len(job.segments) == 2
+
+
+class RateRecordingConverter(Converter):
+    """Records the output rate each connection asks ffmpeg for."""
+
+    rates: list[int] = []  # noqa: RUF012 # reset by the test that uses it
+
+    @classmethod
+    async def start(cls, input_rate: int, output_rate: int) -> Converter:
+        cls.rates.append(output_rate)
+        return cls()
+
+
+@run_async
+async def test_service_converts_audio_to_the_rate_the_provider_asks_for(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A provider with new needs works without the service knowing which provider it is."""
+    RateRecordingConverter.rates = []
+    monkeypatch.setattr(realtime, "PCMStream", RateRecordingConverter)
+    recorded = capture(tmp_path, finished=True)
+    client = Client(profile=RealtimeProfile(sample_rate=8000, checkpoint=CheckpointStrategy.FLUSH))
+    job = RealtimeRecording(
+        recorded, CHOICE, client, TranscriptionOptions(False, False), lambda _s: None
+    )
+    async with asyncio.timeout(5):
+        await job.run()
+    assert RateRecordingConverter.rates == [8000]

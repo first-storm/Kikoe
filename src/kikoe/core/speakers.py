@@ -144,6 +144,22 @@ def matching_candidates(note: Note) -> tuple[Speaker, ...]:
     return tuple(s for s in note.speakers if s.name or s.speaker_id in established)
 
 
+def speaker_numbers(note: Note) -> dict[str, int]:
+    """The “Speaker N” number per identity: its stable ordinal, else its first appearance.
+
+    Legacy speakers have ordinal zero, so they are numbered by where they first speak in the
+    resolved transcript, counting every speaker from one.
+    """
+    appearing = dict.fromkeys(
+        s.speaker_id
+        for r in note.recordings
+        for s in resolved_segments(r)
+        if s.speaker_id is not None
+    )
+    first = {speaker_id: index for index, speaker_id in enumerate(appearing, start=1)}
+    return first | {s.speaker_id: s.ordinal for s in note.speakers if s.ordinal > 0}
+
+
 def live_speaker_numbers(note: Note, segments: tuple[Segment, ...]) -> dict[str, int]:
     """Allocate preview numbers as persistence will, including retained old identities."""
     numbers = {s.speaker_id: s.ordinal for s in note.speakers if s.ordinal > 0}

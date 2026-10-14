@@ -3,7 +3,15 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from kikoe.core.models import ApiKind, ModeCapabilities, ModelSpec, Provider, TimestampGranularity
+from kikoe.core.models import (
+    ApiKind,
+    ModeCapabilities,
+    ModelKey,
+    ModelSpec,
+    Provider,
+    TimestampGranularity,
+)
+from kikoe.core.provider_registry import descriptor
 from kikoe.core.validation import Capability
 
 
@@ -13,7 +21,7 @@ class ModelChoice:
     model: ModelSpec
 
     @property
-    def key(self) -> tuple[str, str]:
+    def key(self) -> ModelKey:
         """Stable identity, since a provider or model may be replaced by an edited copy."""
         return self.provider.provider_id, self.model.model_id
 
@@ -23,16 +31,15 @@ def available_models(providers: Iterable[Provider]) -> tuple[ModelChoice, ...]:
     return tuple(ModelChoice(p, m) for p in providers for m in p.models)
 
 
-def resolve_choice(
-    providers: Iterable[Provider], wanted: tuple[str, str] | None
-) -> ModelChoice | None:
-    """The model with key ``wanted``, refreshed from ``providers``.
+def resolve_choice(providers: Iterable[Provider], *wanted: ModelKey | None) -> ModelChoice | None:
+    """The first ``wanted`` model that still exists, refreshed from ``providers``.
 
-    Falls back to the first model when it was removed, so there is always a model to
+    Falls back to the first model when none does, so there is always a model to
     transcribe with as long as one exists.
     """
     choices = available_models(providers)
-    return next((c for c in choices if c.key == wanted), choices[0] if choices else None)
+    found = (c for key in wanted for c in choices if c.key == key)
+    return next(found, choices[0] if choices else None)
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,10 +83,12 @@ def unsupported_features(capabilities: ModeCapabilities) -> tuple[Capability, ..
 def language_dropped(api: ApiKind, features: RequestedFeatures, language: str | None) -> bool:
     """Whether a set transcription language is left out of the request.
 
-    Mistral rejects a language together with timestamp granularities, and speaker labels
-    need its segment timestamps, so either option makes the service detect the language.
-    ``features`` must already be limited to what the model supports.
+    Some services reject a language together with timestamp granularities, and their
+    speaker labels need segment timestamps, so either option makes them detect the
+    language. ``features`` must already be limited to what the model supports.
     """
     return (
-        api is ApiKind.MISTRAL and bool(language) and (features.timestamps or features.diarization)
+        descriptor(api).language_excludes_timestamps
+        and bool(language)
+        and (features.timestamps or features.diarization)
     )

@@ -6,12 +6,14 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Protocol
+from typing import ClassVar, Protocol
+from urllib.parse import urlsplit
 
 from kikoe.core.choice import RequestedFeatures
-from kikoe.core.models import ModeCapabilities, ModelSpec, Segment, TimestampGranularity
-from kikoe.core.transcription import FileTranscriptSnapshot, TranscriptEvent
+from kikoe.core.models import ModeCapabilities, ModelSpec, Segment
+from kikoe.core.transcription import FileTranscriptSnapshot, RealtimeProfile, TranscriptEvent
 from kikoe.core.upload import UploadLimits
+from kikoe.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -28,23 +30,11 @@ async def close_stack(stack: AsyncExitStack) -> None:
 
 
 @dataclass(frozen=True, slots=True)
-class TranscriptionOptions:
+class TranscriptionOptions(RequestedFeatures):
     """Per-request switches. Only honoured when the model's Capabilities allow them."""
 
-    timestamps: bool = True
-    diarization: bool = True
-    language: str | None = None
+    language: str | None = field(default=None, kw_only=True)
     """BCP 47 tag, or None to let the service detect it."""
-    timestamp_granularities: tuple[TimestampGranularity, ...] = field(
-        default=(TimestampGranularity.SEGMENT,), kw_only=True
-    )
-    """Timestamp detail; honoured only when the model has word timestamps."""
-
-    def allowed_by(self, capabilities: ModeCapabilities) -> RequestedFeatures:
-        """Apply the same capability constraints as the model options UI."""
-        return RequestedFeatures(
-            self.timestamps, self.diarization, self.timestamp_granularities
-        ).allowed_by(capabilities)
 
 
 def file_capabilities(model: ModelSpec) -> ModeCapabilities:
@@ -70,6 +60,38 @@ class RealtimeSession(Protocol):
     def events(self) -> AsyncIterator[TranscriptEvent]: ...
 
 
+class HttpClient[T]:
+    """Connection settings every SDK adapter keeps; ``T`` is the SDK's httpx transport type."""
+
+    def __init__(self, base_url: str, api_key: str, transport: T | None = None) -> None:
+        self._url = base_url.rstrip("/")
+        self._host = urlsplit(base_url).hostname or base_url
+        self._key = api_key
+        self._transport = transport
+        """Tests substitute a mock transport; None uses the network."""
+
+    def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
+        """Endpoint caps live in the provider registry; override only for option limits."""
+        return UploadLimits()
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return RealtimeProfile()
+
+
+class FileOnlyClient[T](HttpClient[T]):
+    """A service without live transcription."""
+
+    name: ClassVar[str]
+    """Brand name, shown when someone tries to transcribe live."""
+
+    async def open_realtime(
+        self, model: ModelSpec, options: TranscriptionOptions
+    ) -> RealtimeSession:
+        # Translators: {name} is a service name such as Groq.
+        message = _("{name} supports file transcription only.")
+        raise TranscriptionError(message.format(name=self.name))
+
+
 class TranscriptionProvider(Protocol):
     async def transcribe_file(
         self,
@@ -79,10 +101,18 @@ class TranscriptionProvider(Protocol):
         *,
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
-        """Upload a finished recording and return its transcript."""
+        """Upload a finished recording and return its transcript.
+
+        Callers split audio to ``upload_limits`` combined with the registry's
+        ``UploadPolicy``, so clients do not check the size again.
+        """
         ...
 
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits: ...
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        """How live audio must be delivered; file-only services return the default."""
+        ...
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions

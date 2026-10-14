@@ -4,15 +4,18 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
 from kikoe.core.formatting import SPEAKER_COLOR_COUNT
 from kikoe.core.models import Note, Recording, Speaker, SpeakerBinding
-from kikoe.core.speakers import sample_range, sample_segment
+from kikoe.core.speakers import sample_range, sample_segment, speaker_numbers
 from kikoe.i18n import _
 from kikoe.ui.templates import ui_file
 
 
 def speaker_label(note: Note, speaker_id: str) -> str:
-    """Keep fallback labels translatable and tied to a stable person number."""
+    """Keep fallback labels translatable and numbered like the transcript."""
     person = note.speaker(speaker_id)
-    return (person.name or _("Speaker {number}").format(number=person.ordinal)) if person else ""
+    if person is None:
+        return ""
+    number = speaker_numbers(note).get(speaker_id, person.ordinal)
+    return person.name or _("Speaker {number}").format(number=number)
 
 
 def color_widget(widget: Gtk.Widget, ordinal: int, *, title_only: bool = False) -> None:
@@ -39,7 +42,6 @@ class SpeakerRow(Adw.ActionRow):
     choice_button: Gtk.MenuButton = Gtk.Template.Child()
     choice_popover: Gtk.Popover = Gtk.Template.Child()
     choices_list: Gtk.ListBox = Gtk.Template.Child()
-    keep_button: Gtk.Button = Gtk.Template.Child()
     keep_check: Gtk.Image = Gtk.Template.Child()
     target_label: Gtk.Label = Gtk.Template.Child()
 

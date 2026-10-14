@@ -8,6 +8,7 @@ from kikoe.core.validation import ModelError, validate_model
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.dialogs import confirm_discard
+from kikoe.ui.guard import Guard
 from kikoe.ui.labels import model_error_message
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
@@ -40,12 +41,25 @@ class ModelDialog(Adw.Dialog):
         self._repository = repository
         self._provider_id = provider_id
         self._model = model
-        self._updating = False
+        self._updating = Guard()
         self._touched = model is not None
         """Saved options are never replaced by a preset, even when the ID is edited."""
         self._subtitles = {
             row: row.get_subtitle() or "" for row in (self.file_row, self.realtime_row)
         }
+        self._checks = {
+            self.file_row: (
+                (self.file_timestamps_check, "timestamps"),
+                (self.file_words_check, "word_timestamps"),
+                (self.file_speakers_check, "diarization"),
+                (self.file_streaming_check, "streaming"),
+            ),
+            self.realtime_row: (
+                (self.realtime_timestamps_check, "timestamps"),
+                (self.realtime_speakers_check, "diarization"),
+            ),
+        }
+        """Each mode's check buttons and the `ModeCapabilities`/`ModePreset` field they set."""
         if model is not None:
             self.set_title(_("Edit Model"))
             self.confirm_button.set_label(_("_Save"))
@@ -57,45 +71,23 @@ class ModelDialog(Adw.Dialog):
         self._guard_unsaved_input()
 
     def _capabilities(self) -> Capabilities:
-        file = (
-            ModeCapabilities(
-                timestamps=self.file_timestamps_check.get_active(),
-                word_timestamps=self.file_words_check.get_active(),
-                diarization=self.file_speakers_check.get_active(),
-                streaming=self.file_streaming_check.get_active(),
-            )
-            if self.file_row.get_enable_expansion()
-            else None
-        )
-        realtime = (
-            ModeCapabilities(
-                timestamps=self.realtime_timestamps_check.get_active(),
-                diarization=self.realtime_speakers_check.get_active(),
-            )
-            if self.realtime_row.get_enable_expansion()
-            else None
-        )
-        return Capabilities(file=file, realtime=realtime)
+        return Capabilities(file=self._mode(self.file_row), realtime=self._mode(self.realtime_row))
+
+    def _mode(self, row: Adw.ExpanderRow) -> ModeCapabilities | None:
+        if not row.get_enable_expansion():
+            return None
+        return ModeCapabilities(**{field: check.get_active() for check, field in self._checks[row]})
 
     def _show_capabilities(self, capabilities: Capabilities) -> None:
-        self._updating = True
-        try:
-            file, realtime = capabilities.file, capabilities.realtime
-            self.file_row.set_enable_expansion(file is not None)
-            self.realtime_row.set_enable_expansion(realtime is not None)
-            file = file or ModeCapabilities()
-            realtime = realtime or ModeCapabilities()
-            for check, active in (
-                (self.file_timestamps_check, file.timestamps),
-                (self.file_words_check, file.word_timestamps),
-                (self.file_speakers_check, file.diarization),
-                (self.file_streaming_check, file.streaming),
-                (self.realtime_timestamps_check, realtime.timestamps),
-                (self.realtime_speakers_check, realtime.diarization),
+        with self._updating:
+            for row, mode in (
+                (self.file_row, capabilities.file),
+                (self.realtime_row, capabilities.realtime),
             ):
-                check.set_active(active)
-        finally:
-            self._updating = False
+                row.set_enable_expansion(mode is not None)
+                for check, field in self._checks[row]:
+                    active: bool = getattr(mode or ModeCapabilities(), field)
+                    check.set_active(active)
 
     def _fields(self) -> tuple[str, str, Capabilities]:
         return (
@@ -114,7 +106,7 @@ class ModelDialog(Adw.Dialog):
 
     @Gtk.Template.Callback()
     def _on_option_changed(self, _widget: Gtk.Widget, _spec: GObject.ParamSpec) -> None:
-        if not self._updating:
+        if not self._updating.active:
             self._touched = True
 
     def _preset(self) -> ModelPreset | None:
@@ -138,42 +130,15 @@ class ModelDialog(Adw.Dialog):
             )
         else:
             self._show_capabilities(preset.defaults())
-        file, realtime = preset.file, preset.realtime
-        self._updating = True
-        try:
-            self._limit_mode(
-                self.file_row,
-                file,
-                realtime,
-                (
-                    (self.file_timestamps_check, file.timestamps),
-                    (self.file_words_check, file.word_timestamps),
-                    (self.file_speakers_check, file.diarization),
-                    (self.file_streaming_check, file.streaming),
-                ),
-            )
-            self._limit_mode(
-                self.realtime_row,
-                realtime,
-                file,
-                (
-                    (self.realtime_timestamps_check, realtime.timestamps),
-                    (self.realtime_speakers_check, realtime.diarization),
-                ),
-            )
-        finally:
-            self._updating = False
+        with self._updating:
+            self._limit_mode(self.file_row, preset.file, preset.realtime)
+            self._limit_mode(self.realtime_row, preset.realtime, preset.file)
 
-    def _limit_mode(
-        self,
-        row: Adw.ExpanderRow,
-        mode: ModePreset,
-        other: ModePreset,
-        checks: tuple[tuple[Gtk.CheckButton, Support], ...],
-    ) -> None:
+    def _limit_mode(self, row: Adw.ExpanderRow, mode: ModePreset, other: ModePreset) -> None:
         """Disable what the endpoint rejects; a mode the model cannot lack is always on."""
-        for check, support in checks:
-            available = support is not Support.UNSUPPORTED
+        for check, field in self._checks[row]:
+            support: Support = getattr(mode, field)
+            available = support.allowed
             # Dim the whole row, so its title and description read as unavailable too.
             row_widget = check.get_ancestor(Adw.ActionRow) or check
             row_widget.set_sensitive(available)

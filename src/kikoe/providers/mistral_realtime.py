@@ -11,10 +11,11 @@ from mistralai.client.models import (
 )
 from mistralai.extra.realtime import RealtimeConnection
 
-from kikoe.core.models import Segment
 from kikoe.core.transcription import TranscriptEvent
 from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionError, close_stack
+from kikoe.providers.errors import redact
+from kikoe.providers.parsing import parse_text
 
 QUIET_SECONDS = 1.2
 """Mistral acknowledges a flush with no event, so silence after it means the text is complete."""
@@ -96,9 +97,7 @@ class MistralSession:
             self._queue.put_nowait(None)
 
     def _publish(self, *, final: bool) -> None:
-        text = self._text.strip()
-        segments = (Segment(text),) if text else ()
-        self._queue.put_nowait(TranscriptEvent(str(self._turn), segments, final))
+        self._queue.put_nowait(TranscriptEvent(str(self._turn), parse_text(self._text), final))
 
     def _finish_turn(self) -> None:
         if not self._text.strip():
@@ -111,9 +110,10 @@ class MistralSession:
     def _error(self, event: RealtimeTranscriptionError) -> TranscriptionError:
         reason = event.error.message
         if isinstance(reason, str) and reason.strip():
-            detail = reason.strip().replace(self._key, "[redacted]") if self._key else reason
             return TranscriptionError(
-                _("Mistral rejected realtime transcription: {message}").format(message=detail)
+                _("Mistral rejected realtime transcription: {message}").format(
+                    message=redact(reason.strip(), self._key)
+                )
             )
         return TranscriptionError(
             _("The provider rejected realtime transcription. Check the model and API key.")

@@ -8,7 +8,6 @@ from contextlib import AsyncExitStack
 from datetime import timedelta
 from functools import partial
 from pathlib import Path
-from urllib.parse import urlsplit
 
 import httpx2 as httpx
 from openai import APIError, AsyncOpenAI, omit
@@ -18,50 +17,46 @@ from pydantic import BaseModel
 
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.recording import pcm_level
-from kikoe.core.transcription import SpeechBoundary, TranscriptEvent
-from kikoe.core.upload import UploadLimits
+from kikoe.core.transcription import RealtimeProfile, SpeechBoundary, TranscriptEvent
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileTranscriptCallback,
+    HttpClient,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
     close_stack,
     file_capabilities,
 )
-from kikoe.providers.errors import openai_error
+from kikoe.providers.errors import openai_error, unreadable
 from kikoe.providers.openai_file_stream import OpenAIFileTranscript
-from kikoe.providers.parsing import parse_segments
-
-MAX_UPLOAD_BYTES = 25_000_000
+from kikoe.providers.parsing import parse_segments, parse_text
 
 
-class OpenAIClient:
+def openai_sdk(
+    url: str,
+    key: str,
+    transport: httpx.AsyncBaseTransport | None,
+    *,
+    require_key: bool = True,
+) -> AsyncOpenAI:
+    """An SDK client for OpenAI or a service that speaks its API; retries are Kikoe's job."""
+    return AsyncOpenAI(
+        api_key=key,
+        base_url=url,
+        max_retries=0,
+        _enforce_credentials=require_key,
+        timeout=httpx.Timeout(30, read=900, write=300),
+        http_client=httpx.AsyncClient(transport=transport),
+    )
+
+
+class OpenAIClient(HttpClient[httpx.AsyncBaseTransport]):
     """Keep authentication, retries and multipart encoding inside the official SDK."""
 
-    def __init__(
-        self,
-        base_url: str,
-        api_key: str,
-        transport: httpx.AsyncBaseTransport | None = None,
-    ) -> None:
-        self._url = base_url.rstrip("/")
-        self._host = urlsplit(base_url).hostname or base_url
-        self._key = api_key
-        self._transport = transport
-
     def _sdk(self) -> AsyncOpenAI:
-        return AsyncOpenAI(
-            api_key=self._key,
-            base_url=self._url,
-            max_retries=0,
-            _enforce_credentials=False,  # Compatible local servers may deliberately have no key.
-            timeout=httpx.Timeout(30, read=900, write=300),
-            http_client=httpx.AsyncClient(transport=self._transport),
-        )
-
-    def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-        return UploadLimits(MAX_UPLOAD_BYTES)
+        # Compatible local servers may deliberately have no key.
+        return openai_sdk(self._url, self._key, self._transport, require_key=False)
 
     async def transcribe_file(
         self,
@@ -71,8 +66,6 @@ class OpenAIClient:
         *,
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
-        if (await asyncio.to_thread(audio.stat)).st_size > MAX_UPLOAD_BYTES:
-            raise TranscriptionError(_("The audio file is too large to upload to this provider."))
         content = await asyncio.to_thread(audio.read_bytes)
         caps = file_capabilities(model)
         features = options.allowed_by(caps)
@@ -122,9 +115,10 @@ class OpenAIClient:
         except APIError as error:
             raise openai_error(error, self._host, self._key) from error
         except (ValueError, TypeError, KeyError, AttributeError) as error:
-            raise TranscriptionError(
-                _("{host} sent a response Kikoe does not understand.").format(host=self._host)
-            ) from error
+            raise unreadable(self._host) from error
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return RealtimeProfile(sample_rate=24000)
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions
@@ -236,8 +230,7 @@ class OpenAISession:
                     pass
             while self._order and self._order[0] in self._completed:
                 id = self._order.pop(0)
-                text = self._completed.pop(id).strip()
                 self._previews.pop(id, None)
-                yield TranscriptEvent(id, (Segment(text),) if text else (), True)
+                yield TranscriptEvent(id, parse_text(self._completed.pop(id)), True)
                 self._finals += 1
                 self._changed.set()

@@ -13,20 +13,23 @@ from google.genai import types
 from pydantic import BaseModel
 
 from kikoe.core.models import ModelSpec, Segment
-from kikoe.core.transcription import TranscriptEvent
+from kikoe.core.transcription import RealtimeProfile, TranscriptEvent
 from kikoe.core.upload import UploadLimits
 from kikoe.providers.base import (
     FileTranscriptCallback,
+    HttpClient,
     RealtimeSession,
     TranscriptionOptions,
     close_stack,
     file_capabilities,
 )
 from kikoe.providers.errors import sdk_error
-from kikoe.providers.parsing import entries, fields, parse_words
+from kikoe.providers.parsing import entries, fields, parse_text, parse_words
 from kikoe.providers.worker import run_sdk_worker
 
 FLUSH_GRACE_SECONDS = 2
+SESSION_SECONDS = 540
+"""Live connections are replaced before the service ends them on its own."""
 """How long a flush waits for speech the server has not announced yet."""
 
 
@@ -37,15 +40,8 @@ class _LiveSession(Protocol):
     def receive(self) -> AsyncIterator[types.LiveServerMessage]: ...
 
 
-class GeminiClient:
+class GeminiClient(HttpClient[httpx.AsyncBaseTransport]):
     """Use the specialized verbatim STT model, not a prompted generative transcript."""
-
-    def __init__(
-        self, base_url: str, api_key: str, transport: httpx.AsyncBaseTransport | None = None
-    ) -> None:
-        self._url = base_url.rstrip("/")
-        self._key = api_key
-        self._transport = transport
 
     def _sdk(self) -> genai.Client:
         return genai.Client(
@@ -112,6 +108,9 @@ class GeminiClient:
         except Exception as error:
             raise sdk_error(error) from error
 
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return RealtimeProfile(max_session=timedelta(seconds=SESSION_SECONDS))
+
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions
     ) -> RealtimeSession:
@@ -158,10 +157,7 @@ def parse_gemini(body: object, timed: bool, diarize: bool) -> tuple[Segment, ...
         segments = parse_words(words, timed, diarize)
         if segments:
             return segments
-    text = data.get("output_text")
-    if not isinstance(text, str):
-        raise ValueError("Missing transcript")
-    return (Segment(text.strip()),) if text.strip() else ()
+    return parse_text(data.get("output_text"))
 
 
 class GeminiSession:

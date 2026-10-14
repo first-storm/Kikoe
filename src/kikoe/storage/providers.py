@@ -6,14 +6,13 @@ import uuid
 from collections.abc import Callable
 from dataclasses import replace
 
+from kikoe.core.listeners import Listeners
 from kikoe.core.model_catalog import ModelCatalog
 from kikoe.core.models import ApiKind, ModelSpec, Provider, UploadSettings
-from kikoe.core.preferences import Preferences, WindowState
 from kikoe.core.upload import validate_upload
 from kikoe.i18n import _
-from kikoe.storage.model_catalog import load_catalog
 from kikoe.storage.secrets import SecretStore
-from kikoe.storage.settings import Settings, SettingsStore
+from kikoe.storage.settings_writer import SettingsWriter
 
 log = logging.getLogger(__name__)
 
@@ -29,33 +28,22 @@ class ProviderRepository:
     trust ``ModelSpec.capabilities`` without knowing about specific endpoints.
     """
 
-    def __init__(
-        self, settings: SettingsStore, secrets: SecretStore, catalog: ModelCatalog | None = None
-    ) -> None:
-        self._settings = settings
+    def __init__(self, writer: SettingsWriter, secrets: SecretStore) -> None:
+        self._writer = writer
         self._secrets = secrets
-        self._catalog = catalog or load_catalog()
-        self._state = Settings()
-        self._loaded = False
-        self._lock = asyncio.Lock()
-        self._preference_listeners: list[Callable[[], None]] = []
-        self._listeners: list[Callable[[], None]] = []
+        self._listeners = Listeners[()]()
 
     @property
     def providers(self) -> tuple[Provider, ...]:
-        return self._state.providers
+        return self._writer.state.providers
 
     @property
     def catalog(self) -> ModelCatalog:
         """Presets and limits that the model dialog offers and saving enforces."""
-        return self._catalog
-
-    def _clamp(self, provider: Provider) -> Provider:
-        models = tuple(self._catalog.clamp(provider.api, m) for m in provider.models)
-        return provider if models == provider.models else replace(provider, models=models)
+        return self._writer.catalog
 
     def find(self, provider_id: str) -> Provider | None:
-        return next((p for p in self._state.providers if p.provider_id == provider_id), None)
+        return next((p for p in self.providers if p.provider_id == provider_id), None)
 
     def get(self, provider_id: str) -> Provider:
         provider = self.find(provider_id)
@@ -70,45 +58,11 @@ class ProviderRepository:
 
         Returns a function that stops the calls, for short-lived listeners such as pages.
         """
-        self._listeners.append(listener)
-        return lambda: self._listeners.remove(listener) if listener in self._listeners else None
+        return self._listeners.connect(listener)
 
     async def load(self) -> None:
-        async with self._lock:
-            await self._read_state()
-        self._notify()
-        self._notify_preferences()
-
-    @property
-    def preferences(self) -> Preferences:
-        """The persisted defaults, shared by all transcription entry points."""
-        return self._state.preferences
-
-    def connect_preferences_changed(self, listener: Callable[[], None]) -> Callable[[], None]:
-        """Notify only after defaults are successfully committed."""
-        self._preference_listeners.append(listener)
-        return lambda: (
-            self._preference_listeners.remove(listener)
-            if listener in self._preference_listeners
-            else None
-        )
-
-    async def update_preferences(self, change: Callable[[Preferences], Preferences]) -> None:
-        """Merge a field edit with the latest snapshot inside the same writer lock."""
-        await self._write_state(lambda state: replace(state, preferences=change(state.preferences)))
-        self._notify_preferences()
-
-    @property
-    def window(self) -> WindowState | None:
-        return self._state.window
-
-    async def update_window(self, window: WindowState) -> None:
-        """Remember the window geometry without notifying preference listeners."""
-        await self._write_state(lambda state: replace(state, window=window))
-
-    def _notify_preferences(self) -> None:
-        for listener in tuple(self._preference_listeners):
-            listener()
+        await self._writer.load()
+        self._listeners.emit()
 
     async def get_api_key(self, provider_id: str) -> str:
         return await asyncio.to_thread(self._secrets.get, provider_id) or ""
@@ -123,8 +77,7 @@ class ProviderRepository:
     ) -> Provider:
         upload = upload or UploadSettings()
         validate_upload(upload, api)
-        async with self._lock:
-            await self._ensure_loaded()
+        await self._writer.ensure_loaded()
         provider = Provider(uuid.uuid4().hex, name.strip(), api, base_url, upload=upload)
         if api_key:
             await asyncio.to_thread(self._secrets.set, provider.provider_id, api_key)
@@ -209,35 +162,10 @@ class ProviderRepository:
         await self._commit(change)
 
     def _replace_provider(self, updated: Provider) -> tuple[Provider, ...]:
-        return tuple(
-            updated if p.provider_id == updated.provider_id else p for p in self._state.providers
-        )
+        return tuple(updated if p.provider_id == updated.provider_id else p for p in self.providers)
 
     async def _commit(self, change: Callable[[], tuple[Provider, ...]]) -> None:
-        await self._write_state(
-            lambda state: replace(state, providers=tuple(self._clamp(p) for p in change()))
+        await self._writer.update(
+            lambda state: replace(state, providers=tuple(self._writer.clamp(p) for p in change()))
         )
-        self._notify()
-
-    async def _write_state(self, change: Callable[[Settings], Settings]) -> None:
-        """Merge and persist inside one lock; failed writes never publish state."""
-        async with self._lock:
-            await self._ensure_loaded()
-            state = change(self._state)
-            await asyncio.to_thread(self._settings.save_state, state)
-            self._state = state
-
-    async def _ensure_loaded(self) -> None:
-        """A failed startup read must never turn a later edit into data loss."""
-        if not self._loaded:
-            await self._read_state()
-
-    async def _read_state(self) -> None:
-        """An app update may tighten a limit, so stored models are clamped again on load."""
-        state = await asyncio.to_thread(self._settings.load_state)
-        self._state = replace(state, providers=tuple(self._clamp(p) for p in state.providers))
-        self._loaded = True
-
-    def _notify(self) -> None:
-        for listener in self._listeners:
-            listener()
+        self._listeners.emit()

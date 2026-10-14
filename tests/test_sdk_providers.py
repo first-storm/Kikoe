@@ -9,20 +9,15 @@ import pytest
 
 from helpers import file_caps, run_async
 from kikoe.core.models import (
-    ApiKind,
     ModelSpec,
-    Provider,
     Segment,
     TimestampGranularity,
 )
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.providers.deepgram import DeepgramClient, parse_deepgram
-from kikoe.providers.factory import create_client
 from kikoe.providers.gemini import GeminiClient, parse_gemini
-from kikoe.providers.mimo import MiMoClient
-from kikoe.providers.mistral import MistralClient
 from kikoe.providers.openrouter import OpenRouterClient
-from kikoe.providers.parsing import parse_segments
+from kikoe.providers.parsing import parse_segments, parse_text
 
 
 def test_deepgram_word_speaker_zero_is_preserved() -> None:
@@ -94,22 +89,6 @@ def test_gemini_annotation_options_reduce_upload_duration() -> None:
     )
 
 
-@pytest.mark.parametrize(
-    ("api", "kind"),
-    [
-        (ApiKind.DEEPGRAM, DeepgramClient),
-        (ApiKind.GEMINI, GeminiClient),
-        (ApiKind.OPENROUTER, OpenRouterClient),
-        (ApiKind.MIMO, MiMoClient),
-        (ApiKind.MISTRAL, MistralClient),
-    ],
-)
-def test_factory_selects_official_adapters(api: ApiKind, kind: type[object]) -> None:
-    assert isinstance(
-        create_client(Provider("p", "Provider", api, "https://example.test"), "fake"), kind
-    )
-
-
 def test_diarized_segments_discard_unrequested_metadata() -> None:
     data = {"segments": [{"text": "Hello.", "start": 1, "end": 2, "speaker": "A"}]}
     assert parse_segments(data, True, True) == (
@@ -122,6 +101,13 @@ def test_diarized_segments_discard_unrequested_metadata() -> None:
 def test_invalid_provider_timestamps_are_rejected(value: float) -> None:
     with pytest.raises(ValueError):
         parse_segments({"segments": [{"text": "Hello", "start": value, "end": 2}]}, True, False)
+
+
+def test_plain_text_is_trimmed_and_silence_has_no_segment() -> None:
+    assert parse_text(" Hello. ") == (Segment("Hello."),)
+    assert parse_text("  ") == ()
+    with pytest.raises(TypeError):
+        parse_text(None)
 
 
 @run_async

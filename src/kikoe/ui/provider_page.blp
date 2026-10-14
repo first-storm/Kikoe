@@ -33,19 +33,6 @@ template $KikoeProviderPage: Adw.NavigationPage {
         Adw.ComboRow api_row {
           title: _("API Type");
           notify::selected => $_on_api_row_notify_selected();
-
-          model: StringList {
-            strings [
-              _("Deepgram"),
-              _("OpenAI"),
-              _("OpenAI-compatible"),
-              _("OpenRouter"),
-              _("Gemini AI Studio"),
-              _("MiMo"),
-              _("Groq"),
-              _("Mistral"),
-            ]
-          };
         }
 
         Adw.EntryRow base_url_row {

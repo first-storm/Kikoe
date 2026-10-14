@@ -3,12 +3,9 @@
 Translated wording (“Today”, “2 recordings”) is added by the UI on top of these.
 """
 
-from collections.abc import Iterable
+import re
 from datetime import datetime, timedelta
 from enum import StrEnum
-
-from kikoe.core.models import Segment
-from kikoe.core.validation import Capability
 
 
 class RelativeDay(StrEnum):
@@ -44,18 +41,8 @@ class TimestampParseError(ValueError):
 
 
 def format_timestamp_range(start: timedelta | None, end: timedelta | None) -> str:
-    """A segment's time span with start and end joined by an en-dash.
-
-    Shows whichever side exists; empty when neither does so the caller can hide
-    the label. The separator has no spaces to fit the narrow meta column.
-    """
-    if start is not None and end is not None:
-        return f"{format_timestamp(start)}{_RANGE_SEPARATOR}{format_timestamp(end)}"
-    if start is not None:
-        return format_timestamp(start)
-    if end is not None:
-        return format_timestamp(end)
-    return ""
+    """A segment's time span; whichever side exists, or empty so the caller can hide it."""
+    return _RANGE_SEPARATOR.join(format_timestamp(t) for t in (start, end) if t is not None)
 
 
 def format_timestamp_input(position: timedelta) -> str:
@@ -74,33 +61,23 @@ def parse_timestamp(value: str) -> timedelta | None:
     """Parse ``SS``, ``MM:SS`` or ``H:MM:SS`` with an optional fractional part.
 
     Empty text means the timestamp is cleared and returns None. Raises
-    :class:`TimestampParseError` for anything else unparseable.
+    :class:`TimestampParseError` for anything else, including what ``float``
+    alone would accept (``nan``, ``1e1``, ``+5``).
     """
     text = value.strip().replace(",", ".")
     if not text:
         return None
-    if text.startswith("-"):
+    match = _TIMESTAMP.fullmatch(text)
+    if match is None:
         raise TimestampParseError(f"Cannot parse timestamp: {value!r}.")
-    parts = text.split(":")
-    if len(parts) > 3 or any(not part for part in parts):
-        raise TimestampParseError(f"Cannot parse timestamp: {value!r}.")
-    try:
-        *head, last = parts
-        seconds = float(last)
-        numbers = [int(part) for part in head] + [seconds]
-    except ValueError:
-        raise TimestampParseError(f"Cannot parse timestamp: {value!r}.") from None
-    if any(number < 0 for number in numbers):
-        raise TimestampParseError(f"Cannot parse timestamp: {value!r}.")
-    if len(numbers) == 3:
-        hours, minutes, seconds = numbers
-    elif len(numbers) == 2:
-        hours, minutes, seconds = 0, numbers[0], numbers[1]
-    else:
-        hours, minutes, seconds = 0, 0, numbers[0]
+    hours, minutes, seconds = int(match[1] or 0), int(match[2] or 0), float(match[3])
     if minutes >= 60 or seconds >= 60:
         raise TimestampParseError(f"Cannot parse timestamp: {value!r}.")
     return timedelta(hours=hours, minutes=minutes, seconds=seconds)
+
+
+_TIMESTAMP = re.compile(r"(?:(?:(\d+):)?(\d+):)?(\d+(?:\.\d*)?|\.\d+)")
+"""Optional hours and minutes, then seconds with an optional fraction."""
 
 
 def relative_day(when: datetime, now: datetime) -> RelativeDay:
@@ -116,16 +93,6 @@ def relative_day(when: datetime, now: datetime) -> RelativeDay:
     return RelativeDay.OLDER
 
 
-def transcript_features(segments: Iterable[Segment]) -> tuple[Capability, ...]:
-    """What a finished transcript actually contains, in display order."""
-    has_times = has_speakers = False
-    for segment in segments:
-        has_times = has_times or segment.start is not None
-        has_speakers = has_speakers or segment.speaker_id is not None
-    pairs = ((has_times, Capability.TIMESTAMPS), (has_speakers, Capability.DIARIZATION))
-    return tuple(capability for present, capability in pairs if present)
-
-
 def _split(total_seconds: int) -> tuple[int, int, int]:
     hours, rest = divmod(total_seconds, 3600)
     minutes, seconds = divmod(rest, 60)
@@ -137,16 +104,8 @@ _RANGE_SEPARATOR = "–"  # noqa: RUF001 -- en-dash shown in the UI; escaped for
 
 
 SPEAKER_COLOR_COUNT = 4
-"""Distinct speaker colors before they repeat (blue, orange, green, purple)."""
+"""Distinct speaker colors before they repeat (blue, orange, green, purple).
 
-
-def speaker_order(segments: Iterable[Segment]) -> dict[str, int]:
-    """Number speakers 0, 1, … by first appearance; unnamed ones are shown as “Speaker n+1”.
-
-    The color slot is the number modulo :data:`SPEAKER_COLOR_COUNT`, so colors stay stable.
-    """
-    order: dict[str, int] = {}
-    for segment in segments:
-        if segment.speaker_id is not None and segment.speaker_id not in order:
-            order[segment.speaker_id] = len(order)
-    return order
+A speaker's slot is its number from :func:`kikoe.core.speakers.speaker_numbers`, minus one,
+modulo this count, so colors stay stable.
+"""

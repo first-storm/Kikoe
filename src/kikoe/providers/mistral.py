@@ -5,10 +5,8 @@ import json
 import mimetypes
 from contextlib import AsyncExitStack
 from dataclasses import dataclass
-from datetime import timedelta
 from pathlib import Path
 from typing import Literal
-from urllib.parse import urlsplit
 
 import httpx2 as httpx
 from mistralai.client import Mistral
@@ -19,25 +17,21 @@ from mistralai.extra.exceptions import RealtimeTranscriptionException
 
 from kikoe.core.choice import RequestedFeatures, language_dropped
 from kikoe.core.models import ApiKind, ModelSpec, Segment, TimestampGranularity
-from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileTranscriptCallback,
+    HttpClient,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
     close_stack,
     file_capabilities,
 )
-from kikoe.providers.errors import status_error
+from kikoe.providers.errors import body_detail, redact, status_error, unreadable
 from kikoe.providers.mistral_file_stream import MistralFileTranscript
 from kikoe.providers.mistral_parsing import parse_mistral
 from kikoe.providers.mistral_realtime import MistralSession
-from kikoe.providers.parsing import fields
 
-MAX_UPLOAD_BYTES = 500_000_000
-MAX_UPLOAD_SECONDS = 3600
-"""Mistral's limits page says 60 minutes, its audio overview up to 3 hours; use the former."""
 REQUEST_TIMEOUT_MS = 900_000
 REALTIME_SAMPLE_RATE = 16000
 REALTIME_CONNECT_TIMEOUT_MS = 30_000
@@ -60,19 +54,8 @@ class _Request:
         return self.granularities == ["word"]
 
 
-class MistralClient:
+class MistralClient(HttpClient[httpx.AsyncBaseTransport]):
     """Keep multipart encoding and transport lifetime inside the official SDK."""
-
-    def __init__(
-        self, base_url: str, api_key: str, transport: httpx.AsyncBaseTransport | None = None
-    ) -> None:
-        self._url = base_url.rstrip("/")
-        self._host = urlsplit(base_url).hostname or base_url
-        self._key = api_key
-        self._transport = transport
-
-    def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-        return UploadLimits(MAX_UPLOAD_BYTES, timedelta(seconds=MAX_UPLOAD_SECONDS))
 
     async def transcribe_file(
         self,
@@ -82,8 +65,6 @@ class MistralClient:
         *,
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
-        if (await asyncio.to_thread(audio.stat)).st_size > MAX_UPLOAD_BYTES:
-            raise TranscriptionError(_("The audio file is too large to upload to this provider."))
         content = await asyncio.to_thread(audio.read_bytes)
         caps = file_capabilities(model)
         features = options.allowed_by(caps)
@@ -121,22 +102,16 @@ class MistralClient:
         except httpx.TransportError as error:
             raise self._unreachable(_("Could not reach {host}. Try again later.")) from error
         except (ValueError, TypeError, KeyError, AttributeError) as error:
-            raise TranscriptionError(
-                _("{host} sent a response Kikoe does not understand.").format(host=self._host)
-            ) from error
+            raise unreadable(self._host) from error
 
     def _unreachable(self, message: str) -> TranscriptionError:
         return TranscriptionError(message.format(host=self._host), retryable=True)
 
     def _error(self, error: MistralError) -> TranscriptionError:
         if isinstance(error, ResponseValidationError):
-            return TranscriptionError(
-                _("{host} sent a response Kikoe does not understand.").format(host=self._host)
-            )
+            return unreadable(self._host)
         detail = _detail(error.body)
-        if detail and self._key:
-            detail = detail.replace(self._key, "[redacted]")
-        return status_error(error.status_code, self._host, detail)
+        return status_error(error.status_code, self._host, detail and redact(detail, self._key))
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions
@@ -246,7 +221,6 @@ def _granularities(features: RequestedFeatures) -> list[Granularity]:
 def _detail(body: str) -> str | None:
     """The service's own message; the SDK's exception text embeds the whole raw body."""
     try:
-        message = fields(json.loads(body)).get("message")
+        return body_detail(json.loads(body))
     except ValueError, TypeError:
         return None
-    return message.strip() or None if isinstance(message, str) else None

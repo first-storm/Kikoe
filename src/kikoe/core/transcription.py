@@ -7,6 +7,26 @@ from enum import StrEnum
 from kikoe.core.models import Segment
 
 
+class CheckpointStrategy(StrEnum):
+    """How a realtime service tells the client that audio has been fully recognised."""
+
+    FLUSH = "flush"
+    """Ask the service to finish pending audio; replay checkpoints follow each flush."""
+    AUDIO_END = "audio-end"
+    """The service reports the audio range each final result covers."""
+
+
+@dataclass(frozen=True, slots=True)
+class RealtimeProfile:
+    """How a provider wants microphone audio delivered and when its sessions end."""
+
+    sample_rate: int = 16000
+    """Mono 16-bit PCM rate the service expects."""
+    checkpoint: CheckpointStrategy = CheckpointStrategy.FLUSH
+    max_session: timedelta | None = None
+    """Longest a connection may live before it is replaced; None means unlimited."""
+
+
 def scope_speakers(segments: tuple[Segment, ...], scope: str) -> tuple[Segment, ...]:
     """Independent recognition sessions must not claim that same-numbered people match."""
     return tuple(

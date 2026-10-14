@@ -1,5 +1,7 @@
 from dataclasses import replace
 
+import pytest
+
 from helpers import file_caps
 from kikoe.core.choice import (
     RequestedFeatures,
@@ -13,11 +15,13 @@ from kikoe.core.models import (
     ApiKind,
     Capabilities,
     ModeCapabilities,
+    ModelKey,
     ModelSpec,
     Provider,
     TimestampGranularity,
 )
 from kikoe.core.validation import Capability
+from kikoe.providers.base import TranscriptionOptions
 
 WHISPER = ModelSpec("whisper-1", "Whisper", file_caps(timestamps=True))
 GPT = ModelSpec("gpt-4o-transcribe", "GPT-4o", Capabilities())
@@ -54,6 +58,26 @@ def test_removed_model_falls_back_to_the_first() -> None:
 
 def test_no_models_means_no_choice() -> None:
     assert resolve_choice([EMPTY], None) is None
+    assert resolve_choice([], ("o", "whisper-1"), None) is None
+
+
+@pytest.mark.parametrize(
+    ("current", "recent", "default", "expected"),
+    [
+        (("o", "gpt-4o-transcribe"), ("o", "whisper-1"), None, "gpt-4o-transcribe"),
+        (None, ("o", "gpt-4o-transcribe"), ("o", "whisper-1"), "gpt-4o-transcribe"),
+        (None, ("gone", "x"), ("o", "gpt-4o-transcribe"), "gpt-4o-transcribe"),
+        (("gone", "x"), None, ("o", "gpt-4o-transcribe"), "gpt-4o-transcribe"),
+        (("gone", "x"), ("o", "gone"), ("o", "gone"), "whisper-1"),
+        (None, None, None, "whisper-1"),
+    ],
+)
+def test_wanted_models_are_tried_in_order_before_the_first(
+    current: ModelKey | None, recent: ModelKey | None, default: ModelKey | None, expected: str
+) -> None:
+    choice = resolve_choice([OPENAI], current, recent, default)
+
+    assert choice is not None and choice.model.model_id == expected
 
 
 def test_requested_features_are_limited_to_the_model() -> None:
@@ -80,6 +104,12 @@ def test_allowed_by_keeps_granularity_only_with_word_timestamps() -> None:
     assert wanted.allowed_by(ModeCapabilities()).timestamp_granularities == (
         TimestampGranularity.SEGMENT,
     )
+
+
+def test_request_options_are_limited_like_the_features_they_extend() -> None:
+    options = TranscriptionOptions(True, True, (TimestampGranularity.WORD,), language="zh")
+
+    assert options.allowed_by(ModeCapabilities(diarization=True)) == RequestedFeatures(False, True)
 
 
 def test_normalize_granularities_dedupes_orders_and_falls_back() -> None:

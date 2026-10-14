@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kikoe\n"
 "Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
-"POT-Creation-Date: 2026-10-14 21:19+1100\n"
+"POT-Creation-Date: 2026-10-15 01:31+1100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,12 +18,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: src/kikoe/application.py:136
+#: src/kikoe/application.py:149
 msgid "Could not open the folder."
 msgstr ""
 
 #. Translators: replace with your name(s), one per line.
-#: src/kikoe/application.py:161
+#: src/kikoe/application.py:174
 msgid "translator-credits"
 msgstr ""
 
@@ -110,130 +110,119 @@ msgid ""
 "({detail})"
 msgstr ""
 
-#: src/kikoe/providers/deepgram.py:216
+#. Translators: {name} is a service name such as Groq.
+#: src/kikoe/providers/base.py:91
+#, python-brace-format
+msgid "{name} supports file transcription only."
+msgstr ""
+
+#: src/kikoe/providers/deepgram.py:204
 #, python-brace-format
 msgid "Deepgram rejected realtime transcription: {message}"
 msgstr ""
 
-#: src/kikoe/providers/deepgram.py:221
+#: src/kikoe/providers/deepgram.py:209
 #: src/kikoe/providers/mistral_realtime.py:119
 msgid ""
 "The provider rejected realtime transcription. Check the model and API key."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:46
+#: src/kikoe/providers/errors.py:36
+#, python-brace-format
+msgid "{host} sent a response Kikoe does not understand."
+msgstr ""
+
+#: src/kikoe/providers/errors.py:59
 #, python-brace-format
 msgid "{subject} rejected the API key. Check it in Preferences."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:49
+#: src/kikoe/providers/errors.py:62
 #, python-brace-format
 msgid ""
 "{subject} does not allow this API key to use this model, or is not available "
 "in your region. Check your account and the key in Preferences."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:53
+#: src/kikoe/providers/errors.py:66
 #, python-brace-format
 msgid "{subject} reports that your account has run out of credits."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:55
+#: src/kikoe/providers/errors.py:68
 #, python-brace-format
 msgid "{subject} could not find this model. Check the model name."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:57
+#: src/kikoe/providers/errors.py:70
 #, python-brace-format
 msgid "{subject} took too long to respond. Try again later."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:59
+#: src/kikoe/providers/errors.py:72
 #, python-brace-format
 msgid "The audio is too large for {subject}."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:62
+#: src/kikoe/providers/errors.py:75
 #, python-brace-format
 msgid ""
 "{subject} is limiting requests, or your quota is used up. Wait a while and "
 "try again, or check your plan."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:66
+#: src/kikoe/providers/errors.py:79
 #, python-brace-format
 msgid "{subject} is having problems (HTTP {status}). Try again later."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:68
+#: src/kikoe/providers/errors.py:81
 #, python-brace-format
 msgid "{subject} could not process this audio (HTTP {status})."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:71
+#: src/kikoe/providers/errors.py:84
 #, python-brace-format
 msgid ""
 "{subject} rejected this request (HTTP {status}). Check the model and options."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:74
+#: src/kikoe/providers/errors.py:87
 #, python-brace-format
 msgid "{subject} returned an unexpected error (HTTP {status})."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:79
+#: src/kikoe/providers/errors.py:92
 #, python-brace-format
 msgid "{message} Details: {detail}"
 msgstr ""
 
-#: src/kikoe/providers/errors.py:87
+#: src/kikoe/providers/errors.py:100
 msgid "The provider sent a response Kikoe does not understand."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:90
+#: src/kikoe/providers/errors.py:104
 msgid "The provider"
 msgstr ""
 
-#: src/kikoe/providers/errors.py:92 src/kikoe/providers/groq.py:94
+#: src/kikoe/providers/errors.py:106
 msgid "Could not complete transcription. Check your connection and try again."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:107 src/kikoe/providers/groq.py:90
-#: src/kikoe/providers/mistral.py:119
+#: src/kikoe/providers/errors.py:120 src/kikoe/providers/mistral.py:100
 #, python-brace-format
 msgid "{host} took too long to respond. Try again later."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:109 src/kikoe/providers/groq.py:92
-#: src/kikoe/providers/mistral.py:122 src/kikoe/providers/mistral.py:171
+#: src/kikoe/providers/errors.py:122 src/kikoe/providers/mistral.py:103
+#: src/kikoe/providers/mistral.py:146
 #, python-brace-format
 msgid "Could not reach {host}. Try again later."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:112
+#: src/kikoe/providers/errors.py:125
 #, python-brace-format
 msgid "{host} could not finish transcription: {message}"
-msgstr ""
-
-#: src/kikoe/providers/groq.py:51 src/kikoe/providers/mimo.py:57
-#: src/kikoe/providers/mistral.py:86 src/kikoe/providers/openai.py:75
-#: src/kikoe/providers/openrouter.py:48
-msgid "The audio file is too large to upload to this provider."
-msgstr ""
-
-#: src/kikoe/providers/groq.py:80 src/kikoe/providers/mimo.py:89
-#: src/kikoe/providers/mistral.py:125 src/kikoe/providers/mistral.py:134
-#: src/kikoe/providers/openai.py:126
-#, python-brace-format
-msgid "{host} sent a response Kikoe does not understand."
-msgstr ""
-
-#: src/kikoe/providers/groq.py:100
-msgid "Groq supports file transcription only."
-msgstr ""
-
-#: src/kikoe/providers/mimo.py:96
-msgid "MiMo supports file transcription only."
 msgstr ""
 
 #: src/kikoe/providers/mistral_file_stream.py:61
@@ -241,34 +230,35 @@ msgstr ""
 msgid "Transcription ended before it was complete. Try again."
 msgstr ""
 
-#: src/kikoe/providers/mistral_realtime.py:116
+#: src/kikoe/providers/mistral_realtime.py:114
 #, python-brace-format
 msgid "Mistral rejected realtime transcription: {message}"
 msgstr ""
 
-#: src/kikoe/providers/openai.py:166
+#: src/kikoe/providers/openai.py:160
 #, python-brace-format
 msgid "{host} rejected the realtime session: {message}"
 msgstr ""
 
-#: src/kikoe/providers/openai.py:232
+#: src/kikoe/providers/openai.py:226
 msgid "Realtime transcription failed. Your audio has been kept."
 msgstr ""
 
-#: src/kikoe/providers/openrouter.py:77
-msgid "OpenRouter supports file transcription only."
+#: src/kikoe/services/file_transcription.py:120
+msgid "Choose a file transcription model to retry this recording."
 msgstr ""
 
-#: src/kikoe/services/importer.py:76 src/kikoe/ui/bottom_bar.py:167
+#: src/kikoe/services/importer.py:74 src/kikoe/ui/bottom_bar.py:166
 msgid "Choose a file transcription model to import audio."
 msgstr ""
 
-#: src/kikoe/services/importer.py:262
+#: src/kikoe/services/importer.py:258
 msgid "The chunk size is too small for this audio format."
 msgstr ""
 
-#: src/kikoe/services/recording.py:192
-msgid "Choose a file transcription model to retry this recording."
+#: src/kikoe/storage/audio_files.py:33
+#, python-brace-format
+msgid "Could not copy the audio file into the library: {error}"
 msgstr ""
 
 #: src/kikoe/storage/captures.py:142
@@ -285,53 +275,48 @@ msgstr ""
 msgid "Could not save the recording. ({detail})"
 msgstr ""
 
-#: src/kikoe/storage/library.py:138
+#: src/kikoe/storage/library.py:67
 msgid ""
 "The note library was created by a newer version of Kikoe. Update Kikoe to "
 "open it."
 msgstr ""
 
-#: src/kikoe/storage/library.py:253 src/kikoe/storage/library.py:390
-#: src/kikoe/storage/library.py:412
+#: src/kikoe/storage/library.py:182 src/kikoe/storage/library.py:295
+#: src/kikoe/storage/library.py:317
 msgid "This recording no longer exists."
 msgstr ""
 
-#: src/kikoe/storage/library.py:272
-#, python-brace-format
-msgid "Could not copy the audio file into the library: {error}"
-msgstr ""
-
-#: src/kikoe/storage/library.py:379
+#: src/kikoe/storage/library.py:284
 msgid "Enter transcript text."
 msgstr ""
 
-#: src/kikoe/storage/library.py:381
+#: src/kikoe/storage/library.py:286
 msgid "The end time must be after the start time."
 msgstr ""
 
-#: src/kikoe/storage/library.py:396
+#: src/kikoe/storage/library.py:301
 msgid "Enter a speaker name."
 msgstr ""
 
-#: src/kikoe/storage/library.py:418
+#: src/kikoe/storage/library.py:323
 msgid "The speaker selection is no longer available."
 msgstr ""
 
-#: src/kikoe/storage/library.py:581
+#: src/kikoe/storage/library.py:409
 #, python-brace-format
 msgid "The note library could not be read or saved: {error}"
 msgstr ""
 
-#: src/kikoe/storage/library.py:607
+#: src/kikoe/storage/note_rows.py:27
 msgid "This note no longer exists."
 msgstr ""
 
-#: src/kikoe/storage/providers.py:64
+#: src/kikoe/storage/providers.py:52
 #, python-brace-format
 msgid "Provider {provider_id} no longer exists."
 msgstr ""
 
-#: src/kikoe/storage/providers.py:194
+#: src/kikoe/storage/providers.py:147
 #, python-brace-format
 msgid "Model {replacing_id} no longer exists."
 msgstr ""
@@ -343,58 +328,58 @@ msgid ""
 "Details: {error}"
 msgstr ""
 
-#: src/kikoe/storage/settings.py:62
+#: src/kikoe/storage/settings.py:63
 #, python-brace-format
 msgid "Could not read the settings file: {error}"
 msgstr ""
 
-#: src/kikoe/storage/settings.py:74
+#: src/kikoe/storage/settings.py:75
 #, python-brace-format
 msgid "The settings file {detail} is damaged or not understood: {error}"
 msgstr ""
 
-#: src/kikoe/storage/settings.py:99
+#: src/kikoe/storage/settings.py:100
 #, python-brace-format
 msgid "Could not save the settings file: {error}"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:99
+#: src/kikoe/ui/bottom_bar.py:98
 msgid "_Append Recording"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:99 src/kikoe/ui/bottom_bar.ui:125
+#: src/kikoe/ui/bottom_bar.py:98 src/kikoe/ui/bottom_bar.ui:125
 msgid "_Record"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:120 src/kikoe/ui/bottom_bar.ui:224
+#: src/kikoe/ui/bottom_bar.py:119 src/kikoe/ui/bottom_bar.ui:224
 #: src/kikoe/ui/bottom_bar.ui:227
 msgid "Pause Recording"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:120
+#: src/kikoe/ui/bottom_bar.py:119
 msgid "Resume Recording"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:150
+#: src/kikoe/ui/bottom_bar.py:149
 msgid "No Model"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:152
+#: src/kikoe/ui/bottom_bar.py:151
 msgid "Add a model in Preferences first"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:153 src/kikoe/ui/bottom_bar.ui:44
+#: src/kikoe/ui/bottom_bar.py:152 src/kikoe/ui/bottom_bar.ui:44
 msgid "Transcription Model…"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:158
+#: src/kikoe/ui/bottom_bar.py:157
 #, python-brace-format
 msgid ""
 "{model} · {provider}\n"
 "{hint}"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:165 src/kikoe/ui/bottom_bar.ui:90
+#: src/kikoe/ui/bottom_bar.py:164 src/kikoe/ui/bottom_bar.ui:90
 #: src/kikoe/ui/shortcuts.ui:27
 msgid "Import Audio…"
 msgstr ""
@@ -403,7 +388,7 @@ msgstr ""
 msgid "Transcription Model"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.ui:92 src/kikoe/ui/window.py:1100
+#: src/kikoe/ui/bottom_bar.ui:92 src/kikoe/ui/file_dialogs.py:68
 msgid "Import Audio"
 msgstr ""
 
@@ -412,10 +397,10 @@ msgstr ""
 msgid "_Import Audio…"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.ui:158 src/kikoe/ui/dialogs.py:47
+#: src/kikoe/ui/bottom_bar.ui:158 src/kikoe/ui/dialogs.py:66
 #: src/kikoe/ui/export_dialog.ui:21 src/kikoe/ui/model_dialog.ui:21
-#: src/kikoe/ui/retranscribe_dialog.ui:21 src/kikoe/ui/speaker_dialog.ui:21
-#: src/kikoe/ui/speaker_editor.ui:20 src/kikoe/ui/window.py:600
+#: src/kikoe/ui/note_actions.py:56 src/kikoe/ui/retranscribe_dialog.ui:21
+#: src/kikoe/ui/speaker_dialog.ui:21 src/kikoe/ui/speaker_editor.ui:20
 msgid "_Cancel"
 msgstr ""
 
@@ -423,10 +408,10 @@ msgstr ""
 msgid "_Stop"
 msgstr ""
 
-#: src/kikoe/ui/content_header.ui:14 src/kikoe/ui/window.py:538
-#: src/kikoe/ui/window.py:1178 src/kikoe/ui/window.ui:10
-#: src/kikoe/ui/window.ui:37 src/kikoe/ui/window.ui:119
-#: src/kikoe/ui/window.ui:130
+#: src/kikoe/ui/content_header.ui:14
+#: src/kikoe/ui/transcription_controller.py:323 src/kikoe/ui/window.py:388
+#: src/kikoe/ui/window.ui:10 src/kikoe/ui/window.ui:37
+#: src/kikoe/ui/window.ui:119 src/kikoe/ui/window.ui:130
 msgid "Kikoe"
 msgstr ""
 
@@ -462,7 +447,7 @@ msgstr ""
 msgid "Show _Speakers"
 msgstr ""
 
-#: src/kikoe/ui/content_header.ui:80 src/kikoe/ui/window.py:427
+#: src/kikoe/ui/content_header.ui:80 src/kikoe/ui/note_sidebar.py:172
 #: src/kikoe/ui/window.ui:300
 msgid "_Rename…"
 msgstr ""
@@ -476,25 +461,60 @@ msgstr ""
 msgid "_Export…"
 msgstr ""
 
-#: src/kikoe/ui/content_header.ui:94 src/kikoe/ui/window.py:429
+#: src/kikoe/ui/content_header.ui:94 src/kikoe/ui/note_sidebar.py:174
 #: src/kikoe/ui/window.ui:314
 msgid "_Delete Note"
 msgstr ""
 
-#: src/kikoe/ui/dialogs.py:23
+#: src/kikoe/ui/dialogs.py:51
 msgid "Discard Changes?"
 msgstr ""
 
-#: src/kikoe/ui/dialogs.py:24
+#: src/kikoe/ui/dialogs.py:52
 msgid "Your changes have not been saved and will be lost."
 msgstr ""
 
-#: src/kikoe/ui/dialogs.py:26
+#: src/kikoe/ui/dialogs.py:53
 msgid "_Keep Editing"
 msgstr ""
 
-#: src/kikoe/ui/dialogs.py:27
+#: src/kikoe/ui/dialogs.py:54
 msgid "_Discard"
+msgstr ""
+
+#: src/kikoe/ui/export_controller.py:62
+msgid "Copied to clipboard"
+msgstr ""
+
+#: src/kikoe/ui/export_controller.py:70 src/kikoe/ui/export_dialog.ui:10
+msgid "Export Note"
+msgstr ""
+
+#: src/kikoe/ui/export_controller.py:83 src/kikoe/ui/note_actions.py:86
+msgid "This recording is no longer available."
+msgstr ""
+
+#: src/kikoe/ui/export_controller.py:94
+msgid "Export Original Audio"
+msgstr ""
+
+#: src/kikoe/ui/export_controller.py:96
+msgid "Audio Files"
+msgstr ""
+
+#: src/kikoe/ui/export_controller.py:99 src/kikoe/ui/speaker_controller.py:56
+#: src/kikoe/ui/transcription_controller.py:160
+msgid "The original audio is not available."
+msgstr ""
+
+#: src/kikoe/ui/export_controller.py:122
+#, python-brace-format
+msgid "Could not save “{name}”: {error}"
+msgstr ""
+
+#: src/kikoe/ui/export_controller.py:125
+#, python-brace-format
+msgid "Exported “{name}”"
 msgstr ""
 
 #: src/kikoe/ui/export_dialog.py:45
@@ -512,10 +532,6 @@ msgstr ""
 
 #: src/kikoe/ui/export_dialog.py:86
 msgid "This note has no timestamps"
-msgstr ""
-
-#: src/kikoe/ui/export_dialog.ui:10 src/kikoe/ui/window.py:885
-msgid "Export Note"
 msgstr ""
 
 #: src/kikoe/ui/export_dialog.ui:42
@@ -542,213 +558,249 @@ msgstr ""
 msgid "Options"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:31 src/kikoe/ui/provider_page.ui:47
-msgid "Deepgram"
+#: src/kikoe/ui/file_dialogs.py:48
+msgid "All Files"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:33 src/kikoe/ui/provider_page.ui:48
-msgid "OpenAI"
+#: src/kikoe/ui/file_dialogs.py:57
+msgid "Only locations on this computer can be used."
 msgstr ""
 
-#: src/kikoe/ui/labels.py:35 src/kikoe/ui/provider_page.ui:50
-msgid "OpenRouter"
+#: src/kikoe/ui/file_dialogs.py:63
+msgid "Audio and Video"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:37 src/kikoe/ui/provider_page.ui:51
-msgid "Gemini AI Studio"
+#: src/kikoe/ui/file_dialogs.py:70
+msgid "Only files on this computer can be imported."
 msgstr ""
 
-#: src/kikoe/ui/labels.py:39 src/kikoe/ui/provider_page.ui:52
-msgid "MiMo"
-msgstr ""
-
-#: src/kikoe/ui/labels.py:41 src/kikoe/ui/provider_page.ui:53
-msgid "Groq"
-msgstr ""
-
-#: src/kikoe/ui/labels.py:43 src/kikoe/ui/provider_page.ui:54
-msgid "Mistral"
-msgstr ""
-
-#: src/kikoe/ui/labels.py:45 src/kikoe/ui/provider_page.ui:49
+#: src/kikoe/ui/labels.py:29
 msgid "OpenAI-compatible"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:51
+#: src/kikoe/ui/labels.py:34
+msgid "Maximum 60 minutes, or 30 with timestamps or speaker detection"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:35 src/kikoe/ui/provider_page.ui:95
+msgid "0 uses the provider limit; chunks also respect the size limit"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:40
+msgid "Defaults to 25 MB; your server may require smaller chunks"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:41
+#, python-brace-format
+msgid "Maximum {size:g} MB per chunk"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:46
+msgid "Connecting…"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:47
+msgid "In progress"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:48
+msgid "Reconnecting… Audio is saved locally"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:49
+msgid "Catching up…"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:50
+msgid "Transcription incomplete"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:51 src/kikoe/ui/labels.py:56
+#: src/kikoe/ui/recording_view.py:33
+msgid "Paused"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:56 src/kikoe/ui/recording_view.py:24
+#: src/kikoe/ui/recording_view.py:33 src/kikoe/ui/recording_view.ui:69
+msgid "Recording"
+msgstr ""
+
+#: src/kikoe/ui/labels.py:62
 msgid "Realtime"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:53 src/kikoe/ui/model_dialog.ui:79
-#: src/kikoe/ui/model_dialog.ui:140 src/kikoe/ui/window.py:1218
+#: src/kikoe/ui/labels.py:64 src/kikoe/ui/model_dialog.ui:79
+#: src/kikoe/ui/model_dialog.ui:140 src/kikoe/ui/recording_controller.py:164
 msgid "Timestamps"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:55 src/kikoe/ui/model_dialog.ui:92
+#: src/kikoe/ui/labels.py:66 src/kikoe/ui/model_dialog.ui:92
 msgid "Word Timestamps"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:57 src/kikoe/ui/window.py:1220
+#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:166
 msgid "Speakers"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:59
+#: src/kikoe/ui/labels.py:70
 msgid "Streaming"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:65 src/kikoe/ui/window.py:1224
+#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:170
 msgid "Text only"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:71
+#: src/kikoe/ui/labels.py:82
 msgid "Plain Text (.txt)"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:73
+#: src/kikoe/ui/labels.py:84
 msgid "Markdown (.md)"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:75
+#: src/kikoe/ui/labels.py:86
 msgid "SRT Subtitles (.srt)"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:77
+#: src/kikoe/ui/labels.py:88
 msgid "WebVTT Subtitles (.vtt)"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:83
+#: src/kikoe/ui/labels.py:94
 msgid "Enter a name for this provider."
 msgstr ""
 
-#: src/kikoe/ui/labels.py:85
+#: src/kikoe/ui/labels.py:96
 msgid "Enter the base URL of the API."
 msgstr ""
 
-#: src/kikoe/ui/labels.py:87
+#: src/kikoe/ui/labels.py:98
 msgid ""
 "The base URL must start with http:// or https:// and include a host name."
 msgstr ""
 
-#: src/kikoe/ui/labels.py:93
+#: src/kikoe/ui/labels.py:104
 msgid "Enter the model ID."
 msgstr ""
 
-#: src/kikoe/ui/labels.py:95
+#: src/kikoe/ui/labels.py:106
 msgid "This provider already has a model with that ID."
 msgstr ""
 
-#: src/kikoe/ui/labels.py:97
+#: src/kikoe/ui/labels.py:108
 msgid "Turn on file or realtime transcription."
 msgstr ""
 
-#: src/kikoe/ui/labels.py:105
+#: src/kikoe/ui/labels.py:116
 msgid "%H:%M"
 msgstr ""
 
 #. Translators: {time} is a time of day formatted with the “%H:%M” string below.
-#: src/kikoe/ui/labels.py:105
+#: src/kikoe/ui/labels.py:116
 #, python-brace-format
 msgid "Today {time}"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:107
+#: src/kikoe/ui/labels.py:118
 msgid "Yesterday"
 msgstr ""
 
 #. Translators: date in this year, see the GLib.DateTime.format documentation.
-#: src/kikoe/ui/labels.py:110
+#: src/kikoe/ui/labels.py:121
 msgid "%b %-d"
 msgstr ""
 
 #. Translators: date in another year, see the GLib.DateTime.format documentation.
-#: src/kikoe/ui/labels.py:113
+#: src/kikoe/ui/labels.py:124
 msgid "%b %-d, %Y"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:118
+#: src/kikoe/ui/labels.py:129
 msgid "%b %-d %H:%M"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:118
+#: src/kikoe/ui/labels.py:129
 #, python-brace-format
 msgid "{date} Recording"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:128
+#: src/kikoe/ui/labels.py:139
 msgid "Imported audio"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:136
+#: src/kikoe/ui/labels.py:147
 msgid "No recordings"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:141
+#: src/kikoe/ui/labels.py:152
 #, python-brace-format
 msgid "{count} recording"
 msgid_plural "{count} recordings"
 msgstr[0] ""
 msgstr[1] ""
 
-#: src/kikoe/ui/labels.py:176
+#: src/kikoe/ui/labels.py:189
 #, python-brace-format
 msgid "Converting part {part} of {parts}…"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:178
+#: src/kikoe/ui/labels.py:191
 msgid "Converting audio…"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:180
+#: src/kikoe/ui/labels.py:193
 #, python-brace-format
 msgid "Transcribing… {part} of {parts} chunks complete"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:184 src/kikoe/ui/window.py:744
-#: src/kikoe/ui/window.py:1160 src/kikoe/ui/window.py:1369
+#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:175
+#: src/kikoe/ui/transcription_controller.py:261
+#: src/kikoe/ui/transcription_controller.py:308
 msgid "Transcribing…"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:186
+#: src/kikoe/ui/labels.py:199
 msgid "Saving…"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:191
+#: src/kikoe/ui/labels.py:204
 msgid "Not supported by this model"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:197
+#: src/kikoe/ui/labels.py:210
 msgid "Transcribes while recording"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:198
+#: src/kikoe/ui/labels.py:211
 msgid "Transcribes after recording"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:206
+#: src/kikoe/ui/labels.py:219
 #, python-brace-format
 msgid "{mode} · This model does not support {features}"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:216
+#: src/kikoe/ui/labels.py:229
 msgid "realtime transcription"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:218
+#: src/kikoe/ui/labels.py:231
 msgid "timestamps"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:220
+#: src/kikoe/ui/labels.py:233
 msgid "word timestamps"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:222
+#: src/kikoe/ui/labels.py:235
 msgid "speaker detection"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:224
+#: src/kikoe/ui/labels.py:237
 msgid "streaming preview"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:228
+#: src/kikoe/ui/labels.py:241
 #, python-brace-format
 msgid "{provider} · {model}"
 msgstr ""
@@ -757,16 +809,16 @@ msgstr ""
 msgid "Microphone Level"
 msgstr ""
 
-#: src/kikoe/ui/model_dialog.py:50 src/kikoe/ui/provider_page.py:106
-#: src/kikoe/ui/provider_page.py:110
+#: src/kikoe/ui/model_dialog.py:64 src/kikoe/ui/provider_page.py:115
+#: src/kikoe/ui/provider_page.py:119
 msgid "Edit Model"
 msgstr ""
 
-#: src/kikoe/ui/model_dialog.py:51 src/kikoe/ui/speaker_editor.ui:27
+#: src/kikoe/ui/model_dialog.py:65 src/kikoe/ui/speaker_editor.ui:27
 msgid "_Save"
 msgstr ""
 
-#: src/kikoe/ui/model_dialog.py:181 src/kikoe/ui/model_dialog.py:195
+#: src/kikoe/ui/model_dialog.py:146 src/kikoe/ui/model_dialog.py:160
 msgid "This model does not support this option."
 msgstr ""
 
@@ -842,54 +894,63 @@ msgstr ""
 msgid "_Remove Model"
 msgstr ""
 
-#: src/kikoe/ui/note_view.py:133
+#: src/kikoe/ui/note_actions.py:32 src/kikoe/ui/shortcuts.ui:15
+#: src/kikoe/ui/sidebar_header.ui:15 src/kikoe/ui/sidebar_header.ui:17
+#: src/kikoe/ui/window.ui:45 src/kikoe/ui/window.ui:47
+msgid "New Note"
+msgstr ""
+
+#: src/kikoe/ui/note_actions.py:49
+msgid "Note Title"
+msgstr ""
+
+#: src/kikoe/ui/note_actions.py:56
+msgid "Rename Note"
+msgstr ""
+
+#: src/kikoe/ui/note_actions.py:56
+msgid "_Rename"
+msgstr ""
+
+#: src/kikoe/ui/note_actions.py:73
 #, python-brace-format
-msgid "Recording {number} has speakers that are not yet matched."
+msgid "Delete “{title}”?"
 msgstr ""
 
-#: src/kikoe/ui/note_view.py:355
-msgid "Connecting…"
+#: src/kikoe/ui/note_actions.py:74 src/kikoe/ui/note_actions.py:93
+msgid ""
+"Its transcript and original audio will be deleted. This cannot be undone."
 msgstr ""
 
-#: src/kikoe/ui/note_view.py:356
-msgid "In progress"
+#: src/kikoe/ui/note_actions.py:75 src/kikoe/ui/note_actions.py:94
+msgid "_Delete"
 msgstr ""
 
-#: src/kikoe/ui/note_view.py:357
-msgid "Reconnecting… Audio is saved locally"
+#: src/kikoe/ui/note_actions.py:92
+#, python-brace-format
+msgid "Delete Recording {number}?"
 msgstr ""
 
-#: src/kikoe/ui/note_view.py:358
-msgid "Catching up…"
+#: src/kikoe/ui/note_sidebar.py:87
+msgid "No Matching Notes"
 msgstr ""
 
-#: src/kikoe/ui/note_view.py:359
-msgid "Transcription incomplete"
+#: src/kikoe/ui/note_sidebar.py:87 src/kikoe/ui/window.ui:102
+msgid "No Notes Yet"
 msgstr ""
 
-#: src/kikoe/ui/note_view.py:360 src/kikoe/ui/recording_view.py:33
-#: src/kikoe/ui/window.py:1511
-msgid "Paused"
-msgstr ""
-
-#: src/kikoe/ui/note_view.py:362
+#: src/kikoe/ui/note_view.py:312
 #, python-brace-format
 msgid "{status} · {summary}"
 msgstr ""
 
-#: src/kikoe/ui/note_view.py:404
+#: src/kikoe/ui/note_view.py:344
 #, python-brace-format
 msgid "Transcribing… · {model}"
 msgstr ""
 
-#: src/kikoe/ui/note_view.py:463 src/kikoe/ui/note_view.py:591
-#: src/kikoe/ui/speaker_row.py:15
-#, python-brace-format
-msgid "Speaker {number}"
-msgstr ""
-
 #: src/kikoe/ui/note_view.ui:25 src/kikoe/ui/speaker_editor.ui:49
-#: src/kikoe/ui/transcript_row.py:485
+#: src/kikoe/ui/transcript_row.py:482
 msgid "Match Speakers…"
 msgstr ""
 
@@ -940,15 +1001,15 @@ msgstr ""
 msgid "System Default"
 msgstr ""
 
-#: src/kikoe/ui/preferences.py:135
+#: src/kikoe/ui/preferences.py:132
 msgid "No Default Model"
 msgstr ""
 
-#: src/kikoe/ui/preferences.py:222 src/kikoe/ui/preferences.ui:39
+#: src/kikoe/ui/preferences.py:215 src/kikoe/ui/preferences.ui:39
 msgid "Enter a language code such as zh, en, or ja."
 msgstr ""
 
-#: src/kikoe/ui/preferences.py:237
+#: src/kikoe/ui/preferences.py:230
 #, python-brace-format
 msgid "{api} API · {count} model"
 msgid_plural "{api} API · {count} models"
@@ -1040,33 +1101,16 @@ msgstr ""
 msgid "No Providers Yet"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.py:213
-#, python-brace-format
-msgid "Maximum {size:g} MB per chunk"
-msgstr ""
-
-#: src/kikoe/ui/provider_page.py:217
-msgid "Maximum 60 minutes, or 30 with timestamps or speaker detection"
-msgstr ""
-
-#: src/kikoe/ui/provider_page.py:221 src/kikoe/ui/provider_page.ui:109
-msgid "0 uses the provider limit; chunks also respect the size limit"
-msgstr ""
-
-#: src/kikoe/ui/provider_page.py:225
-msgid "Defaults to 25 MB; your server may require smaller chunks"
-msgstr ""
-
-#: src/kikoe/ui/provider_page.py:275
+#: src/kikoe/ui/provider_page.py:274
 #, python-brace-format
 msgid "Remove “{name}”?"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.py:276
+#: src/kikoe/ui/provider_page.py:275
 msgid "Its models and API key will be deleted."
 msgstr ""
 
-#: src/kikoe/ui/provider_page.py:277
+#: src/kikoe/ui/provider_page.py:276
 msgid "_Remove"
 msgstr ""
 
@@ -1092,66 +1136,87 @@ msgstr ""
 msgid "API Type"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:62
+#: src/kikoe/ui/provider_page.ui:48
 msgid "Base URL"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:69
+#: src/kikoe/ui/provider_page.ui:55
 msgid "API Key"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:90
+#: src/kikoe/ui/provider_page.ui:76
 msgid "File Transcription"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:91
+#: src/kikoe/ui/provider_page.ui:77
 msgid ""
 "Applies to imported audio, recordings transcribed after stopping, and re-"
 "transcription. Smaller chunks allow more parallel requests."
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:94
+#: src/kikoe/ui/provider_page.ui:80
 msgid "Parallel Requests"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:95
+#: src/kikoe/ui/provider_page.ui:81
 msgid "1 processes chunks one at a time; account rate limits still apply"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:108
+#: src/kikoe/ui/provider_page.ui:94
 msgid "Chunk Length (Minutes)"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:123
+#: src/kikoe/ui/provider_page.ui:109
 msgid "Chunk Size (MB)"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:137
+#: src/kikoe/ui/provider_page.ui:123
 msgid "Audio Format"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:143
+#: src/kikoe/ui/provider_page.ui:129
 msgid "Reset Transcription Defaults"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:151
+#: src/kikoe/ui/provider_page.ui:137
 msgid "Models"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:152
+#: src/kikoe/ui/provider_page.ui:138
 msgid "What each model can do is set when you add it."
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:161
+#: src/kikoe/ui/provider_page.ui:147
 msgid "Add _Model"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:175
+#: src/kikoe/ui/provider_page.ui:161
 msgid "No Models Yet"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.ui:192
+#: src/kikoe/ui/provider_page.ui:178
 msgid "_Remove Provider"
+msgstr ""
+
+#: src/kikoe/ui/recording_controller.py:147
+msgid "No audio was recorded"
+msgstr ""
+
+#: src/kikoe/ui/recording_controller.py:167
+#, python-brace-format
+msgid "{provider} {model} · {options}"
+msgstr ""
+
+#: src/kikoe/ui/recording_controller.py:179
+msgid "Saving recording…"
+msgstr ""
+
+#: src/kikoe/ui/recording_controller.py:187 src/kikoe/ui/tasks.py:59
+msgid "An unexpected error occurred. See the local log for details."
+msgstr ""
+
+#: src/kikoe/ui/recording_controller.py:221
+msgid "Recovering recordings…"
 msgstr ""
 
 #: src/kikoe/ui/recording_header.ui:31 src/kikoe/ui/recording_header.ui:34
@@ -1182,11 +1247,6 @@ msgstr ""
 msgid "In progress · {summary}"
 msgstr ""
 
-#: src/kikoe/ui/recording_view.py:24 src/kikoe/ui/recording_view.py:33
-#: src/kikoe/ui/recording_view.ui:69 src/kikoe/ui/window.py:1511
-msgid "Recording"
-msgstr ""
-
 #: src/kikoe/ui/recording_view.py:27
 #, python-brace-format
 msgid ""
@@ -1194,7 +1254,25 @@ msgid ""
 "you stop. The text will appear here."
 msgstr ""
 
-#: src/kikoe/ui/retranscribe_dialog.py:48
+#: src/kikoe/ui/recovery_prompt.py:14
+msgid "Recover Recordings?"
+msgstr ""
+
+#: src/kikoe/ui/recovery_prompt.py:16
+msgid ""
+"Kikoe found unfinished recordings. Recover their audio now, then choose a "
+"model to transcribe them."
+msgstr ""
+
+#: src/kikoe/ui/recovery_prompt.py:19
+msgid "_Later"
+msgstr ""
+
+#: src/kikoe/ui/recovery_prompt.py:20
+msgid "_Recover"
+msgstr ""
+
+#: src/kikoe/ui/retranscribe_dialog.py:47
 #, python-brace-format
 msgid ""
 "Re-transcribe “Recording {number}” ({duration}) from the kept original "
@@ -1202,7 +1280,7 @@ msgid ""
 "can be added this way."
 msgstr ""
 
-#: src/kikoe/ui/retranscribe_dialog.py:62
+#: src/kikoe/ui/retranscribe_dialog.py:61
 msgid "Choose a File Model…"
 msgstr ""
 
@@ -1237,12 +1315,6 @@ msgstr ""
 
 #: src/kikoe/ui/shortcuts.ui:12
 msgid "Notes"
-msgstr ""
-
-#: src/kikoe/ui/shortcuts.ui:15 src/kikoe/ui/sidebar_header.ui:15
-#: src/kikoe/ui/sidebar_header.ui:17 src/kikoe/ui/window.py:581
-#: src/kikoe/ui/window.ui:45 src/kikoe/ui/window.ui:47
-msgid "New Note"
 msgstr ""
 
 #: src/kikoe/ui/shortcuts.ui:21 src/kikoe/ui/sidebar_header.ui:36
@@ -1309,6 +1381,15 @@ msgstr ""
 msgid "_About Kikoe"
 msgstr ""
 
+#: src/kikoe/ui/speaker_banner.py:19
+#, python-brace-format
+msgid "Recording {number} has speakers that are not yet matched."
+msgstr ""
+
+#: src/kikoe/ui/speaker_controller.py:91
+msgid "This recording has no detected speakers."
+msgstr ""
+
 #: src/kikoe/ui/speaker_dialog.py:38
 #, python-brace-format
 msgid ""
@@ -1334,30 +1415,36 @@ msgstr ""
 msgid "Rename Speaker"
 msgstr ""
 
-#: src/kikoe/ui/speaker_row.py:66
+#: src/kikoe/ui/speaker_row.py:18 src/kikoe/ui/transcript_rows.py:32
+#: src/kikoe/ui/transcript_rows.py:71
+#, python-brace-format
+msgid "Speaker {number}"
+msgstr ""
+
+#: src/kikoe/ui/speaker_row.py:68
 msgid "No sample available"
 msgstr ""
 
-#: src/kikoe/ui/speaker_row.py:66
+#: src/kikoe/ui/speaker_row.py:68
 #, python-brace-format
 msgid "“{text}”"
 msgstr ""
 
-#: src/kikoe/ui/speaker_row.py:69
+#: src/kikoe/ui/speaker_row.py:71
 #, python-brace-format
 msgid "Play a sample from “{name}”"
 msgstr ""
 
-#: src/kikoe/ui/speaker_row.py:70
+#: src/kikoe/ui/speaker_row.py:72
 #, python-brace-format
 msgid "Who is {name}?"
 msgstr ""
 
-#: src/kikoe/ui/speaker_row.py:74
+#: src/kikoe/ui/speaker_row.py:76
 msgid "Sample playback needs reliable timestamps."
 msgstr ""
 
-#: src/kikoe/ui/speaker_row.py:144
+#: src/kikoe/ui/speaker_row.py:146
 msgid "New Speaker"
 msgstr ""
 
@@ -1369,16 +1456,12 @@ msgstr ""
 msgid "Keep as New Speaker"
 msgstr ""
 
-#: src/kikoe/ui/tasks.py:38
+#: src/kikoe/ui/tasks.py:18
 msgid "Something Went Wrong"
 msgstr ""
 
-#: src/kikoe/ui/tasks.py:39
+#: src/kikoe/ui/tasks.py:19
 msgid "_Close"
-msgstr ""
-
-#: src/kikoe/ui/tasks.py:79
-msgid "An unexpected error occurred. See the local log for details."
 msgstr ""
 
 #: src/kikoe/ui/timestamp_popover.ui:26 src/kikoe/ui/transcript_row.ui:174
@@ -1442,32 +1525,69 @@ msgstr ""
 msgid "Stop Playback"
 msgstr ""
 
-#: src/kikoe/ui/transcript_row.py:334
+#: src/kikoe/ui/transcript_row.py:331
 msgid "Segment text cannot be empty"
 msgstr ""
 
-#: src/kikoe/ui/transcript_row.py:403
+#: src/kikoe/ui/transcript_row.py:400
 msgid "End time must not be earlier than start time"
 msgstr ""
 
-#: src/kikoe/ui/transcript_row.py:434
+#: src/kikoe/ui/transcript_row.py:431
 msgid "Timestamps were not saved because the input is invalid"
 msgstr ""
 
-#: src/kikoe/ui/transcript_row.py:471
+#: src/kikoe/ui/transcript_row.py:468
 msgid "Use MM:SS or H:MM:SS, with optional decimal seconds"
 msgstr ""
 
-#: src/kikoe/ui/transcript_row.py:483
+#: src/kikoe/ui/transcript_row.py:480
 msgid "Re-transcribe…"
 msgstr ""
 
-#: src/kikoe/ui/transcript_row.py:484
+#: src/kikoe/ui/transcript_row.py:481
 msgid "Export Original Audio…"
 msgstr ""
 
-#: src/kikoe/ui/transcript_row.py:486
+#: src/kikoe/ui/transcript_row.py:483
 msgid "Delete Recording"
+msgstr ""
+
+#: src/kikoe/ui/transcription_controller.py:106
+msgid "Import cancelled"
+msgstr ""
+
+#: src/kikoe/ui/transcription_controller.py:140
+#: src/kikoe/ui/transcription_controller.py:284
+msgid "Transcription Failed"
+msgstr ""
+
+#: src/kikoe/ui/transcription_controller.py:148
+msgid "Transcription finished"
+msgstr ""
+
+#: src/kikoe/ui/transcription_controller.py:168
+msgid "Choose an available file transcription model."
+msgstr ""
+
+#: src/kikoe/ui/transcription_controller.py:206
+msgid "Re-transcription cancelled"
+msgstr ""
+
+#: src/kikoe/ui/transcription_controller.py:211
+#, python-brace-format
+msgid ""
+"{error}\n"
+"\n"
+"Your text and audio have been kept."
+msgstr ""
+
+#: src/kikoe/ui/transcription_controller.py:212
+msgid "Re-transcription Failed"
+msgstr ""
+
+#: src/kikoe/ui/transcription_controller.py:266
+msgid "Transcription cancelled"
 msgstr ""
 
 #: src/kikoe/ui/transcription_dialog.py:53
@@ -1476,167 +1596,6 @@ msgstr ""
 
 #: src/kikoe/ui/transcription_dialog.ui:42
 msgid "_Manage Providers and Models…"
-msgstr ""
-
-#: src/kikoe/ui/window.py:365
-msgid "No Matching Notes"
-msgstr ""
-
-#: src/kikoe/ui/window.py:365 src/kikoe/ui/window.ui:102
-msgid "No Notes Yet"
-msgstr ""
-
-#: src/kikoe/ui/window.py:598
-msgid "Note Title"
-msgstr ""
-
-#: src/kikoe/ui/window.py:599
-msgid "Rename Note"
-msgstr ""
-
-#: src/kikoe/ui/window.py:601
-msgid "_Rename"
-msgstr ""
-
-#: src/kikoe/ui/window.py:631
-#, python-brace-format
-msgid "Delete “{title}”?"
-msgstr ""
-
-#: src/kikoe/ui/window.py:632 src/kikoe/ui/window.py:651
-msgid ""
-"Its transcript and original audio will be deleted. This cannot be undone."
-msgstr ""
-
-#: src/kikoe/ui/window.py:633 src/kikoe/ui/window.py:652
-msgid "_Delete"
-msgstr ""
-
-#: src/kikoe/ui/window.py:644 src/kikoe/ui/window.py:907
-msgid "This recording is no longer available."
-msgstr ""
-
-#: src/kikoe/ui/window.py:650
-#, python-brace-format
-msgid "Delete Recording {number}?"
-msgstr ""
-
-#: src/kikoe/ui/window.py:677 src/kikoe/ui/window.py:730
-#: src/kikoe/ui/window.py:931
-msgid "The original audio is not available."
-msgstr ""
-
-#: src/kikoe/ui/window.py:714
-msgid "This recording has no detected speakers."
-msgstr ""
-
-#: src/kikoe/ui/window.py:738
-msgid "Choose an available file transcription model."
-msgstr ""
-
-#: src/kikoe/ui/window.py:778
-msgid "Re-transcription cancelled"
-msgstr ""
-
-#: src/kikoe/ui/window.py:783
-#, python-brace-format
-msgid ""
-"{error}\n"
-"\n"
-"Your text and audio have been kept."
-msgstr ""
-
-#: src/kikoe/ui/window.py:784
-msgid "Re-transcription Failed"
-msgstr ""
-
-#: src/kikoe/ui/window.py:877
-msgid "Copied to clipboard"
-msgstr ""
-
-#: src/kikoe/ui/window.py:896 src/kikoe/ui/window.py:935
-#, python-brace-format
-msgid "Could not save “{name}”: {error}"
-msgstr ""
-
-#: src/kikoe/ui/window.py:899 src/kikoe/ui/window.py:938
-#, python-brace-format
-msgid "Exported “{name}”"
-msgstr ""
-
-#: src/kikoe/ui/window.py:918
-msgid "Export Original Audio"
-msgstr ""
-
-#: src/kikoe/ui/window.py:920
-msgid "Audio Files"
-msgstr ""
-
-#: src/kikoe/ui/window.py:946
-msgid "All Files"
-msgstr ""
-
-#: src/kikoe/ui/window.py:955
-msgid "Only locations on this computer can be used."
-msgstr ""
-
-#: src/kikoe/ui/window.py:1087
-msgid "Import cancelled"
-msgstr ""
-
-#: src/kikoe/ui/window.py:1095
-msgid "Audio and Video"
-msgstr ""
-
-#: src/kikoe/ui/window.py:1102
-msgid "Only files on this computer can be imported."
-msgstr ""
-
-#: src/kikoe/ui/window.py:1137 src/kikoe/ui/window.py:1399
-msgid "Transcription Failed"
-msgstr ""
-
-#: src/kikoe/ui/window.py:1144
-msgid "Transcription finished"
-msgstr ""
-
-#: src/kikoe/ui/window.py:1221
-#, python-brace-format
-msgid "{provider} {model} · {options}"
-msgstr ""
-
-#: src/kikoe/ui/window.py:1251
-msgid "Saving recording…"
-msgstr ""
-
-#: src/kikoe/ui/window.py:1278
-msgid "No audio was recorded"
-msgstr ""
-
-#: src/kikoe/ui/window.py:1374
-msgid "Transcription cancelled"
-msgstr ""
-
-#: src/kikoe/ui/window.py:1412
-msgid "Recover Recordings?"
-msgstr ""
-
-#: src/kikoe/ui/window.py:1414
-msgid ""
-"Kikoe found unfinished recordings. Recover their audio now, then choose a "
-"model to transcribe them."
-msgstr ""
-
-#: src/kikoe/ui/window.py:1418
-msgid "_Later"
-msgstr ""
-
-#: src/kikoe/ui/window.py:1419
-msgid "_Recover"
-msgstr ""
-
-#: src/kikoe/ui/window.py:1438
-msgid "Recovering recordings…"
 msgstr ""
 
 #: src/kikoe/ui/window.ui:197

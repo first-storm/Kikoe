@@ -4,40 +4,25 @@ import asyncio
 import mimetypes
 from pathlib import Path
 from typing import Literal
-from urllib.parse import urlsplit
 
 import httpx
-from groq import APIConnectionError, APIError, APIStatusError, APITimeoutError, AsyncGroq, omit
+from groq import APIError, AsyncGroq, omit
 
 from kikoe.core.models import ModelSpec, Segment
-from kikoe.core.upload import UploadLimits
-from kikoe.i18n import _
 from kikoe.providers.base import (
+    FileOnlyClient,
     FileTranscriptCallback,
-    RealtimeSession,
-    TranscriptionError,
     TranscriptionOptions,
     file_capabilities,
 )
-from kikoe.providers.errors import detail_of, status_error
+from kikoe.providers.errors import openai_error, unreadable
 from kikoe.providers.parsing import parse_segments
 
-MAX_UPLOAD_BYTES = 25_000_000
 
-
-class GroqClient:
+class GroqClient(FileOnlyClient[httpx.AsyncBaseTransport]):
     """Keep multipart encoding and transport lifetime inside the official SDK."""
 
-    def __init__(
-        self, base_url: str, api_key: str, transport: httpx.AsyncBaseTransport | None = None
-    ) -> None:
-        self._url = base_url.rstrip("/")
-        self._host = urlsplit(base_url).hostname or base_url
-        self._key = api_key
-        self._transport = transport
-
-    def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-        return UploadLimits(MAX_UPLOAD_BYTES)
+    name = "Groq"
 
     async def transcribe_file(
         self,
@@ -47,8 +32,6 @@ class GroqClient:
         *,
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
-        if (await asyncio.to_thread(audio.stat)).st_size > MAX_UPLOAD_BYTES:
-            raise TranscriptionError(_("The audio file is too large to upload to this provider."))
         content = await asyncio.to_thread(audio.read_bytes)
         features = options.allowed_by(file_capabilities(model))
         granularities: list[Literal["segment", "word"]] = [
@@ -74,27 +57,6 @@ class GroqClient:
                 # Parsing validates text and times; serializer warnings could expose payloads.
                 return parse_segments(result.model_dump(warnings=False), features.timestamps, False)
         except APIError as error:
-            raise self._error(error) from error
+            raise openai_error(error, self._host, self._key) from error
         except (ValueError, TypeError, KeyError, AttributeError) as error:
-            raise TranscriptionError(
-                _("{host} sent a response Kikoe does not understand.").format(host=self._host)
-            ) from error
-
-    def _error(self, error: APIError) -> TranscriptionError:
-        if isinstance(error, APIStatusError):
-            detail = detail_of(error)
-            if detail and self._key:
-                detail = detail.replace(self._key, "[redacted]")
-            return status_error(error.status_code, self._host, detail)
-        if isinstance(error, APITimeoutError):
-            message = _("{host} took too long to respond. Try again later.")
-        elif isinstance(error, APIConnectionError):
-            message = _("Could not reach {host}. Try again later.")
-        else:
-            message = _("Could not complete transcription. Check your connection and try again.")
-        return TranscriptionError(message.format(host=self._host), retryable=True)
-
-    async def open_realtime(
-        self, model: ModelSpec, options: TranscriptionOptions
-    ) -> RealtimeSession:
-        raise TranscriptionError(_("Groq supports file transcription only."))
+            raise unreadable(self._host) from error

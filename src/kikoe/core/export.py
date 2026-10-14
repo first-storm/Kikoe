@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from datetime import timedelta
 from enum import StrEnum
 
-from kikoe.core.formatting import format_timestamp_range, speaker_order
+from kikoe.core.formatting import format_timestamp_range
 from kikoe.core.models import DisplayOptions, Note, Segment
-from kikoe.core.speakers import resolved_note
+from kikoe.core.speakers import resolved_note, speaker_numbers
 
 
 class ExportFormat(StrEnum):
@@ -75,12 +75,9 @@ def export_filename(stem: str, extension: str) -> str:
 
 def _speaker_labels(note: Note) -> dict[str, str]:
     """Display name per speaker id, numbered note-wide like the note view."""
-    order = speaker_order(s for r in note.recordings for s in r.segments)
-    ordinals = {s.speaker_id: s.ordinal for s in note.speakers}
     return {
-        speaker_id: note.speaker_name(speaker_id)
-        or f"Speaker {ordinals.get(speaker_id) or number + 1}"
-        for speaker_id, number in order.items()
+        speaker_id: note.speaker_name(speaker_id) or f"Speaker {number}"
+        for speaker_id, number in speaker_numbers(note).items()
     }
 
 

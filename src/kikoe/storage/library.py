@@ -5,13 +5,11 @@ does not matter which worker thread runs it.
 """
 
 import logging
-import os
-import shutil
 import sqlite3
 import uuid
 from collections.abc import Generator
 from contextlib import closing, contextmanager
-from datetime import UTC, datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 from kikoe import paths
@@ -22,97 +20,27 @@ from kikoe.core.models import (
     Recording,
     RecordingSource,
     Segment,
-    Speaker,
-    SpeakerBinding,
     TranscriptionState,
 )
 from kikoe.core.speakers import binding_choices, preserved_identities
 from kikoe.i18n import _
+from kikoe.storage.audio_files import AudioFiles
+from kikoe.storage.errors import LibraryError
+from kikoe.storage.note_rows import (
+    format_time,
+    from_ms,
+    note_not_found,
+    parse_time,
+    read_note,
+    require_found,
+    to_ms,
+)
+from kikoe.storage.schema import MIGRATIONS, SCHEMA_VERSION
 
 log = logging.getLogger(__name__)
 
 DATABASE_NAME = "library.sqlite3"
 AUDIO_DIR_NAME = "audio"
-
-_MIGRATIONS: tuple[str, ...] = (
-    """
-    CREATE TABLE notes (
-        id TEXT PRIMARY KEY,
-        title TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        show_timestamps INTEGER NOT NULL DEFAULT 1,
-        show_speakers INTEGER NOT NULL DEFAULT 1
-    );
-    CREATE TABLE speakers (
-        note_id TEXT NOT NULL REFERENCES notes (id) ON DELETE CASCADE,
-        id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        PRIMARY KEY (note_id, id)
-    );
-    CREATE TABLE recordings (
-        id TEXT PRIMARY KEY,
-        note_id TEXT NOT NULL REFERENCES notes (id) ON DELETE CASCADE,
-        position INTEGER NOT NULL,
-        created_at TEXT NOT NULL,
-        duration_ms INTEGER NOT NULL,
-        source TEXT NOT NULL,
-        provider_name TEXT NOT NULL,
-        model_id TEXT NOT NULL,
-        audio_file TEXT
-    );
-    CREATE INDEX recordings_by_note ON recordings (note_id, position);
-    CREATE TABLE segments (
-        recording_id TEXT NOT NULL REFERENCES recordings (id) ON DELETE CASCADE,
-        position INTEGER NOT NULL,
-        start_ms INTEGER,
-        end_ms INTEGER,
-        speaker_id TEXT,
-        text TEXT NOT NULL,
-        PRIMARY KEY (recording_id, position)
-    );
-    """,
-    "ALTER TABLE recordings ADD COLUMN transcription_state TEXT NOT NULL DEFAULT 'ready';",
-    """
-    ALTER TABLE speakers ADD COLUMN ordinal INTEGER NOT NULL DEFAULT 0;
-    INSERT OR IGNORE INTO speakers (note_id, id, name)
-      SELECT r.note_id, s.speaker_id, '' FROM segments s
-      JOIN recordings r ON r.id = s.recording_id
-      WHERE s.speaker_id IS NOT NULL ORDER BY r.position, s.position;
-    UPDATE speakers SET ordinal = (
-      SELECT COUNT(*) FROM speakers other
-      WHERE other.note_id = speakers.note_id AND other.rowid <= speakers.rowid);
-    CREATE TABLE recording_speakers (
-      recording_id TEXT NOT NULL REFERENCES recordings(id) ON DELETE CASCADE,
-      source_id TEXT NOT NULL,
-      speaker_id TEXT NOT NULL,
-      original_id TEXT NOT NULL,
-      confirmed INTEGER NOT NULL,
-      PRIMARY KEY (recording_id, source_id)
-    );
-    INSERT INTO recording_speakers
-      SELECT DISTINCT r.id, s.speaker_id, s.speaker_id, s.speaker_id,
-        CASE WHEN EXISTS (
-          SELECT 1 FROM recordings earlier JOIN segments es ON es.recording_id = earlier.id
-          WHERE earlier.note_id = r.note_id AND earlier.position < r.position
-          AND es.speaker_id IS NOT NULL) THEN 0 ELSE 1 END
-      FROM recordings r JOIN segments s ON s.recording_id = r.id
-      WHERE s.speaker_id IS NOT NULL;
-    """,
-)
-"""Schema changes in order; entry ``n`` upgrades ``user_version`` from ``n`` to ``n + 1``.
-
-Never edit a released entry; append a new one instead.
-"""
-
-SCHEMA_VERSION = len(_MIGRATIONS)
-
-
-class LibraryError(Exception):
-    """The library cannot be read or written. The message is meant for the user."""
-
-
-class NoteNotFoundError(LookupError):
-    """A note was deleted while something still referred to it."""
 
 
 def database_path() -> Path:
@@ -126,7 +54,8 @@ def audio_dir() -> Path:
 class Library:
     def __init__(self, database: Path, audio_dir: Path) -> None:
         self._database = database
-        self._audio_dir = audio_dir
+        self.audio = AudioFiles(audio_dir)
+        """The retained originals that recordings point to."""
 
     def migrate(self) -> None:
         """Bring the schema up to date. Call once before anything else."""
@@ -141,7 +70,7 @@ class Library:
                 )
             for number in range(version, SCHEMA_VERSION):
                 connection.executescript(
-                    f"BEGIN;\n{_MIGRATIONS[number]}\nPRAGMA user_version = {number + 1};\nCOMMIT;"
+                    f"BEGIN;\n{MIGRATIONS[number]}\nPRAGMA user_version = {number + 1};\nCOMMIT;"
                 )
                 log.info("Migrated library to version %d", number + 1)
 
@@ -184,9 +113,9 @@ class Library:
             NoteSummary(
                 note_id=note_id,
                 title=title,
-                created_at=_parse_time(created_at),
+                created_at=parse_time(created_at),
                 recording_count=count,
-                duration=_from_ms(duration_ms),
+                duration=from_ms(duration_ms),
                 source=None if source is None else RecordingSource(source),
             )
             for note_id, title, created_at, count, duration_ms, source in rows
@@ -213,7 +142,7 @@ class Library:
     def rename_note(self, note_id: str, title: str) -> None:
         with self._connect() as connection, connection:
             cursor = connection.execute("UPDATE notes SET title = ? WHERE id = ?", (title, note_id))
-            _require_found(cursor.rowcount)
+            require_found(cursor.rowcount)
 
     def set_display_options(self, note_id: str, options: DisplayOptions) -> None:
         with self._connect() as connection, connection:
@@ -221,7 +150,7 @@ class Library:
                 "UPDATE notes SET show_timestamps = ?, show_speakers = ? WHERE id = ?",
                 (options.show_timestamps, options.show_speakers, note_id),
             )
-            _require_found(cursor.rowcount)
+            require_found(cursor.rowcount)
 
     def delete_note(self, note_id: str) -> None:
         """Delete the note, its transcript and its retained audio files."""
@@ -234,9 +163,9 @@ class Library:
                 )
             ]
             cursor = connection.execute("DELETE FROM notes WHERE id = ?", (note_id,))
-            _require_found(cursor.rowcount)
+            require_found(cursor.rowcount)
         for name in files:
-            self.discard_audio(self._audio_dir / name)
+            self.audio.discard(self.audio.directory / name)
 
     def delete_recording(self, note_id: str, recording_id: str) -> Note:
         """Delete one recording, its transcript and its retained audio file."""
@@ -253,32 +182,8 @@ class Library:
                 raise LibraryError(_("This recording no longer exists."))
             note = self._read_note(connection, note_id)
         if row is not None and row[0] is not None:
-            self.discard_audio(self._audio_dir / row[0])
+            self.audio.discard(self.audio.directory / row[0])
         return note
-
-    def store_audio(self, source: Path, recording_id: str) -> Path:
-        """Copy an original into the library so it outlives the file the user picked."""
-        destination = self._audio_dir / f"{recording_id}{source.suffix.lower()}"
-        try:
-            self._audio_dir.mkdir(parents=True, exist_ok=True)
-            # fsync on the writable handle: Windows rejects it on a read-only one (EBADF).
-            with source.open("rb") as origin, destination.open("wb") as copy:
-                shutil.copyfileobj(origin, copy)
-                copy.flush()
-                os.fsync(copy.fileno())
-        except OSError as error:
-            self.discard_audio(destination)
-            raise LibraryError(
-                _("Could not copy the audio file into the library: {error}").format(error=error)
-            ) from error
-        return destination
-
-    def discard_audio(self, path: Path) -> None:
-        """Remove a retained audio file; failure only costs disk space, so it is logged."""
-        try:
-            path.unlink(missing_ok=True)
-        except OSError as error:
-            log.warning("Could not delete %s: %s", path, error)
 
     def add_recording(self, note_id: str | None, title: str, recording: Recording) -> Note:
         """Append ``recording`` to a note, or to a new note called ``title`` if ``note_id`` is None.
@@ -293,7 +198,7 @@ class Library:
                 elif not connection.execute(
                     "SELECT 1 FROM notes WHERE id = ?", (note_id,)
                 ).fetchone():
-                    raise _note_not_found()
+                    raise note_not_found()
                 self._insert_recording(connection, note_id, recording)
             return self._read_note(connection, note_id)
 
@@ -302,7 +207,7 @@ class Library:
     ) -> None:
         audio_file = None
         if recording.audio_path is not None:
-            audio_file = recording.audio_path.relative_to(self._audio_dir).as_posix()
+            audio_file = recording.audio_path.relative_to(self.audio.directory).as_posix()
         connection.execute(
             """
             INSERT INTO recordings (id, note_id, position, created_at, duration_ms, source,
@@ -314,8 +219,8 @@ class Library:
                 recording.recording_id,
                 note_id,
                 note_id,
-                _format_time(recording.created_at),
-                _to_ms(recording.duration),
+                format_time(recording.created_at),
+                to_ms(recording.duration),
                 recording.source.value,
                 recording.provider_name,
                 recording.model_id,
@@ -344,7 +249,7 @@ class Library:
                 "WHERE id = ? AND note_id = ?",
                 (state.value, provider_name, model_id, recording_id, note_id),
             )
-            _require_found(cursor.rowcount)
+            require_found(cursor.rowcount)
             if segments is not None:
                 old = self._read_note(connection, note_id)
                 previous = next(r for r in old.recordings if r.recording_id == recording_id)
@@ -399,7 +304,7 @@ class Library:
                 "UPDATE speakers SET name = ? WHERE note_id = ? AND id = ?",
                 (name.strip(), note_id, speaker_id),
             )
-            _require_found(cursor.rowcount)
+            require_found(cursor.rowcount)
 
     def match_speakers(
         self, note_id: str, recording_id: str, choices: dict[str, str | None]
@@ -481,8 +386,8 @@ class Library:
                 (
                     recording_id,
                     position,
-                    None if segment.start is None else _to_ms(segment.start),
-                    None if segment.end is None else _to_ms(segment.end),
+                    None if segment.start is None else to_ms(segment.start),
+                    None if segment.end is None else to_ms(segment.end),
                     segment.speaker_id,
                     segment.text,
                 )
@@ -491,84 +396,7 @@ class Library:
         )
 
     def _read_note(self, connection: sqlite3.Connection, note_id: str) -> Note:
-        row = connection.execute(
-            "SELECT title, created_at, show_timestamps, show_speakers FROM notes WHERE id = ?",
-            (note_id,),
-        ).fetchone()
-        if row is None:
-            raise _note_not_found()
-        title, created_at, show_timestamps, show_speakers = row
-        speakers = tuple(
-            Speaker(speaker_id, name, ordinal)
-            for speaker_id, name, ordinal in connection.execute(
-                "SELECT id, name, ordinal FROM speakers WHERE note_id = ? ORDER BY ordinal",
-                (note_id,),
-            )
-        )
-        segments: dict[str, list[Segment]] = {}
-        for recording_id, start_ms, end_ms, speaker_id, text in connection.execute(
-            """
-            SELECT s.recording_id, s.start_ms, s.end_ms, s.speaker_id, s.text
-            FROM segments AS s JOIN recordings AS r ON r.id = s.recording_id
-            WHERE r.note_id = ?
-            ORDER BY s.recording_id, s.position
-            """,
-            (note_id,),
-        ):
-            segments.setdefault(recording_id, []).append(
-                Segment(
-                    text,
-                    None if start_ms is None else _from_ms(start_ms),
-                    None if end_ms is None else _from_ms(end_ms),
-                    speaker_id,
-                )
-            )
-        recordings = tuple(
-            Recording(
-                recording_id=recording_id,
-                created_at=_parse_time(recording_created_at),
-                duration=_from_ms(duration_ms),
-                source=RecordingSource(source),
-                provider_name=provider_name,
-                model_id=model_id,
-                segments=tuple(segments.get(recording_id, ())),
-                audio_path=None if audio_file is None else self._audio_dir / audio_file,
-                transcription_state=TranscriptionState(transcription_state),
-                speaker_bindings=tuple(
-                    SpeakerBinding(source, person, original, bool(confirmed))
-                    for source, person, original, confirmed in connection.execute(
-                        "SELECT source_id, speaker_id, original_id, confirmed "
-                        "FROM recording_speakers WHERE recording_id = ? ORDER BY rowid",
-                        (recording_id,),
-                    )
-                ),
-            )
-            for (
-                recording_id,
-                recording_created_at,
-                duration_ms,
-                source,
-                provider_name,
-                model_id,
-                audio_file,
-                transcription_state,
-            ) in connection.execute(
-                """
-                SELECT id, created_at, duration_ms, source, provider_name, model_id, audio_file,
-                    transcription_state
-                FROM recordings WHERE note_id = ? ORDER BY position
-                """,
-                (note_id,),
-            )
-        )
-        return Note(
-            note_id=note_id,
-            title=title,
-            created_at=_parse_time(created_at),
-            recordings=recordings,
-            speakers=speakers,
-            display=DisplayOptions(bool(show_timestamps), bool(show_speakers)),
-        )
+        return read_note(connection, note_id, self.audio.directory)
 
     @contextmanager
     def _connect(self) -> Generator[sqlite3.Connection]:
@@ -591,33 +419,8 @@ def _insert_note(connection: sqlite3.Connection, note: Note) -> None:
         (
             note.note_id,
             note.title,
-            _format_time(note.created_at),
+            format_time(note.created_at),
             note.display.show_timestamps,
             note.display.show_speakers,
         ),
     )
-
-
-def _require_found(rowcount: int) -> None:
-    if rowcount == 0:
-        raise _note_not_found()
-
-
-def _note_not_found() -> NoteNotFoundError:
-    return NoteNotFoundError(_("This note no longer exists."))
-
-
-def _format_time(moment: datetime) -> str:
-    return moment.astimezone(UTC).isoformat()
-
-
-def _parse_time(text: str) -> datetime:
-    return datetime.fromisoformat(text)
-
-
-def _to_ms(duration: timedelta) -> int:
-    return round(duration / timedelta(milliseconds=1))
-
-
-def _from_ms(milliseconds: int) -> timedelta:
-    return timedelta(milliseconds=milliseconds)

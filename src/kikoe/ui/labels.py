@@ -6,12 +6,7 @@ from gi.repository import GLib
 
 from kikoe.core.choice import ModelChoice, unsupported_features
 from kikoe.core.export import ExportFormat
-from kikoe.core.formatting import (
-    RelativeDay,
-    format_duration,
-    relative_day,
-    transcript_features,
-)
+from kikoe.core.formatting import RelativeDay, format_duration, relative_day
 from kikoe.core.models import (
     ApiKind,
     Capabilities,
@@ -20,29 +15,45 @@ from kikoe.core.models import (
     Recording,
     RecordingSource,
 )
+from kikoe.core.provider_registry import ProviderDescriptor, UploadHint, descriptor
+from kikoe.core.recording import CaptureState
+from kikoe.core.transcript_rows import transcript_columns
+from kikoe.core.transcription import LiveState
 from kikoe.core.validation import Capability, ModelError, ProviderError, capability_list
 from kikoe.i18n import _, ngettext
 from kikoe.services.importer import ImportStage
 
 
 def api_label(api: ApiKind) -> str:
-    match api:
-        case ApiKind.DEEPGRAM:
-            return _("Deepgram")
-        case ApiKind.OPENAI:
-            return _("OpenAI")
-        case ApiKind.OPENROUTER:
-            return _("OpenRouter")
-        case ApiKind.GEMINI:
-            return _("Gemini AI Studio")
-        case ApiKind.MIMO:
-            return _("MiMo")
-        case ApiKind.GROQ:
-            return _("Groq")
-        case ApiKind.MISTRAL:
-            return _("Mistral")
-        case ApiKind.OPENAI_COMPATIBLE:
-            return _("OpenAI-compatible")
+    provider = descriptor(api)
+    return _("OpenAI-compatible") if provider.generic else provider.display_name
+
+
+def chunk_length_subtitle(provider: ProviderDescriptor) -> str:
+    if UploadHint.DURATION_DEPENDS_ON_OPTIONS in provider.upload_hints:
+        return _("Maximum 60 minutes, or 30 with timestamps or speaker detection")
+    return _("0 uses the provider limit; chunks also respect the size limit")
+
+
+def chunk_size_subtitle(provider: ProviderDescriptor, limit_megabytes: float) -> str:
+    if UploadHint.SERVER_MAY_LIMIT_SIZE in provider.upload_hints:
+        return _("Defaults to 25 MB; your server may require smaller chunks")
+    return _("Maximum {size:g} MB per chunk").format(size=limit_megabytes)
+
+
+def live_status_label(state: LiveState) -> str:
+    return {
+        LiveState.CONNECTING: _("Connecting…"),
+        LiveState.LIVE: _("In progress"),
+        LiveState.RECONNECTING: _("Reconnecting… Audio is saved locally"),
+        LiveState.CATCHING_UP: _("Catching up…"),
+        LiveState.INCOMPLETE: _("Transcription incomplete"),
+        LiveState.PAUSED: _("Paused"),
+    }[state]
+
+
+def capture_label(state: CaptureState) -> str:
+    return _("Paused") if state is CaptureState.PAUSED else _("Recording")
 
 
 def capability_label(capability: Capability) -> str:
@@ -164,8 +175,10 @@ def recording_meta(recording: Recording, now: datetime) -> str:
         format_duration(recording.duration),
         f"{recording.provider_name} {recording.model_id}",
     ]
-    if features := transcript_features(recording.segments):
-        parts.append(", ".join(capability_label(feature) for feature in features))
+    has_times, has_speakers = transcript_columns(recording.segments)
+    features = ((has_times, Capability.TIMESTAMPS), (has_speakers, Capability.DIARIZATION))
+    if present := [capability_label(feature) for found, feature in features if found]:
+        parts.append(", ".join(present))
     return " · ".join(parts)
 
 

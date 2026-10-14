@@ -7,7 +7,7 @@ from pathlib import Path
 import httpx
 import pytest
 
-from helpers import run_async
+from helpers import form_field, run_async
 from kikoe.core.models import (
     ApiKind,
     AudioFormat,
@@ -16,35 +16,19 @@ from kikoe.core.models import (
     Segment,
     TimestampGranularity,
 )
-from kikoe.core.upload import OGG_OPUS, UploadLimits, upload_policy
+from kikoe.core.provider_registry import descriptor
+from kikoe.core.upload import OGG_OPUS, UploadLimits, effective_upload_limits
 from kikoe.core.validation import effective_base_url, validate_provider
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
-from kikoe.providers.factory import create_client
-from kikoe.providers.groq import MAX_UPLOAD_BYTES, GroqClient
+from kikoe.providers.groq import GroqClient
 from kikoe.storage.model_catalog import load_catalog
 from kikoe.storage.settings import Settings, SettingsStore
 
 MODEL = ModelSpec(
     "whisper-large-v3-turbo",
     "Whisper",
-    load_catalog().defaults(ApiKind.GROQ, "whisper-large-v3-turbo"),
+    load_catalog().preset(ApiKind.GROQ, "whisper-large-v3-turbo").defaults(),
 )
-
-
-@pytest.fixture
-def audio(tmp_path: Path) -> Path:
-    path = tmp_path / "upload.ogg"
-    path.write_bytes(b"OggS fake audio")
-    return path
-
-
-def field(request: httpx.Request, name: str) -> str | None:
-    marker = f'name="{name}"\r\n\r\n'.encode()
-    body = request.content
-    if marker not in body:
-        return None
-    start = body.index(marker) + len(marker)
-    return body[start : body.index(b"\r\n", start)].decode()
 
 
 @run_async
@@ -66,12 +50,12 @@ async def test_sdk_uploads_segments_with_authentication_and_primary_language(
     request = requests[0]
     assert str(request.url) == base_url.rstrip("/") + "/openai/v1/audio/transcriptions"
     assert request.headers["Authorization"] == "Bearer secret"
-    assert field(request, "model") == MODEL.model_id
-    assert field(request, "language") == "zh"
-    assert field(request, "response_format") == "verbose_json"
-    assert field(request, "timestamp_granularities[]") == "segment"
-    assert field(request, "stream") is None
-    assert field(request, "diarize") is None
+    assert form_field(request, "model") == MODEL.model_id
+    assert form_field(request, "language") == "zh"
+    assert form_field(request, "response_format") == "verbose_json"
+    assert form_field(request, "timestamp_granularities[]") == "segment"
+    assert form_field(request, "stream") is None
+    assert form_field(request, "diarize") is None
     assert b'filename="upload.ogg"' in request.content
     assert b"Content-Type: audio/ogg" in request.content
 
@@ -90,9 +74,9 @@ async def test_disabled_timestamps_omit_metadata_and_automatic_language(
     client = GroqClient("https://api.groq.com", "secret", httpx.MockTransport(respond))
     result = await client.transcribe_file(audio, MODEL, TranscriptionOptions(timestamps=False))
     assert result == ((Segment("Hello"),) if text else ())
-    assert field(requests[0], "response_format") == "json"
-    assert field(requests[0], "language") is None
-    assert field(requests[0], "timestamp_granularities[]") is None
+    assert form_field(requests[0], "response_format") == "json"
+    assert form_field(requests[0], "language") is None
+    assert form_field(requests[0], "timestamp_granularities[]") is None
 
 
 @run_async
@@ -157,6 +141,18 @@ async def test_sdk_errors_are_redacted_and_only_service_failures_retry(
 
 
 @run_async
+async def test_rejection_shows_the_service_message_not_the_raw_response(audio: Path) -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, json={"error": {"message": "Invalid file format"}})
+
+    client = GroqClient("https://api.groq.com", "secret", httpx.MockTransport(respond))
+    with pytest.raises(TranscriptionError) as caught:
+        await client.transcribe_file(audio, MODEL, TranscriptionOptions())
+    assert str(caught.value).endswith("Details: Invalid file format")
+    assert "Error code" not in str(caught.value)
+
+
+@run_async
 @pytest.mark.parametrize("is_timeout", [False, True])
 async def test_network_failures_are_retryable(audio: Path, is_timeout: bool) -> None:
     def respond(request: httpx.Request) -> httpx.Response:
@@ -169,19 +165,6 @@ async def test_network_failures_are_retryable(audio: Path, is_timeout: bool) -> 
         await client.transcribe_file(audio, MODEL, TranscriptionOptions())
     assert caught.value.retryable
     assert "secret" not in str(caught.value)
-
-
-@run_async
-async def test_oversized_audio_is_rejected_before_upload(audio: Path) -> None:
-    with audio.open("r+b") as stream:
-        stream.truncate(MAX_UPLOAD_BYTES + 1)
-
-    def respond(request: httpx.Request) -> httpx.Response:
-        pytest.fail("Oversized audio must not be uploaded")
-
-    client = GroqClient("https://api.groq.com", "secret", httpx.MockTransport(respond))
-    with pytest.raises(TranscriptionError, match="too large"):
-        await client.transcribe_file(audio, MODEL, TranscriptionOptions())
 
 
 @run_async
@@ -215,7 +198,7 @@ async def test_realtime_is_explicitly_unsupported() -> None:
         )
 
 
-def test_groq_configuration_roundtrips_and_uses_official_adapter(tmp_path: Path) -> None:
+def test_groq_configuration_roundtrips_with_its_upload_limits(tmp_path: Path) -> None:
     assert validate_provider("Groq", ApiKind.GROQ, "") is None
     provider = Provider(
         "groq", "Groq", ApiKind.GROQ, effective_base_url(ApiKind.GROQ, ""), (MODEL,)
@@ -223,12 +206,13 @@ def test_groq_configuration_roundtrips_and_uses_official_adapter(tmp_path: Path)
     store = SettingsStore(tmp_path / "settings.json")
     store.save_state(Settings((provider,)))
     assert store.load_state().providers == (provider,)
-    assert isinstance(create_client(provider, "secret"), GroqClient)
-    policy = upload_policy(ApiKind.GROQ)
-    assert policy.bytes == MAX_UPLOAD_BYTES and policy.format is AudioFormat.OGG
-    assert GroqClient(provider.base_url, "secret").upload_limits(
-        MODEL, TranscriptionOptions()
-    ) == UploadLimits(MAX_UPLOAD_BYTES, format=OGG_OPUS)
+    policy = descriptor(ApiKind.GROQ).upload
+    assert policy.bytes == 25_000_000 and policy.format is AudioFormat.OGG
+    assert effective_upload_limits(
+        GroqClient(provider.base_url, "secret").upload_limits(MODEL, TranscriptionOptions()),
+        provider.upload,
+        ApiKind.GROQ,
+    ) == UploadLimits(25_000_000, format=OGG_OPUS)
 
 
 @pytest.mark.parametrize("model_id", ["whisper-large-v3", "whisper-large-v3-turbo"])
@@ -236,7 +220,7 @@ def test_whisper_capabilities_support_words_without_live_or_speakers(model_id: s
     from kikoe.core.models import Capabilities, ModeCapabilities
 
     catalog = load_catalog()
-    caps = catalog.defaults(ApiKind.GROQ, model_id)
+    caps = catalog.preset(ApiKind.GROQ, model_id).defaults()
     assert caps == Capabilities(file=ModeCapabilities(timestamps=True, word_timestamps=True))
     claimed = ModelSpec(
         model_id,

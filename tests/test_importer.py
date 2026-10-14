@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from helpers import LIVE_ONLY, file_caps, run_async
+from kikoe.core.choice import ModelChoice
 from kikoe.core.chunking import TimeSpan
 from kikoe.core.models import (
     ApiKind,
@@ -18,8 +19,8 @@ from kikoe.core.models import (
     Segment,
     UploadSettings,
 )
-from kikoe.core.transcription import FileTranscriptSnapshot
-from kikoe.core.upload import MP3, OGG_OPUS, UploadFormat, UploadLimits
+from kikoe.core.transcription import FileTranscriptSnapshot, RealtimeProfile
+from kikoe.core.upload import OGG_OPUS, UploadFormat, UploadLimits
 from kikoe.media import transcode
 from kikoe.providers.base import (
     FileTranscriptCallback,
@@ -28,11 +29,11 @@ from kikoe.providers.base import (
     TranscriptionOptions,
 )
 from kikoe.services.importer import ImportStage, import_audio, transcribe_audio
-from kikoe.storage.library import Library
 from kikoe.storage.notes import NoteRepository
 
 MODEL = ModelSpec("whisper-large-v3", "Whisper", file_caps(timestamps=True))
 PROVIDER = Provider("p1", "Groq", ApiKind.OPENAI_COMPATIBLE, "https://example.test/v1", (MODEL,))
+CHOICE = ModelChoice(PROVIDER, MODEL)
 
 
 def s(seconds: float) -> timedelta:
@@ -54,6 +55,9 @@ class FakeClient:
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
         self.options.append(options)
         return UploadLimits(self.max_upload_bytes)
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return RealtimeProfile()
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions
@@ -111,11 +115,6 @@ class FakeConverter:
 
 
 @pytest.fixture
-def notes(tmp_path: Path) -> NoteRepository:
-    return NoteRepository(Library(tmp_path / "library.sqlite3", tmp_path / "audio"))
-
-
-@pytest.fixture
 def source(tmp_path: Path) -> Path:
     path = tmp_path / "Team Sync.m4a"
     path.write_bytes(b"original")
@@ -139,7 +138,7 @@ async def test_upload_limits_and_transcription_receive_the_requested_options(
     client = FakeClient()
 
     duration, segments = await transcribe_audio(
-        source, MODEL, client=client, options=options, work_dir=tmp_path / "work"
+        source, CHOICE, client=client, options=options, work_dir=tmp_path / "work"
     )
 
     assert client.options == [options or TranscriptionOptions()] * 2
@@ -160,8 +159,7 @@ async def test_import_creates_a_note_named_after_the_file(
     note = await import_audio(
         source,
         None,
-        PROVIDER,
-        MODEL,
+        CHOICE,
         client=FakeClient(),
         notes=notes,
         on_progress=stages,
@@ -196,8 +194,7 @@ async def test_import_into_an_open_note_appends(
     note = await import_audio(
         source,
         existing.note_id,
-        PROVIDER,
-        MODEL,
+        CHOICE,
         client=FakeClient(),
         notes=notes,
         work_dir=tmp_path,
@@ -205,8 +202,7 @@ async def test_import_into_an_open_note_appends(
     note = await import_audio(
         source,
         existing.note_id,
-        PROVIDER,
-        MODEL,
+        CHOICE,
         client=FakeClient(),
         notes=notes,
         work_dir=tmp_path,
@@ -231,8 +227,7 @@ async def test_oversize_audio_is_split_at_silences_and_times_shifted(
     note = await import_audio(
         source,
         None,
-        PROVIDER,
-        MODEL,
+        CHOICE,
         client=client,
         notes=notes,
         on_progress=stages,
@@ -263,8 +258,7 @@ async def test_failed_transcription_saves_nothing(
         await import_audio(
             source,
             None,
-            PROVIDER,
-            MODEL,
+            CHOICE,
             client=FakeClient(fail=True),
             notes=notes,
             work_dir=work,
@@ -304,7 +298,7 @@ async def test_cancelling_removes_the_copied_audio(
     await notes.load()
     client = HangingClient()
     task = asyncio.create_task(
-        import_audio(source, None, PROVIDER, MODEL, client=client, notes=notes, work_dir=tmp_path)
+        import_audio(source, None, CHOICE, client=client, notes=notes, work_dir=tmp_path)
     )
     await client.started.wait()
 
@@ -328,25 +322,21 @@ async def test_duration_limit_splits_even_small_compressed_files(
     use_converter(monkeypatch, converter)
     await notes.load()
     client = DurationClient()
-    await import_audio(source, None, PROVIDER, MODEL, client=client, notes=notes, work_dir=tmp_path)
+    await import_audio(source, None, CHOICE, client=client, notes=notes, work_dir=tmp_path)
     assert len(client.uploads) >= 2
     assert all(part.end - part.start <= s(60) for part in converter.parts)
 
 
 @run_async
-async def test_provider_chosen_format_is_used_for_every_part(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, notes: NoteRepository, source: Path
+async def test_registry_format_of_the_api_is_used_for_every_part(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, source: Path
 ) -> None:
-    class Mp3Client(FakeClient):
-        def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-            return UploadLimits(1000, format=MP3)
-
     use_converter(monkeypatch, FakeConverter(s(120), size=1500))
-    await notes.load()
-    client = Mp3Client()
-    await transcribe_audio(source, MODEL, client=client, work_dir=tmp_path)
+    client = FakeClient(max_upload_bytes=1000)
+    openai = ModelChoice(replace(PROVIDER, api=ApiKind.OPENAI), MODEL)
+    await transcribe_audio(source, openai, client=client, work_dir=tmp_path)
     assert len(client.uploads) >= 2
-    assert {path.suffix for path in client.uploads} == {".mp3"}
+    assert {path.suffix for path in client.uploads} == {".wav"}
 
 
 @run_async
@@ -360,7 +350,12 @@ async def test_live_only_model_is_refused_before_copying_audio(
     await notes.load()
     with pytest.raises(TranscriptionError, match="file transcription model"):
         await import_audio(
-            source, None, provider, model, client=FakeClient(), notes=notes, work_dir=tmp_path
+            source,
+            None,
+            ModelChoice(provider, model),
+            client=FakeClient(),
+            notes=notes,
+            work_dir=tmp_path,
         )
     assert list((tmp_path / "audio").glob("*")) == []
 
@@ -397,7 +392,7 @@ async def test_file_stream_offsets_previews_and_keeps_previous_parts(
     client = StreamingClient()
     duration, result = await transcribe_audio(
         source,
-        MODEL,
+        CHOICE,
         client=client,
         on_update=updates.append,
         work_dir=tmp_path / "work",
@@ -428,8 +423,7 @@ async def test_failed_later_stream_does_not_save_earlier_completed_parts(
         await import_audio(
             source,
             None,
-            PROVIDER,
-            MODEL,
+            CHOICE,
             client=client,
             notes=notes,
             on_update=updates.append,
@@ -463,8 +457,7 @@ async def test_cancel_during_import_commit_finishes_saving_audio_and_text(
         import_audio(
             source,
             None,
-            PROVIDER,
-            MODEL,
+            CHOICE,
             client=FakeClient(),
             notes=notes,
             work_dir=tmp_path / "work",
@@ -532,9 +525,8 @@ async def test_parallel_chunks_finish_out_of_order_but_transcript_and_previews_s
         task = asyncio.create_task(
             transcribe_audio(
                 source,
-                MODEL,
+                ModelChoice(provider, MODEL),
                 client=client,
-                provider=provider,
                 work_dir=tmp_path / "work",
                 on_progress=stages,
                 on_update=updates.append,
@@ -573,9 +565,8 @@ async def test_cancel_drains_active_requests_and_never_starts_queued_chunks(
         task = asyncio.create_task(
             transcribe_audio(
                 source,
-                MODEL,
+                ModelChoice(provider, MODEL),
                 client=client,
-                provider=provider,
                 work_dir=work,
             )
         )
@@ -614,7 +605,7 @@ async def test_encoded_parts_are_resplit_when_variable_bitrate_exceeds_size_budg
 
     use_converter(monkeypatch, VariableConverter(s(12), size=2000))
     client = FakeClient(max_upload_bytes=1000)
-    await transcribe_audio(source, MODEL, client=client, work_dir=tmp_path / "work")
+    await transcribe_audio(source, CHOICE, client=client, work_dir=tmp_path / "work")
     assert len(client.uploads) > 2
     assert not any(path.exists() for path in client.uploads)
 
@@ -629,7 +620,7 @@ async def test_provider_format_and_size_override_apply_to_every_part(
     use_converter(monkeypatch, converter)
     client = FakeClient(max_upload_bytes=5000)
     provider = replace(PROVIDER, upload=UploadSettings(chunk_bytes=1000, format=AudioFormat.FLAC))
-    await transcribe_audio(source, MODEL, client=client, provider=provider, work_dir=tmp_path)
+    await transcribe_audio(source, ModelChoice(provider, MODEL), client=client, work_dir=tmp_path)
     assert len(client.uploads) >= 2
     assert {path.suffix for path in client.uploads} == {".flac"}
 
@@ -670,9 +661,8 @@ async def test_cancel_waits_for_slow_request_cleanup(
         task = asyncio.create_task(
             transcribe_audio(
                 source,
-                MODEL,
+                ModelChoice(provider, MODEL),
                 client=client,
-                provider=provider,
                 work_dir=tmp_path / "work",
             )
         )

@@ -19,6 +19,7 @@ from kikoe.core.formatting import (
 from kikoe.core.models import Segment, TranscriptionState
 from kikoe.core.validation import SegmentEditError, validate_segment_edit
 from kikoe.i18n import _
+from kikoe.ui.guard import Guard
 from kikoe.ui.items import TranscriptItem
 from kikoe.ui.labels import recording_meta
 from kikoe.ui.segment_text import SegmentText
@@ -77,10 +78,9 @@ class TranscriptRow(Gtk.Box):
         """(compact, speakers, timestamps) the meta column is laid out for."""
         self._committed = ""
         """The text last saved or loaded; typing beyond it is not committed yet."""
-        self._loading = False
+        self._loading = Guard()
         self._typed = False
         """Whether there is typing that has not been committed."""
-        self._loading_times = False
         self._preedit = False
         self._commit_source = 0
         buffer = self.text_view.get_buffer()
@@ -288,11 +288,8 @@ class TranscriptRow(Gtk.Box):
         self._commit(final=True)
 
     def _load(self, text: str) -> None:
-        self._loading = True
-        try:
+        with self._loading:
             self.text_view.get_buffer().set_text(text)
-        finally:
-            self._loading = False
         self._committed = text
         self._typed = False
 
@@ -302,7 +299,7 @@ class TranscriptRow(Gtk.Box):
         return buffer.get_text(start, end, False)
 
     def _on_buffer_changed(self, _buffer: Gtk.TextBuffer) -> None:
-        if self._loading or self._key is None:
+        if self._loading.active or self._key is None:
             return
         self._typed = True
         self._cancel_commit()
