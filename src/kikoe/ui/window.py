@@ -38,10 +38,12 @@ from kikoe.providers.base import TranscriptionOptions
 from kikoe.providers.factory import create_client
 from kikoe.services.activity import ActivityTracker
 from kikoe.services.editing import EditingSession
-from kikoe.services.importer import ImportStage, import_audio
+from kikoe.services.errors import USER_FACING_ERRORS
+from kikoe.services.file_transcription import FileTranscriptionWorkflow
+from kikoe.services.importer import ImportStage
 from kikoe.services.playback import Playback
 from kikoe.services.realtime import RealtimeRecording
-from kikoe.services.recording import RecordingSession, recover_recording, transcribe_recording
+from kikoe.services.recording import RecordingSession, recover_recording
 from kikoe.storage.captures import CaptureStore, capture_dir
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
@@ -63,7 +65,7 @@ from kikoe.ui.retranscribe_dialog import RetranscribeDialog
 from kikoe.ui.search import NoteSearch
 from kikoe.ui.speaker_dialog import SpeakerDialog
 from kikoe.ui.speaker_editor import SpeakerEditor
-from kikoe.ui.tasks import USER_FACING_ERRORS, run_task, show_error, show_notice
+from kikoe.ui.tasks import run_task, show_error, show_notice
 from kikoe.ui.templates import ui_file
 from kikoe.ui.transcript_row import NO_TIME
 
@@ -172,6 +174,7 @@ class Window(Adw.ApplicationWindow):
         self._add_action("import-audio", self._on_import_audio)
         self._add_action("cancel-import", self._on_cancel_import)
         self._work = ActivityTracker()
+        self._transcriptions = FileTranscriptionWorkflow(providers, notes)
         self._file_display = FileTranscriptionDisplay(self.note_view)
         self._live: RealtimeRecording | None = None
         self._session: RecordingSession | None = None
@@ -774,17 +777,13 @@ class Window(Adw.ApplicationWindow):
         self._begin_file_transcription(recording, choice, replacing=True)
         try:
             await self._playback.finish()
-            key = await self._providers.get_api_key(choice.provider.provider_id)
-            note = await transcribe_recording(
+            note = await self._transcriptions.retranscribe(
                 note_id,
                 recording,
                 choice,
-                client=create_client(choice.provider, key),
-                notes=self._notes,
-                options=options,
+                options,
                 on_progress=self._on_file_progress,
                 on_update=self._on_file_update,
-                preserve_on_failure=True,
             )
             self._end_file_transcription()
             self._show_note(note)
@@ -1095,15 +1094,11 @@ class Window(Adw.ApplicationWindow):
         self._begin_file_transcription(recording, choice, title=path.stem)
         try:
             await self._playback.finish()
-            api_key = await self._providers.get_api_key(choice.provider.provider_id)
-            note = await import_audio(
+            note = await self._transcriptions.import_file(
                 path,
                 note_id,
-                choice.provider,
-                choice.model,
-                client=create_client(choice.provider, api_key),
-                notes=self._notes,
-                options=options,
+                choice,
+                options,
                 on_progress=self._on_file_progress,
                 on_update=self._on_file_update,
             )
@@ -1359,22 +1354,15 @@ class Window(Adw.ApplicationWindow):
     ) -> None:
         self._begin_file_transcription(recording, choice, replacing=True)
         try:
-            key = await self._providers.get_api_key(choice.provider.provider_id)
-            note = await transcribe_recording(
+            note = await self._transcriptions.transcribe_pending(
                 note_id,
                 recording,
                 choice,
-                client=create_client(choice.provider, key),
-                notes=self._notes,
-                options=options,
+                options,
                 on_progress=self._on_file_progress,
                 on_update=self._on_file_update,
             )
         except USER_FACING_ERRORS as error:
-            # Also covers key and client errors raised before the service could mark it.
-            await self._notes.update_transcription(
-                note_id, recording.recording_id, TranscriptionState.FAILED
-            )
             show_error(self, str(error), _("Transcription Failed"))
             return
         finally:
