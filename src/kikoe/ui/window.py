@@ -2,51 +2,37 @@
 
 import asyncio
 import logging
-from collections.abc import Callable
-from datetime import UTC, datetime
+from collections.abc import Callable, Coroutine
 
 from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
 from kikoe.core.activity import Activity, action_availability
-from kikoe.core.choice import ModelChoice
 from kikoe.core.models import (
     DisplayOptions,
     Note,
     Recording,
 )
 from kikoe.core.preferences import WindowState
-from kikoe.core.recording import CaptureProgress, CaptureState
-from kikoe.core.transcription import (
-    LiveSnapshot,
-)
+from kikoe.core.recording import CaptureState
 from kikoe.i18n import _
 from kikoe.media.player import PlaybackError
-from kikoe.media.recorder import SoundDeviceRecorder
-from kikoe.providers.base import TranscriptionOptions
 from kikoe.services.activity import ActivityTracker
 from kikoe.services.errors import USER_FACING_ERRORS
 from kikoe.services.playback import Playback
-from kikoe.services.realtime import RealtimeRecording
-from kikoe.services.recording import RecordingSession
-from kikoe.services.recording_workflow import RecordingCallbacks, RecordingWorkflow
-from kikoe.services.recovery import recover_all
-from kikoe.storage.captures import CaptureStore, capture_dir
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.export_controller import ExportController
 from kikoe.ui.labels import (
-    capture_label,
     note_title_subtitle,
-    recording_note_title,
 )
 from kikoe.ui.note_actions import NoteActions
 from kikoe.ui.note_sidebar import NoteSidebar
 from kikoe.ui.note_view import NoteView
-from kikoe.ui.recovery_prompt import confirm_recovery
+from kikoe.ui.recording_controller import RecordingController
 from kikoe.ui.segment_editor import SegmentEditor
 from kikoe.ui.speaker_controller import SpeakerController
-from kikoe.ui.tasks import run_task, show_error
+from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
 from kikoe.ui.transcription_controller import TranscriptionController
 from kikoe.ui.window_chrome import GeometryKeeper, HeaderLayout
@@ -96,133 +82,16 @@ class Window(Adw.ApplicationWindow):
         window_state: WindowState | None = None,
     ) -> None:
         super().__init__(application=application)
-        self._geometry = GeometryKeeper(self, providers, window_state)
-        # Custom widgets are added from code: Blueprint's linter cannot inspect their types.
-        self.note_view = NoteView()
-        self.note_view_slot.set_child(self.note_view)
-        self._editor = SegmentEditor(
-            notes,
-            self.note_view,
-            lambda coro: run_task(coro, self),
-            lambda: self._note,
-            self.show_note,
-            self.set_action_enabled,
-        )
-        self._export = ExportController(
-            self,
-            lambda: self._note,
-            self.note_view.flush_edits,
-            self._editor.wait_saved,
-            lambda title: self.add_toast(Adw.Toast(title=title)),
-        )
-        self.bottom_bar = BottomBar()
-        self.bottom_bar_slot.set_child(self.bottom_bar)
-        self._sidebar = NoteSidebar(
-            notes=notes,
-            notes_list=self.notes_list,
-            placeholder=self.notes_placeholder,
-            search_entry=self.search_entry,
-            search_bar=self.search_bar,
-            split_view=self.split_view,
-            start_task=lambda coro: run_task(coro, self),
-            current_note_id=lambda: self._note.note_id if self._note else None,
-            capture_state=self._sidebar_capture_state,
-            locked=self._switch_locked,
-            open_note=self._open_from_sidebar,
-        )
-        self._add_action("search-notes", self._on_search_notes)
-        for action, keys in (
-            ("new-note", ["<primary>n"]),
-            ("search-notes", ["<primary>f"]),
-            ("import-audio", ["<primary>o"]),
-            ("rename-note", ["F2"]),
-            ("export", ["<primary><shift>e"]),
-            ("undo", ["<primary>z"]),
-            ("redo", ["<primary><shift>z", "<primary>y"]),
-        ):
-            application.set_accels_for_action(f"win.{action}", keys)
         self._providers = providers
         self._notes = notes
         self._note: Note | None = None
         self._providers_loaded = False
-        self._add_action("copy-all-text", self._export.on_copy_all_text)
-        self._add_action("export", self._export.on_export)
-        self._add_toggle_action("show-timestamps")
-        self._add_toggle_action("show-speakers")
-        self._add_action("export-audio", self._export.on_export_audio, GLib.VariantType.new("s"))
-        self._add_action("choose-model", self._on_choose_model)
-        self._work = ActivityTracker()
-        self._recording: RecordingWorkflow | None = None
-        self._recording_note_id: str | None = None
-        self._recording_summary = ""
-        self._recording_model = ""
         self._recovery_checked = False
-        self._add_action("start-recording", self._on_start_recording)
-        self._add_action("pause-recording", self._on_pause_recording)
-        self._add_action("resume-recording", self._on_resume_recording)
-        self._add_action("stop-recording", self._on_stop_recording)
-        self._playback = Playback(
-            lambda coro: run_task(coro, self), self.note_view.set_playing, self._on_playback_error
-        )
-        self._speakers = SpeakerController(
-            self,
-            notes,
-            providers,
-            self._playback,
-            lambda: self._note,
-            lambda title: self.add_toast(Adw.Toast(title=title)),
-        )
-        self._add_action(
-            "play-recording", self._speakers.on_play_recording, GLib.VariantType.new("s")
-        )
-        self._add_action(
-            "play-sample", self._speakers.on_play_sample, GLib.VariantType.new("(sdd)")
-        )
-        self._add_action(
-            "edit-speaker", self._speakers.on_edit_speaker, GLib.VariantType.new("(ss)")
-        )
-        self._transcribe = TranscriptionController(
-            self,
-            self,
-            providers=providers,
-            notes=notes,
-            work=self._work,
-            bottom_bar=self.bottom_bar,
-            playback=self._playback,
-            speakers=self._speakers,
-            note_view=self.note_view,
-        )
-        self._add_action("import-audio", self._transcribe.on_import_audio)
-        self._add_action("cancel-import", self._transcribe.on_cancel_import)
-        self._add_action(
-            "retry-recording", self._transcribe.on_retry_recording, GLib.VariantType.new("s")
-        )
-        self._note_actions = NoteActions(
-            self,
-            notes,
-            self._playback,
-            lambda: self._note,
-            self.select_note,
-            self.show_note,
-            lambda title: self.add_toast(Adw.Toast(title=title)),
-        )
-        self._add_action("new-note", self._note_actions.on_new_note)
-        self._add_action("rename-note", self._note_actions.on_rename_note)
-        self._add_action("delete-note", self._note_actions.on_delete_note)
-        string = GLib.VariantType.new("s")
-        self._add_action("rename-note-row", self._note_actions.on_rename_note_row, string)
-        self._add_action("delete-note-row", self._note_actions.on_delete_note_row, string)
-        self._add_action("delete-recording", self._note_actions.on_delete_recording, string)
-        self._add_action("undo", self._editor.on_undo)
-        self._add_action("redo", self._editor.on_redo)
-        self._add_action(
-            "match-speakers", self._speakers.on_match_speakers, GLib.VariantType.new("s")
-        )
-        self._add_action(
-            "retranscribe-recording",
-            self._transcribe.on_retranscribe_recording,
-            GLib.VariantType.new("s"),
-        )
+        self._work = ActivityTracker()
+        self._geometry = GeometryKeeper(self, providers, window_state)
+        self._create_views()
+        self._create_controllers()
+        self._register_actions(application)
         self.set_action_enabled("new-note", False)  # Until providers are loaded.
         self.show_note(None)
         providers.connect_changed(self._on_providers_changed)
@@ -237,13 +106,119 @@ class Window(Adw.ApplicationWindow):
             self.compact_breakpoint,
         )
 
-    @property
-    def _session(self) -> RecordingSession | None:
-        return self._recording.session if self._recording is not None else None
+    def _create_views(self) -> None:
+        # Custom widgets are added from code: Blueprint's linter cannot inspect their types.
+        self.note_view = NoteView()
+        self.note_view_slot.set_child(self.note_view)
+        self.bottom_bar = BottomBar()
+        self.bottom_bar_slot.set_child(self.bottom_bar)
 
-    @property
-    def _live(self) -> RealtimeRecording | None:
-        return self._recording.live if self._recording is not None else None
+    def _start_task(self, coroutine: Coroutine[None, None, None]) -> asyncio.Task[None]:
+        return run_task(coroutine, self)
+
+    def _toast(self, title: str) -> None:
+        self.add_toast(Adw.Toast(title=title))
+
+    def _current_note(self) -> Note | None:
+        return self._note
+
+    def _create_controllers(self) -> None:
+        """Each controller owns one kind of work; the window only wires them together."""
+        notes, providers = self._notes, self._providers
+        start_task, toast, current_note = self._start_task, self._toast, self._current_note
+        self._editor = SegmentEditor(
+            notes, self.note_view, start_task, current_note, self.show_note, self.set_action_enabled
+        )
+        self._export = ExportController(
+            self, current_note, self.note_view.flush_edits, self._editor.wait_saved, toast
+        )
+        self._sidebar = NoteSidebar(
+            notes=notes,
+            notes_list=self.notes_list,
+            placeholder=self.notes_placeholder,
+            search_entry=self.search_entry,
+            search_bar=self.search_bar,
+            split_view=self.split_view,
+            start_task=start_task,
+            current_note_id=lambda: self._note.note_id if self._note else None,
+            capture_state=self._sidebar_capture_state,
+            locked=self._switch_locked,
+            open_note=self._open_from_sidebar,
+        )
+        self._playback = Playback(start_task, self.note_view.set_playing, self._on_playback_error)
+        self._speakers = SpeakerController(
+            self, notes, providers, self._playback, current_note, toast
+        )
+        self._transcribe = TranscriptionController(
+            self,
+            self,
+            providers=providers,
+            notes=notes,
+            work=self._work,
+            bottom_bar=self.bottom_bar,
+            playback=self._playback,
+            speakers=self._speakers,
+            note_view=self.note_view,
+        )
+        self._recorder = RecordingController(
+            self,
+            self,
+            providers=providers,
+            notes=notes,
+            work=self._work,
+            bottom_bar=self.bottom_bar,
+            playback=self._playback,
+            sidebar=self._sidebar,
+            note_view=self.note_view,
+            transcribe=self._transcribe,
+        )
+        self._note_actions = NoteActions(
+            self, notes, self._playback, current_note, self.select_note, self.show_note, toast
+        )
+
+    def _register_actions(self, application: Gtk.Application) -> None:
+        """Buttons and menus trigger these `win.*` actions; each belongs to one controller."""
+        string = GLib.VariantType.new("s")
+        for name, handler, parameter in (
+            ("search-notes", self._on_search_notes, None),
+            ("choose-model", self._on_choose_model, None),
+            ("new-note", self._note_actions.on_new_note, None),
+            ("rename-note", self._note_actions.on_rename_note, None),
+            ("delete-note", self._note_actions.on_delete_note, None),
+            ("rename-note-row", self._note_actions.on_rename_note_row, string),
+            ("delete-note-row", self._note_actions.on_delete_note_row, string),
+            ("delete-recording", self._note_actions.on_delete_recording, string),
+            ("copy-all-text", self._export.on_copy_all_text, None),
+            ("export", self._export.on_export, None),
+            ("export-audio", self._export.on_export_audio, string),
+            ("play-recording", self._speakers.on_play_recording, string),
+            ("play-sample", self._speakers.on_play_sample, GLib.VariantType.new("(sdd)")),
+            ("edit-speaker", self._speakers.on_edit_speaker, GLib.VariantType.new("(ss)")),
+            ("match-speakers", self._speakers.on_match_speakers, string),
+            ("undo", self._editor.on_undo, None),
+            ("redo", self._editor.on_redo, None),
+            ("import-audio", self._transcribe.on_import_audio, None),
+            ("cancel-import", self._transcribe.on_cancel_import, None),
+            ("retry-recording", self._transcribe.on_retry_recording, string),
+            ("retranscribe-recording", self._transcribe.on_retranscribe_recording, string),
+            ("start-recording", self._recorder.on_start, None),
+            ("pause-recording", self._recorder.on_pause, None),
+            ("resume-recording", self._recorder.on_resume, None),
+            ("stop-recording", self._recorder.on_stop, None),
+        ):
+            self._add_action(name, handler, parameter)
+        self._add_toggle_action("show-timestamps")
+        self._add_toggle_action("show-speakers")
+        for action, keys in (
+            ("new-note", ["<primary>n"]),
+            ("search-notes", ["<primary>f"]),
+            ("import-audio", ["<primary>o"]),
+            ("rename-note", ["F2"]),
+            ("export", ["<primary><shift>e"]),
+            ("undo", ["<primary>z"]),
+            ("redo", ["<primary><shift>z", "<primary>y"]),
+        ):
+            application.set_accels_for_action(f"win.{action}", keys)
 
     @property
     def note(self) -> Note | None:
@@ -338,15 +313,15 @@ class Window(Adw.ApplicationWindow):
         self.split_view.set_show_content(True)
 
     def _sidebar_capture_state(self, note_id: str) -> CaptureState:
-        session = self._session
-        if session is not None and note_id == self._recording_note_id:
+        session = self._recorder.session
+        if session is not None and note_id == self._recorder.note_id:
             return session.state
         return CaptureState.STOPPED
 
     def _activity(self) -> Activity:
         """What the window is doing right now; every action state follows from it."""
         choice = self.bottom_bar.choice
-        session = self._session
+        session = self._recorder.session
         return Activity(
             importing=self._work.import_task is not None,
             recording=self._work.recording_task is not None,
@@ -375,7 +350,7 @@ class Window(Adw.ApplicationWindow):
     def _on_notes_changed(self, note_id: str | None) -> None:
         if not self._recovery_checked:
             self._recovery_checked = True
-            self._work.recovery_task = run_task(self._offer_recovery(), self)
+            self._work.recovery_task = run_task(self._recorder.offer_recovery(), self)
         self._sidebar.refresh()
         current = self._note.note_id if self._note else None
         if current is None:
@@ -403,7 +378,7 @@ class Window(Adw.ApplicationWindow):
 
     async def _open_note(self, note_id: str) -> None:
         note = await self._notes.get_note(note_id)
-        current = self._recording_note_id or (self._note.note_id if self._note else None)
+        current = self._recorder.note_id or (self._note.note_id if self._note else None)
         if not self._switch_locked() or note_id == current:
             self.show_note(note)
 
@@ -430,14 +405,7 @@ class Window(Adw.ApplicationWindow):
                 self._editor.forget()
             self._transcribe.display.show(note)
             self.bottom_bar.set_note(bool(note.recordings))
-            if self._session is not None and self._session.state is not CaptureState.STOPPED:
-                self.note_view.show_recording(
-                    self._recording_summary, self._recording_model, realtime=self._live is not None
-                )
-                if self._live is not None:
-                    self.note_view.update_live(self._live.snapshot())
-                self.note_view.recording_view.set_state(self._session.state)
-                self.window_title.set_subtitle(capture_label(self._session.state))
+            self._recorder.show_in_progress()
         self.refresh_content()
         self.refresh_actions()
 
@@ -489,148 +457,6 @@ class Window(Adw.ApplicationWindow):
     def _on_choose_model(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         self.bottom_bar.present_transcription_dialog()
 
-    # Recording
-
-    def _on_start_recording(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        choice = self.bottom_bar.choice
-        if (
-            choice is None
-            or self._work.recording_task is not None
-            or self._work.import_task is not None
-        ):
-            return
-        options = self._transcribe.transcription_options(self.bottom_bar.requested_features)
-        note_id = self._note.note_id if self._note else None
-        self._work.recording_task = run_task(self._record(note_id, choice, options), self)
-        self.refresh_actions()
-
-    async def _record(
-        self, note_id: str | None, choice: ModelChoice, options: TranscriptionOptions
-    ) -> None:
-        async def upload(saved_note_id: str, recording: Recording) -> None:
-            await self._transcribe.upload_recording(saved_note_id, recording, choice, options)
-
-        self._recording = RecordingWorkflow(
-            notes=self._notes,
-            keys=self._providers,
-            callbacks=RecordingCallbacks(
-                before_start=self._playback.finish,
-                started=lambda note: self._on_recording_started(note, choice, options),
-                progress=self._on_capture_progress,
-                live_update=self._on_live_update,
-                capture_ended=self._on_recording_capture_ended,
-                saved=self.show_note,
-                nothing_recorded=lambda: self.add_toast(
-                    Adw.Toast(title=_("No audio was recorded"))
-                ),
-                capture_failed=lambda error: show_error(self, str(error)),
-                live_failed=self._on_live_failed,
-                upload=upload,
-                finished=self._on_recording_finished,
-            ),
-            make_recorder=lambda: SoundDeviceRecorder(self._providers.preferences.input_device),
-            open_store=lambda: CaptureStore(capture_dir()),
-            is_closing=lambda: self._work.closing,
-        )
-        await self._recording.run(note_id, recording_note_title(datetime.now(UTC)), choice, options)
-
-    def _on_recording_started(
-        self, note: Note, choice: ModelChoice, options: TranscriptionOptions
-    ) -> None:
-        self._recording_note_id = note.note_id
-        self._recording_model = choice.model.display_name
-        labels: list[str] = []
-        if options.timestamps:
-            labels.append(_("Timestamps"))
-        if options.diarization:
-            labels.append(_("Speakers"))
-        self._recording_summary = _("{provider} {model} · {options}").format(
-            provider=choice.provider.name,
-            model=choice.model.display_name,
-            options=_("Text only") if not labels else ", ".join(labels),
-        )
-        self.show_note(note)
-        self._refresh_recording_sidebar()
-        self.split_view.set_show_content(True)
-        self.bottom_bar.show_recording(self._recording_summary)
-
-    def _on_recording_capture_ended(self) -> None:
-        self.note_view.hide_recording()
-        self.bottom_bar.set_progress(_("Saving recording…"))
-        self.refresh_actions()
-
-    def _on_live_failed(self, error: Exception) -> None:
-        if isinstance(error, USER_FACING_ERRORS):
-            show_error(self, str(error))
-        else:
-            show_error(self, _("An unexpected error occurred. See the local log for details."))
-
-    def _on_recording_finished(self) -> None:
-        self._recording = None
-        self._recording_note_id = None
-        self._work.recording_task = None
-        self.note_view.hide_recording()
-        self.bottom_bar.set_progress(None)
-        self._refresh_recording_sidebar()
-        self.show_note(self._note)
-
-    def _refresh_recording_sidebar(self) -> None:
-        self._sidebar.refresh()
-        self._sidebar.select(self._note.note_id if self._note else None)
-
-    def _on_live_update(self, snapshot: LiveSnapshot) -> None:
-        self.note_view.update_live(snapshot)
-
-    def _on_capture_progress(self, progress: CaptureProgress) -> None:
-        self.bottom_bar.update_recording(progress)
-        self.note_view.recording_view.set_state(progress.state)
-        if progress.state is not CaptureState.STOPPED:
-            self.window_title.set_subtitle(capture_label(progress.state))
-        self.refresh_actions()
-
-    def _on_pause_recording(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        if self._session is not None:
-            run_task(self._change_capture_state(True), self)
-
-    def _on_resume_recording(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        if self._session is not None:
-            run_task(self._change_capture_state(False), self)
-
-    async def _change_capture_state(self, pause: bool) -> None:
-        if self._session is None:
-            return
-        if pause:
-            await self._session.pause()
-        else:
-            await self._session.resume()
-        self._refresh_recording_sidebar()
-
-    def _on_stop_recording(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        if self._session is not None:
-            run_task(self._session.stop(), self)
-
-    async def _offer_recovery(self) -> None:
-        store = CaptureStore(await asyncio.to_thread(capture_dir))
-        journals = await asyncio.to_thread(store.pending)
-        if not journals:
-            return
-        if not await confirm_recovery(self):
-            return
-        self._work.recovery_busy = True
-        self.bottom_bar.set_progress(_("Recovering recordings…"))
-        self.refresh_actions()
-        try:
-            await recover_all(journals, store, self._notes, self._show_recovered_note)
-        finally:
-            self._work.recovery_busy = False
-            self.bottom_bar.set_progress(None)
-            self.refresh_actions()
-
-    def _show_recovered_note(self, note: Note) -> None:
-        self.show_note(note)
-        self._sidebar.select(note.note_id)
-        self.split_view.set_show_content(True)
-
     @Gtk.Template.Callback()
     def _on_window_close_request(self, _window: Gtk.Window) -> bool:
         if self._work.closing:
@@ -653,14 +479,10 @@ class Window(Adw.ApplicationWindow):
             await self._work.wind_down(
                 wait_edits=self._editor.wait_saved,
                 finish_playback=self._playback.finish,
-                stop_recording=self._stop_session,
+                stop_recording=self._recorder.stop,
             )
             self.destroy()
         except USER_FACING_ERRORS:
             self._work.closing = False
             self.refresh_actions()
             raise
-
-    async def _stop_session(self) -> None:
-        if self._session is not None:
-            await self._session.stop()

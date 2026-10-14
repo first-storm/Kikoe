@@ -101,8 +101,6 @@ ban-relative-imports = "all"
 "src/kikoe/main.py" = ["TID251"]
 "scripts/**" = ["T20"]
 "tests/**" = ["TID251"]
-# Complexity baseline. ui/window.py is being decomposed; remove its entry when done.
-"src/kikoe/ui/window.py" = ["C901", "PLR0912", "PLR0915"]
 # One flat status-to-error table; splitting it would only hide the mapping.
 "src/kikoe/providers/errors.py" = ["C901", "PLR0912"]
 

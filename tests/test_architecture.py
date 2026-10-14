@@ -18,7 +18,6 @@ MAX_MODULE_LINES = 500
 OVERSIZED_MODULES = {
     "storage/library.py",
     "ui/note_view.py",
-    "ui/window.py",
 }
 """Modules above MAX_MODULE_LINES today; each one is scheduled to be split."""
 
