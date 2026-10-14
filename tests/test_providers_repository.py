@@ -257,3 +257,26 @@ async def test_upload_edits_preserve_models_credentials_and_other_providers(
     assert repo.get(first.provider_id).upload == upload
     await repo.update_provider(first.provider_id, "Changed", ApiKind.MIMO, URL, "secret")
     assert repo.get(first.provider_id).upload == UploadSettings()
+
+
+@run_async
+async def test_failed_window_save_keeps_state_and_does_not_notify(
+    repo: ProviderRepository, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from kikoe.core.preferences import WindowState
+    from kikoe.storage.settings import Settings, SettingsError
+
+    await repo.load()
+    original = repo.window
+    calls: list[str] = []
+    repo.connect_changed(lambda: calls.append("providers"))
+    repo.connect_preferences_changed(lambda: calls.append("preferences"))
+
+    def fail_save(self: SettingsStore, state: Settings) -> None:
+        raise SettingsError("Cannot save")
+
+    monkeypatch.setattr(SettingsStore, "save_state", fail_save)
+    with pytest.raises(SettingsError):
+        await repo.update_window(WindowState(900, 700, False))
+    assert repo.window == original
+    assert calls == []

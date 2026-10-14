@@ -71,7 +71,8 @@ Top-level helpers (`constants`, `paths`, `i18n`) are importable from any layer.
   restores the main window's size; unusable values are ignored, not reported. The frozen `Settings` and core
   `Preferences` types describe one snapshot; `ProviderRepository` owns both kinds of
   settings and serializes writes with an asyncio lock. Field changes merge against
-  the latest snapshot; failed writes do not publish state or notify listeners. Mutations
+  the latest snapshot; failed writes do not publish state or notify listeners. Provider, preference and window
+  changes share one private settings writer, with notification kept at each caller. Mutations
   require a successful settings read, so a failed startup cannot overwrite a damaged file. A file with
   a newer `version` or damaged content is reported to the user, not overwritten silently.
   GSettings is avoided because it needs compiled schemas on
@@ -333,7 +334,8 @@ SQLite `instr` expressions and a Python `casefold` SQL function. Wildcards are l
 Unicode matching is consistent, and no schema change is required. `NoteRepository.search`
 runs this off the GTK thread. The sidebar debounces input by 200 ms, cancels old tasks
 and rejects outdated results; matching summaries retain the existing newest-first order.
-This personal-project implementation scans text rather than maintaining an FTS index.
+This personal-project implementation scans text rather than maintaining an FTS index. List and search queries share summary
+projection and ordering; searches load only matching summaries.
 
 `core.preferences.preferred_model` resolves recent, default, first available, then none.
 The bottom bar persists explicit model selection through the shared settings writer.

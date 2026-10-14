@@ -148,16 +148,38 @@ class Library:
     def list_notes(self) -> tuple[NoteSummary, ...]:
         """All notes, newest first."""
         with self._connect() as connection:
-            rows = connection.execute(
-                """
-                SELECT n.id, n.title, n.created_at, COUNT(r.id), COALESCE(SUM(r.duration_ms), 0),
-                    (SELECT source FROM recordings WHERE note_id = n.id
-                     ORDER BY position LIMIT 1)
-                FROM notes AS n LEFT JOIN recordings AS r ON r.note_id = n.id
-                GROUP BY n.id
-                ORDER BY n.created_at DESC
-                """
-            ).fetchall()
+            return self._summaries(connection)
+
+    def search_notes(self, query: str) -> tuple[NoteSummary, ...]:
+        """Match titles or segment text without loading unrelated summaries."""
+        query = query.strip().casefold()
+        with self._connect() as connection:
+            connection.create_function("casefold", 1, str.casefold, deterministic=True)
+            return self._summaries(connection, query)
+
+    def _summaries(
+        self, connection: sqlite3.Connection, query: str = ""
+    ) -> tuple[NoteSummary, ...]:
+        condition = (
+            """
+            WHERE instr(casefold(n.title), ?) > 0
+            OR EXISTS (SELECT 1 FROM recordings r JOIN segments s ON s.recording_id = r.id
+                       WHERE r.note_id = n.id AND instr(casefold(s.text), ?) > 0)
+        """
+            if query
+            else ""
+        )
+        rows = connection.execute(
+            """
+            SELECT n.id, n.title, n.created_at, COUNT(r.id), COALESCE(SUM(r.duration_ms), 0),
+                (SELECT source FROM recordings WHERE note_id = n.id
+                 ORDER BY position LIMIT 1)
+            FROM notes AS n LEFT JOIN recordings AS r ON r.note_id = n.id
+            """
+            + condition
+            + " GROUP BY n.id ORDER BY n.created_at DESC",
+            (query, query) if query else (),
+        ).fetchall()
         return tuple(
             NoteSummary(
                 note_id=note_id,
@@ -169,22 +191,6 @@ class Library:
             )
             for note_id, title, created_at, count, duration_ms, source in rows
         )
-
-    def search_notes(self, query: str) -> tuple[NoteSummary, ...]:
-        """Match titles or segment text without loading entire note objects."""
-        query = query.strip().casefold()
-        if not query:
-            return self.list_notes()
-        with self._connect() as connection:
-            connection.create_function("casefold", 1, str.casefold, deterministic=True)
-            rows = connection.execute(
-                """SELECT n.id FROM notes n WHERE instr(casefold(n.title), ?) > 0
-                OR EXISTS (SELECT 1 FROM recordings r JOIN segments s ON s.recording_id = r.id
-                           WHERE r.note_id = n.id AND instr(casefold(s.text), ?) > 0)""",
-                (query, query),
-            ).fetchall()
-        matches = {row[0] for row in rows}
-        return tuple(note for note in self.list_notes() if note.note_id in matches)
 
     def get_note(self, note_id: str) -> Note:
         with self._connect() as connection:

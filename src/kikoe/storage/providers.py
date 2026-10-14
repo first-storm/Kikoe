@@ -95,11 +95,7 @@ class ProviderRepository:
 
     async def update_preferences(self, change: Callable[[Preferences], Preferences]) -> None:
         """Merge a field edit with the latest snapshot inside the same writer lock."""
-        async with self._lock:
-            await self._ensure_loaded()
-            state = replace(self._state, preferences=change(self.preferences))
-            await asyncio.to_thread(self._settings.save_state, state)
-            self._state = state
+        await self._write_state(lambda state: replace(state, preferences=change(state.preferences)))
         self._notify_preferences()
 
     @property
@@ -108,11 +104,7 @@ class ProviderRepository:
 
     async def update_window(self, window: WindowState) -> None:
         """Remember the window geometry without notifying preference listeners."""
-        async with self._lock:
-            await self._ensure_loaded()
-            state = replace(self._state, window=window)
-            await asyncio.to_thread(self._settings.save_state, state)
-            self._state = state
+        await self._write_state(lambda state: replace(state, window=window))
 
     def _notify_preferences(self) -> None:
         for listener in tuple(self._preference_listeners):
@@ -225,12 +217,18 @@ class ProviderRepository:
         )
 
     async def _commit(self, change: Callable[[], tuple[Provider, ...]]) -> None:
+        await self._write_state(
+            lambda state: replace(state, providers=tuple(self._clamp(p) for p in change()))
+        )
+        self._notify()
+
+    async def _write_state(self, change: Callable[[Settings], Settings]) -> None:
+        """Merge and persist inside one lock; failed writes never publish state."""
         async with self._lock:
             await self._ensure_loaded()
-            state = replace(self._state, providers=tuple(self._clamp(p) for p in change()))
+            state = change(self._state)
             await asyncio.to_thread(self._settings.save_state, state)
             self._state = state
-        self._notify()
 
     async def _ensure_loaded(self) -> None:
         """A failed startup read must never turn a later edit into data loss."""

@@ -48,3 +48,25 @@ async def test_repository_search_refreshes_after_rename(tmp_path: Path) -> None:
     await repository.rename_note(note.note_id, "Podcast")
     assert await repository.search("meeting") == ()
     assert (await repository.search("podcast"))[0].note_id == note.note_id
+
+
+def test_search_returns_identical_summaries_without_loading_unmatched_notes(tmp_path: Path) -> None:
+    library = Library(tmp_path / "library.sqlite3", tmp_path / "audio")
+    library.migrate()
+    library.create_note("Other", datetime(2026, 1, 1, tzinfo=UTC))
+    library.add_recording(
+        None,
+        "Match",
+        Recording(
+            "r",
+            datetime(2026, 2, 1, tzinfo=UTC),
+            timedelta(seconds=5),
+            RecordingSource.IMPORTED,
+            "Cloud",
+            "Model",
+            (Segment("match"),),
+        ),
+    )
+    expected = library.list_notes()[:1]
+    assert library.search_notes("match") == expected
+    assert library.search_notes("") == library.list_notes()
