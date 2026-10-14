@@ -18,7 +18,7 @@ from kikoe.core.models import (
     Segment,
     UploadSettings,
 )
-from kikoe.core.transcription import FileTranscriptSnapshot
+from kikoe.core.transcription import FileTranscriptSnapshot, RealtimeProfile
 from kikoe.core.upload import MP3, OGG_OPUS, UploadFormat, UploadLimits
 from kikoe.media import transcode
 from kikoe.providers.base import (
@@ -54,6 +54,9 @@ class FakeClient:
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
         self.options.append(options)
         return UploadLimits(self.max_upload_bytes)
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return RealtimeProfile()
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions

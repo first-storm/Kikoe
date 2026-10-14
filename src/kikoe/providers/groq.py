@@ -10,6 +10,7 @@ import httpx
 from groq import APIConnectionError, APIError, APIStatusError, APITimeoutError, AsyncGroq, omit
 
 from kikoe.core.models import ModelSpec, Segment
+from kikoe.core.transcription import RealtimeProfile
 from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
@@ -93,6 +94,9 @@ class GroqClient:
         else:
             message = _("Could not complete transcription. Check your connection and try again.")
         return TranscriptionError(message.format(host=self._host), retryable=True)
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return RealtimeProfile()
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions

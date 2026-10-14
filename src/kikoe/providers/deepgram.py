@@ -13,7 +13,7 @@ from deepgram.environment import DeepgramClientEnvironment
 from pydantic import BaseModel
 
 from kikoe.core.models import ModelSpec, Segment
-from kikoe.core.transcription import TranscriptEvent
+from kikoe.core.transcription import CheckpointStrategy, RealtimeProfile, TranscriptEvent
 from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
@@ -124,6 +124,9 @@ class DeepgramClient:
                 )
         except Exception as error:
             raise sdk_error(error) from error
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return RealtimeProfile(checkpoint=CheckpointStrategy.AUDIO_END)
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions

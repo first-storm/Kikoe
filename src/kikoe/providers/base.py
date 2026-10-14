@@ -10,7 +10,7 @@ from typing import Protocol
 
 from kikoe.core.choice import RequestedFeatures
 from kikoe.core.models import ModeCapabilities, ModelSpec, Segment, TimestampGranularity
-from kikoe.core.transcription import FileTranscriptSnapshot, TranscriptEvent
+from kikoe.core.transcription import FileTranscriptSnapshot, RealtimeProfile, TranscriptEvent
 from kikoe.core.upload import UploadLimits
 
 log = logging.getLogger(__name__)
@@ -83,6 +83,10 @@ class TranscriptionProvider(Protocol):
         ...
 
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits: ...
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        """How live audio must be delivered; file-only services return the default."""
+        ...
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions

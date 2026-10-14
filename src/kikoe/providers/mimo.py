@@ -11,6 +11,7 @@ from openai import APIError, AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
 from kikoe.core.models import ModelSpec, Segment
+from kikoe.core.transcription import RealtimeProfile
 from kikoe.core.upload import MP3, WAV, UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
@@ -89,6 +90,9 @@ class MiMoClient:
                 _("{host} sent a response Kikoe does not understand.").format(host=self._host)
             )
         return (Segment(text),)
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return RealtimeProfile()
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions

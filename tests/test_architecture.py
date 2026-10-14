@@ -26,7 +26,6 @@ API_KIND_MEMBER_USERS = {
     "core/provider_registry.py",
     "providers/factory.py",
     "providers/mistral.py",
-    "services/realtime.py",
 }
 """Modules that name a specific ``ApiKind.MEMBER``. Provider-specific rules belong in the
 provider registry or the provider's own client, not in callers."""

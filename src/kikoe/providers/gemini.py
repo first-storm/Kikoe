@@ -13,7 +13,7 @@ from google.genai import types
 from pydantic import BaseModel
 
 from kikoe.core.models import ModelSpec, Segment
-from kikoe.core.transcription import TranscriptEvent
+from kikoe.core.transcription import RealtimeProfile, TranscriptEvent
 from kikoe.core.upload import UploadLimits
 from kikoe.providers.base import (
     FileTranscriptCallback,
@@ -27,6 +27,8 @@ from kikoe.providers.parsing import entries, fields, parse_words
 from kikoe.providers.worker import run_sdk_worker
 
 FLUSH_GRACE_SECONDS = 2
+SESSION_SECONDS = 540
+"""Live connections are replaced before the service ends them on its own."""
 """How long a flush waits for speech the server has not announced yet."""
 
 
@@ -111,6 +113,9 @@ class GeminiClient:
                         await sdk.files.delete(name=uploaded.name)
         except Exception as error:
             raise sdk_error(error) from error
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return RealtimeProfile(max_session=timedelta(seconds=SESSION_SECONDS))
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions

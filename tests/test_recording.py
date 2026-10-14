@@ -19,7 +19,7 @@ from kikoe.core.models import (
     TranscriptionState,
 )
 from kikoe.core.recording import CaptureProgress, CaptureState, pcm_level
-from kikoe.core.transcription import FileTranscriptSnapshot
+from kikoe.core.transcription import FileTranscriptSnapshot, RealtimeProfile
 from kikoe.core.upload import OGG_OPUS, UploadFormat, UploadLimits
 from kikoe.media import transcode
 from kikoe.media.recorder import RecorderError
@@ -80,6 +80,9 @@ class FakeRecorder:
 class FakeClient:
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
         return UploadLimits(self.max_upload_bytes)
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return RealtimeProfile()
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions

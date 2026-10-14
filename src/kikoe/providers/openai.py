@@ -18,7 +18,7 @@ from pydantic import BaseModel
 
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.recording import pcm_level
-from kikoe.core.transcription import SpeechBoundary, TranscriptEvent
+from kikoe.core.transcription import RealtimeProfile, SpeechBoundary, TranscriptEvent
 from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
@@ -125,6 +125,9 @@ class OpenAIClient:
             raise TranscriptionError(
                 _("{host} sent a response Kikoe does not understand.").format(host=self._host)
             ) from error
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return RealtimeProfile(sample_rate=24000)
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions

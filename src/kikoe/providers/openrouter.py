@@ -7,6 +7,7 @@ import httpx
 from openrouter import OpenRouter
 
 from kikoe.core.models import ModelSpec, Segment
+from kikoe.core.transcription import RealtimeProfile
 from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
@@ -70,6 +71,9 @@ class OpenRouterClient:
                 return parse_segments(data, timed, diarize)
         except Exception as error:
             raise sdk_error(error) from error
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return RealtimeProfile()
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions

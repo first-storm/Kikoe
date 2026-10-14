@@ -8,9 +8,16 @@ from datetime import timedelta
 
 from kikoe.core.choice import ModelChoice
 from kikoe.core.chunking import offset_segments
-from kikoe.core.models import ApiKind, Segment
+from kikoe.core.models import Segment
 from kikoe.core.recording import CaptureState
-from kikoe.core.transcription import LiveSnapshot, LiveState, LiveTranscript, scope_speakers
+from kikoe.core.transcription import (
+    CheckpointStrategy,
+    LiveSnapshot,
+    LiveState,
+    LiveTranscript,
+    RealtimeProfile,
+    scope_speakers,
+)
 from kikoe.media.ffmpeg import PCMStream
 from kikoe.providers.base import (
     RealtimeSession,
@@ -21,7 +28,6 @@ from kikoe.providers.errors import sdk_error
 from kikoe.services.recording import RecordingSession
 
 log = logging.getLogger(__name__)
-GEMINI_SESSION_SECONDS = 540
 
 
 class RealtimeRecording:
@@ -51,6 +57,7 @@ class RealtimeRecording:
         self._seen: set[str] = set()
         self._state = LiveState.CONNECTING
         self._exhausted = False
+        self._profile = RealtimeProfile()
 
     def snapshot(self) -> LiveSnapshot:
         return LiveSnapshot(self.segments, self._text.preview, self._state)
@@ -107,11 +114,8 @@ class RealtimeRecording:
         self._exhausted = False
         self._text = LiveTranscript()
         self._seen = set()
-        rate = (
-            24000
-            if self.choice.provider.api in (ApiKind.OPENAI, ApiKind.OPENAI_COMPATIBLE)
-            else 16000
-        )
+        self._profile = self.client.realtime_profile(self.choice.model)
+        rate = self._profile.sample_rate
         session: RealtimeSession | None = None
         converter: PCMStream | None = None
         tasks: list[asyncio.Task[None]] = []
@@ -178,16 +182,14 @@ class RealtimeRecording:
             self._sent = start + (output_bytes * journal.sample_rate // rate // 2) * 2
             # Catch-up is paced rather than uploading an unbounded WebSocket burst.
             await asyncio.sleep(len(block) / (rate * 2 * 1.25))
-            if self.choice.provider.api is not ApiKind.DEEPGRAM and (
+            if self._profile.checkpoint is CheckpointStrategy.FLUSH and (
                 loop.time() - checkpoint >= 15
                 or (self._replay_until and self._sent >= self._replay_until)
             ):
                 await self._checkpoint(session)
                 checkpoint = loop.time()
-            if (
-                self.choice.provider.api is ApiKind.GEMINI
-                and loop.time() - connected >= GEMINI_SESSION_SECONDS
-            ):
+            lifetime = self._profile.max_session
+            if lifetime is not None and loop.time() - connected >= lifetime.total_seconds():
                 await self._checkpoint(session)
                 return
         await self._checkpoint(session)
@@ -220,7 +222,10 @@ class RealtimeRecording:
                 if not self._replay_until:
                     self.segments = self._stable + self._text.segments
                     await self._persist()
-                if self.choice.provider.api is ApiKind.DEEPGRAM and event.audio_end is not None:
+                if (
+                    self._profile.checkpoint is CheckpointStrategy.AUDIO_END
+                    and event.audio_end is not None
+                ):
                     covered = (
                         start + round(event.audio_end.total_seconds() * journal.sample_rate) * 2
                     )

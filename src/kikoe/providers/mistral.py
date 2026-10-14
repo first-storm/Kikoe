@@ -19,6 +19,7 @@ from mistralai.extra.exceptions import RealtimeTranscriptionException
 
 from kikoe.core.choice import RequestedFeatures, language_dropped
 from kikoe.core.models import ApiKind, ModelSpec, Segment, TimestampGranularity
+from kikoe.core.transcription import RealtimeProfile
 from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
@@ -137,6 +138,9 @@ class MistralClient:
         if detail and self._key:
             detail = detail.replace(self._key, "[redacted]")
         return status_error(error.status_code, self._host, detail)
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return RealtimeProfile()
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions
