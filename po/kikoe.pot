@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kikoe\n"
 "Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
-"POT-Creation-Date: 2026-10-14 23:53+1100\n"
+"POT-Creation-Date: 2026-10-15 00:27+1100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -110,130 +110,119 @@ msgid ""
 "({detail})"
 msgstr ""
 
-#: src/kikoe/providers/deepgram.py:219
+#. Translators: {name} is a service name such as Groq.
+#: src/kikoe/providers/base.py:103
+#, python-brace-format
+msgid "{name} supports file transcription only."
+msgstr ""
+
+#: src/kikoe/providers/deepgram.py:204
 #, python-brace-format
 msgid "Deepgram rejected realtime transcription: {message}"
 msgstr ""
 
-#: src/kikoe/providers/deepgram.py:224
+#: src/kikoe/providers/deepgram.py:209
 #: src/kikoe/providers/mistral_realtime.py:119
 msgid ""
 "The provider rejected realtime transcription. Check the model and API key."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:46
+#: src/kikoe/providers/errors.py:36
+#, python-brace-format
+msgid "{host} sent a response Kikoe does not understand."
+msgstr ""
+
+#: src/kikoe/providers/errors.py:59
 #, python-brace-format
 msgid "{subject} rejected the API key. Check it in Preferences."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:49
+#: src/kikoe/providers/errors.py:62
 #, python-brace-format
 msgid ""
 "{subject} does not allow this API key to use this model, or is not available "
 "in your region. Check your account and the key in Preferences."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:53
+#: src/kikoe/providers/errors.py:66
 #, python-brace-format
 msgid "{subject} reports that your account has run out of credits."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:55
+#: src/kikoe/providers/errors.py:68
 #, python-brace-format
 msgid "{subject} could not find this model. Check the model name."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:57
+#: src/kikoe/providers/errors.py:70
 #, python-brace-format
 msgid "{subject} took too long to respond. Try again later."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:59
+#: src/kikoe/providers/errors.py:72
 #, python-brace-format
 msgid "The audio is too large for {subject}."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:62
+#: src/kikoe/providers/errors.py:75
 #, python-brace-format
 msgid ""
 "{subject} is limiting requests, or your quota is used up. Wait a while and "
 "try again, or check your plan."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:66
+#: src/kikoe/providers/errors.py:79
 #, python-brace-format
 msgid "{subject} is having problems (HTTP {status}). Try again later."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:68
+#: src/kikoe/providers/errors.py:81
 #, python-brace-format
 msgid "{subject} could not process this audio (HTTP {status})."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:71
+#: src/kikoe/providers/errors.py:84
 #, python-brace-format
 msgid ""
 "{subject} rejected this request (HTTP {status}). Check the model and options."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:74
+#: src/kikoe/providers/errors.py:87
 #, python-brace-format
 msgid "{subject} returned an unexpected error (HTTP {status})."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:79
+#: src/kikoe/providers/errors.py:92
 #, python-brace-format
 msgid "{message} Details: {detail}"
 msgstr ""
 
-#: src/kikoe/providers/errors.py:87
+#: src/kikoe/providers/errors.py:100
 msgid "The provider sent a response Kikoe does not understand."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:90
+#: src/kikoe/providers/errors.py:104
 msgid "The provider"
 msgstr ""
 
-#: src/kikoe/providers/errors.py:92 src/kikoe/providers/groq.py:95
+#: src/kikoe/providers/errors.py:106
 msgid "Could not complete transcription. Check your connection and try again."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:107 src/kikoe/providers/groq.py:91
-#: src/kikoe/providers/mistral.py:120
+#: src/kikoe/providers/errors.py:120 src/kikoe/providers/mistral.py:100
 #, python-brace-format
 msgid "{host} took too long to respond. Try again later."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:109 src/kikoe/providers/groq.py:93
-#: src/kikoe/providers/mistral.py:123 src/kikoe/providers/mistral.py:175
+#: src/kikoe/providers/errors.py:122 src/kikoe/providers/mistral.py:103
+#: src/kikoe/providers/mistral.py:146
 #, python-brace-format
 msgid "Could not reach {host}. Try again later."
 msgstr ""
 
-#: src/kikoe/providers/errors.py:112
+#: src/kikoe/providers/errors.py:125
 #, python-brace-format
 msgid "{host} could not finish transcription: {message}"
-msgstr ""
-
-#: src/kikoe/providers/groq.py:52 src/kikoe/providers/mimo.py:58
-#: src/kikoe/providers/mistral.py:87 src/kikoe/providers/openai.py:75
-#: src/kikoe/providers/openrouter.py:49
-msgid "The audio file is too large to upload to this provider."
-msgstr ""
-
-#: src/kikoe/providers/groq.py:81 src/kikoe/providers/mimo.py:90
-#: src/kikoe/providers/mistral.py:126 src/kikoe/providers/mistral.py:135
-#: src/kikoe/providers/openai.py:126
-#, python-brace-format
-msgid "{host} sent a response Kikoe does not understand."
-msgstr ""
-
-#: src/kikoe/providers/groq.py:104
-msgid "Groq supports file transcription only."
-msgstr ""
-
-#: src/kikoe/providers/mimo.py:100
-msgid "MiMo supports file transcription only."
 msgstr ""
 
 #: src/kikoe/providers/mistral_file_stream.py:61
@@ -241,22 +230,18 @@ msgstr ""
 msgid "Transcription ended before it was complete. Try again."
 msgstr ""
 
-#: src/kikoe/providers/mistral_realtime.py:116
+#: src/kikoe/providers/mistral_realtime.py:114
 #, python-brace-format
 msgid "Mistral rejected realtime transcription: {message}"
 msgstr ""
 
-#: src/kikoe/providers/openai.py:169
+#: src/kikoe/providers/openai.py:160
 #, python-brace-format
 msgid "{host} rejected the realtime session: {message}"
 msgstr ""
 
-#: src/kikoe/providers/openai.py:235
+#: src/kikoe/providers/openai.py:226
 msgid "Realtime transcription failed. Your audio has been kept."
-msgstr ""
-
-#: src/kikoe/providers/openrouter.py:81
-msgid "OpenRouter supports file transcription only."
 msgstr ""
 
 #: src/kikoe/services/importer.py:76 src/kikoe/ui/bottom_bar.py:170
