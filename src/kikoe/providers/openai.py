@@ -30,7 +30,7 @@ from kikoe.providers.base import (
 )
 from kikoe.providers.errors import openai_error, unreadable
 from kikoe.providers.openai_file_stream import OpenAIFileTranscript
-from kikoe.providers.parsing import parse_segments
+from kikoe.providers.parsing import parse_segments, parse_text
 
 
 def openai_sdk(
@@ -230,8 +230,7 @@ class OpenAISession:
                     pass
             while self._order and self._order[0] in self._completed:
                 id = self._order.pop(0)
-                text = self._completed.pop(id).strip()
                 self._previews.pop(id, None)
-                yield TranscriptEvent(id, (Segment(text),) if text else (), True)
+                yield TranscriptEvent(id, parse_text(self._completed.pop(id)), True)
                 self._finals += 1
                 self._changed.set()

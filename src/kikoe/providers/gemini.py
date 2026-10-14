@@ -24,7 +24,7 @@ from kikoe.providers.base import (
     file_capabilities,
 )
 from kikoe.providers.errors import sdk_error
-from kikoe.providers.parsing import entries, fields, parse_words
+from kikoe.providers.parsing import entries, fields, parse_text, parse_words
 from kikoe.providers.worker import run_sdk_worker
 
 FLUSH_GRACE_SECONDS = 2
@@ -157,10 +157,7 @@ def parse_gemini(body: object, timed: bool, diarize: bool) -> tuple[Segment, ...
         segments = parse_words(words, timed, diarize)
         if segments:
             return segments
-    text = data.get("output_text")
-    if not isinstance(text, str):
-        raise ValueError("Missing transcript")
-    return (Segment(text.strip()),) if text.strip() else ()
+    return parse_text(data.get("output_text"))
 
 
 class GeminiSession:

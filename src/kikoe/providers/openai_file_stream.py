@@ -6,7 +6,7 @@ from kikoe.core.models import Segment
 from kikoe.core.transcription import FileTranscriptSnapshot
 from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionError
-from kikoe.providers.parsing import parse_segments
+from kikoe.providers.parsing import parse_segments, parse_text
 
 
 class OpenAIFileTranscript:
@@ -54,7 +54,7 @@ class OpenAIFileTranscript:
             for s in self._segments[id]
         )
         if self._text is not None and not self._structured:
-            segments = parse_segments({"text": self._text}, False, False)
+            segments = parse_text(self._text)
         return FileTranscriptSnapshot(
             segments, tuple(Segment(text) for text in self._previews.values() if text.strip())
         )

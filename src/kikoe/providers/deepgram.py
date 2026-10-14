@@ -25,7 +25,7 @@ from kikoe.providers.base import (
     file_capabilities,
 )
 from kikoe.providers.errors import sdk_error
-from kikoe.providers.parsing import entries, fields, parse_words, seconds
+from kikoe.providers.parsing import entries, fields, parse_text, parse_words, seconds
 
 
 class _Socket(Protocol):
@@ -157,11 +157,7 @@ def _alternative(data: dict[str, object], timed: bool, diarize: bool) -> tuple[S
     words = entries(data.get("words"))
     if words:
         return parse_words(words, timed, diarize)
-    value = data.get("transcript")
-    if not isinstance(value, str):
-        raise ValueError("Missing transcript")
-    text = value.strip()
-    return (Segment(text),) if text else ()
+    return parse_text(data.get("transcript"))
 
 
 class DeepgramSession:

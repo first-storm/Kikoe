@@ -22,7 +22,7 @@ from kikoe.providers.gemini import GeminiClient, parse_gemini
 from kikoe.providers.mimo import MiMoClient
 from kikoe.providers.mistral import MistralClient
 from kikoe.providers.openrouter import OpenRouterClient
-from kikoe.providers.parsing import parse_segments
+from kikoe.providers.parsing import parse_segments, parse_text
 
 
 def test_deepgram_word_speaker_zero_is_preserved() -> None:
@@ -122,6 +122,13 @@ def test_diarized_segments_discard_unrequested_metadata() -> None:
 def test_invalid_provider_timestamps_are_rejected(value: float) -> None:
     with pytest.raises(ValueError):
         parse_segments({"segments": [{"text": "Hello", "start": value, "end": 2}]}, True, False)
+
+
+def test_plain_text_is_trimmed_and_silence_has_no_segment() -> None:
+    assert parse_text(" Hello. ") == (Segment("Hello."),)
+    assert parse_text("  ") == ()
+    with pytest.raises(TypeError):
+        parse_text(None)
 
 
 @run_async
