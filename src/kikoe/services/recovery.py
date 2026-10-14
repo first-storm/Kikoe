@@ -7,7 +7,7 @@ from datetime import timedelta
 from kikoe.core.models import Note, Recording, RecordingSource, TranscriptionState
 from kikoe.media import transcode
 from kikoe.storage.captures import CaptureJournal, CaptureStore
-from kikoe.storage.library import NoteNotFoundError
+from kikoe.storage.errors import NoteNotFoundError
 from kikoe.storage.notes import NoteRepository
 
 

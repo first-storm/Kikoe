@@ -4,7 +4,7 @@ from kikoe.media.ffmpeg import FFmpegError
 from kikoe.media.recorder import RecorderError
 from kikoe.providers.base import TranscriptionError
 from kikoe.storage.captures import CaptureStoreError
-from kikoe.storage.library import LibraryError, NoteNotFoundError
+from kikoe.storage.errors import LibraryError, NoteNotFoundError
 from kikoe.storage.providers import ProviderNotFoundError
 from kikoe.storage.secrets import SecretStoreError
 from kikoe.storage.settings import SettingsError

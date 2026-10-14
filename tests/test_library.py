@@ -8,8 +8,10 @@ import pytest
 
 from helpers import run_async
 from kikoe.core.models import DisplayOptions, Recording, RecordingSource, Segment
-from kikoe.storage.library import SCHEMA_VERSION, Library, LibraryError, NoteNotFoundError
+from kikoe.storage.errors import LibraryError, NoteNotFoundError
+from kikoe.storage.library import Library
 from kikoe.storage.notes import NoteRepository
+from kikoe.storage.schema import SCHEMA_VERSION
 
 WHEN = datetime(2026, 10, 12, 6, 30, tzinfo=UTC)
 
@@ -265,11 +267,11 @@ async def test_repository_delete_recording_notifies(tmp_path: Path, library: Lib
 
 def test_version_one_library_migrates_without_changing_existing_transcript(tmp_path: Path) -> None:
     from kikoe.core.models import TranscriptionState
-    from kikoe.storage.library import _MIGRATIONS
+    from kikoe.storage.schema import MIGRATIONS
 
     database = tmp_path / "library.sqlite3"
     with sqlite3.connect(database) as connection:
-        connection.executescript(_MIGRATIONS[0])
+        connection.executescript(MIGRATIONS[0])
         connection.execute("PRAGMA user_version = 1")
         connection.execute(
             "INSERT INTO notes VALUES (?, ?, ?, 1, 1)", ("n", "Old", WHEN.isoformat())
@@ -380,11 +382,11 @@ def test_replacement_keeps_named_identity_and_other_recording(library: Library) 
 
 
 def test_v2_library_migrates_existing_speaker_names(tmp_path: Path) -> None:
-    from kikoe.storage.library import _MIGRATIONS
+    from kikoe.storage.schema import MIGRATIONS
 
     database = tmp_path / "old.sqlite3"
     with sqlite3.connect(database) as connection:
-        for migration in _MIGRATIONS[:2]:
+        for migration in MIGRATIONS[:2]:
             connection.executescript(migration)
         connection.execute("PRAGMA user_version = 2")
         connection.execute(
