@@ -44,6 +44,7 @@ from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.storage.settings import SettingsError
 from kikoe.ui.bottom_bar import BottomBar
+from kikoe.ui.dialogs import confirm_destructive
 from kikoe.ui.export_dialog import ExportDialog
 from kikoe.ui.file_transcription import FileTranscriptionDisplay
 from kikoe.ui.items import NoteItem
@@ -583,22 +584,13 @@ class Window(Adw.ApplicationWindow):
             self._delete_note(summary.note_id, summary.title)
 
     def _delete_note(self, note_id: str, title: str) -> None:
-        dialog = Adw.AlertDialog(
-            heading=_("Delete “{title}”?").format(title=title),
-            body=_("Its transcript and original audio will be deleted. This cannot be undone."),
+        confirm_destructive(
+            self,
+            _("Delete “{title}”?").format(title=title),
+            _("Its transcript and original audio will be deleted. This cannot be undone."),
+            _("_Delete"),
+            lambda: run_task(self._notes.delete_note(note_id), self),
         )
-        dialog.add_response("cancel", _("_Cancel"))
-        dialog.add_response("delete", _("_Delete"))
-        dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
-        dialog.set_default_response("cancel")
-        dialog.set_close_response("cancel")
-
-        def respond(_dialog: Adw.AlertDialog, response: str) -> None:
-            if response == "delete":
-                run_task(self._notes.delete_note(note_id), self)
-
-        dialog.connect("response", respond)
-        dialog.present(self)
 
     def _on_delete_recording(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
         note = self._note
@@ -611,22 +603,13 @@ class Window(Adw.ApplicationWindow):
             return
         number = note.recordings.index(recording) + 1
         self._playback.stop()
-        dialog = Adw.AlertDialog(
-            heading=_("Delete Recording {number}?").format(number=number),
-            body=_("Its transcript and original audio will be deleted. This cannot be undone."),
+        confirm_destructive(
+            self,
+            _("Delete Recording {number}?").format(number=number),
+            _("Its transcript and original audio will be deleted. This cannot be undone."),
+            _("_Delete"),
+            lambda: run_task(self._delete_recording(note.note_id, recording_id), self),
         )
-        dialog.add_response("cancel", _("_Cancel"))
-        dialog.add_response("delete", _("_Delete"))
-        dialog.set_response_appearance("delete", Adw.ResponseAppearance.DESTRUCTIVE)
-        dialog.set_default_response("cancel")
-        dialog.set_close_response("cancel")
-
-        def respond(_dialog: Adw.AlertDialog, response: str) -> None:
-            if response == "delete":
-                run_task(self._delete_recording(note.note_id, recording_id), self)
-
-        dialog.connect("response", respond)
-        dialog.present(self)
 
     async def _delete_recording(self, note_id: str, recording_id: str) -> None:
         note = await self._notes.delete_recording(note_id, recording_id)
@@ -635,11 +618,7 @@ class Window(Adw.ApplicationWindow):
     # Speaker identities and playback
 
     def _recording_by_id(self, recording_id: str) -> Recording | None:
-        return (
-            next((r for r in self._note.recordings if r.recording_id == recording_id), None)
-            if self._note
-            else None
-        )
+        return self._note.recording(recording_id) if self._note else None
 
     def _on_play_recording(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
         if param is not None:
@@ -882,20 +861,11 @@ class Window(Adw.ApplicationWindow):
         note = self._note
         if note is None or param is None:
             return
-        recording_id = param.get_string()
-        found = next(
-            (
-                (number, recording)
-                for number, recording in enumerate(note.recordings, start=1)
-                if recording.recording_id == recording_id
-            ),
-            None,
-        )
-        if found is None:
+        recording = note.recording(param.get_string())
+        if recording is None:
             self.add_toast(Adw.Toast(title=_("This recording is no longer available.")))
             return
-        number, recording = found
-        run_task(self._export_audio(number, recording), self)
+        run_task(self._export_audio(note.recordings.index(recording) + 1, recording), self)
 
     async def _export_audio(self, number: int, recording: Recording) -> None:
         note = self._note
@@ -940,24 +910,37 @@ class Window(Adw.ApplicationWindow):
         dialog = Gtk.FileDialog(
             title=title, filters=filters, default_filter=target, initial_name=initial_name
         )
+        return await self._run_file_dialog(
+            dialog.save, dialog.save_finish, _("Only locations on this computer can be used.")
+        )
+
+    async def _run_file_dialog(
+        self,
+        start: Callable[
+            [Gtk.Window, None, Callable[[Gtk.FileDialog, Gio.AsyncResult], None]], None
+        ],
+        finish: Callable[[Gio.AsyncResult], Gio.File | None],
+        not_local: str,
+    ) -> Path | None:
+        """Await a file dialog; None if it was dismissed or chose a non-local file."""
         future: asyncio.Future[Gio.File | None] = asyncio.get_running_loop().create_future()
 
         def done(_dialog: Gtk.FileDialog, result: Gio.AsyncResult) -> None:
             try:
-                future.set_result(dialog.save_finish(result))
+                future.set_result(finish(result))
             except GLib.Error as error:
                 if error.matches(Gtk.dialog_error_quark(), Gtk.DialogError.DISMISSED):
                     future.set_result(None)
                 else:
                     future.set_exception(error)
 
-        dialog.save(self, None, done)
+        start(self, None, done)
         file = await future
         if file is None:
             return None
         path = file.get_path()
         if path is None:
-            show_notice(self, _("Only locations on this computer can be used."))
+            show_notice(self, not_local)
             return None
         return Path(path)
 
@@ -1075,26 +1058,9 @@ class Window(Adw.ApplicationWindow):
         filters: Gio.ListStore[Gtk.FileFilter] = Gio.ListStore(item_type=Gtk.FileFilter)
         filters.append(media)
         dialog = Gtk.FileDialog(title=_("Import Audio"), filters=filters, default_filter=media)
-        future: asyncio.Future[Gio.File | None] = asyncio.get_running_loop().create_future()
-
-        def done(_dialog: Gtk.FileDialog, result: Gio.AsyncResult) -> None:
-            try:
-                future.set_result(dialog.open_finish(result))
-            except GLib.Error as error:
-                if error.matches(Gtk.dialog_error_quark(), Gtk.DialogError.DISMISSED):
-                    future.set_result(None)
-                else:
-                    future.set_exception(error)
-
-        dialog.open(self, None, done)
-        file = await future
-        if file is None:
-            return None
-        path = file.get_path()
-        if path is None:
-            show_notice(self, _("Only files on this computer can be imported."))
-            return None
-        return Path(path)
+        return await self._run_file_dialog(
+            dialog.open, dialog.open_finish, _("Only files on this computer can be imported.")
+        )
 
     async def _import(
         self,
@@ -1342,7 +1308,7 @@ class Window(Adw.ApplicationWindow):
             or self._recording_task is not None
         ):
             return
-        recording = next((r for r in note.recordings if r.recording_id == param.get_string()), None)
+        recording = note.recording(param.get_string())
         if recording is None or recording.transcription_state is TranscriptionState.READY:
             return
         options = self._transcription_options(self.bottom_bar.file_features)

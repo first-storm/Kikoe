@@ -1,8 +1,8 @@
-"""Shared dialog behavior: ask before an edit dialog throws away unsaved input."""
+"""Shared dialog behavior: confirmations before destroying data or unsaved input."""
 
 from collections.abc import Callable
 
-from gi.repository import Adw
+from gi.repository import Adw, Gtk
 
 from kikoe.i18n import _
 
@@ -37,3 +37,22 @@ def confirm_discard(dialog: Adw.Dialog, is_dirty: Callable[[], bool]) -> None:
         alert.present(dialog)
 
     dialog.connect("close-attempt", on_close_attempt)
+
+
+def confirm_destructive(
+    parent: Gtk.Widget, heading: str, body: str, label: str, on_confirm: Callable[[], object]
+) -> None:
+    """Ask before an irreversible action; Cancel is the default so Enter is safe."""
+    dialog = Adw.AlertDialog(heading=heading, body=body)
+    dialog.add_response("cancel", _("_Cancel"))
+    dialog.add_response("confirm", label)
+    dialog.set_response_appearance("confirm", Adw.ResponseAppearance.DESTRUCTIVE)
+    dialog.set_default_response("cancel")
+    dialog.set_close_response("cancel")
+
+    def on_response(_dialog: Adw.AlertDialog, response: str) -> None:
+        if response == "confirm":
+            on_confirm()
+
+    dialog.connect("response", on_response)
+    dialog.present(parent)

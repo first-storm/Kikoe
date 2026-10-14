@@ -75,11 +75,7 @@ class EditingSession:
     def _fields(self, recording_id: str, position: int) -> SegmentFields | None:
         if (fields := self._edited.get((recording_id, position))) is not None:
             return fields
-        recording = (
-            next((r for r in self._note.recordings if r.recording_id == recording_id), None)
-            if self._note
-            else None
-        )
+        recording = self._note.recording(recording_id) if self._note else None
         if recording is None or not 0 <= position < len(recording.segments):
             return None
         segment = recording.segments[position]

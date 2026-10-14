@@ -407,7 +407,7 @@ class Library:
         """Apply a dialog's choices atomically, retaining reversible source identities."""
         with self._connect() as connection, connection:
             note = self._read_note(connection, note_id)
-            recording = next((r for r in note.recordings if r.recording_id == recording_id), None)
+            recording = note.recording(recording_id)
             if recording is None:
                 raise LibraryError(_("This recording no longer exists."))
             sources = {b.source_id for b in recording.speaker_bindings}

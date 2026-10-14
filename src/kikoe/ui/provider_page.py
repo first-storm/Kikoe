@@ -14,6 +14,7 @@ from kikoe.core.upload import MAX_CHUNK_SECONDS, MAX_PARALLELISM, upload_policy
 from kikoe.core.validation import DEFAULT_BASE_URLS, effective_base_url, validate_provider
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
+from kikoe.ui.dialogs import confirm_destructive
 from kikoe.ui.items import ModelItem
 from kikoe.ui.labels import capability_summary, provider_error_message
 from kikoe.ui.model_dialog import ModelDialog
@@ -266,21 +267,16 @@ class ProviderPage(Adw.NavigationPage):
 
     @Gtk.Template.Callback()
     def _on_remove_row_activated(self, _row: Adw.ButtonRow) -> None:
-        dialog = Adw.AlertDialog(
-            heading=_("Remove “{name}”?").format(name=self.name_row.get_text()),
-            body=_("Its models and API key will be deleted."),
+        provider_id = self._provider_id
+        if not provider_id:
+            return
+        confirm_destructive(
+            self,
+            _("Remove “{name}”?").format(name=self.name_row.get_text()),
+            _("Its models and API key will be deleted."),
+            _("_Remove"),
+            lambda: run_task(self._remove(provider_id), self),
         )
-        dialog.add_response("cancel", _("_Cancel"))
-        dialog.add_response("remove", _("_Remove"))
-        dialog.set_response_appearance("remove", Adw.ResponseAppearance.DESTRUCTIVE)
-        dialog.set_default_response("cancel")
-        dialog.set_close_response("cancel")
-        dialog.connect("response", self._on_remove_dialog_response)
-        dialog.present(self)
-
-    def _on_remove_dialog_response(self, _dialog: Adw.AlertDialog, response: str) -> None:
-        if response == "remove" and self._provider_id:
-            run_task(self._remove(self._provider_id), self)
 
     async def _remove(self, provider_id: str) -> None:
         await self._repository.remove_provider(provider_id)

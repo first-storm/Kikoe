@@ -10,7 +10,7 @@ from kikoe.ui.templates import ui_file
 
 def speaker_label(note: Note, speaker_id: str) -> str:
     """Keep fallback labels translatable and tied to a stable person number."""
-    person = next((s for s in note.speakers if s.speaker_id == speaker_id), None)
+    person = note.speaker(speaker_id)
     return (person.name or _("Speaker {number}").format(number=person.ordinal)) if person else ""
 
 
@@ -90,8 +90,7 @@ class SpeakerRow(Adw.ActionRow):
             ],
         )
         self.choices_list.bind_model(self._items, self._create_choice)
-        person = next(s for s in note.speakers if s.speaker_id == binding.original_id)
-        color_widget(self, person.ordinal, title_only=True)
+        self._color_title()
         self._update_choice()
         self._dark = Adw.StyleManager.get_default().get_dark()
         self.add_tick_callback(self._on_tick)
@@ -100,12 +99,13 @@ class SpeakerRow(Adw.ActionRow):
         dark = Adw.StyleManager.get_default().get_dark()
         if dark != self._dark:
             self._dark = dark
-            person = next(
-                s for s in self._note.speakers if s.speaker_id == self.binding.original_id
-            )
-            color_widget(self, person.ordinal, title_only=True)
+            self._color_title()
             self._update_choice()
         return True
+
+    def _color_title(self) -> None:
+        person = self._note.speaker(self.binding.original_id)
+        color_widget(self, person.ordinal if person else 0, title_only=True)
 
     def _create_choice(self, item: object) -> Gtk.Widget:
         assert isinstance(item, SpeakerItem)
@@ -138,7 +138,7 @@ class SpeakerRow(Adw.ActionRow):
         self.choice_popover.popdown()
 
     def _update_choice(self) -> None:
-        person = next((s for s in self._note.speakers if s.speaker_id == self.selected), None)
+        person = self._note.speaker(self.selected)
         self.target_label.set_label(
             speaker_label(self._note, person.speaker_id) if person else _("New Speaker")
         )

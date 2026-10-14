@@ -178,8 +178,15 @@ class Note:
     def duration(self) -> timedelta:
         return sum((r.duration for r in self.recordings), timedelta())
 
+    def recording(self, recording_id: str) -> Recording | None:
+        return next((r for r in self.recordings if r.recording_id == recording_id), None)
+
+    def speaker(self, speaker_id: str | None) -> Speaker | None:
+        return next((s for s in self.speakers if s.speaker_id == speaker_id), None)
+
     def speaker_name(self, speaker_id: str) -> str | None:
-        return next((s.name for s in self.speakers if s.speaker_id == speaker_id), None)
+        person = self.speaker(speaker_id)
+        return person.name if person else None
 
 
 @dataclass(frozen=True, slots=True)
