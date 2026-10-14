@@ -8,12 +8,13 @@ from collections.abc import Awaitable, Callable
 from gi.repository import Gio, GLib, Gtk
 
 from kikoe.core.export import ExportFormat, export_filename, export_note
-from kikoe.core.models import DisplayOptions, Note, Recording
+from kikoe.core.models import DisplayOptions, Recording
 from kikoe.i18n import _
 from kikoe.ui.export_dialog import ExportDialog
 from kikoe.ui.file_dialogs import pick_save_path
 from kikoe.ui.labels import export_format_label
 from kikoe.ui.tasks import run_task, show_error, show_notice
+from kikoe.ui.window_host import WindowHost
 
 log = logging.getLogger(__name__)
 
@@ -24,16 +25,14 @@ class ExportController:
     def __init__(
         self,
         window: Gtk.Window,
-        note: Callable[[], Note | None],
+        host: WindowHost,
         flush_edits: Callable[[], None],
         wait_saved: Callable[[], Awaitable[None]],
-        toast: Callable[[str], None],
     ) -> None:
         self._window = window
-        self._note = note
+        self._host = host
         self._flush_edits = flush_edits
         self._wait_saved = wait_saved
-        self._toast = toast
 
     def on_export(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         self._flush_edits()
@@ -41,7 +40,7 @@ class ExportController:
 
     async def _present_export(self) -> None:
         await self._wait_saved()
-        note = self._note()
+        note = self._host.note
         if note is None:
             return
         ExportDialog(note, self._on_export_dialog_submitted).present(self._window)
@@ -55,14 +54,14 @@ class ExportController:
 
     async def _copy_all_text(self) -> None:
         await self._wait_saved()
-        note = self._note()
+        note = self._host.note
         if note is None:
             return
         self._window.get_clipboard().set(export_note(note, ExportFormat.TEXT, note.display))
-        self._toast(_("Copied to clipboard"))
+        self._host.toast(_("Copied to clipboard"))
 
     async def _export_note(self, fmt: ExportFormat, options: DisplayOptions) -> None:
-        note = self._note()
+        note = self._host.note
         if note is None:
             return
         content = export_note(note, fmt, options)
@@ -82,20 +81,20 @@ class ExportController:
             message = _("Could not save “{name}”: {error}").format(name=target.name, error=error)
             show_error(self._window, message)
             return
-        self._toast(_("Exported “{name}”").format(name=target.name))
+        self._host.toast(_("Exported “{name}”").format(name=target.name))
 
     def on_export_audio(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        note = self._note()
+        note = self._host.note
         if note is None or param is None:
             return
         recording = note.recording(param.get_string())
         if recording is None:
-            self._toast(_("This recording is no longer available."))
+            self._host.toast(_("This recording is no longer available."))
             return
         run_task(self._export_audio(note.recordings.index(recording) + 1, recording), self._window)
 
     async def _export_audio(self, number: int, recording: Recording) -> None:
-        note = self._note()
+        note = self._host.note
         source = recording.audio_path
         if note is None or source is None:
             return
@@ -122,4 +121,4 @@ class ExportController:
             message = _("Could not save “{name}”: {error}").format(name=target.name, error=error)
             show_error(self._window, message)
             return
-        self._toast(_("Exported “{name}”").format(name=target.name))
+        self._host.toast(_("Exported “{name}”").format(name=target.name))

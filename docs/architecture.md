@@ -296,7 +296,7 @@ Added only when the feature using them lands (see AGENTS.md, "Dependencies"):
   controller per kind of work, registers the `win.*` actions and wires them together; it does
   not run workflows itself. Controllers are plain classes without layout (the window's
   template supplies their widgets) and reach the window only through the `ui.window_host`
-  protocol:
+  protocol (the sidebar, which needs little, takes a few callables instead):
   - `ui.note_sidebar.NoteSidebar`: list, search (`NoteSearch`), row menu and selection.
   - `ui.note_actions.NoteActions`: create, rename and delete notes and recordings.
   - `ui.segment_editor.SegmentEditor`: in-place edits, Undo and Redo over

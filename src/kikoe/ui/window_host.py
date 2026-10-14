@@ -2,8 +2,6 @@
 
 from typing import Protocol
 
-from gi.repository import Adw
-
 from kikoe.core.models import Note
 
 
@@ -17,7 +15,7 @@ class WindowHost(Protocol):
 
     def show_note(self, note: Note | None) -> None: ...
     def select_note(self, note_id: str) -> None: ...
-    def add_toast(self, toast: Adw.Toast) -> None: ...
+    def toast(self, title: str) -> None: ...
     def show_content_pane(self) -> None:
         """On narrow windows, bring the content pane in front of the sidebar."""
         ...

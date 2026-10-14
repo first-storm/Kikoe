@@ -103,7 +103,7 @@ class TranscriptionController:
         except asyncio.CancelledError:
             if not task.cancelled():
                 raise  # This coroutine itself was cancelled, not the import.
-            self._host.add_toast(Adw.Toast(title=_("Import cancelled")))
+            self._host.toast(_("Import cancelled"))
         finally:
             self._work.import_task = None
             self._bottom_bar.set_progress(None)
@@ -145,7 +145,7 @@ class TranscriptionController:
         if shown is None or shown.note_id == note.note_id:
             self._host.select_note(note.note_id)
         else:
-            self._host.add_toast(Adw.Toast(title=_("Transcription finished")))
+            self._host.toast(_("Transcription finished"))
 
     # Re-transcription
 
@@ -157,7 +157,7 @@ class TranscriptionController:
             return
         recording = note.recording(param.get_string())
         if recording is None or recording.audio_path is None:
-            self._host.add_toast(Adw.Toast(title=_("The original audio is not available.")))
+            self._host.toast(_("The original audio is not available."))
             return
         note_id = note.note_id
 
@@ -165,9 +165,7 @@ class TranscriptionController:
             choices = available_models(self._providers.providers)
             refreshed = next((c for c in choices if c.key == choice.key), None)
             if refreshed is None or refreshed.model.capabilities.file is None:
-                self._host.add_toast(
-                    Adw.Toast(title=_("Choose an available file transcription model."))
-                )
+                self._host.toast(_("Choose an available file transcription model."))
                 return
             self._playback.stop()
             options = self.transcription_options(features)
@@ -205,7 +203,7 @@ class TranscriptionController:
             self._end()
             self._host.show_note(note)
         except asyncio.CancelledError:
-            self._host.add_toast(Adw.Toast(title=_("Re-transcription cancelled")))
+            self._host.toast(_("Re-transcription cancelled"))
         except USER_FACING_ERRORS as error:
             log.warning("Re-transcription failed: %s", error)
             show_error(
@@ -265,7 +263,7 @@ class TranscriptionController:
         try:
             await self._work.import_task
         except asyncio.CancelledError:
-            self._host.add_toast(Adw.Toast(title=_("Transcription cancelled")))
+            self._host.toast(_("Transcription cancelled"))
         finally:
             self._work.import_task = None
 

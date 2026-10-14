@@ -144,9 +144,7 @@ class RecordingController:
                 live_update=self._note_view.update_live,
                 capture_ended=self._on_capture_ended,
                 saved=self._host.show_note,
-                nothing_recorded=lambda: self._host.add_toast(
-                    Adw.Toast(title=_("No audio was recorded"))
-                ),
+                nothing_recorded=lambda: self._host.toast(_("No audio was recorded")),
                 capture_failed=lambda error: show_error(self._window, str(error)),
                 live_failed=self._on_live_failed,
                 upload=upload,

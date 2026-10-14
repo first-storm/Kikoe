@@ -1,8 +1,8 @@
 """The main window: notes sidebar on the left, the selected note on the right."""
 
-import asyncio
 import logging
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable
+from functools import partial
 
 from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
@@ -112,24 +112,13 @@ class Window(Adw.ApplicationWindow):
         self.bottom_bar = BottomBar()
         self.bottom_bar_slot.set_child(self.bottom_bar)
 
-    def _start_task(self, coroutine: Coroutine[None, None, None]) -> asyncio.Task[None]:
-        return run_task(coroutine, self)
-
-    def _toast(self, title: str) -> None:
-        self.add_toast(Adw.Toast(title=title))
-
-    def _current_note(self) -> Note | None:
-        return self._note
-
     def _create_controllers(self) -> None:
         """Each controller owns one kind of work; the window only wires them together."""
         notes, providers, preferences = self._notes, self._providers, self._preferences
-        start_task, toast, current_note = self._start_task, self._toast, self._current_note
-        self._editor = SegmentEditor(
-            notes, self.note_view, start_task, current_note, self.show_note, self.set_action_enabled
-        )
+        start_task = partial(run_task, parent=self)
+        self._editor = SegmentEditor(self, notes, self.note_view, start_task)
         self._export = ExportController(
-            self, current_note, self.note_view.flush_edits, self._editor.wait_saved, toast
+            self, self, self.note_view.flush_edits, self._editor.wait_saved
         )
         self._sidebar = NoteSidebar(
             notes=notes,
@@ -145,9 +134,7 @@ class Window(Adw.ApplicationWindow):
             open_note=self._open_from_sidebar,
         )
         self._playback = Playback(start_task, self.note_view.set_playing, self._on_playback_error)
-        self._speakers = SpeakerController(
-            self, notes, preferences, self._playback, current_note, toast
-        )
+        self._speakers = SpeakerController(self, self, notes, preferences, self._playback)
         self._transcribe = TranscriptionController(
             self,
             self,
@@ -173,9 +160,7 @@ class Window(Adw.ApplicationWindow):
             note_view=self.note_view,
             transcribe=self._transcribe,
         )
-        self._note_actions = NoteActions(
-            self, notes, self._playback, current_note, self.select_note, self.show_note, toast
-        )
+        self._note_actions = NoteActions(self, self, notes, self._playback)
 
     def _register_actions(self, application: Gtk.Application) -> None:
         """Buttons and menus trigger these `win.*` actions; each belongs to one controller."""
@@ -228,6 +213,9 @@ class Window(Adw.ApplicationWindow):
 
     def add_toast(self, toast: Adw.Toast) -> None:
         self.toast_overlay.add_toast(toast)
+
+    def toast(self, title: str) -> None:
+        self.add_toast(Adw.Toast(title=title))
 
     def show_content_pane(self) -> None:
         self.split_view.set_show_content(True)
@@ -431,7 +419,7 @@ class Window(Adw.ApplicationWindow):
 
     def _on_playback_error(self, error: PlaybackError) -> None:
         log.warning("Playback failed: %s", error)
-        self.add_toast(Adw.Toast(title=str(error)))
+        self.toast(str(error))
 
     # Import
 

@@ -1,15 +1,14 @@
 """Create, rename and delete notes and recordings from the main window's actions."""
 
-from collections.abc import Callable
-
 from gi.repository import Adw, Gio, GLib, Gtk
 
-from kikoe.core.models import Note, NoteSummary
+from kikoe.core.models import NoteSummary
 from kikoe.i18n import _
 from kikoe.services.playback import Playback
 from kikoe.storage.notes import NoteRepository
 from kikoe.ui.dialogs import confirm_destructive
 from kikoe.ui.tasks import run_task
+from kikoe.ui.window_host import WindowHost
 
 
 class NoteActions:
@@ -18,30 +17,24 @@ class NoteActions:
     def __init__(
         self,
         window: Adw.ApplicationWindow,
+        host: WindowHost,
         notes: NoteRepository,
         playback: Playback,
-        note: Callable[[], Note | None],
-        select_note: Callable[[str], None],
-        show_note: Callable[[Note], None],
-        toast: Callable[[str], None],
     ) -> None:
         self._window = window
+        self._host = host
         self._notes = notes
         self._playback = playback
-        self._note = note
-        self._select_note = select_note
-        self._show_note = show_note
-        self._toast = toast
 
     def on_new_note(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         run_task(self._create_note(), self._window)
 
     async def _create_note(self) -> None:
         note = await self._notes.create_note(_("New Note"))
-        self._select_note(note.note_id)
+        self._host.select_note(note.note_id)
 
     def on_rename_note(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        note = self._note()
+        note = self._host.note
         if note is not None:
             self._rename(note.note_id, note.title)
 
@@ -77,7 +70,7 @@ class NoteActions:
         entry.grab_focus()
 
     def on_delete_note(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        note = self._note()
+        note = self._host.note
         if note is not None:
             self._delete(note.note_id, note.title)
 
@@ -96,13 +89,13 @@ class NoteActions:
         )
 
     def on_delete_recording(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        note = self._note()
+        note = self._host.note
         if note is None or param is None:
             return
         recording_id = param.get_string()
         recording = note.recording(recording_id)
         if recording is None:
-            self._toast(_("This recording is no longer available."))
+            self._host.toast(_("This recording is no longer available."))
             return
         number = note.recordings.index(recording) + 1
         self._playback.stop()
@@ -115,4 +108,4 @@ class NoteActions:
         )
 
     async def _delete_recording(self, note_id: str, recording_id: str) -> None:
-        self._show_note(await self._notes.delete_recording(note_id, recording_id))
+        self._host.show_note(await self._notes.delete_recording(note_id, recording_id))

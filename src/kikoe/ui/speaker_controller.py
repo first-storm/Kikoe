@@ -1,10 +1,8 @@
 """Playback and speaker-identity actions for the note shown in the main window."""
 
-from collections.abc import Callable
-
 from gi.repository import Adw, Gio, GLib
 
-from kikoe.core.models import Note, Recording
+from kikoe.core.models import Recording
 from kikoe.core.speakers import identity_for
 from kikoe.i18n import _
 from kikoe.services.playback import Playback
@@ -12,6 +10,7 @@ from kikoe.storage.notes import NoteRepository
 from kikoe.storage.preferences import PreferencesRepository
 from kikoe.ui.speaker_dialog import SpeakerDialog
 from kikoe.ui.speaker_editor import SpeakerEditor
+from kikoe.ui.window_host import WindowHost
 
 
 class SpeakerController:
@@ -20,18 +19,16 @@ class SpeakerController:
     def __init__(
         self,
         window: Adw.ApplicationWindow,
+        host: WindowHost,
         notes: NoteRepository,
         preferences: PreferencesRepository,
         playback: Playback,
-        note: Callable[[], Note | None],
-        toast: Callable[[str], None],
     ) -> None:
         self._window = window
+        self._host = host
         self._notes = notes
         self._preferences = preferences
         self._playback = playback
-        self._note = note
-        self._toast = toast
 
     def stop_playback_on_close(self, dialog: Adw.Dialog) -> None:
         """Samples played from a dialog must not outlive it."""
@@ -41,7 +38,7 @@ class SpeakerController:
         self._playback.stop()
 
     def _recording(self, recording_id: str) -> Recording | None:
-        note = self._note()
+        note = self._host.note
         return note.recording(recording_id) if note else None
 
     def on_play_recording(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
@@ -56,7 +53,7 @@ class SpeakerController:
     def _request_playback(self, recording_id: str, start: float, end: float | None) -> None:
         recording = self._recording(recording_id)
         if recording is None or recording.audio_path is None:
-            self._toast(_("The original audio is not available."))
+            self._host.toast(_("The original audio is not available."))
             return
         self._playback.play(
             recording.audio_path,
@@ -67,7 +64,7 @@ class SpeakerController:
         )
 
     def on_edit_speaker(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        note = self._note()
+        note = self._host.note
         if note is None or param is None:
             return
         recording_id, source_id = param.unpack()
@@ -88,10 +85,10 @@ class SpeakerController:
             self._present_matching(param.get_string())
 
     def _present_matching(self, recording_id: str) -> None:
-        note = self._note()
+        note = self._host.note
         recording = self._recording(recording_id)
         if note is None or recording is None or not recording.speaker_bindings:
-            self._toast(_("This recording has no detected speakers."))
+            self._host.toast(_("This recording has no detected speakers."))
             return
         dialog = SpeakerDialog(self._notes, note, recording)
         self.stop_playback_on_close(dialog)

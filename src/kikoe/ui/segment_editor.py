@@ -13,6 +13,7 @@ from kikoe.services.editing import EditingSession
 from kikoe.storage.notes import NoteRepository
 from kikoe.ui.note_view import NoteView
 from kikoe.ui.transcript_row import NO_TIME
+from kikoe.ui.window_host import WindowHost
 
 
 class SegmentEditor:
@@ -20,19 +21,15 @@ class SegmentEditor:
 
     def __init__(
         self,
+        host: WindowHost,
         notes: NoteRepository,
         note_view: NoteView,
         start_task: Callable[[Coroutine[None, None, None]], asyncio.Task[None]],
-        note: Callable[[], Note | None],
-        show_note: Callable[[Note], None],
-        set_action_enabled: Callable[[str, bool], None],
     ) -> None:
         self.blocked = False
         """Edits are refused while work is writing to the shown note."""
+        self._host = host
         self._note_view = note_view
-        self._note = note
-        self._show_note = show_note
-        self._set_action_enabled = set_action_enabled
         self._session = EditingSession(notes, start_task, self._on_saved)
         note_view.connect("text-edited", self._on_note_view_text_edited)
         note_view.connect("times-edited", self._on_note_view_times_edited)
@@ -54,9 +51,9 @@ class SegmentEditor:
         self.update_actions()
 
     def update_actions(self) -> None:
-        enabled = not self.blocked and self._note() is not None
-        self._set_action_enabled("undo", enabled and self._session.history.can_undo)
-        self._set_action_enabled("redo", enabled and self._session.history.can_redo)
+        enabled = not self.blocked and self._host.note is not None
+        self._host.set_action_enabled("undo", enabled and self._session.history.can_undo)
+        self._host.set_action_enabled("redo", enabled and self._session.history.can_redo)
 
     def on_undo(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         self._step(self._session.undo)
@@ -100,9 +97,9 @@ class SegmentEditor:
         self.update_actions()
 
     def _on_saved(self, note: Note) -> None:
-        shown = self._note()
+        shown = self._host.note
         if shown is not None and shown.note_id == note.note_id:
-            self._show_note(note)
+            self._host.show_note(note)
 
 
 def _from_ms(value: int) -> timedelta | None:
