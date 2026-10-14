@@ -157,6 +157,18 @@ async def test_sdk_errors_are_redacted_and_only_service_failures_retry(
 
 
 @run_async
+async def test_rejection_shows_the_service_message_not_the_raw_response(audio: Path) -> None:
+    def respond(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, json={"error": {"message": "Invalid file format"}})
+
+    client = GroqClient("https://api.groq.com", "secret", httpx.MockTransport(respond))
+    with pytest.raises(TranscriptionError) as caught:
+        await client.transcribe_file(audio, MODEL, TranscriptionOptions())
+    assert str(caught.value).endswith("Details: Invalid file format")
+    assert "Error code" not in str(caught.value)
+
+
+@run_async
 @pytest.mark.parametrize("is_timeout", [False, True])
 async def test_network_failures_are_retryable(audio: Path, is_timeout: bool) -> None:
     def respond(request: httpx.Request) -> httpx.Response:

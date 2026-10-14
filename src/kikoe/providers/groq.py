@@ -6,18 +6,16 @@ from pathlib import Path
 from typing import Literal
 
 import httpx
-from groq import APIConnectionError, APIError, APIStatusError, APITimeoutError, AsyncGroq, omit
+from groq import APIError, AsyncGroq, omit
 
 from kikoe.core.models import ModelSpec, Segment
-from kikoe.i18n import _
 from kikoe.providers.base import (
     FileOnlyClient,
     FileTranscriptCallback,
-    TranscriptionError,
     TranscriptionOptions,
     file_capabilities,
 )
-from kikoe.providers.errors import detail_of, redact, status_error, unreadable
+from kikoe.providers.errors import openai_error, unreadable
 from kikoe.providers.parsing import parse_segments
 
 
@@ -59,18 +57,6 @@ class GroqClient(FileOnlyClient[httpx.AsyncBaseTransport]):
                 # Parsing validates text and times; serializer warnings could expose payloads.
                 return parse_segments(result.model_dump(warnings=False), features.timestamps, False)
         except APIError as error:
-            raise self._error(error) from error
+            raise openai_error(error, self._host, self._key) from error
         except (ValueError, TypeError, KeyError, AttributeError) as error:
             raise unreadable(self._host) from error
-
-    def _error(self, error: APIError) -> TranscriptionError:
-        if isinstance(error, APIStatusError):
-            detail = detail_of(error)
-            return status_error(error.status_code, self._host, detail and redact(detail, self._key))
-        if isinstance(error, APITimeoutError):
-            message = _("{host} took too long to respond. Try again later.")
-        elif isinstance(error, APIConnectionError):
-            message = _("Could not reach {host}. Try again later.")
-        else:
-            message = _("Could not complete transcription. Check your connection and try again.")
-        return TranscriptionError(message.format(host=self._host), retryable=True)

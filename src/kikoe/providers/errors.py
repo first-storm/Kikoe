@@ -2,7 +2,8 @@
 
 from typing import cast
 
-from openai import APIConnectionError, APIError, APIStatusError, APITimeoutError
+import groq
+import openai
 
 from kikoe.core.http_status import StatusKind, classify_status, is_retryable
 from kikoe.i18n import _
@@ -47,11 +48,6 @@ def body_detail(body: object) -> str | None:
         if message:
             return message
     return _text(data.get("err_msg")) or _text(data.get("message"))
-
-
-def detail_of(error: BaseException) -> str | None:
-    """The service's own explanation, trimmed; only shown where it helps fix the request."""
-    return _text(getattr(error, "message", None)) or body_detail(getattr(error, "body", None))
 
 
 def status_error(status: int, subject: str, detail: str | None = None) -> TranscriptionError:
@@ -104,21 +100,25 @@ def sdk_error(error: Exception) -> TranscriptionError:
         return TranscriptionError(_("The provider sent a response Kikoe does not understand."))
     status = status_of(error)
     if status is not None:
-        return status_error(status, _("The provider"), detail_of(error))
+        detail = _text(getattr(error, "message", None)) or body_detail(getattr(error, "body", None))
+        return status_error(status, _("The provider"), detail)
     return TranscriptionError(
         _("Could not complete transcription. Check your connection and try again."), retryable=True
     )
 
 
-def openai_error(error: APIError, host: str, key: str) -> TranscriptionError:
-    """Explain an OpenAI SDK failure from OpenAI or a compatible service, hiding the key."""
+def openai_error(error: openai.APIError | groq.APIError, host: str, key: str) -> TranscriptionError:
+    """Explain a failure from the OpenAI SDK or Groq's SDK, which shares its error classes.
+
+    Their ``message`` embeds the raw response body, so the body's own message comes first.
+    """
     match error:
-        case APIStatusError():
+        case openai.APIStatusError() | groq.APIStatusError():
             message = body_detail(error.body) or error.message
             return status_error(error.status_code, host, redact(message, key))
-        case APITimeoutError():
+        case openai.APITimeoutError() | groq.APITimeoutError():
             message = _("{host} took too long to respond. Try again later.")
-        case APIConnectionError():
+        case openai.APIConnectionError() | groq.APIConnectionError():
             message = _("Could not reach {host}. Try again later.")
         case _:
             return TranscriptionError(
