@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kikoe\n"
 "Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
-"POT-Creation-Date: 2026-10-15 00:47+1100\n"
+"POT-Creation-Date: 2026-10-15 01:31+1100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,12 +18,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: src/kikoe/application.py:155
+#: src/kikoe/application.py:149
 msgid "Could not open the folder."
 msgstr ""
 
 #. Translators: replace with your name(s), one per line.
-#: src/kikoe/application.py:180
+#: src/kikoe/application.py:174
 msgid "translator-credits"
 msgstr ""
 
@@ -244,16 +244,16 @@ msgstr ""
 msgid "Realtime transcription failed. Your audio has been kept."
 msgstr ""
 
-#: src/kikoe/services/importer.py:76 src/kikoe/ui/bottom_bar.py:168
+#: src/kikoe/services/file_transcription.py:120
+msgid "Choose a file transcription model to retry this recording."
+msgstr ""
+
+#: src/kikoe/services/importer.py:74 src/kikoe/ui/bottom_bar.py:166
 msgid "Choose a file transcription model to import audio."
 msgstr ""
 
-#: src/kikoe/services/importer.py:262
+#: src/kikoe/services/importer.py:258
 msgid "The chunk size is too small for this audio format."
-msgstr ""
-
-#: src/kikoe/services/recording_transcription.py:37
-msgid "Choose a file transcription model to retry this recording."
 msgstr ""
 
 #: src/kikoe/storage/audio_files.py:33
@@ -281,28 +281,28 @@ msgid ""
 "open it."
 msgstr ""
 
-#: src/kikoe/storage/library.py:182 src/kikoe/storage/library.py:303
-#: src/kikoe/storage/library.py:325
+#: src/kikoe/storage/library.py:182 src/kikoe/storage/library.py:295
+#: src/kikoe/storage/library.py:317
 msgid "This recording no longer exists."
 msgstr ""
 
-#: src/kikoe/storage/library.py:292
+#: src/kikoe/storage/library.py:284
 msgid "Enter transcript text."
 msgstr ""
 
-#: src/kikoe/storage/library.py:294
+#: src/kikoe/storage/library.py:286
 msgid "The end time must be after the start time."
 msgstr ""
 
-#: src/kikoe/storage/library.py:309
+#: src/kikoe/storage/library.py:301
 msgid "Enter a speaker name."
 msgstr ""
 
-#: src/kikoe/storage/library.py:331
+#: src/kikoe/storage/library.py:323
 msgid "The speaker selection is no longer available."
 msgstr ""
 
-#: src/kikoe/storage/library.py:417
+#: src/kikoe/storage/library.py:409
 #, python-brace-format
 msgid "The note library could not be read or saved: {error}"
 msgstr ""
@@ -311,7 +311,7 @@ msgstr ""
 msgid "This note no longer exists."
 msgstr ""
 
-#: src/kikoe/storage/providers.py:51
+#: src/kikoe/storage/providers.py:52
 #, python-brace-format
 msgid "Provider {provider_id} no longer exists."
 msgstr ""
@@ -343,43 +343,43 @@ msgstr ""
 msgid "Could not save the settings file: {error}"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:100
+#: src/kikoe/ui/bottom_bar.py:98
 msgid "_Append Recording"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:100 src/kikoe/ui/bottom_bar.ui:125
+#: src/kikoe/ui/bottom_bar.py:98 src/kikoe/ui/bottom_bar.ui:125
 msgid "_Record"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:121 src/kikoe/ui/bottom_bar.ui:224
+#: src/kikoe/ui/bottom_bar.py:119 src/kikoe/ui/bottom_bar.ui:224
 #: src/kikoe/ui/bottom_bar.ui:227
 msgid "Pause Recording"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:121
+#: src/kikoe/ui/bottom_bar.py:119
 msgid "Resume Recording"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:151
+#: src/kikoe/ui/bottom_bar.py:149
 msgid "No Model"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:153
+#: src/kikoe/ui/bottom_bar.py:151
 msgid "Add a model in Preferences first"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:154 src/kikoe/ui/bottom_bar.ui:44
+#: src/kikoe/ui/bottom_bar.py:152 src/kikoe/ui/bottom_bar.ui:44
 msgid "Transcription Model…"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:159
+#: src/kikoe/ui/bottom_bar.py:157
 #, python-brace-format
 msgid ""
 "{model} · {provider}\n"
 "{hint}"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:166 src/kikoe/ui/bottom_bar.ui:90
+#: src/kikoe/ui/bottom_bar.py:164 src/kikoe/ui/bottom_bar.ui:90
 #: src/kikoe/ui/shortcuts.ui:27
 msgid "Import Audio…"
 msgstr ""
@@ -397,9 +397,9 @@ msgstr ""
 msgid "_Import Audio…"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.ui:158 src/kikoe/ui/dialogs.py:47
+#: src/kikoe/ui/bottom_bar.ui:158 src/kikoe/ui/dialogs.py:66
 #: src/kikoe/ui/export_dialog.ui:21 src/kikoe/ui/model_dialog.ui:21
-#: src/kikoe/ui/note_actions.py:60 src/kikoe/ui/retranscribe_dialog.ui:21
+#: src/kikoe/ui/note_actions.py:56 src/kikoe/ui/retranscribe_dialog.ui:21
 #: src/kikoe/ui/speaker_dialog.ui:21 src/kikoe/ui/speaker_editor.ui:20
 msgid "_Cancel"
 msgstr ""
@@ -409,7 +409,7 @@ msgid "_Stop"
 msgstr ""
 
 #: src/kikoe/ui/content_header.ui:14
-#: src/kikoe/ui/transcription_controller.py:325 src/kikoe/ui/window.py:406
+#: src/kikoe/ui/transcription_controller.py:323 src/kikoe/ui/window.py:388
 #: src/kikoe/ui/window.ui:10 src/kikoe/ui/window.ui:37
 #: src/kikoe/ui/window.ui:119 src/kikoe/ui/window.ui:130
 msgid "Kikoe"
@@ -447,7 +447,7 @@ msgstr ""
 msgid "Show _Speakers"
 msgstr ""
 
-#: src/kikoe/ui/content_header.ui:80 src/kikoe/ui/note_sidebar.py:177
+#: src/kikoe/ui/content_header.ui:80 src/kikoe/ui/note_sidebar.py:172
 #: src/kikoe/ui/window.ui:300
 msgid "_Rename…"
 msgstr ""
@@ -461,24 +461,24 @@ msgstr ""
 msgid "_Export…"
 msgstr ""
 
-#: src/kikoe/ui/content_header.ui:94 src/kikoe/ui/note_sidebar.py:179
+#: src/kikoe/ui/content_header.ui:94 src/kikoe/ui/note_sidebar.py:174
 #: src/kikoe/ui/window.ui:314
 msgid "_Delete Note"
 msgstr ""
 
-#: src/kikoe/ui/dialogs.py:23
+#: src/kikoe/ui/dialogs.py:51
 msgid "Discard Changes?"
 msgstr ""
 
-#: src/kikoe/ui/dialogs.py:24
+#: src/kikoe/ui/dialogs.py:52
 msgid "Your changes have not been saved and will be lost."
 msgstr ""
 
-#: src/kikoe/ui/dialogs.py:26
+#: src/kikoe/ui/dialogs.py:53
 msgid "_Keep Editing"
 msgstr ""
 
-#: src/kikoe/ui/dialogs.py:27
+#: src/kikoe/ui/dialogs.py:54
 msgid "_Discard"
 msgstr ""
 
@@ -486,35 +486,35 @@ msgstr ""
 msgid "Copied to clipboard"
 msgstr ""
 
-#: src/kikoe/ui/export_controller.py:71 src/kikoe/ui/export_dialog.ui:10
+#: src/kikoe/ui/export_controller.py:70 src/kikoe/ui/export_dialog.ui:10
 msgid "Export Note"
 msgstr ""
 
-#: src/kikoe/ui/export_controller.py:82 src/kikoe/ui/export_controller.py:122
+#: src/kikoe/ui/export_controller.py:83 src/kikoe/ui/note_actions.py:86
+msgid "This recording is no longer available."
+msgstr ""
+
+#: src/kikoe/ui/export_controller.py:94
+msgid "Export Original Audio"
+msgstr ""
+
+#: src/kikoe/ui/export_controller.py:96
+msgid "Audio Files"
+msgstr ""
+
+#: src/kikoe/ui/export_controller.py:99 src/kikoe/ui/speaker_controller.py:56
+#: src/kikoe/ui/transcription_controller.py:160
+msgid "The original audio is not available."
+msgstr ""
+
+#: src/kikoe/ui/export_controller.py:122
 #, python-brace-format
 msgid "Could not save “{name}”: {error}"
 msgstr ""
 
-#: src/kikoe/ui/export_controller.py:85 src/kikoe/ui/export_controller.py:125
+#: src/kikoe/ui/export_controller.py:125
 #, python-brace-format
 msgid "Exported “{name}”"
-msgstr ""
-
-#: src/kikoe/ui/export_controller.py:93 src/kikoe/ui/note_actions.py:105
-msgid "This recording is no longer available."
-msgstr ""
-
-#: src/kikoe/ui/export_controller.py:105
-msgid "Export Original Audio"
-msgstr ""
-
-#: src/kikoe/ui/export_controller.py:107
-msgid "Audio Files"
-msgstr ""
-
-#: src/kikoe/ui/export_controller.py:118 src/kikoe/ui/speaker_controller.py:59
-#: src/kikoe/ui/transcription_controller.py:160
-msgid "The original audio is not available."
 msgstr ""
 
 #: src/kikoe/ui/export_dialog.py:45
@@ -630,7 +630,7 @@ msgid "Realtime"
 msgstr ""
 
 #: src/kikoe/ui/labels.py:64 src/kikoe/ui/model_dialog.ui:79
-#: src/kikoe/ui/model_dialog.ui:140 src/kikoe/ui/recording_controller.py:166
+#: src/kikoe/ui/model_dialog.ui:140 src/kikoe/ui/recording_controller.py:164
 msgid "Timestamps"
 msgstr ""
 
@@ -638,7 +638,7 @@ msgstr ""
 msgid "Word Timestamps"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:168
+#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:166
 msgid "Speakers"
 msgstr ""
 
@@ -646,7 +646,7 @@ msgstr ""
 msgid "Streaming"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:172
+#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:170
 msgid "Text only"
 msgstr ""
 
@@ -753,9 +753,9 @@ msgstr ""
 msgid "Transcribing… {part} of {parts} chunks complete"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:177
-#: src/kikoe/ui/transcription_controller.py:263
-#: src/kikoe/ui/transcription_controller.py:310
+#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:175
+#: src/kikoe/ui/transcription_controller.py:261
+#: src/kikoe/ui/transcription_controller.py:308
 msgid "Transcribing…"
 msgstr ""
 
@@ -809,16 +809,16 @@ msgstr ""
 msgid "Microphone Level"
 msgstr ""
 
-#: src/kikoe/ui/model_dialog.py:50 src/kikoe/ui/provider_page.py:114
-#: src/kikoe/ui/provider_page.py:118
+#: src/kikoe/ui/model_dialog.py:64 src/kikoe/ui/provider_page.py:115
+#: src/kikoe/ui/provider_page.py:119
 msgid "Edit Model"
 msgstr ""
 
-#: src/kikoe/ui/model_dialog.py:51 src/kikoe/ui/speaker_editor.ui:27
+#: src/kikoe/ui/model_dialog.py:65 src/kikoe/ui/speaker_editor.ui:27
 msgid "_Save"
 msgstr ""
 
-#: src/kikoe/ui/model_dialog.py:181 src/kikoe/ui/model_dialog.py:195
+#: src/kikoe/ui/model_dialog.py:146 src/kikoe/ui/model_dialog.py:160
 msgid "This model does not support this option."
 msgstr ""
 
@@ -894,39 +894,39 @@ msgstr ""
 msgid "_Remove Model"
 msgstr ""
 
-#: src/kikoe/ui/note_actions.py:40 src/kikoe/ui/shortcuts.ui:15
+#: src/kikoe/ui/note_actions.py:32 src/kikoe/ui/shortcuts.ui:15
 #: src/kikoe/ui/sidebar_header.ui:15 src/kikoe/ui/sidebar_header.ui:17
 #: src/kikoe/ui/window.ui:45 src/kikoe/ui/window.ui:47
 msgid "New Note"
 msgstr ""
 
-#: src/kikoe/ui/note_actions.py:58
+#: src/kikoe/ui/note_actions.py:49
 msgid "Note Title"
 msgstr ""
 
-#: src/kikoe/ui/note_actions.py:59
+#: src/kikoe/ui/note_actions.py:56
 msgid "Rename Note"
 msgstr ""
 
-#: src/kikoe/ui/note_actions.py:61
+#: src/kikoe/ui/note_actions.py:56
 msgid "_Rename"
 msgstr ""
 
-#: src/kikoe/ui/note_actions.py:92
+#: src/kikoe/ui/note_actions.py:73
 #, python-brace-format
 msgid "Delete “{title}”?"
 msgstr ""
 
-#: src/kikoe/ui/note_actions.py:93 src/kikoe/ui/note_actions.py:112
+#: src/kikoe/ui/note_actions.py:74 src/kikoe/ui/note_actions.py:93
 msgid ""
 "Its transcript and original audio will be deleted. This cannot be undone."
 msgstr ""
 
-#: src/kikoe/ui/note_actions.py:94 src/kikoe/ui/note_actions.py:113
+#: src/kikoe/ui/note_actions.py:75 src/kikoe/ui/note_actions.py:94
 msgid "_Delete"
 msgstr ""
 
-#: src/kikoe/ui/note_actions.py:111
+#: src/kikoe/ui/note_actions.py:92
 #, python-brace-format
 msgid "Delete Recording {number}?"
 msgstr ""
@@ -950,7 +950,7 @@ msgid "Transcribing… · {model}"
 msgstr ""
 
 #: src/kikoe/ui/note_view.ui:25 src/kikoe/ui/speaker_editor.ui:49
-#: src/kikoe/ui/transcript_row.py:485
+#: src/kikoe/ui/transcript_row.py:482
 msgid "Match Speakers…"
 msgstr ""
 
@@ -1001,15 +1001,15 @@ msgstr ""
 msgid "System Default"
 msgstr ""
 
-#: src/kikoe/ui/preferences.py:135
+#: src/kikoe/ui/preferences.py:132
 msgid "No Default Model"
 msgstr ""
 
-#: src/kikoe/ui/preferences.py:220 src/kikoe/ui/preferences.ui:39
+#: src/kikoe/ui/preferences.py:215 src/kikoe/ui/preferences.ui:39
 msgid "Enter a language code such as zh, en, or ja."
 msgstr ""
 
-#: src/kikoe/ui/preferences.py:235
+#: src/kikoe/ui/preferences.py:230
 #, python-brace-format
 msgid "{api} API · {count} model"
 msgid_plural "{api} API · {count} models"
@@ -1101,16 +1101,16 @@ msgstr ""
 msgid "No Providers Yet"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.py:271
+#: src/kikoe/ui/provider_page.py:274
 #, python-brace-format
 msgid "Remove “{name}”?"
 msgstr ""
 
-#: src/kikoe/ui/provider_page.py:272
+#: src/kikoe/ui/provider_page.py:275
 msgid "Its models and API key will be deleted."
 msgstr ""
 
-#: src/kikoe/ui/provider_page.py:273
+#: src/kikoe/ui/provider_page.py:276
 msgid "_Remove"
 msgstr ""
 
@@ -1198,24 +1198,24 @@ msgstr ""
 msgid "_Remove Provider"
 msgstr ""
 
-#: src/kikoe/ui/recording_controller.py:148
+#: src/kikoe/ui/recording_controller.py:147
 msgid "No audio was recorded"
 msgstr ""
 
-#: src/kikoe/ui/recording_controller.py:169
+#: src/kikoe/ui/recording_controller.py:167
 #, python-brace-format
 msgid "{provider} {model} · {options}"
 msgstr ""
 
-#: src/kikoe/ui/recording_controller.py:181
+#: src/kikoe/ui/recording_controller.py:179
 msgid "Saving recording…"
 msgstr ""
 
-#: src/kikoe/ui/recording_controller.py:189 src/kikoe/ui/tasks.py:59
+#: src/kikoe/ui/recording_controller.py:187 src/kikoe/ui/tasks.py:59
 msgid "An unexpected error occurred. See the local log for details."
 msgstr ""
 
-#: src/kikoe/ui/recording_controller.py:223
+#: src/kikoe/ui/recording_controller.py:221
 msgid "Recovering recordings…"
 msgstr ""
 
@@ -1254,11 +1254,11 @@ msgid ""
 "you stop. The text will appear here."
 msgstr ""
 
-#: src/kikoe/ui/recovery_prompt.py:13
+#: src/kikoe/ui/recovery_prompt.py:14
 msgid "Recover Recordings?"
 msgstr ""
 
-#: src/kikoe/ui/recovery_prompt.py:15
+#: src/kikoe/ui/recovery_prompt.py:16
 msgid ""
 "Kikoe found unfinished recordings. Recover their audio now, then choose a "
 "model to transcribe them."
@@ -1386,7 +1386,7 @@ msgstr ""
 msgid "Recording {number} has speakers that are not yet matched."
 msgstr ""
 
-#: src/kikoe/ui/speaker_controller.py:94
+#: src/kikoe/ui/speaker_controller.py:91
 msgid "This recording has no detected speakers."
 msgstr ""
 
@@ -1421,30 +1421,30 @@ msgstr ""
 msgid "Speaker {number}"
 msgstr ""
 
-#: src/kikoe/ui/speaker_row.py:69
+#: src/kikoe/ui/speaker_row.py:68
 msgid "No sample available"
 msgstr ""
 
-#: src/kikoe/ui/speaker_row.py:69
+#: src/kikoe/ui/speaker_row.py:68
 #, python-brace-format
 msgid "“{text}”"
 msgstr ""
 
-#: src/kikoe/ui/speaker_row.py:72
+#: src/kikoe/ui/speaker_row.py:71
 #, python-brace-format
 msgid "Play a sample from “{name}”"
 msgstr ""
 
-#: src/kikoe/ui/speaker_row.py:73
+#: src/kikoe/ui/speaker_row.py:72
 #, python-brace-format
 msgid "Who is {name}?"
 msgstr ""
 
-#: src/kikoe/ui/speaker_row.py:77
+#: src/kikoe/ui/speaker_row.py:76
 msgid "Sample playback needs reliable timestamps."
 msgstr ""
 
-#: src/kikoe/ui/speaker_row.py:147
+#: src/kikoe/ui/speaker_row.py:146
 msgid "New Speaker"
 msgstr ""
 
@@ -1525,31 +1525,31 @@ msgstr ""
 msgid "Stop Playback"
 msgstr ""
 
-#: src/kikoe/ui/transcript_row.py:334
+#: src/kikoe/ui/transcript_row.py:331
 msgid "Segment text cannot be empty"
 msgstr ""
 
-#: src/kikoe/ui/transcript_row.py:403
+#: src/kikoe/ui/transcript_row.py:400
 msgid "End time must not be earlier than start time"
 msgstr ""
 
-#: src/kikoe/ui/transcript_row.py:434
+#: src/kikoe/ui/transcript_row.py:431
 msgid "Timestamps were not saved because the input is invalid"
 msgstr ""
 
-#: src/kikoe/ui/transcript_row.py:471
+#: src/kikoe/ui/transcript_row.py:468
 msgid "Use MM:SS or H:MM:SS, with optional decimal seconds"
 msgstr ""
 
-#: src/kikoe/ui/transcript_row.py:483
+#: src/kikoe/ui/transcript_row.py:480
 msgid "Re-transcribe…"
 msgstr ""
 
-#: src/kikoe/ui/transcript_row.py:484
+#: src/kikoe/ui/transcript_row.py:481
 msgid "Export Original Audio…"
 msgstr ""
 
-#: src/kikoe/ui/transcript_row.py:486
+#: src/kikoe/ui/transcript_row.py:483
 msgid "Delete Recording"
 msgstr ""
 
@@ -1558,7 +1558,7 @@ msgid "Import cancelled"
 msgstr ""
 
 #: src/kikoe/ui/transcription_controller.py:140
-#: src/kikoe/ui/transcription_controller.py:286
+#: src/kikoe/ui/transcription_controller.py:284
 msgid "Transcription Failed"
 msgstr ""
 
@@ -1566,15 +1566,15 @@ msgstr ""
 msgid "Transcription finished"
 msgstr ""
 
-#: src/kikoe/ui/transcription_controller.py:169
+#: src/kikoe/ui/transcription_controller.py:168
 msgid "Choose an available file transcription model."
 msgstr ""
 
-#: src/kikoe/ui/transcription_controller.py:208
+#: src/kikoe/ui/transcription_controller.py:206
 msgid "Re-transcription cancelled"
 msgstr ""
 
-#: src/kikoe/ui/transcription_controller.py:213
+#: src/kikoe/ui/transcription_controller.py:211
 #, python-brace-format
 msgid ""
 "{error}\n"
@@ -1582,11 +1582,11 @@ msgid ""
 "Your text and audio have been kept."
 msgstr ""
 
-#: src/kikoe/ui/transcription_controller.py:214
+#: src/kikoe/ui/transcription_controller.py:212
 msgid "Re-transcription Failed"
 msgstr ""
 
-#: src/kikoe/ui/transcription_controller.py:268
+#: src/kikoe/ui/transcription_controller.py:266
 msgid "Transcription cancelled"
 msgstr ""
 
