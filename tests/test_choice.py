@@ -4,6 +4,7 @@ from helpers import file_caps
 from kikoe.core.choice import (
     RequestedFeatures,
     available_models,
+    language_dropped,
     normalize_granularities,
     resolve_choice,
     unsupported_features,
@@ -95,3 +96,18 @@ def test_normalize_granularities_dedupes_orders_and_falls_back() -> None:
 def test_unsupported_features_feed_the_hint() -> None:
     assert unsupported_features(ModeCapabilities(timestamps=True)) == (Capability.DIARIZATION,)
     assert unsupported_features(ModeCapabilities(timestamps=True, diarization=True)) == ()
+
+
+def test_mistral_drops_the_language_when_timestamps_or_speakers_are_requested() -> None:
+    for features in (RequestedFeatures(True, False), RequestedFeatures(False, True)):
+        assert language_dropped(ApiKind.MISTRAL, features, "zh")
+
+
+def test_mistral_keeps_the_language_for_plain_text() -> None:
+    assert not language_dropped(ApiKind.MISTRAL, RequestedFeatures(False, False), "zh")
+
+
+def test_language_is_never_dropped_without_one_or_for_other_services() -> None:
+    assert not language_dropped(ApiKind.MISTRAL, RequestedFeatures(), None)
+    assert not language_dropped(ApiKind.MISTRAL, RequestedFeatures(), "")
+    assert not language_dropped(ApiKind.GROQ, RequestedFeatures(), "zh")

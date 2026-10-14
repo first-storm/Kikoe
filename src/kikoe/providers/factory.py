@@ -6,6 +6,7 @@ from kikoe.providers.deepgram import DeepgramClient
 from kikoe.providers.gemini import GeminiClient
 from kikoe.providers.groq import GroqClient
 from kikoe.providers.mimo import MiMoClient
+from kikoe.providers.mistral import MistralClient
 from kikoe.providers.openai import OpenAIClient
 from kikoe.providers.openrouter import OpenRouterClient
 
@@ -25,3 +26,5 @@ def create_client(provider: Provider, api_key: str) -> TranscriptionProvider:
             return MiMoClient(provider.base_url, api_key)
         case ApiKind.GROQ:
             return GroqClient(provider.base_url, api_key)
+        case ApiKind.MISTRAL:
+            return MistralClient(provider.base_url, api_key)

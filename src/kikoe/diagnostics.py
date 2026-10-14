@@ -84,6 +84,7 @@ def configure_logging(level: str = "INFO") -> None:
     for name in (
         "openai",
         "groq",
+        "mistralai",
         "openrouter",
         "deepgram",
         "google.genai",

@@ -20,6 +20,7 @@ from kikoe.providers.deepgram import DeepgramClient, parse_deepgram
 from kikoe.providers.factory import create_client
 from kikoe.providers.gemini import GeminiClient, parse_gemini
 from kikoe.providers.mimo import MiMoClient
+from kikoe.providers.mistral import MistralClient
 from kikoe.providers.openrouter import OpenRouterClient
 from kikoe.providers.parsing import parse_segments
 
@@ -100,6 +101,7 @@ def test_gemini_annotation_options_reduce_upload_duration() -> None:
         (ApiKind.GEMINI, GeminiClient),
         (ApiKind.OPENROUTER, OpenRouterClient),
         (ApiKind.MIMO, MiMoClient),
+        (ApiKind.MISTRAL, MistralClient),
     ],
 )
 def test_factory_selects_official_adapters(api: ApiKind, kind: type[object]) -> None:

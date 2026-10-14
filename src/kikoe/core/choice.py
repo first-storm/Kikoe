@@ -3,7 +3,7 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from kikoe.core.models import ModeCapabilities, ModelSpec, Provider, TimestampGranularity
+from kikoe.core.models import ApiKind, ModeCapabilities, ModelSpec, Provider, TimestampGranularity
 from kikoe.core.validation import Capability
 
 
@@ -71,3 +71,15 @@ def unsupported_features(capabilities: ModeCapabilities) -> tuple[Capability, ..
         (capabilities.diarization, Capability.DIARIZATION),
     )
     return tuple(capability for supported, capability in pairs if not supported)
+
+
+def language_dropped(api: ApiKind, features: RequestedFeatures, language: str | None) -> bool:
+    """Whether a set transcription language is left out of the request.
+
+    Mistral rejects a language together with timestamp granularities, and speaker labels
+    need its segment timestamps, so either option makes the service detect the language.
+    ``features`` must already be limited to what the model supports.
+    """
+    return (
+        api is ApiKind.MISTRAL and bool(language) and (features.timestamps or features.diarization)
+    )

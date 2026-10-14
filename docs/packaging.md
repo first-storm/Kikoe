@@ -138,8 +138,16 @@ controls with animations disabled. SDK requests and live streams are covered wit
 responses; ffmpeg resampling is checked at 16 and 24 kHz. No real provider account was
 used, and macOS/Windows realtime audio have not been verified on hardware.
 
+Mistral's file requests and streams are covered with fake HTTP responses, and its realtime
+client runs against a loopback WebSocket server with the real SDK. No Mistral account was
+used, so these assumptions need a real check: the response shape for word timestamps
+(treated as one segment per word), whether diarization requires segment granularity
+(assumed), the 60 minute and 500 MB limits (the docs disagree on duration), event order
+in streams (text may arrive before or after its segment), and flush behavior in realtime
+sessions (quiet-period heuristic).
+
 For real-account acceptance, test each configured hosted provider's file model, and
-Deepgram/OpenAI/Gemini live models: spoken text, multiple turns, pause/resume, a network
+Deepgram/OpenAI/Gemini/Mistral live models: spoken text, multiple turns, pause/resume, a network
 interruption and catch-up, stop during catch-up, and original FLAC export. For Deepgram,
 verify speaker turns; for Gemini, include a recording longer than ten minutes. A live-only
 model must require an explicit file-model choice for retry. Closing and startup recovery

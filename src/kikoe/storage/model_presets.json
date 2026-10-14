@@ -40,6 +40,20 @@
         "diarization": "unsupported"
       }
     },
+    "mistral": {
+      "file": {
+        "available": "on",
+        "timestamps": "on",
+        "word_timestamps": "on",
+        "diarization": "on",
+        "streaming": "on"
+      },
+      "realtime": {
+        "available": "unsupported",
+        "timestamps": "unsupported",
+        "diarization": "unsupported"
+      }
+    },
     "mimo": {
       "file": {
         "available": "on",
@@ -102,6 +116,13 @@
     {
       "apis": ["gemini"],
       "ids": ["gemini-3.5-transcribe-live"],
+      "file": { "available": "unsupported" },
+      "realtime": { "available": "on" }
+    },
+    {
+      "note": "Voxtral Realtime is live-only; the service offers no speakers or times in this mode.",
+      "apis": ["mistral"],
+      "prefixes": ["voxtral-mini-transcribe-realtime"],
       "file": { "available": "unsupported" },
       "realtime": { "available": "on" }
     },

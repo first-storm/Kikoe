@@ -19,6 +19,7 @@ class ApiKind(StrEnum):
     GEMINI = "gemini"
     MIMO = "mimo"
     GROQ = "groq"
+    MISTRAL = "mistral"
 
 
 @dataclass(frozen=True, slots=True)

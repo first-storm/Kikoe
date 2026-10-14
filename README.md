@@ -16,7 +16,7 @@ into searchable, editable notes with cloud speech-to-text services.
 ## ✨ Capture, refine, share
 
 - 🎙️ **Record or import** — microphone capture with pause/resume, plus existing audio files.
-- ☁️ **Choose your service** — Deepgram, OpenAI, OpenRouter, Gemini AI Studio, MiMo, Groq, or an OpenAI-compatible API.
+- ☁️ **Choose your service** — Deepgram, OpenAI, OpenRouter, Gemini AI Studio, MiMo, Groq, Mistral, or an OpenAI-compatible API.
 - 👥 **Follow each voice** — optional timestamps, speaker labels, and matching across recordings.
 - ✏️ **Polish your notes** — edit text and timestamps in place, with Undo/Redo; search titles and transcripts.
 - 📤 **Take them anywhere** — export text, Markdown, SRT, WebVTT, or original audio. Subtitles need timestamps.
@@ -88,8 +88,8 @@ Preferences → General sets a default model and language hint; leave the hint e
 <details>
 <summary>Models, recovery, and re-transcription</summary>
 
-- **Model support varies.** Deepgram Nova-3 supports file/live transcription, timestamps, and speakers. Groq Whisper supports file transcription with segment and word timestamps. OpenRouter and MiMo support file transcription (MiMo returns plain text without timestamps or speakers); OpenAI and Gemini also offer live models, with unsupported options disabled.
-- **Live-only models need a file alternative.** `gpt-live-transcribe` and `gemini-3.5-transcribe-live` are microphone-only; choose a file model for imports or retries.
+- **Model support varies.** Deepgram Nova-3 supports file/live transcription, timestamps, and speakers. Groq Whisper supports file transcription with segment and word timestamps. Mistral Voxtral supports file transcription with timestamps, speakers and streaming previews (the transcription language is ignored while timestamps or speakers are on), and its realtime model is microphone-only text. OpenRouter and MiMo support file transcription (MiMo returns plain text without timestamps or speakers); OpenAI, Gemini and Mistral also offer live models, with unsupported options disabled.
+- **Live-only models need a file alternative.** `gpt-live-transcribe`, `gemini-3.5-transcribe-live` and `voxtral-mini-transcribe-realtime-2602` are microphone-only; choose a file model for imports or retries.
 - **Audio stays available.** Recordings are saved locally. Interruptions retain audio and confirmed text; recovery never uploads automatically. Use **Retry Transcription** with a file model.
 - **Keep speakers consistent.** Click names to rename them; **Match Speakers** links people across recordings, with audio samples when timing allows.
 - **Try another model.** The recording menu offers playback and **Re-transcribe**. A successful result replaces that recording’s text, including manual edits; failure or cancellation keeps the previous text and audio.

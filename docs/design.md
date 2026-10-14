@@ -172,7 +172,7 @@ button "Match Speakers…" → opens screen 4. Widgets: `Adw.Banner`.
   heading, and "Kikoe will upload the audio to {model} and transcribe it automatically
   after you stop. The text will appear here." Existing recordings remain above the
   appended recording section. Models without effective realtime support use this branch.
-  Deepgram, OpenAI and Gemini native live endpoints use the realtime branch.
+  Deepgram, OpenAI, Gemini and Mistral native live endpoints use the realtime branch.
 - Bottom bar follows the HTML's order: 10 px red recording indicator, elapsed time
   `00:31` (tabular digits), 28 live level bars (3 px wide, up to 28 px high),
   model/options summary, round icon-only "Pause Recording" button, and a

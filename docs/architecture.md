@@ -159,8 +159,8 @@ and removes scheduled updates when a job ends.
    except OpenAI/MiMo use WAV. ffmpeg's `-progress` output gives the length, so ffprobe
    is not needed.
 4. **Split at the effective upload limit**: `UploadLimits` combines file size with
-   model/option-dependent duration. OpenAI, OpenRouter and Groq use 25 MB; Deepgram uses
-   2 GB; MiMo uses WAV and 7.5 MB, since its 10 MB limit applies to Base64;
+   model/option-dependent duration. OpenAI, OpenRouter and Groq use 25 MB; Mistral uses
+   500 MB and 60 minutes; Deepgram uses 2 GB; MiMo uses WAV and 7.5 MB, since its 10 MB limit applies to Base64;
    Gemini Files accepts 2 GB and Transcribe accepts 60 minutes, or 30 minutes with
    word timestamps/speakers. Per-provider settings can lower these bounds.
    The stricter size/duration budget wins. When a limit is exceeded, `media.transcode.find_silences` runs ffmpeg's
@@ -171,10 +171,25 @@ and removes scheduled updates when a job ends.
    workers; `offset_segments` shifts its timestamps before ordered merging.
 5. **Transcribe**: each backend uses an official asynchronous SDK: `openai[realtime]`
    (also for OpenAI-compatible URLs), `openrouter` STT multipart, `google-genai`
-   Interactions/Live, `deepgram-sdk` Listen v1, and `groq` audio transcriptions.
+   Interactions/Live, `deepgram-sdk` Listen v1, `groq` audio transcriptions, and
+   `mistralai[realtime]` for Voxtral files and live audio.
    Groq uses the SDK root URL `https://api.groq.com`; the SDK adds `/openai/v1`.
    Its Whisper models support segment and word timestamps, without diarization,
    streaming previews or realtime sessions; recordings upload after stopping.
+   Mistral uses the SDK root URL `https://api.mistral.ai`. Files go through
+   `audio.transcriptions.complete_async`, or `stream_async` when the model has the
+   streaming capability: text deltas are previews, segment events replace them, and
+   `transcription.done` is the authoritative result (EOF without it is a retryable
+   failure). Speakers come from `speaker_id` and need segment times, so requesting them
+   sends only the segment granularity. Word timestamps are grouped into sentences. The API
+   cannot take a language together with timestamp granularities:
+   `core.choice.language_dropped` decides when the language is left out, and the option
+   group tells the user. Uploads stay under 500 MB and 60 minutes, the stricter of the
+   limits page and the audio overview (which says three hours). The live model
+   (`voxtral-mini-transcribe-realtime-*`) is live-only, text without times or speakers,
+   16 kHz PCM through `audio.realtime.connect`. The service gives no flush
+   acknowledgement, so `MistralSession.flush` asks for the buffered audio and ends the turn
+   once no text has arrived for a short quiet period (at most eight seconds).
    Explicit language tags use their primary language code. Factory clients own their
    SDK and transport lifetimes. Requests use JSON, verbose JSON or diarized JSON according to
    the effective model/option support; provider metadata is normalized into `Segment`.

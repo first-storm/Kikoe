@@ -28,6 +28,8 @@ def catalog() -> ModelCatalog:
         (ApiKind.GEMINI, "gemini-3.5-transcribe", True, False, True, True),
         (ApiKind.DEEPGRAM, "nova-3", True, True, True, True),
         (ApiKind.MIMO, "mimo-v2.5-asr", True, False, False, False),
+        (ApiKind.MISTRAL, "voxtral-mini-latest", True, False, True, True),
+        (ApiKind.MISTRAL, "voxtral-mini-transcribe-realtime-2602", False, True, False, False),
     ],
 )
 def test_known_api_limits_override_manual_capability_claims(
@@ -77,7 +79,7 @@ def test_word_timestamps_are_offered_only_where_a_client_sends_them(
     catalog: ModelCatalog,
 ) -> None:
     allowed = [api for api in ApiKind if catalog.apis[api].file.word_timestamps.allowed]
-    assert allowed == [ApiKind.OPENROUTER, ApiKind.GROQ]
+    assert allowed == [ApiKind.OPENROUTER, ApiKind.GROQ, ApiKind.MISTRAL]
 
 
 def test_a_model_left_without_any_mode_gets_the_defaults(catalog: ModelCatalog) -> None:
@@ -135,3 +137,10 @@ def test_every_api_needs_an_entry() -> None:
     del apis["gemini"]
     with pytest.raises(CatalogError):
         parse_catalog(document)
+
+
+def test_mistral_streams_file_previews_by_default(catalog: ModelCatalog) -> None:
+    file = catalog.defaults(ApiKind.MISTRAL, "voxtral-mini-latest").file
+    assert file == ModeCapabilities(
+        timestamps=True, word_timestamps=True, diarization=True, streaming=True
+    )

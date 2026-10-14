@@ -75,6 +75,8 @@ def upload_policy(api: ApiKind) -> UploadPolicy:
             return UploadPolicy(7_500_000, format=AudioFormat.WAV, formats=(AudioFormat.WAV,))
         case ApiKind.OPENAI:
             return UploadPolicy(25_000_000, format=AudioFormat.WAV)
+        case ApiKind.MISTRAL:
+            return UploadPolicy(500_000_000, 3600)
         case ApiKind.OPENROUTER | ApiKind.OPENAI_COMPATIBLE | ApiKind.GROQ:
             return UploadPolicy(25_000_000)
 

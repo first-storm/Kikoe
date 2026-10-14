@@ -39,6 +39,8 @@ def api_label(api: ApiKind) -> str:
             return _("MiMo")
         case ApiKind.GROQ:
             return _("Groq")
+        case ApiKind.MISTRAL:
+            return _("Mistral")
         case ApiKind.OPENAI_COMPATIBLE:
             return _("OpenAI-compatible")
 

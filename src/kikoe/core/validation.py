@@ -41,6 +41,7 @@ DEFAULT_BASE_URLS: dict[ApiKind, str] = {
     ApiKind.GEMINI: "https://generativelanguage.googleapis.com",
     ApiKind.MIMO: "https://api.xiaomimimo.com/v1",
     ApiKind.GROQ: "https://api.groq.com",
+    ApiKind.MISTRAL: "https://api.mistral.ai",
 }
 """Hosted APIs with one well-known endpoint; OpenAI-compatible services have none."""
 

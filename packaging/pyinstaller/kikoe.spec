@@ -38,14 +38,20 @@ for distribution in (
     "keyring",
     "deepgram-sdk",
     "google-genai",
+    "mistralai",
     "openai",
     "openrouter",
     "websockets",
 ):
     datas += copy_metadata(distribution)
 
-# Providers and keyring backends are imported lazily or through entry points.
-hiddenimports = collect_submodules("kikoe") + collect_submodules("keyring.backends")
+# Providers and keyring backends are imported lazily or through entry points; the Mistral
+# SDK resolves its models and resources on first use, so PyInstaller cannot see them.
+hiddenimports = (
+    collect_submodules("kikoe")
+    + collect_submodules("keyring.backends")
+    + collect_submodules("mistralai")
+)
 
 a = Analysis(
     [str(HERE / "launch.py")],
