@@ -10,6 +10,7 @@ from kikoe.core.models import ModeCapabilities, Recording
 from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.storage.providers import ProviderRepository
+from kikoe.ui.labels import model_choice_label
 from kikoe.ui.options_group import OptionsGroup
 from kikoe.ui.templates import ui_file
 
@@ -56,10 +57,7 @@ class RetranscribeDialog(Adw.Dialog):
         ]
         # Without a usable current model the first row is a prompt, so nothing is chosen silently.
         self._offset = 0 if self._choice is not None else 1
-        names = [
-            _("{provider} · {model}").format(provider=c.provider.name, model=c.model.display_name)
-            for c in self._choices
-        ]
+        names = [model_choice_label(c) for c in self._choices]
         if self._offset:
             names.insert(0, _("Choose a File Model…"))
         self.model_row.set_model(Gtk.StringList.new(names))

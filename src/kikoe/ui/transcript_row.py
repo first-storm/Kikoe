@@ -148,9 +148,8 @@ class TranscriptRow(Gtk.Box):
         if segment is None:
             self._bind_header(item)
             return
-        self.recording_menu_button.set_visible(False)
         self._bind_meta(item, segment, show_timestamps, show_speakers, compact, editable)
-        live = item.position is None or item.preview or item.recording.recording_id == "live"
+        live = item.is_live
         self.text_stack.set_visible_child_name("live" if live else "edit")
         if live:
             self._key = None
@@ -241,7 +240,7 @@ class TranscriptRow(Gtk.Box):
             self._dark = None
             self.update_speaker_color()
         span = format_timestamp_range(segment.start, segment.end)
-        live = item.position is None or item.preview or item.recording.recording_id == "live"
+        live = item.is_live
         self.timestamp_button.set_visible(show_timestamps and (bool(span) or not live))
         self.timestamp_label.set_label(span or _("Add Time"))
         self.timestamp_button.update_property(
@@ -395,7 +394,7 @@ class TranscriptRow(Gtk.Box):
         start_ok = _mark_row(self.start_row)
         end_ok = _mark_row(self.end_row)
         if not (start_ok and end_ok):
-            self._show_time_error(_("Use MM:SS or H:MM:SS, with optional decimal seconds"))
+            self._show_time_error(_time_format_hint())
             return None
         start = parse_timestamp(self.start_row.get_text())
         end = parse_timestamp(self.end_row.get_text())
@@ -460,12 +459,16 @@ def _mark_row(row: Gtk.Entry) -> bool:
         row.add_css_class("error")
         row.update_property(
             [Gtk.AccessibleProperty.DESCRIPTION],
-            [_("Use MM:SS or H:MM:SS, with optional decimal seconds")],
+            [_time_format_hint()],
         )
         return False
     row.remove_css_class("error")
     row.update_property([Gtk.AccessibleProperty.DESCRIPTION], [""])
     return True
+
+
+def _time_format_hint() -> str:
+    return _("Use MM:SS or H:MM:SS, with optional decimal seconds")
 
 
 def _to_ms(value: timedelta | None) -> int:
@@ -474,23 +477,13 @@ def _to_ms(value: timedelta | None) -> int:
 
 def _recording_menu(recording_id: str) -> Gio.Menu:
     """Per-row menu; built in code because recycled rows cannot carry the id in Blueprint."""
-    entry = Gio.MenuItem()
-    entry.set_label(_("Export Original Audio…"))
-    entry.set_action_and_target_value("win.export-audio", GLib.Variant("s", recording_id))
+    target = GLib.Variant("s", recording_id)
     menu = Gio.Menu()
-    menu.append_item(entry)
-    retranscribe = Gio.MenuItem()
-    retranscribe.set_label(_("Re-transcribe…"))
-    retranscribe.set_action_and_target_value(
-        "win.retranscribe-recording", GLib.Variant("s", recording_id)
-    )
-    menu.prepend_item(retranscribe)
-    match = Gio.MenuItem()
-    match.set_label(_("Match Speakers…"))
-    match.set_action_and_target_value("win.match-speakers", GLib.Variant("s", recording_id))
-    menu.append_item(match)
-    delete = Gio.MenuItem()
-    delete.set_label(_("Delete Recording"))
-    delete.set_action_and_target_value("win.delete-recording", GLib.Variant("s", recording_id))
-    menu.append_item(delete)
+    for label, action in (
+        (_("Re-transcribe…"), "win.retranscribe-recording"),
+        (_("Export Original Audio…"), "win.export-audio"),
+        (_("Match Speakers…"), "win.match-speakers"),
+        (_("Delete Recording"), "win.delete-recording"),
+    ):
+        menu.append(label, Gio.Action.print_detailed_name(action, target))
     return menu

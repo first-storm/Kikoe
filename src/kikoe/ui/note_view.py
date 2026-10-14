@@ -6,13 +6,14 @@ window saves them and keeps the Undo history.
 """
 
 import sys
+from collections.abc import Iterable
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
-from kikoe.core.formatting import SPEAKER_COLOR_COUNT, speaker_order, transcript_features
-from kikoe.core.models import Note, Recording, RecordingSource
+from kikoe.core.formatting import SPEAKER_COLOR_COUNT, speaker_order
+from kikoe.core.models import Note, Recording, RecordingSource, Segment
 from kikoe.core.speakers import (
     identity_for,
     live_speaker_numbers,
@@ -20,7 +21,6 @@ from kikoe.core.speakers import (
     unresolved_recordings,
 )
 from kikoe.core.transcription import FileTranscriptSnapshot, LiveSnapshot, LiveState
-from kikoe.core.validation import Capability
 from kikoe.i18n import _
 from kikoe.ui.items import TranscriptItem
 from kikoe.ui.recording_view import RecordingView
@@ -138,29 +138,22 @@ class NoteView(Adw.BreakpointBin):
             self.speaker_banner.set_action_name("win.match-speakers")
         self.stack.set_visible_child_name("transcript" if note.recordings else "no-recordings")
         same_note = previous is not None and previous.note_id == note.note_id
-        if (
-            previous is not None
-            and same_note
-            and previous.recordings == note.recordings
-            and previous.speakers == note.speakers
-        ):
-            if previous.display != note.display:
-                self._rebind()
-            return False
-        if previous is not None and same_note and _same_structure(previous, note):
-            self._update_segments(note)
-            return False
-        self._has_speakers = any(
-            Capability.DIARIZATION in transcript_features(r.segments) for r in note.recordings
+        if previous is not None and same_note:
+            if previous.recordings == note.recordings and previous.speakers == note.speakers:
+                if previous.display != note.display:
+                    self._rebind()
+                return False
+            if _same_structure(previous, note):
+                self._update_segments(note)
+                return False
+        self._has_timestamps, self._has_speakers = _columns(
+            s for r in note.recordings for s in r.segments
         )
-        self._has_timestamps = any(
-            s.start is not None or s.end is not None for r in note.recordings for s in r.segments
-        )
-        self._fill(note, scroll_to_top=not same_note)
+        self._fill_rows(_rows(note), scroll_to_top=not same_note)
         return True
 
-    def _fill(self, note: Note, *, scroll_to_top: bool = False) -> None:
-        """Show ``note``'s rows in the items the list already has.
+    def _fill_rows(self, rows: list[TranscriptItem], *, scroll_to_top: bool = False) -> None:
+        """Show ``rows`` in the items the list already has, for saved notes and file overlays.
 
         Replacing the items would make the list destroy and rebuild every row widget,
         about two hundred of them however short the note, so each item takes over a row
@@ -168,10 +161,6 @@ class NoteView(Adw.BreakpointBin):
         longer than a frame, so when the view moves to the top of a newly opened note,
         the rows that fit on screen are bound at once and the others in later frames.
         """
-        self._fill_rows(_rows(note), scroll_to_top=scroll_to_top)
-
-    def _fill_rows(self, rows: list[TranscriptItem], *, scroll_to_top: bool = False) -> None:
-        """Retain the row pool for both saved notes and temporary file overlays."""
         # Typing is saved under the row it was typed into, before the items change.
         self.flush_edits()
         on_screen = sys.maxsize
@@ -298,7 +287,7 @@ class NoteView(Adw.BreakpointBin):
         index = found[1] + step
         while 0 <= index < self._items.get_n_items():
             item = self._items.get_item(index)
-            if item is not None and _editable_item(item):
+            if item is not None and not item.hidden and not item.is_live:
                 self._focus_index(index, at_end=step < 0)
                 return
             index += step
@@ -353,7 +342,7 @@ class NoteView(Adw.BreakpointBin):
             self._live = None
             self._live_rows = []
             if self._note is not None:
-                self._fill(self._note)
+                self._fill_rows(_rows(self._note))
         self.recording_slot.set_visible(False)
         self.stack.set_visible(True)
         self.stack.set_vexpand(True)
@@ -441,9 +430,9 @@ class NoteView(Adw.BreakpointBin):
         self._file_base_note = None
         self._note = note
         self._fill_rows(_rows(note) if note else [])
-        segments = tuple(s for r in note.recordings for s in r.segments) if note else ()
-        self._has_speakers = any(s.speaker_id is not None for s in segments)
-        self._has_timestamps = any(s.start is not None or s.end is not None for s in segments)
+        self._has_timestamps, self._has_speakers = _columns(
+            s for r in (note.recordings if note else ()) for s in r.segments
+        )
         self.stack.set_visible_child_name(
             "transcript" if note and note.recordings else "no-recordings"
         )
@@ -461,14 +450,10 @@ class NoteView(Adw.BreakpointBin):
     ) -> list[TranscriptItem]:
         existing = [s for r in resolved_note(context).recordings for s in r.segments]
         all_segments = (*snapshot.segments, *snapshot.preview)
-        order = speaker_order((*existing, *all_segments))
         numbers = live_speaker_numbers(context, all_segments)
-        previous_columns = self._has_speakers, self._has_timestamps
-        self._has_speakers = bool(order)
-        self._has_timestamps = any(
-            s.start is not None or s.end is not None for s in (*existing, *all_segments)
-        )
-        if previous_columns != (self._has_speakers, self._has_timestamps):
+        previous_columns = self._has_timestamps, self._has_speakers
+        self._has_timestamps, self._has_speakers = _columns((*existing, *all_segments))
+        if previous_columns != (self._has_timestamps, self._has_speakers):
             self._rebind()
         rows = [TranscriptItem(recording, number, live_summary=summary)]
         for index, segment in enumerate(all_segments):
@@ -481,29 +466,14 @@ class NoteView(Adw.BreakpointBin):
             )
             color = (numbers[speaker] - 1) % SPEAKER_COLOR_COUNT if speaker else None
             preview = index >= len(snapshot.segments)
+            new = TranscriptItem(recording, number, segment, name, color, preview=preview)
             old = previous_rows[index + 1] if index + 1 < len(previous_rows) else None
-            if old is not None and (old.segment, old.preview, old.speaker_name, old.color_slot) == (
-                segment,
-                preview,
-                name,
-                color,
-            ):
-                rows.append(old)
-            else:
-                rows.append(
-                    TranscriptItem(recording, number, segment, name, color, preview=preview)
-                )
+            rows.append(old if old is not None and old.content_key() == new.content_key() else new)
         adjustment = self.transcript_scroll.get_vadjustment()
         follow = adjustment.get_upper() - adjustment.get_value() - adjustment.get_page_size() < 48
         prefix = 0
         for old, new in zip(previous_rows, rows, strict=False):
-            if (old.segment, old.preview, old.live_summary, old.speaker_name, old.color_slot) != (
-                new.segment,
-                new.preview,
-                new.live_summary,
-                new.speaker_name,
-                new.color_slot,
-            ):
+            if old.content_key() != new.content_key():
                 break
             prefix += 1
         self._items.splice(base + prefix, len(previous_rows) - prefix, rows[prefix:])
@@ -627,13 +597,13 @@ def _rows(note: Note) -> list[TranscriptItem]:
     return rows
 
 
-def _editable_item(item: TranscriptItem) -> bool:
-    return (
-        item.position is not None
-        and not item.hidden
-        and not item.preview
-        and item.recording.recording_id != "live"
-    )
+def _columns(segments: Iterable[Segment]) -> tuple[bool, bool]:
+    """Whether any segment has a time, and whether any has a speaker."""
+    has_times = has_speakers = False
+    for segment in segments:
+        has_times = has_times or segment.start is not None or segment.end is not None
+        has_speakers = has_speakers or segment.speaker_id is not None
+    return has_times, has_speakers
 
 
 def _same_structure(previous: Note, note: Note) -> bool:

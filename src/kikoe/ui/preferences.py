@@ -14,7 +14,7 @@ from kikoe.media.devices import DeviceKind, list_devices
 from kikoe.paths import data_dir, log_dir
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.items import ProviderItem
-from kikoe.ui.labels import api_label
+from kikoe.ui.labels import api_label, model_choice_label
 from kikoe.ui.provider_page import ProviderPage
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
@@ -133,12 +133,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
             self._choices = available_models(self._repository.providers)
             names = [
                 _("No Default Model"),
-                *[
-                    _("{provider} · {model}").format(
-                        provider=c.provider.name, model=c.model.display_name
-                    )
-                    for c in self._choices
-                ],
+                *[model_choice_label(c) for c in self._choices],
             ]
             self.default_model_row.set_model(Gtk.StringList.new(names))
             selected = next(
@@ -155,11 +150,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
             if language != self._shown_language:
                 self.language_row.set_text(language or "")
                 self._shown_language = language
-                self.language_row.remove_css_class("error")
-                self.language_error.set_visible(False)
-                self.language_row.update_state(
-                    [Gtk.AccessibleState.INVALID], [int(Gtk.AccessibleInvalidState.FALSE)]
-                )
+                self._show_language_error(False)
         finally:
             self._updating = False
 
@@ -183,19 +174,10 @@ class PreferencesDialog(Adw.PreferencesDialog):
     @Gtk.Template.Callback()
     def _on_language_row_apply(self, _row: Adw.EntryRow) -> None:
         language = self.language_row.get_text().strip()
-        if language and not valid_language(language):
-            self.language_row.add_css_class("error")
-            self.language_error.set_visible(True)
-            self.language_row.update_state(
-                [Gtk.AccessibleState.INVALID], [int(Gtk.AccessibleInvalidState.TRUE)]
-            )
-            self.language_row.set_tooltip_text(_("Enter a language code such as zh, en, or ja."))
+        invalid = bool(language) and not valid_language(language)
+        self._show_language_error(invalid)
+        if invalid:
             return
-        self.language_row.remove_css_class("error")
-        self.language_error.set_visible(False)
-        self.language_row.update_state(
-            [Gtk.AccessibleState.INVALID], [int(Gtk.AccessibleInvalidState.FALSE)]
-        )
         run_task(
             self._repository.update_preferences(lambda p: replace(p, language=language or None)),
             self,
@@ -225,6 +207,20 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
         row.connect("activated", open_provider)
         return row
+
+    def _show_language_error(self, invalid: bool) -> None:
+        if invalid:
+            self.language_row.add_css_class("error")
+        else:
+            self.language_row.remove_css_class("error")
+        self.language_error.set_visible(invalid)
+        self.language_row.update_state(
+            [Gtk.AccessibleState.INVALID],
+            [int(Gtk.AccessibleInvalidState.TRUE if invalid else Gtk.AccessibleInvalidState.FALSE)],
+        )
+        self.language_row.set_tooltip_text(
+            _("Enter a language code such as zh, en, or ja.") if invalid else None
+        )
 
     @Gtk.Template.Callback()
     def _on_add_provider_button_clicked(self, _button: Gtk.Button) -> None:

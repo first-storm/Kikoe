@@ -2,6 +2,7 @@
 
 from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
+from kikoe.core.formatting import SPEAKER_COLOR_COUNT
 from kikoe.core.models import Note, Recording, Speaker, SpeakerBinding
 from kikoe.core.speakers import sample_range, sample_segment
 from kikoe.i18n import _
@@ -16,14 +17,14 @@ def speaker_label(note: Note, speaker_id: str) -> str:
 
 def color_widget(widget: Gtk.Widget, ordinal: int, *, title_only: bool = False) -> None:
     """Use the same theme palette in the transcript and matching controls."""
-    for slot in range(4):
+    for slot in range(SPEAKER_COLOR_COUNT):
         widget.remove_css_class(f"speaker-{slot}")
         widget.remove_css_class(f"speaker-{slot}-dark")
         widget.remove_css_class(f"speaker-title-{slot}")
         widget.remove_css_class(f"speaker-title-{slot}-dark")
     if ordinal <= 0:
         return
-    slot = (ordinal - 1) % 4
+    slot = (ordinal - 1) % SPEAKER_COLOR_COUNT
     dark = Adw.StyleManager.get_default().get_dark()
     prefix = "speaker-title" if title_only else "speaker"
     widget.add_css_class(f"{prefix}-{slot}-dark" if dark else f"{prefix}-{slot}")

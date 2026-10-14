@@ -4,7 +4,7 @@ from datetime import datetime
 
 from gi.repository import GLib
 
-from kikoe.core.choice import unsupported_features
+from kikoe.core.choice import ModelChoice, unsupported_features
 from kikoe.core.export import ExportFormat
 from kikoe.core.formatting import (
     RelativeDay,
@@ -218,3 +218,9 @@ def _feature_name(capability: Capability) -> str:
             return _("speaker detection")
         case Capability.STREAMING:
             return _("streaming preview")
+
+
+def model_choice_label(choice: ModelChoice) -> str:
+    return _("{provider} · {model}").format(
+        provider=choice.provider.name, model=choice.model.display_name
+    )

@@ -18,10 +18,6 @@ class ExportDialog(Adw.Dialog):
 
     __gtype_name__ = "KikoeExportDialog"
 
-    export_button: Gtk.Button = Gtk.Template.Child()
-    text_row: Adw.ActionRow = Gtk.Template.Child()
-    text_radio: Gtk.CheckButton = Gtk.Template.Child()
-    md_row: Adw.ActionRow = Gtk.Template.Child()
     md_radio: Gtk.CheckButton = Gtk.Template.Child()
     srt_row: Adw.ActionRow = Gtk.Template.Child()
     srt_radio: Gtk.CheckButton = Gtk.Template.Child()

@@ -51,6 +51,15 @@ class TranscriptItem(GObject.Object):
         self.hidden = False
         """A spare row kept for the next note; it shows nothing and takes no room."""
 
+    @property
+    def is_live(self) -> bool:
+        """Streamed or preview text, which has no saved segment to edit."""
+        return self.position is None or self.preview or self.recording.recording_id == "live"
+
+    def content_key(self) -> tuple[object, ...]:
+        """What the row shows; equal keys can keep the same row."""
+        return (self.segment, self.preview, self.live_summary, self.speaker_name, self.color_slot)
+
     def assign(self, other: TranscriptItem) -> None:
         """Show ``other``'s row in this item, so the list keeps its row widgets."""
         self.recording = other.recording

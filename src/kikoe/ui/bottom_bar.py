@@ -7,6 +7,7 @@ from gi.repository import Adw, Gdk, GObject, Gtk
 
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models, resolve_choice
 from kikoe.core.formatting import format_timestamp
+from kikoe.core.models import ModeCapabilities
 from kikoe.core.preferences import preferred_model
 from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.i18n import _
@@ -60,17 +61,17 @@ class BottomBar(Adw.Bin):
     @property
     def requested_features(self) -> RequestedFeatures:
         """The options' state, limited to what the chosen model supports."""
-        if self._choice is None:
-            return RequestedFeatures(timestamps=False, diarization=False)
-        return self._wanted.allowed_by(self._choice.model.capabilities.recording)
+        return self._allowed(self._choice.model.capabilities.recording if self._choice else None)
 
     @property
     def file_features(self) -> RequestedFeatures:
         """Import and retry use file capabilities even when recording would stream."""
-        file = self._choice.model.capabilities.file if self._choice else None
-        if file is None:
-            return RequestedFeatures(False, False)
-        return self._wanted.allowed_by(file)
+        return self._allowed(self._choice.model.capabilities.file if self._choice else None)
+
+    def _allowed(self, mode: ModeCapabilities | None) -> RequestedFeatures:
+        return (
+            self._wanted.allowed_by(mode) if mode is not None else RequestedFeatures(False, False)
+        )
 
     def bind_providers(self, repository: ProviderRepository) -> None:
         self._repository = repository
