@@ -29,7 +29,9 @@ from kikoe.providers.base import (
     TranscriptionError,
     TranscriptionOptions,
 )
-from kikoe.services.recording import RecordingSession, recover_recording, transcribe_recording
+from kikoe.services.recording import RecordingSession
+from kikoe.services.recording_transcription import transcribe_recording
+from kikoe.services.recovery import recover_all, recover_recording
 from kikoe.storage.captures import CaptureJournal, CaptureStore, CaptureStoreError
 from kikoe.storage.library import Library
 from kikoe.storage.notes import NoteRepository
@@ -733,3 +735,19 @@ async def test_retranscription_stream_failure_keeps_original_text_and_audio(
     assert await notes.get_note(note.note_id) == before
     assert await asyncio.to_thread(original_audio.read_bytes) == b"original audio"
     assert list((tmp_path / "work").iterdir()) == []
+
+
+@run_async
+async def test_recover_all_reports_each_note_that_gained_audio(
+    notes: NoteRepository, store: CaptureStore
+) -> None:
+    await notes.load()
+    with_audio = journal("deleted")
+    store.create(with_audio)
+    store.append(with_audio, struct.pack("<h", 1000) * 16000)
+    empty = replace(journal("deleted"), recording_id="b" * 32)
+    store.create(empty)
+    reported: list[str] = []
+    await recover_all((with_audio, empty), store, notes, lambda note: reported.append(note.title))
+    assert reported == ["Recovered"]
+    assert store.pending() == ()

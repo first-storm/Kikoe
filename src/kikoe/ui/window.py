@@ -41,8 +41,9 @@ from kikoe.services.file_transcription import FileTranscriptionWorkflow
 from kikoe.services.importer import ImportStage
 from kikoe.services.playback import Playback
 from kikoe.services.realtime import RealtimeRecording
-from kikoe.services.recording import RecordingSession, recover_recording
+from kikoe.services.recording import RecordingSession
 from kikoe.services.recording_workflow import RecordingCallbacks, RecordingWorkflow
+from kikoe.services.recovery import recover_all
 from kikoe.storage.captures import CaptureStore, capture_dir
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
@@ -60,6 +61,7 @@ from kikoe.ui.labels import (
     recording_note_title,
 )
 from kikoe.ui.note_view import NoteView
+from kikoe.ui.recovery_prompt import confirm_recovery
 from kikoe.ui.retranscribe_dialog import RetranscribeDialog
 from kikoe.ui.search import NoteSearch
 from kikoe.ui.speaker_dialog import SpeakerDialog
@@ -1347,46 +1349,22 @@ class Window(Adw.ApplicationWindow):
         journals = await asyncio.to_thread(store.pending)
         if not journals:
             return
-        dialog = Adw.AlertDialog(
-            heading=_("Recover Recordings?"),
-            body=_(
-                "Kikoe found unfinished recordings. Recover their audio now, then "
-                "choose a model to transcribe them."
-            ),
-        )
-        dialog.add_response("later", _("_Later"))
-        dialog.add_response("recover", _("_Recover"))
-        dialog.set_response_appearance("recover", Adw.ResponseAppearance.SUGGESTED)
-        dialog.set_default_response("recover")
-        dialog.set_close_response("later")
-        future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
-
-        def respond(_dialog: Adw.AlertDialog, response: str) -> None:
-            if not future.done():
-                future.set_result(response)
-
-        dialog.connect("response", respond)
-        dialog.present(self)
-        try:
-            response = await future
-        finally:
-            dialog.close()
-        if response != "recover":
+        if not await confirm_recovery(self):
             return
         self._work.recovery_busy = True
         self.bottom_bar.set_progress(_("Recovering recordings…"))
         self._update_actions()
         try:
-            for journal in journals:
-                note = await recover_recording(journal, store, self._notes)
-                if note is not None:
-                    self._show_note(note)
-                    self._select_row(note.note_id)
-                    self.split_view.set_show_content(True)
+            await recover_all(journals, store, self._notes, self._show_recovered_note)
         finally:
             self._work.recovery_busy = False
             self.bottom_bar.set_progress(None)
             self._update_actions()
+
+    def _show_recovered_note(self, note: Note) -> None:
+        self._show_note(note)
+        self._select_row(note.note_id)
+        self.split_view.set_show_content(True)
 
     @Gtk.Template.Callback()
     def _on_window_close_request(self, _window: Gtk.Window) -> bool:

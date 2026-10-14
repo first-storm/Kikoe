@@ -14,7 +14,7 @@ from kikoe.providers.base import FileTranscriptCallback, TranscriptionOptions, T
 from kikoe.providers.factory import create_client
 from kikoe.services.errors import USER_FACING_ERRORS
 from kikoe.services.importer import ProgressCallback, import_audio
-from kikoe.services.recording import transcribe_recording
+from kikoe.services.recording_transcription import transcribe_recording
 from kikoe.storage.notes import NoteRepository
 
 type ClientFactory = Callable[[Provider, str], TranscriptionProvider]
