@@ -2,7 +2,6 @@
 
 from gi.repository import Adw, Gio, GLib, Gtk
 
-from kikoe.core.models import NoteSummary
 from kikoe.i18n import _
 from kikoe.services.playback import Playback
 from kikoe.storage.notes import NoteRepository
@@ -33,18 +32,17 @@ class NoteActions:
         note = await self._notes.create_note(_("New Note"))
         self._host.select_note(note.note_id)
 
-    def on_rename_note(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        note = self._host.note
-        if note is not None:
-            self._rename(note.note_id, note.title)
+    def on_rename_note(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
+        if target := self._target(param):
+            self._rename(*target)
 
-    def on_rename_note_row(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        summary = self._summary(param.get_string()) if param is not None else None
-        if summary is not None:
-            self._rename(summary.note_id, summary.title)
-
-    def _summary(self, note_id: str) -> NoteSummary | None:
-        return next((s for s in self._notes.notes if s.note_id == note_id), None)
+    def _target(self, param: GLib.Variant | None) -> tuple[str, str] | None:
+        """ID and title of the sidebar row's note (``*-row`` actions) or else the shown note."""
+        if param is None:
+            note = self._host.note
+        else:
+            note = next((s for s in self._notes.notes if s.note_id == param.get_string()), None)
+        return (note.note_id, note.title) if note is not None else None
 
     def _rename(self, note_id: str, current_title: str) -> None:
         entry = Gtk.Entry(text=current_title, activates_default=True)
@@ -69,15 +67,9 @@ class NoteActions:
         dialog.present(self._window)
         entry.grab_focus()
 
-    def on_delete_note(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        note = self._host.note
-        if note is not None:
-            self._delete(note.note_id, note.title)
-
-    def on_delete_note_row(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        summary = self._summary(param.get_string()) if param is not None else None
-        if summary is not None:
-            self._delete(summary.note_id, summary.title)
+    def on_delete_note(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
+        if target := self._target(param):
+            self._delete(*target)
 
     def _delete(self, note_id: str, title: str) -> None:
         confirm_destructive(
