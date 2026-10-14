@@ -11,10 +11,14 @@ from kikoe.core.preferences import WindowState
 from kikoe.i18n import _
 from kikoe.paths import data_dir, log_dir
 from kikoe.storage.library import Library, audio_dir, database_path
+from kikoe.storage.model_catalog import load_catalog
 from kikoe.storage.notes import NoteRepository
+from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.storage.secrets import KeyringSecretStore
 from kikoe.storage.settings import SettingsError, SettingsStore, default_settings_path
+from kikoe.storage.settings_writer import SettingsWriter
+from kikoe.storage.window_state import WindowStateStore
 from kikoe.ui.preferences import PreferencesDialog
 from kikoe.ui.shortcuts import create_shortcuts_dialog
 from kikoe.ui.tasks import run_task, show_notice
@@ -33,7 +37,10 @@ class Application(Adw.Application):
             flags=Gio.ApplicationFlags.DEFAULT_FLAGS,
         )
         self._settings = SettingsStore(default_settings_path())
-        self.providers = ProviderRepository(self._settings, KeyringSecretStore())
+        writer = SettingsWriter(self._settings, load_catalog())
+        self.providers = ProviderRepository(writer, KeyringSecretStore())
+        self.preferences = PreferencesRepository(writer)
+        self.window_state = WindowStateStore(writer)
         self.notes = NoteRepository(Library(database_path(), audio_dir()))
         self._add_action("quit", self._on_quit, ["<primary>q"])
         self._add_action("preferences", self._on_preferences, ["<primary>comma"])
@@ -52,10 +59,22 @@ class Application(Adw.Application):
     def do_activate(self) -> None:
         window = self.get_active_window()
         if window is None:
-            window = Window(self, self.providers, self.notes, self._saved_window_state())
-            run_task(self.providers.load(), window)
+            window = Window(
+                self,
+                self.providers,
+                self.preferences,
+                self.window_state,
+                self.notes,
+                self._saved_window_state(),
+            )
+            run_task(self._load_settings(), window)
             run_task(self.notes.load(), window)
         window.present()
+
+    async def _load_settings(self) -> None:
+        """Providers are announced first, then the defaults that choose among them."""
+        await self.providers.load()
+        await self.preferences.load()
 
     def _saved_window_state(self) -> WindowState | None:
         """Read synchronously: the size must be known before the first frame is shown."""
@@ -98,15 +117,15 @@ class Application(Adw.Application):
             self.quit()
 
     def _on_preferences(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        PreferencesDialog(self.providers).present(self.get_active_window())
+        PreferencesDialog(self.providers, self.preferences).present(self.get_active_window())
 
     def _on_manage_providers(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        dialog = PreferencesDialog(self.providers)
+        dialog = PreferencesDialog(self.providers, self.preferences)
         dialog.set_visible_page_name("providers")
         dialog.present(self.get_active_window())
 
     def _on_add_provider(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        dialog = PreferencesDialog(self.providers)
+        dialog = PreferencesDialog(self.providers, self.preferences)
         dialog.present(self.get_active_window())
         dialog.start_add_provider()
 

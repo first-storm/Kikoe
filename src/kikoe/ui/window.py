@@ -20,7 +20,9 @@ from kikoe.services.activity import ActivityTracker
 from kikoe.services.errors import USER_FACING_ERRORS
 from kikoe.services.playback import Playback
 from kikoe.storage.notes import NoteRepository
+from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
+from kikoe.storage.window_state import WindowStateStore
 from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.export_controller import ExportController
 from kikoe.ui.labels import (
@@ -78,17 +80,20 @@ class Window(Adw.ApplicationWindow):
         self,
         application: Gtk.Application,
         providers: ProviderRepository,
+        preferences: PreferencesRepository,
+        window_store: WindowStateStore,
         notes: NoteRepository,
         window_state: WindowState | None = None,
     ) -> None:
         super().__init__(application=application)
         self._providers = providers
+        self._preferences = preferences
         self._notes = notes
         self._note: Note | None = None
         self._providers_loaded = False
         self._recovery_checked = False
         self._work = ActivityTracker()
-        self._geometry = GeometryKeeper(self, providers, window_state)
+        self._geometry = GeometryKeeper(self, window_store, window_state)
         self._create_views()
         self._create_controllers()
         self._register_actions(application)
@@ -97,7 +102,7 @@ class Window(Adw.ApplicationWindow):
         providers.connect_changed(self._on_providers_changed)
         notes.connect_changed(self._on_notes_changed)
         self.bottom_bar.connect("choice-changed", self._on_bottom_bar_choice_changed)
-        self.bottom_bar.bind_providers(providers)
+        self.bottom_bar.bind(providers, preferences)
         self._header_layout = HeaderLayout(
             self,
             self.sidebar_header,
@@ -124,7 +129,7 @@ class Window(Adw.ApplicationWindow):
 
     def _create_controllers(self) -> None:
         """Each controller owns one kind of work; the window only wires them together."""
-        notes, providers = self._notes, self._providers
+        notes, providers, preferences = self._notes, self._providers, self._preferences
         start_task, toast, current_note = self._start_task, self._toast, self._current_note
         self._editor = SegmentEditor(
             notes, self.note_view, start_task, current_note, self.show_note, self.set_action_enabled
@@ -147,12 +152,13 @@ class Window(Adw.ApplicationWindow):
         )
         self._playback = Playback(start_task, self.note_view.set_playing, self._on_playback_error)
         self._speakers = SpeakerController(
-            self, notes, providers, self._playback, current_note, toast
+            self, notes, preferences, self._playback, current_note, toast
         )
         self._transcribe = TranscriptionController(
             self,
             self,
             providers=providers,
+            preferences=preferences,
             notes=notes,
             work=self._work,
             bottom_bar=self.bottom_bar,
@@ -164,6 +170,7 @@ class Window(Adw.ApplicationWindow):
             self,
             self,
             providers=providers,
+            preferences=preferences,
             notes=notes,
             work=self._work,
             bottom_bar=self.bottom_bar,

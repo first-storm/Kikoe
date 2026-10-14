@@ -9,7 +9,7 @@ from kikoe.core.speakers import identity_for
 from kikoe.i18n import _
 from kikoe.services.playback import Playback
 from kikoe.storage.notes import NoteRepository
-from kikoe.storage.providers import ProviderRepository
+from kikoe.storage.preferences import PreferencesRepository
 from kikoe.ui.speaker_dialog import SpeakerDialog
 from kikoe.ui.speaker_editor import SpeakerEditor
 
@@ -21,14 +21,14 @@ class SpeakerController:
         self,
         window: Adw.ApplicationWindow,
         notes: NoteRepository,
-        providers: ProviderRepository,
+        preferences: PreferencesRepository,
         playback: Playback,
         note: Callable[[], Note | None],
         toast: Callable[[str], None],
     ) -> None:
         self._window = window
         self._notes = notes
-        self._providers = providers
+        self._preferences = preferences
         self._playback = playback
         self._note = note
         self._toast = toast
@@ -63,7 +63,7 @@ class SpeakerController:
             recording_id,
             start,
             end,
-            self._providers.preferences.output_device,
+            self._preferences.current.output_device,
         )
 
     def on_edit_speaker(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:

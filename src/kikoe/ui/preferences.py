@@ -12,6 +12,7 @@ from kikoe.core.preferences import Preferences, valid_language
 from kikoe.i18n import _, ngettext
 from kikoe.media.devices import DeviceKind, list_devices
 from kikoe.paths import data_dir, log_dir
+from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.items import ProviderItem
 from kikoe.ui.labels import api_label, model_choice_label
@@ -35,16 +36,15 @@ class PreferencesDialog(Adw.PreferencesDialog):
     data_row: Adw.ActionRow = Gtk.Template.Child()
     log_row: Adw.ActionRow = Gtk.Template.Child()
 
-    def __init__(self, repository: ProviderRepository) -> None:
+    def __init__(self, repository: ProviderRepository, preferences: PreferencesRepository) -> None:
         super().__init__()
         self._repository = repository
+        self._preferences = preferences
         self._updating = False
         self._shown_language: str | None = None
         self._choices: tuple[ModelChoice, ...] = ()
         self._device_names: dict[DeviceKind, list[str]] = {"input": [], "output": []}
-        self._disconnect_preferences = repository.connect_preferences_changed(
-            self._refresh_defaults
-        )
+        self._disconnect_preferences = preferences.connect_changed(self._refresh_defaults)
         run_task(self._show_paths(), self)
         run_task(self._load_devices(), self)
         self._providers: Gio.ListStore[ProviderItem] = Gio.ListStore(item_type=ProviderItem)
@@ -71,7 +71,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         return self.input_device_row if kind == "input" else self.output_device_row
 
     def _saved_device(self, kind: DeviceKind) -> str | None:
-        preferences = self._repository.preferences
+        preferences = self._preferences.current
         return preferences.input_device if kind == "input" else preferences.output_device
 
     def _device_entries(self, kind: DeviceKind) -> list[str]:
@@ -113,7 +113,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
                 return replace(preferences, input_device=name)
             return replace(preferences, output_device=name)
 
-        run_task(self._repository.update_preferences(change), self)
+        run_task(self._preferences.update(change), self)
 
     @Gtk.Template.Callback()
     def _on_input_device_row_notify_selected(
@@ -140,13 +140,13 @@ class PreferencesDialog(Adw.PreferencesDialog):
                 (
                     i + 1
                     for i, c in enumerate(self._choices)
-                    if c.key == self._repository.preferences.default_model
+                    if c.key == self._preferences.current.default_model
                 ),
                 0,
             )
             self.default_model_row.set_selected(selected)
             self._refresh_devices()
-            language = self._repository.preferences.language
+            language = self._preferences.current.language
             if language != self._shown_language:
                 self.language_row.set_text(language or "")
                 self._shown_language = language
@@ -165,9 +165,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
             return
         key = self._choices[index - 1].key if index else None
         run_task(
-            self._repository.update_preferences(
-                lambda p: replace(p, default_model=key, recent_model=key)
-            ),
+            self._preferences.update(lambda p: replace(p, default_model=key, recent_model=key)),
             self,
         )
 
@@ -179,7 +177,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         if invalid:
             return
         run_task(
-            self._repository.update_preferences(lambda p: replace(p, language=language or None)),
+            self._preferences.update(lambda p: replace(p, language=language or None)),
             self,
         )
 

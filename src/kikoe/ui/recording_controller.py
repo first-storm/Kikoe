@@ -20,6 +20,7 @@ from kikoe.services.recording_workflow import RecordingCallbacks, RecordingWorkf
 from kikoe.services.recovery import recover_all
 from kikoe.storage.captures import CaptureStore, capture_dir
 from kikoe.storage.notes import NoteRepository
+from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.labels import capture_label, recording_note_title
@@ -40,6 +41,7 @@ class RecordingController:
         host: WindowHost,
         *,
         providers: ProviderRepository,
+        preferences: PreferencesRepository,
         notes: NoteRepository,
         work: ActivityTracker,
         bottom_bar: BottomBar,
@@ -51,6 +53,7 @@ class RecordingController:
         self._window = window
         self._host = host
         self._providers = providers
+        self._preferences = preferences
         self._notes = notes
         self._work = work
         self._bottom_bar = bottom_bar
@@ -149,7 +152,7 @@ class RecordingController:
                 upload=upload,
                 finished=self._on_finished,
             ),
-            make_recorder=lambda: SoundDeviceRecorder(self._providers.preferences.input_device),
+            make_recorder=lambda: SoundDeviceRecorder(self._preferences.current.input_device),
             open_store=lambda: CaptureStore(capture_dir()),
             is_closing=lambda: self._work.closing,
         )

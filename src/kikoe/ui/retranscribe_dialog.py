@@ -9,6 +9,7 @@ from kikoe.core.formatting import format_duration
 from kikoe.core.models import ModeCapabilities, Recording
 from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionOptions
+from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.labels import model_choice_label
 from kikoe.ui.options_group import OptionsGroup
@@ -28,6 +29,7 @@ class RetranscribeDialog(Adw.Dialog):
     def __init__(
         self,
         providers: ProviderRepository,
+        preferences: PreferencesRepository,
         recording: Recording,
         number: int,
         current: ModelChoice | None,
@@ -35,7 +37,7 @@ class RetranscribeDialog(Adw.Dialog):
     ) -> None:
         super().__init__()
         self._updating = True
-        self._providers, self._submit = providers, submit
+        self._providers, self._preferences, self._submit = providers, preferences, submit
         self._options = OptionsGroup()
         self.options_slot.append(self._options)
         self._choice = current if current and current.model.capabilities.file is not None else None
@@ -85,7 +87,7 @@ class RetranscribeDialog(Adw.Dialog):
             file or ModeCapabilities(),
             wanted,
             self._choice.provider.api if self._choice else None,
-            self._providers.preferences.language,
+            self._preferences.current.language,
         )
 
     @Gtk.Template.Callback()
@@ -102,7 +104,7 @@ class RetranscribeDialog(Adw.Dialog):
             TranscriptionOptions(
                 timestamps=allowed.timestamps,
                 diarization=allowed.diarization,
-                language=self._providers.preferences.language,
+                language=self._preferences.current.language,
                 timestamp_granularities=allowed.timestamp_granularities,
             ),
         )

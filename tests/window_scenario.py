@@ -22,9 +22,13 @@ from gi.repository import Adw, Gio, GLib  # noqa: E402
 from kikoe import i18n  # noqa: E402
 from kikoe.core.models import ApiKind  # noqa: E402
 from kikoe.storage.library import Library  # noqa: E402
+from kikoe.storage.model_catalog import load_catalog  # noqa: E402
 from kikoe.storage.notes import NoteRepository  # noqa: E402
+from kikoe.storage.preferences import PreferencesRepository  # noqa: E402
 from kikoe.storage.providers import ProviderRepository  # noqa: E402
 from kikoe.storage.settings import SettingsStore  # noqa: E402
+from kikoe.storage.settings_writer import SettingsWriter  # noqa: E402
+from kikoe.storage.window_state import WindowStateStore  # noqa: E402
 
 if TYPE_CHECKING:
     from kikoe.ui.window import Window
@@ -145,14 +149,17 @@ def main() -> None:
     def on_activate(application: Adw.Application) -> None:
         from kikoe.ui.window import Window
 
-        providers = ProviderRepository(SettingsStore(directory / "settings.json"), MemorySecrets())
+        writer = SettingsWriter(SettingsStore(directory / "settings.json"), load_catalog())
+        providers = ProviderRepository(writer, MemorySecrets())
+        preferences = PreferencesRepository(writer)
         notes = NoteRepository(Library(directory / "library.sqlite3", directory / "audio"))
-        window = Window(application, providers, notes)
+        window = Window(application, providers, preferences, WindowStateStore(writer), notes)
         window.present()
 
         async def run() -> None:
             try:
                 await providers.load()
+                await preferences.load()
                 await notes.load()
                 await scenario(window, providers, notes, result)
             except Exception as error:

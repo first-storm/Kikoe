@@ -3,8 +3,12 @@
 import asyncio
 import functools
 from collections.abc import Callable, Coroutine
+from pathlib import Path
 
 from kikoe.core.models import Capabilities, ModeCapabilities
+from kikoe.storage.model_catalog import load_catalog
+from kikoe.storage.settings import SettingsStore
+from kikoe.storage.settings_writer import SettingsWriter
 
 
 def run_async[**P](test: Callable[P, Coroutine[None, None, None]]) -> Callable[P, None]:
@@ -37,3 +41,8 @@ def file_caps(
 
 LIVE_ONLY = Capabilities(file=None, realtime=ModeCapabilities())
 """A model that can only stream while recording."""
+
+
+def open_settings(path: Path) -> SettingsWriter:
+    """The shared settings writer for a settings file, as the application builds it."""
+    return SettingsWriter(SettingsStore(path), load_catalog())

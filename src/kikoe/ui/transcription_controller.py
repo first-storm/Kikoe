@@ -18,6 +18,7 @@ from kikoe.services.file_transcription import FileTranscriptionWorkflow
 from kikoe.services.importer import ImportStage
 from kikoe.services.playback import Playback
 from kikoe.storage.notes import NoteRepository
+from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.file_dialogs import pick_audio_file
@@ -41,6 +42,7 @@ class TranscriptionController:
         host: WindowHost,
         *,
         providers: ProviderRepository,
+        preferences: PreferencesRepository,
         notes: NoteRepository,
         work: ActivityTracker,
         bottom_bar: BottomBar,
@@ -51,6 +53,7 @@ class TranscriptionController:
         self._window = window
         self._host = host
         self._providers = providers
+        self._preferences = preferences
         self._work = work
         self._bottom_bar = bottom_bar
         self._playback = playback
@@ -64,7 +67,7 @@ class TranscriptionController:
         return TranscriptionOptions(
             timestamps=features.timestamps,
             diarization=features.diarization,
-            language=self._providers.preferences.language,
+            language=self._preferences.current.language,
             timestamp_granularities=features.timestamp_granularities,
         )
 
@@ -175,6 +178,7 @@ class TranscriptionController:
 
         dialog = RetranscribeDialog(
             self._providers,
+            self._preferences,
             recording,
             note.recordings.index(recording) + 1,
             self._bottom_bar.choice,

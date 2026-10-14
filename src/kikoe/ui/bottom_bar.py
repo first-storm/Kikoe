@@ -11,6 +11,7 @@ from kikoe.core.models import ModeCapabilities
 from kikoe.core.preferences import preferred_model
 from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.i18n import _
+from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.labels import transcription_hint
 from kikoe.ui.level_meter import LevelMeter
@@ -44,7 +45,8 @@ class BottomBar(Adw.Bin):
         self.recording_dot.add_tick_callback(self._pulse_dot)
         self._meter = LevelMeter()
         self.meter_slot.set_child(self._meter)
-        self._repository: ProviderRepository | None = None
+        self._providers: ProviderRepository | None = None
+        self._preferences: PreferencesRepository | None = None
         self._choice: ModelChoice | None = None
         self._wanted = RequestedFeatures()
         """What the user asked for, kept while a model that lacks a feature is chosen."""
@@ -73,18 +75,19 @@ class BottomBar(Adw.Bin):
             self._wanted.allowed_by(mode) if mode is not None else RequestedFeatures(False, False)
         )
 
-    def bind_providers(self, repository: ProviderRepository) -> None:
-        self._repository = repository
-        repository.connect_changed(self._refresh)
-        repository.connect_preferences_changed(self._on_preferences_changed)
+    def bind(self, providers: ProviderRepository, preferences: PreferencesRepository) -> None:
+        self._providers = providers
+        self._preferences = preferences
+        providers.connect_changed(self._refresh)
+        preferences.connect_changed(self._on_preferences_changed)
         self._refresh()
 
     def _on_preferences_changed(self) -> None:
         if self.state_stack.get_visible_child_name() != "idle":
             self._defaults_pending = True
             return
-        if self._repository is not None:
-            self._choice = preferred_model(self._repository.providers, self._repository.preferences)
+        if self._providers is not None and self._preferences is not None:
+            self._choice = preferred_model(self._providers.providers, self._preferences.current)
             self._refresh()
 
     def set_progress(self, message: str | None) -> None:
@@ -132,14 +135,14 @@ class BottomBar(Adw.Bin):
         return True
 
     def _refresh(self) -> None:
-        providers = self._repository.providers if self._repository else ()
+        providers = self._providers.providers if self._providers else ()
         wanted = self._choice.key if self._choice else None
         choices = available_models(providers)
         self._choice = (
             resolve_choice(providers, wanted)
             if any(c.key == wanted for c in choices)
-            else preferred_model(providers, self._repository.preferences)
-            if self._repository
+            else preferred_model(providers, self._preferences.current)
+            if self._preferences
             else None
         )
         self._show_choice()
@@ -170,8 +173,8 @@ class BottomBar(Adw.Bin):
 
     def present_transcription_dialog(self) -> None:
         """Let the user pick the model and options for the next transcription."""
-        providers = self._repository.providers if self._repository else ()
-        language = self._repository.preferences.language if self._repository else None
+        providers = self._providers.providers if self._providers else ()
+        language = self._preferences.current.language if self._preferences else None
         TranscriptionDialog(
             available_models(providers),
             self._choice,
@@ -185,9 +188,7 @@ class BottomBar(Adw.Bin):
         if self._choice is not None and choice.key == self._choice.key:
             return
         self._choice = choice
-        if self._repository is not None:
+        if self._preferences is not None:
             key = choice.key
-            run_task(
-                self._repository.update_preferences(lambda p: replace(p, recent_model=key)), self
-            )
+            run_task(self._preferences.update(lambda p: replace(p, recent_model=key)), self)
         self._show_choice()

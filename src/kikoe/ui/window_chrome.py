@@ -6,8 +6,8 @@ from gi.repository import Adw, GLib, GObject, Gtk
 
 from kikoe.core.decoration_layout import DecorationLayout
 from kikoe.core.preferences import WindowState, valid_window_state
-from kikoe.storage.providers import ProviderRepository
 from kikoe.storage.settings import SettingsError
+from kikoe.storage.window_state import WindowStateStore
 from kikoe.ui.tasks import run_task
 
 log = logging.getLogger(__name__)
@@ -21,11 +21,11 @@ class GeometryKeeper:
     def __init__(
         self,
         window: Adw.ApplicationWindow,
-        providers: ProviderRepository,
+        store: WindowStateStore,
         state: WindowState | None,
     ) -> None:
         self._window = window
-        self._providers = providers
+        self._store = store
         self._timeout = 0
         if state is not None:
             window.set_default_size(state.width, state.height)
@@ -50,7 +50,7 @@ class GeometryKeeper:
         if not valid_window_state(state):
             return
         try:
-            await self._providers.update_window(state)
+            await self._store.update(state)
         except SettingsError as error:
             log.warning("Could not remember the window size: %s", error)
 
