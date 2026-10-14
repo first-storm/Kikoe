@@ -4,6 +4,7 @@ import asyncio
 import logging
 import shutil
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 
 from gi.repository import Gio, GLib, Gtk
 
@@ -65,23 +66,13 @@ class ExportController:
         if note is None:
             return
         content = export_note(note, fmt, options)
-        target = await pick_save_path(
-            self._window,
+        await self._save_as(
             _("Export Note"),
             export_filename(note.title, fmt.value),
             export_format_label(fmt),
             f"*.{fmt.value}",
+            lambda target: target.write_text(content, encoding="utf-8"),
         )
-        if target is None:
-            return
-        try:
-            await asyncio.to_thread(target.write_text, content, encoding="utf-8")
-        except OSError as error:
-            log.warning("Export of note %s failed: %s", note.note_id, error)
-            message = _("Could not save “{name}”: {error}").format(name=target.name, error=error)
-            show_error(self._window, message)
-            return
-        self._host.toast(_("Exported “{name}”").format(name=target.name))
 
     def on_export_audio(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
         note = self._host.note
@@ -99,25 +90,35 @@ class ExportController:
         if note is None or source is None:
             return
         suffix = source.suffix or ".ogg"
-        target = await pick_save_path(
-            self._window,
+        await self._save_as(
             _("Export Original Audio"),
             export_filename(f"{note.title} - Recording {number}", suffix.lstrip(".")),
             _("Audio Files"),
             f"*{suffix}",
+            lambda target: shutil.copyfile(source, target),
+            source_missing=_("The original audio is not available."),
         )
+
+    async def _save_as(
+        self,
+        title: str,
+        name: str,
+        filter_label: str,
+        pattern: str,
+        write: Callable[[Path], object],
+        source_missing: str | None = None,
+    ) -> None:
+        """Ask for a location, write there off the main thread and report the outcome."""
+        target = await pick_save_path(self._window, title, name, filter_label, pattern)
         if target is None:
             return
         try:
-            await asyncio.to_thread(shutil.copyfile, source, target)
-        except FileNotFoundError:
-            log.warning(
-                "Original audio for recording %s is missing: %s", recording.recording_id, source
-            )
-            show_notice(self._window, _("The original audio is not available."))
-            return
+            await asyncio.to_thread(write, target)
         except OSError as error:
-            log.warning("Audio export of recording %s failed: %s", recording.recording_id, error)
+            log.warning("Saving %s failed: %s", target, error)
+            if source_missing is not None and isinstance(error, FileNotFoundError):
+                show_notice(self._window, source_missing)
+                return
             message = _("Could not save “{name}”: {error}").format(name=target.name, error=error)
             show_error(self._window, message)
             return
