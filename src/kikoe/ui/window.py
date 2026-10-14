@@ -3,25 +3,20 @@
 import asyncio
 import logging
 from collections.abc import Callable
-from dataclasses import replace
-from datetime import UTC, datetime, timedelta
-from pathlib import Path
+from datetime import UTC, datetime
 
 from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
 from kikoe.core.activity import Activity, action_availability
-from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models
+from kikoe.core.choice import ModelChoice
 from kikoe.core.models import (
     DisplayOptions,
     Note,
     Recording,
-    RecordingSource,
-    TranscriptionState,
 )
 from kikoe.core.preferences import WindowState
 from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.core.transcription import (
-    FileTranscriptSnapshot,
     LiveSnapshot,
 )
 from kikoe.i18n import _
@@ -30,8 +25,6 @@ from kikoe.media.recorder import SoundDeviceRecorder
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.services.activity import ActivityTracker
 from kikoe.services.errors import USER_FACING_ERRORS
-from kikoe.services.file_transcription import FileTranscriptionWorkflow
-from kikoe.services.importer import ImportStage
 from kikoe.services.playback import Playback
 from kikoe.services.realtime import RealtimeRecording
 from kikoe.services.recording import RecordingSession
@@ -42,11 +35,8 @@ from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.export_controller import ExportController
-from kikoe.ui.file_dialogs import pick_audio_file
-from kikoe.ui.file_transcription import FileTranscriptionDisplay
 from kikoe.ui.labels import (
     capture_label,
-    import_stage_label,
     note_title_subtitle,
     recording_note_title,
 )
@@ -54,11 +44,11 @@ from kikoe.ui.note_actions import NoteActions
 from kikoe.ui.note_sidebar import NoteSidebar
 from kikoe.ui.note_view import NoteView
 from kikoe.ui.recovery_prompt import confirm_recovery
-from kikoe.ui.retranscribe_dialog import RetranscribeDialog
 from kikoe.ui.segment_editor import SegmentEditor
 from kikoe.ui.speaker_controller import SpeakerController
 from kikoe.ui.tasks import run_task, show_error
 from kikoe.ui.templates import ui_file
+from kikoe.ui.transcription_controller import TranscriptionController
 from kikoe.ui.window_chrome import GeometryKeeper, HeaderLayout
 
 log = logging.getLogger(__name__)
@@ -115,8 +105,8 @@ class Window(Adw.ApplicationWindow):
             self.note_view,
             lambda coro: run_task(coro, self),
             lambda: self._note,
-            self._show_note,
-            self._set_action_enabled,
+            self.show_note,
+            self.set_action_enabled,
         )
         self._export = ExportController(
             self,
@@ -161,11 +151,7 @@ class Window(Adw.ApplicationWindow):
         self._add_toggle_action("show-speakers")
         self._add_action("export-audio", self._export.on_export_audio, GLib.VariantType.new("s"))
         self._add_action("choose-model", self._on_choose_model)
-        self._add_action("import-audio", self._on_import_audio)
-        self._add_action("cancel-import", self._on_cancel_import)
         self._work = ActivityTracker()
-        self._transcriptions = FileTranscriptionWorkflow(providers, notes)
-        self._file_display = FileTranscriptionDisplay(self.note_view)
         self._recording: RecordingWorkflow | None = None
         self._recording_note_id: str | None = None
         self._recording_summary = ""
@@ -175,7 +161,6 @@ class Window(Adw.ApplicationWindow):
         self._add_action("pause-recording", self._on_pause_recording)
         self._add_action("resume-recording", self._on_resume_recording)
         self._add_action("stop-recording", self._on_stop_recording)
-        self._add_action("retry-recording", self._on_retry_recording, GLib.VariantType.new("s"))
         self._playback = Playback(
             lambda coro: run_task(coro, self), self.note_view.set_playing, self._on_playback_error
         )
@@ -196,13 +181,29 @@ class Window(Adw.ApplicationWindow):
         self._add_action(
             "edit-speaker", self._speakers.on_edit_speaker, GLib.VariantType.new("(ss)")
         )
+        self._transcribe = TranscriptionController(
+            self,
+            self,
+            providers=providers,
+            notes=notes,
+            work=self._work,
+            bottom_bar=self.bottom_bar,
+            playback=self._playback,
+            speakers=self._speakers,
+            note_view=self.note_view,
+        )
+        self._add_action("import-audio", self._transcribe.on_import_audio)
+        self._add_action("cancel-import", self._transcribe.on_cancel_import)
+        self._add_action(
+            "retry-recording", self._transcribe.on_retry_recording, GLib.VariantType.new("s")
+        )
         self._note_actions = NoteActions(
             self,
             notes,
             self._playback,
             lambda: self._note,
             self.select_note,
-            self._show_note,
+            self.show_note,
             lambda title: self.add_toast(Adw.Toast(title=title)),
         )
         self._add_action("new-note", self._note_actions.on_new_note)
@@ -218,10 +219,12 @@ class Window(Adw.ApplicationWindow):
             "match-speakers", self._speakers.on_match_speakers, GLib.VariantType.new("s")
         )
         self._add_action(
-            "retranscribe-recording", self._on_retranscribe_recording, GLib.VariantType.new("s")
+            "retranscribe-recording",
+            self._transcribe.on_retranscribe_recording,
+            GLib.VariantType.new("s"),
         )
-        self._set_action_enabled("new-note", False)  # Until providers are loaded.
-        self._show_note(None)
+        self.set_action_enabled("new-note", False)  # Until providers are loaded.
+        self.show_note(None)
         providers.connect_changed(self._on_providers_changed)
         notes.connect_changed(self._on_notes_changed)
         self.bottom_bar.connect("choice-changed", self._on_bottom_bar_choice_changed)
@@ -249,6 +252,12 @@ class Window(Adw.ApplicationWindow):
 
     def add_toast(self, toast: Adw.Toast) -> None:
         self.toast_overlay.add_toast(toast)
+
+    def show_content_pane(self) -> None:
+        self.split_view.set_show_content(True)
+
+    def set_subtitle(self, subtitle: str) -> None:
+        self.window_title.set_subtitle(subtitle)
 
     def select_note(self, note_id: str) -> None:
         """Select ``note_id`` in the sidebar and show it."""
@@ -361,7 +370,7 @@ class Window(Adw.ApplicationWindow):
         """Whether the note on screen is the one a running transcription writes to."""
         if self._work.import_task is None:
             return False
-        return self._note is None or self._note.note_id == self._file_display.note_id
+        return self._note is None or self._note.note_id == self._transcribe.display.note_id
 
     def _on_notes_changed(self, note_id: str | None) -> None:
         if not self._recovery_checked:
@@ -370,10 +379,10 @@ class Window(Adw.ApplicationWindow):
         self._sidebar.refresh()
         current = self._note.note_id if self._note else None
         if current is None:
-            self._update_content()
+            self.refresh_content()
             return
         if not any(s.note_id == current for s in self._notes.notes):
-            self._show_note(None)
+            self.show_note(None)
             self.split_view.set_show_content(False)
         elif note_id == current:
             run_task(self._open_note(current), self)
@@ -381,11 +390,11 @@ class Window(Adw.ApplicationWindow):
     def _on_providers_changed(self) -> None:
         self._providers_loaded = True
         # Matches the first-run design: nothing to transcribe with, so no new notes yet.
-        self._set_action_enabled("new-note", bool(self._providers.providers))
-        self._update_content()
-        self._update_actions()
+        self.set_action_enabled("new-note", bool(self._providers.providers))
+        self.refresh_content()
+        self.refresh_actions()
 
-    def _set_action_enabled(self, name: str, enabled: bool) -> None:
+    def set_action_enabled(self, name: str, enabled: bool) -> None:
         action = self.lookup_action(name)
         if isinstance(action, Gio.SimpleAction):
             action.set_enabled(enabled)
@@ -396,10 +405,10 @@ class Window(Adw.ApplicationWindow):
         note = await self._notes.get_note(note_id)
         current = self._recording_note_id or (self._note.note_id if self._note else None)
         if not self._switch_locked() or note_id == current:
-            self._show_note(note)
+            self.show_note(note)
 
-    def _show_note(self, note: Note | None) -> None:
-        self._file_display.hide_if_other(note)
+    def show_note(self, note: Note | None) -> None:
+        self._transcribe.display.hide_if_other(note)
         if self._note is not None and (note is None or self._note.note_id != note.note_id):
             self._playback.stop()
             # Saved under the note being left, so this must run before it is replaced.
@@ -410,16 +419,16 @@ class Window(Adw.ApplicationWindow):
         self.note_menu_button.set_visible(note is not None)
         self.display_options_button.set_visible(note is not None)
         for name in _NOTE_ACTIONS:
-            self._set_action_enabled(name, note is not None)
+            self.set_action_enabled(name, note is not None)
         if note is None:
-            self._set_titles(_("Kikoe"), "", "")
+            self.set_titles(_("Kikoe"), "", "")
         else:
-            self._set_titles(note.title, note.title, note_title_subtitle(note))
+            self.set_titles(note.title, note.title, note_title_subtitle(note))
             self._set_display_action_state("show-timestamps", note.display.show_timestamps)
             self._set_display_action_state("show-speakers", note.display.show_speakers)
             if self.note_view.show_note(note):
                 self._editor.forget()
-            self._file_display.show(note)
+            self._transcribe.display.show(note)
             self.bottom_bar.set_note(bool(note.recordings))
             if self._session is not None and self._session.state is not CaptureState.STOPPED:
                 self.note_view.show_recording(
@@ -429,16 +438,16 @@ class Window(Adw.ApplicationWindow):
                     self.note_view.update_live(self._live.snapshot())
                 self.note_view.recording_view.set_state(self._session.state)
                 self.window_title.set_subtitle(capture_label(self._session.state))
-        self._update_content()
-        self._update_actions()
+        self.refresh_content()
+        self.refresh_actions()
 
-    def _set_titles(self, page: str, title: str, subtitle: str) -> None:
+    def set_titles(self, page: str, title: str, subtitle: str) -> None:
         self.content_page.set_title(page)
         self.window_title.set_title(title)
         self.window_title.set_subtitle(subtitle)
 
-    def _update_content(self) -> None:
-        if self._note is not None or self._file_display.active:
+    def refresh_content(self) -> None:
+        if self._note is not None or self._transcribe.display.active:
             page = "note"
         elif not self._providers_loaded:
             page = "loading"
@@ -458,83 +467,17 @@ class Window(Adw.ApplicationWindow):
         log.warning("Playback failed: %s", error)
         self.add_toast(Adw.Toast(title=str(error)))
 
-    def _on_retranscribe_recording(
-        self, _action: Gio.SimpleAction, param: GLib.Variant | None
-    ) -> None:
-        if self._note is None or param is None:
-            return
-        recording = self._recording_by_id(param.get_string())
-        if recording is None or recording.audio_path is None:
-            self.add_toast(Adw.Toast(title=_("The original audio is not available.")))
-            return
-        note_id = self._note.note_id
-
-        def submit(choice: ModelChoice, options: TranscriptionOptions) -> None:
-            choices = available_models(self._providers.providers)
-            refreshed = next((c for c in choices if c.key == choice.key), None)
-            if refreshed is None or refreshed.model.capabilities.file is None:
-                self.add_toast(Adw.Toast(title=_("Choose an available file transcription model.")))
-                return
-            self._playback.stop()
-            self._work.import_task = run_task(
-                self._retranscribe(note_id, recording, refreshed, options), self
-            )
-            self.bottom_bar.set_progress(_("Transcribing…"))
-            self._update_actions()
-
-        dialog = RetranscribeDialog(
-            self._providers,
-            recording,
-            self._note.recordings.index(recording) + 1,
-            self.bottom_bar.choice,
-            submit,
-        )
-        self._speakers.stop_playback_on_close(dialog)
-        dialog.present(self)
-
-    async def _retranscribe(
-        self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
-    ) -> None:
-        self._begin_file_transcription(recording, choice, replacing=True)
-        try:
-            await self._playback.finish()
-            note = await self._transcriptions.retranscribe(
-                note_id,
-                recording,
-                choice,
-                options,
-                on_progress=self._on_file_progress,
-                on_update=self._on_file_update,
-            )
-            self._end_file_transcription()
-            self._show_note(note)
-        except asyncio.CancelledError:
-            self.add_toast(Adw.Toast(title=_("Re-transcription cancelled")))
-        except USER_FACING_ERRORS as error:
-            log.warning("Re-transcription failed: %s", error)
-            show_error(
-                self,
-                _("{error}\n\nYour text and audio have been kept.").format(error=error),
-                _("Re-transcription Failed"),
-            )
-        finally:
-            self._end_file_transcription()
-            self._work.committing = False
-            self._work.import_task = None
-            self.bottom_bar.set_progress(None)
-            self._update_actions()
-
     # Import
 
     def _on_bottom_bar_choice_changed(self, _bar: BottomBar) -> None:
-        self._update_actions()
+        self.refresh_actions()
 
-    def _update_actions(self) -> None:
+    def refresh_actions(self) -> None:
         activity = self._activity()
         if activity.locked:
             self._playback.stop()
         for name, enabled in action_availability(activity).items():
-            self._set_action_enabled(name, enabled)
+            self.set_action_enabled(name, enabled)
         self.notes_list.set_can_target(not activity.switch_locked)
         self.search_button.set_sensitive(not activity.busy)
         # Typing in the list starts a search, which must not hide the Stop controls.
@@ -546,122 +489,6 @@ class Window(Adw.ApplicationWindow):
     def _on_choose_model(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         self.bottom_bar.present_transcription_dialog()
 
-    def _on_import_audio(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        run_task(self._pick_and_import(), self)
-
-    def _on_cancel_import(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        if self._work.import_task is not None and not self._work.committing:
-            self._work.import_task.cancel()
-
-    def _transcription_options(self, features: RequestedFeatures) -> TranscriptionOptions:
-        """Capture the current language with the entry point's selected features."""
-        return TranscriptionOptions(
-            timestamps=features.timestamps,
-            diarization=features.diarization,
-            language=self._providers.preferences.language,
-            timestamp_granularities=features.timestamp_granularities,
-        )
-
-    async def _pick_and_import(self) -> None:
-        path = await pick_audio_file(self)
-        choice = self.bottom_bar.choice
-        if (
-            path is None
-            or choice is None
-            or self._work.import_task is not None
-            or self._work.recording_task is not None
-        ):
-            return
-        note_id = self._note.note_id if self._note else None
-        options = self._transcription_options(self.bottom_bar.file_features)
-        task = asyncio.ensure_future(self._import(path, note_id, choice, options))
-        self._work.import_task = task
-        self._update_actions()
-        self.bottom_bar.set_progress(import_stage_label(ImportStage.CONVERTING, 1, 1))
-        self.split_view.set_show_content(True)
-        try:
-            await task
-        except asyncio.CancelledError:
-            if not task.cancelled():
-                raise  # This coroutine itself was cancelled, not the import.
-            self.add_toast(Adw.Toast(title=_("Import cancelled")))
-        finally:
-            self._work.import_task = None
-            self.bottom_bar.set_progress(None)
-            self._update_actions()
-
-    async def _import(
-        self,
-        path: Path,
-        note_id: str | None,
-        choice: ModelChoice,
-        options: TranscriptionOptions,
-    ) -> None:
-        recording = Recording(
-            "file-preview",
-            datetime.now(UTC),
-            timedelta(),
-            RecordingSource.IMPORTED,
-            choice.provider.name,
-            choice.model.model_id,
-        )
-        self._begin_file_transcription(recording, choice, title=path.stem)
-        try:
-            await self._playback.finish()
-            note = await self._transcriptions.import_file(
-                path,
-                note_id,
-                choice,
-                options,
-                on_progress=self._on_file_progress,
-                on_update=self._on_file_update,
-            )
-        except USER_FACING_ERRORS as error:
-            log.warning("Import of %s failed: %s", path, error)
-            show_error(self, str(error), _("Transcription Failed"))
-            return
-        finally:
-            self._end_file_transcription()
-        if self._note is None or self._note.note_id == note.note_id:
-            self.select_note(note.note_id)
-        else:
-            self.add_toast(Adw.Toast(title=_("Transcription finished")))
-
-    def _begin_file_transcription(
-        self,
-        recording: Recording,
-        choice: ModelChoice,
-        *,
-        replacing: bool = False,
-        title: str = "",
-    ) -> None:
-        self._file_display.begin(
-            self._note,
-            replace(recording, provider_name=choice.provider.name, model_id=choice.model.model_id),
-            replacing=replacing,
-        )
-        if self._note is None:
-            self._set_titles(title, title, _("Transcribing…"))
-        self._update_content()
-        self.split_view.set_show_content(True)
-
-    def _on_file_progress(self, stage: ImportStage, part: int, parts: int) -> None:
-        self._work.committing = stage is ImportStage.SAVING
-        self._set_action_enabled("cancel-import", not self._work.committing)
-        self.bottom_bar.set_progress(import_stage_label(stage, part, parts))
-
-    def _on_file_update(self, snapshot: FileTranscriptSnapshot) -> None:
-        self._file_display.update(snapshot)
-
-    def _end_file_transcription(self) -> None:
-        if not self._file_display.active:
-            return
-        self._file_display.end()
-        self._work.committing = False
-        if self._note is None:
-            self._set_titles(_("Kikoe"), "", "")
-        self._update_content()
-
     # Recording
 
     def _on_start_recording(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
@@ -672,16 +499,16 @@ class Window(Adw.ApplicationWindow):
             or self._work.import_task is not None
         ):
             return
-        options = self._transcription_options(self.bottom_bar.requested_features)
+        options = self._transcribe.transcription_options(self.bottom_bar.requested_features)
         note_id = self._note.note_id if self._note else None
         self._work.recording_task = run_task(self._record(note_id, choice, options), self)
-        self._update_actions()
+        self.refresh_actions()
 
     async def _record(
         self, note_id: str | None, choice: ModelChoice, options: TranscriptionOptions
     ) -> None:
         async def upload(saved_note_id: str, recording: Recording) -> None:
-            await self._begin_recording_upload(saved_note_id, recording, choice, options)
+            await self._transcribe.upload_recording(saved_note_id, recording, choice, options)
 
         self._recording = RecordingWorkflow(
             notes=self._notes,
@@ -692,7 +519,7 @@ class Window(Adw.ApplicationWindow):
                 progress=self._on_capture_progress,
                 live_update=self._on_live_update,
                 capture_ended=self._on_recording_capture_ended,
-                saved=self._show_note,
+                saved=self.show_note,
                 nothing_recorded=lambda: self.add_toast(
                     Adw.Toast(title=_("No audio was recorded"))
                 ),
@@ -722,7 +549,7 @@ class Window(Adw.ApplicationWindow):
             model=choice.model.display_name,
             options=_("Text only") if not labels else ", ".join(labels),
         )
-        self._show_note(note)
+        self.show_note(note)
         self._refresh_recording_sidebar()
         self.split_view.set_show_content(True)
         self.bottom_bar.show_recording(self._recording_summary)
@@ -730,7 +557,7 @@ class Window(Adw.ApplicationWindow):
     def _on_recording_capture_ended(self) -> None:
         self.note_view.hide_recording()
         self.bottom_bar.set_progress(_("Saving recording…"))
-        self._update_actions()
+        self.refresh_actions()
 
     def _on_live_failed(self, error: Exception) -> None:
         if isinstance(error, USER_FACING_ERRORS):
@@ -745,7 +572,7 @@ class Window(Adw.ApplicationWindow):
         self.note_view.hide_recording()
         self.bottom_bar.set_progress(None)
         self._refresh_recording_sidebar()
-        self._show_note(self._note)
+        self.show_note(self._note)
 
     def _refresh_recording_sidebar(self) -> None:
         self._sidebar.refresh()
@@ -759,7 +586,7 @@ class Window(Adw.ApplicationWindow):
         self.note_view.recording_view.set_state(progress.state)
         if progress.state is not CaptureState.STOPPED:
             self.window_title.set_subtitle(capture_label(progress.state))
-        self._update_actions()
+        self.refresh_actions()
 
     def _on_pause_recording(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         if self._session is not None:
@@ -782,73 +609,6 @@ class Window(Adw.ApplicationWindow):
         if self._session is not None:
             run_task(self._session.stop(), self)
 
-    def _on_retry_recording(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        choice, note = self.bottom_bar.choice, self._note
-        if (
-            choice is None
-            or note is None
-            or param is None
-            or self._work.import_task is not None
-            or self._work.recording_task is not None
-        ):
-            return
-        recording = note.recording(param.get_string())
-        if recording is None or recording.transcription_state is TranscriptionState.READY:
-            return
-        options = self._transcription_options(self.bottom_bar.file_features)
-        self._work.recording_task = run_task(
-            self._retry_recording(note.note_id, recording, choice, options), self
-        )
-        self._update_actions()
-
-    async def _retry_recording(
-        self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
-    ) -> None:
-        try:
-            await self._begin_recording_upload(note_id, recording, choice, options)
-        finally:
-            self._work.recording_task = None
-            self.bottom_bar.set_progress(None)
-            self._update_actions()
-
-    async def _begin_recording_upload(
-        self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
-    ) -> None:
-        if self._work.closing:
-            return
-        self._work.import_task = run_task(
-            self._upload_recording(note_id, recording, choice, options), self
-        )
-        self.bottom_bar.set_progress(_("Transcribing…"))
-        self._update_actions()
-        try:
-            await self._work.import_task
-        except asyncio.CancelledError:
-            self.add_toast(Adw.Toast(title=_("Transcription cancelled")))
-        finally:
-            self._work.import_task = None
-
-    async def _upload_recording(
-        self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
-    ) -> None:
-        self._begin_file_transcription(recording, choice, replacing=True)
-        try:
-            note = await self._transcriptions.transcribe_pending(
-                note_id,
-                recording,
-                choice,
-                options,
-                on_progress=self._on_file_progress,
-                on_update=self._on_file_update,
-            )
-        except USER_FACING_ERRORS as error:
-            show_error(self, str(error), _("Transcription Failed"))
-            return
-        finally:
-            self._end_file_transcription()
-        if self._note is not None and self._note.note_id == note_id:
-            self._show_note(note)
-
     async def _offer_recovery(self) -> None:
         store = CaptureStore(await asyncio.to_thread(capture_dir))
         journals = await asyncio.to_thread(store.pending)
@@ -858,16 +618,16 @@ class Window(Adw.ApplicationWindow):
             return
         self._work.recovery_busy = True
         self.bottom_bar.set_progress(_("Recovering recordings…"))
-        self._update_actions()
+        self.refresh_actions()
         try:
             await recover_all(journals, store, self._notes, self._show_recovered_note)
         finally:
             self._work.recovery_busy = False
             self.bottom_bar.set_progress(None)
-            self._update_actions()
+            self.refresh_actions()
 
     def _show_recovered_note(self, note: Note) -> None:
-        self._show_note(note)
+        self.show_note(note)
         self._sidebar.select(note.note_id)
         self.split_view.set_show_content(True)
 
@@ -898,7 +658,7 @@ class Window(Adw.ApplicationWindow):
             self.destroy()
         except USER_FACING_ERRORS:
             self._work.closing = False
-            self._update_actions()
+            self.refresh_actions()
             raise
 
     async def _stop_session(self) -> None:
