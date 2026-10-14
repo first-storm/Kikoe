@@ -106,11 +106,6 @@ def descriptor(api: ApiKind) -> ProviderDescriptor:
     return PROVIDERS[api]
 
 
-def descriptors() -> tuple[ProviderDescriptor, ...]:
-    """Every API, in display order."""
-    return tuple(PROVIDERS.values())
-
-
 def is_default_base_url(url: str) -> bool:
     """Whether ``url`` is some API's well-known endpoint, so switching APIs may replace it."""
     return url != "" and any(d.default_base_url == url for d in PROVIDERS.values())

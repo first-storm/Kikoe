@@ -61,7 +61,7 @@ def test_known_api_limits_override_manual_capability_claims(
 def test_openai_streaming_models_stream_by_default_only_on_the_official_api(
     catalog: ModelCatalog, model_id: str
 ) -> None:
-    official = catalog.defaults(ApiKind.OPENAI, model_id).file
+    official = catalog.preset(ApiKind.OPENAI, model_id).defaults().file
     compatible = catalog.preset(ApiKind.OPENAI_COMPATIBLE, model_id).file
     assert official is not None and official.streaming
     assert compatible.streaming is Support.OFF
@@ -70,7 +70,7 @@ def test_openai_streaming_models_stream_by_default_only_on_the_official_api(
 def test_unknown_models_get_their_api_fallback(catalog: ModelCatalog) -> None:
     preset = catalog.preset(ApiKind.OPENAI_COMPATIBLE, "whisper-large-v3")
     assert preset == catalog.apis[ApiKind.OPENAI_COMPATIBLE]
-    assert catalog.defaults(ApiKind.OPENAI, "whisper-large-v3").file == ModeCapabilities(
+    assert catalog.preset(ApiKind.OPENAI, "whisper-large-v3").defaults().file == ModeCapabilities(
         timestamps=True
     )
 
@@ -140,7 +140,7 @@ def test_every_api_needs_an_entry() -> None:
 
 
 def test_mistral_streams_file_previews_by_default(catalog: ModelCatalog) -> None:
-    file = catalog.defaults(ApiKind.MISTRAL, "voxtral-mini-latest").file
+    file = catalog.preset(ApiKind.MISTRAL, "voxtral-mini-latest").defaults().file
     assert file == ModeCapabilities(
         timestamps=True, word_timestamps=True, diarization=True, streaming=True
     )

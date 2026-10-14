@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import timedelta
 
-from kikoe.core.models import ApiKind, AudioFormat, UploadPolicy, UploadSettings
+from kikoe.core.models import ApiKind, AudioFormat, UploadSettings
 from kikoe.core.provider_registry import descriptor
 
 
@@ -47,7 +47,7 @@ def effective_upload_limits(
 ) -> UploadLimits:
     """Intersect user settings with endpoint and model limits before conversion."""
     validate_upload(settings, api)
-    policy = upload_policy(api)
+    policy = descriptor(api).upload
     size = min(settings.chunk_bytes or policy.bytes, limits.bytes or policy.bytes)
     seconds = settings.chunk_seconds or policy.seconds
     duration = timedelta(seconds=seconds) if seconds else limits.duration
@@ -56,14 +56,9 @@ def effective_upload_limits(
     return UploadLimits(size, duration, UPLOAD_FORMATS[settings.format or policy.format])
 
 
-def upload_policy(api: ApiKind) -> UploadPolicy:
-    """Use the documented limits of the endpoint Kikoe actually calls."""
-    return descriptor(api).upload
-
-
 def validate_upload(settings: UploadSettings, api: ApiKind) -> None:
     """Reject damaged settings and choices exceeding the endpoint caps."""
-    policy = upload_policy(api)
+    policy = descriptor(api).upload
     if type(settings.parallelism) is not int or not 1 <= settings.parallelism <= MAX_PARALLELISM:
         raise ValueError("invalid parallel transcription count")
     if settings.chunk_seconds is not None and (

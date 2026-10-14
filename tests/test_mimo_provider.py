@@ -9,7 +9,7 @@ import pytest
 
 from helpers import file_caps, run_async
 from kikoe.core.models import ApiKind, AudioFormat, ModelSpec, Segment
-from kikoe.core.upload import upload_policy
+from kikoe.core.provider_registry import descriptor
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
 from kikoe.providers.mimo import MiMoClient, asr_language
 
@@ -37,7 +37,7 @@ def test_asr_language_falls_back_to_automatic_detection(tag: str | None, expecte
 
 
 def test_mimo_uploads_only_wav_within_the_base64_limit() -> None:
-    policy = upload_policy(ApiKind.MIMO)
+    policy = descriptor(ApiKind.MIMO).upload
     assert policy.formats == (AudioFormat.WAV,)
     assert policy.bytes * 4 / 3 < 10 * 1024 * 1024
 

@@ -120,9 +120,6 @@ class ModelCatalog:
         rule = next((r for r in self.rules if r.matches(api, model_id)), None)
         return rule.apply(base) if rule else base
 
-    def defaults(self, api: ApiKind, model_id: str) -> Capabilities:
-        return self.preset(api, model_id).defaults()
-
     def clamp(self, api: ApiKind, model: ModelSpec) -> ModelSpec:
         capabilities = self.preset(api, model.model_id).clamp(model.capabilities)
         return (

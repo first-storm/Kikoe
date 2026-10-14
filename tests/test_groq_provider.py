@@ -16,7 +16,8 @@ from kikoe.core.models import (
     Segment,
     TimestampGranularity,
 )
-from kikoe.core.upload import OGG_OPUS, UploadLimits, effective_upload_limits, upload_policy
+from kikoe.core.provider_registry import descriptor
+from kikoe.core.upload import OGG_OPUS, UploadLimits, effective_upload_limits
 from kikoe.core.validation import effective_base_url, validate_provider
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
 from kikoe.providers.factory import create_client
@@ -27,7 +28,7 @@ from kikoe.storage.settings import Settings, SettingsStore
 MODEL = ModelSpec(
     "whisper-large-v3-turbo",
     "Whisper",
-    load_catalog().defaults(ApiKind.GROQ, "whisper-large-v3-turbo"),
+    load_catalog().preset(ApiKind.GROQ, "whisper-large-v3-turbo").defaults(),
 )
 
 
@@ -223,7 +224,7 @@ def test_groq_configuration_roundtrips_and_uses_official_adapter(tmp_path: Path)
     store.save_state(Settings((provider,)))
     assert store.load_state().providers == (provider,)
     assert isinstance(create_client(provider, "secret"), GroqClient)
-    policy = upload_policy(ApiKind.GROQ)
+    policy = descriptor(ApiKind.GROQ).upload
     assert policy.bytes == 25_000_000 and policy.format is AudioFormat.OGG
     assert effective_upload_limits(
         GroqClient(provider.base_url, "secret").upload_limits(MODEL, TranscriptionOptions()),
@@ -237,7 +238,7 @@ def test_whisper_capabilities_support_words_without_live_or_speakers(model_id: s
     from kikoe.core.models import Capabilities, ModeCapabilities
 
     catalog = load_catalog()
-    caps = catalog.defaults(ApiKind.GROQ, model_id)
+    caps = catalog.preset(ApiKind.GROQ, model_id).defaults()
     assert caps == Capabilities(file=ModeCapabilities(timestamps=True, word_timestamps=True))
     claimed = ModelSpec(
         model_id,

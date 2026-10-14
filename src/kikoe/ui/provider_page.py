@@ -11,7 +11,7 @@ from gi.repository import Adw, Gio, GObject, Gtk
 
 from kikoe.core.models import ApiKind, ModelSpec, Provider, UploadSettings
 from kikoe.core.provider_registry import PROVIDERS, descriptor, is_default_base_url
-from kikoe.core.upload import MAX_CHUNK_SECONDS, MAX_PARALLELISM, upload_policy
+from kikoe.core.upload import MAX_CHUNK_SECONDS, MAX_PARALLELISM
 from kikoe.core.validation import effective_base_url, validate_provider
 from kikoe.i18n import _
 from kikoe.storage.providers import ProviderRepository
@@ -207,7 +207,7 @@ class ProviderPage(Adw.NavigationPage):
     def _show_upload(self, settings: UploadSettings) -> None:
         populating = self._populating
         self._populating = True
-        policy = upload_policy(self._upload_api)
+        policy = descriptor(self._upload_api).upload
         for row in (self.parallel_row, self.chunk_length_row, self.chunk_size_row):
             row.get_adjustment().set_step_increment(1)
             row.get_adjustment().set_page_increment(1 if row is self.parallel_row else 10)
@@ -228,7 +228,7 @@ class ProviderPage(Adw.NavigationPage):
         self._populating = populating
 
     def _upload_settings(self) -> UploadSettings:
-        policy = upload_policy(self._upload_api)
+        policy = descriptor(self._upload_api).upload
         seconds = round(self.chunk_length_row.get_value() * 60)
         size = round(self.chunk_size_row.get_value() * 1_000_000)
         format = policy.formats[self.upload_format_row.get_selected()]

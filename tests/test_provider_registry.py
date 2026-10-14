@@ -5,20 +5,18 @@ from kikoe.core.provider_registry import (
     PROVIDERS,
     UploadHint,
     descriptor,
-    descriptors,
     is_default_base_url,
 )
-from kikoe.core.upload import upload_policy
 from kikoe.core.validation import effective_base_url
 
 
 def test_every_api_kind_has_a_descriptor_in_enum_order() -> None:
     assert tuple(PROVIDERS) == tuple(ApiKind)
-    assert tuple(d.api for d in descriptors()) == tuple(ApiKind)
+    assert tuple(d.api for d in PROVIDERS.values()) == tuple(ApiKind)
 
 
 def test_display_names_are_unique() -> None:
-    names = [d.display_name for d in descriptors()]
+    names = [d.display_name for d in PROVIDERS.values()]
     assert len(names) == len(set(names))
 
 
@@ -57,15 +55,15 @@ def test_default_base_urls_are_unchanged(api: ApiKind, url: str) -> None:
     ],
 )
 def test_upload_policies_are_unchanged(api: ApiKind, policy: UploadPolicy) -> None:
-    assert upload_policy(api) == policy
+    assert descriptor(api).upload == policy
 
 
 def test_only_compatible_services_are_generic_names() -> None:
-    assert [d.api for d in descriptors() if d.generic] == [ApiKind.OPENAI_COMPATIBLE]
+    assert [d.api for d in PROVIDERS.values() if d.generic] == [ApiKind.OPENAI_COMPATIBLE]
 
 
 def test_upload_hints_mark_the_apis_with_special_limits() -> None:
-    hinted = {d.api: d.upload_hints for d in descriptors() if d.upload_hints}
+    hinted = {d.api: d.upload_hints for d in PROVIDERS.values() if d.upload_hints}
     assert hinted == {
         ApiKind.OPENAI_COMPATIBLE: frozenset({UploadHint.SERVER_MAY_LIMIT_SIZE}),
         ApiKind.GEMINI: frozenset({UploadHint.DURATION_DEPENDS_ON_OPTIONS}),
@@ -79,5 +77,5 @@ def test_default_endpoints_are_recognised_but_custom_ones_are_not() -> None:
 
 
 def test_sdk_loggers_cover_every_sdk_provider() -> None:
-    names = {name for d in descriptors() for name in d.sdk_loggers}
+    names = {name for d in PROVIDERS.values() for name in d.sdk_loggers}
     assert names == {"deepgram", "openai", "openrouter", "google.genai", "groq", "mistralai"}

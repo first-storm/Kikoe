@@ -4,19 +4,19 @@ from datetime import timedelta
 import pytest
 
 from kikoe.core.models import ApiKind, AudioFormat, UploadSettings
+from kikoe.core.provider_registry import descriptor
 from kikoe.core.upload import (
     FLAC,
     WAV,
     UploadLimits,
     effective_upload_limits,
-    upload_policy,
     validate_upload,
 )
 
 
 @pytest.mark.parametrize("api", list(ApiKind))
 def test_defaults_and_documented_maxima_are_valid(api: ApiKind) -> None:
-    policy = upload_policy(api)
+    policy = descriptor(api).upload
     validate_upload(UploadSettings(), api)
     validate_upload(UploadSettings(chunk_bytes=policy.bytes, chunk_seconds=policy.seconds), api)
     with pytest.raises(ValueError, match="size"):

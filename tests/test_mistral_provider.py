@@ -18,8 +18,9 @@ from kikoe.core.models import (
     Segment,
     TimestampGranularity,
 )
+from kikoe.core.provider_registry import descriptor
 from kikoe.core.transcription import FileTranscriptSnapshot
-from kikoe.core.upload import OGG_OPUS, UploadLimits, effective_upload_limits, upload_policy
+from kikoe.core.upload import OGG_OPUS, UploadLimits, effective_upload_limits
 from kikoe.core.validation import effective_base_url, validate_provider
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
 from kikoe.providers.factory import create_client
@@ -364,7 +365,7 @@ def test_mistral_configuration_roundtrips_and_uses_official_adapter(tmp_path: Pa
     assert provider.base_url == "https://api.mistral.ai"
     assert store.load_state().providers == (provider,)
     assert isinstance(create_client(provider, "secret"), MistralClient)
-    policy = upload_policy(ApiKind.MISTRAL)
+    policy = descriptor(ApiKind.MISTRAL).upload
     assert (policy.bytes, policy.seconds) == (500_000_000, 3600)
     assert policy.format is AudioFormat.OGG
     assert effective_upload_limits(

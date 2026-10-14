@@ -9,7 +9,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import override
 
-from kikoe.core.provider_registry import descriptors
+from kikoe.core.provider_registry import PROVIDERS
 from kikoe.paths import log_dir
 
 
@@ -82,7 +82,7 @@ def configure_logging(level: str = "INFO") -> None:
         file_handler.setFormatter(formatter)
         file_handler.addFilter(PrivateFilter())
         root.addHandler(file_handler)
-    sdk_loggers = {name for d in descriptors() for name in d.sdk_loggers}
+    sdk_loggers = {name for d in PROVIDERS.values() for name in d.sdk_loggers}
     for name in (*sorted(sdk_loggers), "httpx", "httpx2", "websockets"):
         logging.getLogger(name).setLevel(logging.WARNING)
     sys.excepthook = _uncaught_exception
