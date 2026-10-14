@@ -74,6 +74,8 @@ select = [
   "ASYNC",    # async pitfalls
   "TID",      # tidy imports (layering, see banned-api below)
   "PLC", "PLE", "PLW",
+  "PLR0912", "PLR0915", # branch and statement counts; PLR0913 is too noisy for keyword-only APIs
+  "C90",      # cyclomatic complexity, see mccabe below
   "PIE",
   "RET",
   "S602", "S604", "S605", # no shell=True subprocesses
@@ -81,6 +83,9 @@ select = [
 ignore = [
   "PLC0415", # imports inside functions are fine for lazy loading
 ]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
@@ -96,6 +101,10 @@ ban-relative-imports = "all"
 "src/kikoe/main.py" = ["TID251"]
 "scripts/**" = ["T20"]
 "tests/**" = ["TID251"]
+# Complexity baseline. ui/window.py is being decomposed; remove its entry when done.
+"src/kikoe/ui/window.py" = ["C901", "PLR0912", "PLR0915"]
+# One flat status-to-error table; splitting it would only hide the mapping.
+"src/kikoe/providers/errors.py" = ["C901", "PLR0912"]
 
 [tool.ruff.format]
 quote-style = "double"
