@@ -1667,7 +1667,8 @@ class Window(Adw.ApplicationWindow):
                     if not importing.cancelled():
                         raise
             self.destroy()
-        except USER_FACING_ERRORS:
+        except Exception:
+            # Any failure while closing must reopen the window, or it can never close again.
             self._closing = False
             self._update_import_actions()
             raise
