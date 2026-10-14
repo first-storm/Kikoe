@@ -11,14 +11,12 @@ from openai.types.chat import ChatCompletionMessageParam
 
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.upload import WAV
-from kikoe.i18n import _
 from kikoe.providers.base import (
     FileOnlyClient,
     FileTranscriptCallback,
-    TranscriptionError,
     TranscriptionOptions,
 )
-from kikoe.providers.errors import openai_error
+from kikoe.providers.errors import openai_error, unreadable
 from kikoe.providers.openai import openai_sdk
 
 
@@ -65,7 +63,5 @@ class MiMoClient(FileOnlyClient[httpx.AsyncBaseTransport]):
             raise openai_error(error, self._host, self._key) from error
         text = (completion.choices[0].message.content or "").strip() if completion.choices else ""
         if not text:
-            raise TranscriptionError(
-                _("{host} sent a response Kikoe does not understand.").format(host=self._host)
-            )
+            raise unreadable(self._host)
         return (Segment(text),)

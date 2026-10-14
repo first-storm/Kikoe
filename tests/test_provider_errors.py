@@ -2,7 +2,7 @@
 
 import pytest
 
-from kikoe.providers.errors import sdk_error
+from kikoe.providers.errors import body_detail, redact, sdk_error
 
 
 class StatusError(Exception):
@@ -62,3 +62,22 @@ def test_failure_without_status_is_a_retryable_connection_problem() -> None:
 
     assert "connection" in str(error)
     assert error.retryable
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        ({"error": {"message": " nested "}, "message": "top"}, "nested"),
+        ({"error": {"message": ""}, "err_msg": "MiMo style"}, "MiMo style"),
+        ({"error": "not an object", "message": "top"}, "top"),
+        ({"message": "  "}, None),
+        ("raw text", None),
+    ],
+)
+def test_body_detail_prefers_the_nested_message(body: object, expected: str | None) -> None:
+    assert body_detail(body) == expected
+
+
+def test_redact_hides_the_key_and_leaves_text_alone_without_one() -> None:
+    assert redact("bad key sk-1", "sk-1") == "bad key [redacted]"
+    assert redact("no key here", "") == "no key here"

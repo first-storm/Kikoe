@@ -28,7 +28,7 @@ from kikoe.providers.base import (
     close_stack,
     file_capabilities,
 )
-from kikoe.providers.errors import openai_error
+from kikoe.providers.errors import openai_error, unreadable
 from kikoe.providers.openai_file_stream import OpenAIFileTranscript
 from kikoe.providers.parsing import parse_segments
 
@@ -115,9 +115,7 @@ class OpenAIClient(HttpClient[httpx.AsyncBaseTransport]):
         except APIError as error:
             raise openai_error(error, self._host, self._key) from error
         except (ValueError, TypeError, KeyError, AttributeError) as error:
-            raise TranscriptionError(
-                _("{host} sent a response Kikoe does not understand.").format(host=self._host)
-            ) from error
+            raise unreadable(self._host) from error
 
     def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
         return RealtimeProfile(sample_rate=24000)

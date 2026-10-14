@@ -24,17 +24,34 @@ def _text(value: object) -> str | None:
     return value.strip() or None if isinstance(value, str) else None
 
 
+def redact(text: str, key: str) -> str:
+    """Services sometimes echo the API key back in their error text."""
+    return text.replace(key, "[redacted]") if key else text
+
+
+def unreadable(host: str) -> TranscriptionError:
+    """The response did not have the shape the SDK or Kikoe expects."""
+    return TranscriptionError(
+        _("{host} sent a response Kikoe does not understand.").format(host=host)
+    )
+
+
+def body_detail(body: object) -> str | None:
+    """The message in a JSON error body; OpenAI nests it under ``error``, others do not."""
+    if not isinstance(body, dict):
+        return None
+    data = cast(dict[str, object], body)
+    nested: object = data.get("error")
+    if isinstance(nested, dict):
+        message = _text(cast(dict[str, object], nested).get("message"))
+        if message:
+            return message
+    return _text(data.get("err_msg")) or _text(data.get("message"))
+
+
 def detail_of(error: BaseException) -> str | None:
     """The service's own explanation, trimmed; only shown where it helps fix the request."""
-    detail = _text(getattr(error, "message", None))
-    body: object = getattr(error, "body", None)
-    if detail is None and isinstance(body, dict):
-        data = cast(dict[str, object], body)
-        nested: object = data.get("error")
-        if isinstance(nested, dict):
-            detail = _text(cast(dict[str, object], nested).get("message"))
-        detail = detail or _text(data.get("err_msg")) or _text(data.get("message"))
-    return detail
+    return _text(getattr(error, "message", None)) or body_detail(getattr(error, "body", None))
 
 
 def status_error(status: int, subject: str, detail: str | None = None) -> TranscriptionError:
@@ -95,14 +112,10 @@ def sdk_error(error: Exception) -> TranscriptionError:
 
 def openai_error(error: APIError, host: str, key: str) -> TranscriptionError:
     """Explain an OpenAI SDK failure from OpenAI or a compatible service, hiding the key."""
-
-    def redact(text: str) -> str:
-        return text.replace(key, "[redacted]") if key else text
-
     match error:
         case APIStatusError():
-            message = _body_message(error.body) or error.message
-            return status_error(error.status_code, host, redact(message))
+            message = body_detail(error.body) or error.message
+            return status_error(error.status_code, host, redact(message, key))
         case APITimeoutError():
             message = _("{host} took too long to respond. Try again later.")
         case APIConnectionError():
@@ -110,22 +123,8 @@ def openai_error(error: APIError, host: str, key: str) -> TranscriptionError:
         case _:
             return TranscriptionError(
                 _("{host} could not finish transcription: {message}").format(
-                    host=host, message=redact(error.message)
+                    host=host, message=redact(error.message, key)
                 ),
                 retryable=True,
             )
     return TranscriptionError(message.format(host=host), retryable=True)
-
-
-def _body_message(body: object) -> str | None:
-    """Prefer the nested ``error.message`` over a top-level ``message``, as OpenAI nests it."""
-    if not isinstance(body, dict):
-        return None
-    data = cast(dict[str, object], body)
-    nested: object = data.get("error")
-    if isinstance(nested, dict):
-        message = cast(dict[str, object], nested).get("message")
-        if isinstance(message, str):
-            return message
-    message = data.get("message")
-    return message if isinstance(message, str) else None

@@ -17,7 +17,7 @@ from kikoe.providers.base import (
     TranscriptionOptions,
     file_capabilities,
 )
-from kikoe.providers.errors import detail_of, status_error
+from kikoe.providers.errors import detail_of, redact, status_error, unreadable
 from kikoe.providers.parsing import parse_segments
 
 
@@ -61,16 +61,12 @@ class GroqClient(FileOnlyClient[httpx.AsyncBaseTransport]):
         except APIError as error:
             raise self._error(error) from error
         except (ValueError, TypeError, KeyError, AttributeError) as error:
-            raise TranscriptionError(
-                _("{host} sent a response Kikoe does not understand.").format(host=self._host)
-            ) from error
+            raise unreadable(self._host) from error
 
     def _error(self, error: APIError) -> TranscriptionError:
         if isinstance(error, APIStatusError):
             detail = detail_of(error)
-            if detail and self._key:
-                detail = detail.replace(self._key, "[redacted]")
-            return status_error(error.status_code, self._host, detail)
+            return status_error(error.status_code, self._host, detail and redact(detail, self._key))
         if isinstance(error, APITimeoutError):
             message = _("{host} took too long to respond. Try again later.")
         elif isinstance(error, APIConnectionError):

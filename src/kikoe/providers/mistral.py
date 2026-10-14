@@ -27,11 +27,10 @@ from kikoe.providers.base import (
     close_stack,
     file_capabilities,
 )
-from kikoe.providers.errors import status_error
+from kikoe.providers.errors import body_detail, redact, status_error, unreadable
 from kikoe.providers.mistral_file_stream import MistralFileTranscript
 from kikoe.providers.mistral_parsing import parse_mistral
 from kikoe.providers.mistral_realtime import MistralSession
-from kikoe.providers.parsing import fields
 
 REQUEST_TIMEOUT_MS = 900_000
 REALTIME_SAMPLE_RATE = 16000
@@ -103,22 +102,16 @@ class MistralClient(HttpClient[httpx.AsyncBaseTransport]):
         except httpx.TransportError as error:
             raise self._unreachable(_("Could not reach {host}. Try again later.")) from error
         except (ValueError, TypeError, KeyError, AttributeError) as error:
-            raise TranscriptionError(
-                _("{host} sent a response Kikoe does not understand.").format(host=self._host)
-            ) from error
+            raise unreadable(self._host) from error
 
     def _unreachable(self, message: str) -> TranscriptionError:
         return TranscriptionError(message.format(host=self._host), retryable=True)
 
     def _error(self, error: MistralError) -> TranscriptionError:
         if isinstance(error, ResponseValidationError):
-            return TranscriptionError(
-                _("{host} sent a response Kikoe does not understand.").format(host=self._host)
-            )
+            return unreadable(self._host)
         detail = _detail(error.body)
-        if detail and self._key:
-            detail = detail.replace(self._key, "[redacted]")
-        return status_error(error.status_code, self._host, detail)
+        return status_error(error.status_code, self._host, detail and redact(detail, self._key))
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions
@@ -228,7 +221,6 @@ def _granularities(features: RequestedFeatures) -> list[Granularity]:
 def _detail(body: str) -> str | None:
     """The service's own message; the SDK's exception text embeds the whole raw body."""
     try:
-        message = fields(json.loads(body)).get("message")
+        return body_detail(json.loads(body))
     except ValueError, TypeError:
         return None
-    return message.strip() or None if isinstance(message, str) else None
