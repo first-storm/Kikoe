@@ -211,8 +211,11 @@ async def _transcribe_parts(
     try:
         await asyncio.gather(*tasks)
     finally:
+        # A worker already cancelled by the outer gather must not be cancelled again: a second
+        # cancel interrupts its cleanup mid-await, so it would never record that it stopped.
         for task in tasks:
-            task.cancel()
+            if not task.done() and not task.cancelling():
+                task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
     return tuple(segment for result in results if result is not None for segment in result)
 
