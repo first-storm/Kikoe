@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-import shutil
 from collections.abc import Callable
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -14,7 +13,6 @@ from kikoe.core.activity import Activity, action_availability
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models
 from kikoe.core.decoration_layout import DecorationLayout
 from kikoe.core.edit_history import SegmentChange, SegmentFields
-from kikoe.core.export import ExportFormat, export_filename, export_note
 from kikoe.core.models import (
     DisplayOptions,
     Note,
@@ -50,11 +48,11 @@ from kikoe.storage.providers import ProviderRepository
 from kikoe.storage.settings import SettingsError
 from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.dialogs import confirm_destructive
-from kikoe.ui.export_dialog import ExportDialog
+from kikoe.ui.export_controller import ExportController
+from kikoe.ui.file_dialogs import pick_audio_file
 from kikoe.ui.file_transcription import FileTranscriptionDisplay
 from kikoe.ui.items import NoteItem
 from kikoe.ui.labels import (
-    export_format_label,
     import_stage_label,
     note_subtitle,
     note_title_subtitle,
@@ -66,7 +64,7 @@ from kikoe.ui.retranscribe_dialog import RetranscribeDialog
 from kikoe.ui.search import NoteSearch
 from kikoe.ui.speaker_dialog import SpeakerDialog
 from kikoe.ui.speaker_editor import SpeakerEditor
-from kikoe.ui.tasks import run_task, show_error, show_notice
+from kikoe.ui.tasks import run_task, show_error
 from kikoe.ui.templates import ui_file
 from kikoe.ui.transcript_row import NO_TIME
 
@@ -132,6 +130,13 @@ class Window(Adw.ApplicationWindow):
             notes, lambda coro: run_task(coro, self), self._on_edit_saved
         )
         self._edits_blocked = False
+        self._export = ExportController(
+            self,
+            lambda: self._note,
+            self.note_view.flush_edits,
+            self._editing.wait_saved,
+            lambda title: self.add_toast(Adw.Toast(title=title)),
+        )
         self.bottom_bar = BottomBar()
         self.bottom_bar_slot.set_child(self.bottom_bar)
         self._search = NoteSearch(
@@ -163,14 +168,14 @@ class Window(Adw.ApplicationWindow):
         self.notes_list.bind_model(self._note_items, self._create_note_row)
         self._add_action("new-note", self._on_new_note)
         self._add_action("rename-note", self._on_rename_note)
-        self._add_action("copy-all-text", self._on_copy_all_text)
+        self._add_action("copy-all-text", self._export.on_copy_all_text)
         self._add_action("delete-note", self._on_delete_note)
         self._add_action("rename-note-row", self._on_rename_note_row, GLib.VariantType.new("s"))
         self._add_action("delete-note-row", self._on_delete_note_row, GLib.VariantType.new("s"))
-        self._add_action("export", self._on_export)
+        self._add_action("export", self._export.on_export)
         self._add_toggle_action("show-timestamps")
         self._add_toggle_action("show-speakers")
-        self._add_action("export-audio", self._on_export_audio, GLib.VariantType.new("s"))
+        self._add_action("export-audio", self._export.on_export_audio, GLib.VariantType.new("s"))
         self._add_action("choose-model", self._on_choose_model)
         self._add_action("import-audio", self._on_import_audio)
         self._add_action("cancel-import", self._on_cancel_import)
@@ -870,143 +875,6 @@ class Window(Adw.ApplicationWindow):
             self.note_view.focus_segment(change.recording_id, change.position)
         self._update_history_actions()
 
-    # Export
-
-    def _on_export(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        self.note_view.flush_edits()
-        run_task(self._present_export(), self)
-
-    async def _present_export(self) -> None:
-        await self._editing.wait_saved()
-        note = self._note
-        if note is None:
-            return
-        ExportDialog(note, self._on_export_dialog_submitted).present(self)
-
-    def _on_export_dialog_submitted(self, fmt: ExportFormat, options: DisplayOptions) -> None:
-        run_task(self._export_note(fmt, options), self)
-
-    def _on_copy_all_text(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        self.note_view.flush_edits()
-        run_task(self._copy_all_text(), self)
-
-    async def _copy_all_text(self) -> None:
-        await self._editing.wait_saved()
-        note = self._note
-        if note is None:
-            return
-        self.get_clipboard().set(export_note(note, ExportFormat.TEXT, note.display))
-        self.add_toast(Adw.Toast(title=_("Copied to clipboard")))
-
-    async def _export_note(self, fmt: ExportFormat, options: DisplayOptions) -> None:
-        note = self._note
-        if note is None:
-            return
-        content = export_note(note, fmt, options)
-        target = await self._pick_save_path(
-            _("Export Note"),
-            export_filename(note.title, fmt.value),
-            export_format_label(fmt),
-            f"*.{fmt.value}",
-        )
-        if target is None:
-            return
-        try:
-            await asyncio.to_thread(target.write_text, content, encoding="utf-8")
-        except OSError as error:
-            log.warning("Export of note %s failed: %s", note.note_id, error)
-            message = _("Could not save “{name}”: {error}").format(name=target.name, error=error)
-            show_error(self, message)
-            return
-        self.add_toast(Adw.Toast(title=_("Exported “{name}”").format(name=target.name)))
-
-    def _on_export_audio(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        note = self._note
-        if note is None or param is None:
-            return
-        recording = note.recording(param.get_string())
-        if recording is None:
-            self.add_toast(Adw.Toast(title=_("This recording is no longer available.")))
-            return
-        run_task(self._export_audio(note.recordings.index(recording) + 1, recording), self)
-
-    async def _export_audio(self, number: int, recording: Recording) -> None:
-        note = self._note
-        source = recording.audio_path
-        if note is None or source is None:
-            return
-        suffix = source.suffix or ".ogg"
-        target = await self._pick_save_path(
-            _("Export Original Audio"),
-            export_filename(f"{note.title} - Recording {number}", suffix.lstrip(".")),
-            _("Audio Files"),
-            f"*{suffix}",
-        )
-        if target is None:
-            return
-        try:
-            await asyncio.to_thread(shutil.copyfile, source, target)
-        except FileNotFoundError:
-            log.warning(
-                "Original audio for recording %s is missing: %s", recording.recording_id, source
-            )
-            show_notice(self, _("The original audio is not available."))
-            return
-        except OSError as error:
-            log.warning("Audio export of recording %s failed: %s", recording.recording_id, error)
-            message = _("Could not save “{name}”: {error}").format(name=target.name, error=error)
-            show_error(self, message)
-            return
-        self.add_toast(Adw.Toast(title=_("Exported “{name}”").format(name=target.name)))
-
-    async def _pick_save_path(
-        self, title: str, initial_name: str, filter_label: str, pattern: str
-    ) -> Path | None:
-        """Ask where to save; None if the dialog was dismissed."""
-        target = Gtk.FileFilter(name=filter_label)
-        target.add_pattern(pattern)
-        everything = Gtk.FileFilter(name=_("All Files"))
-        everything.add_pattern("*")
-        filters: Gio.ListStore[Gtk.FileFilter] = Gio.ListStore(item_type=Gtk.FileFilter)
-        filters.append(target)
-        filters.append(everything)
-        dialog = Gtk.FileDialog(
-            title=title, filters=filters, default_filter=target, initial_name=initial_name
-        )
-        return await self._run_file_dialog(
-            dialog.save, dialog.save_finish, _("Only locations on this computer can be used.")
-        )
-
-    async def _run_file_dialog(
-        self,
-        start: Callable[
-            [Gtk.Window, None, Callable[[Gtk.FileDialog, Gio.AsyncResult], None]], None
-        ],
-        finish: Callable[[Gio.AsyncResult], Gio.File | None],
-        not_local: str,
-    ) -> Path | None:
-        """Await a file dialog; None if it was dismissed or chose a non-local file."""
-        future: asyncio.Future[Gio.File | None] = asyncio.get_running_loop().create_future()
-
-        def done(_dialog: Gtk.FileDialog, result: Gio.AsyncResult) -> None:
-            try:
-                future.set_result(finish(result))
-            except GLib.Error as error:
-                if error.matches(Gtk.dialog_error_quark(), Gtk.DialogError.DISMISSED):
-                    future.set_result(None)
-                else:
-                    future.set_exception(error)
-
-        start(self, None, done)
-        file = await future
-        if file is None:
-            return None
-        path = file.get_path()
-        if path is None:
-            show_notice(self, not_local)
-            return None
-        return Path(path)
-
     # Import
 
     def _on_bottom_bar_choice_changed(self, _bar: BottomBar) -> None:
@@ -1046,7 +914,7 @@ class Window(Adw.ApplicationWindow):
         )
 
     async def _pick_and_import(self) -> None:
-        path = await self._pick_audio_file()
+        path = await pick_audio_file(self)
         choice = self.bottom_bar.choice
         if (
             path is None
@@ -1072,18 +940,6 @@ class Window(Adw.ApplicationWindow):
             self._work.import_task = None
             self.bottom_bar.set_progress(None)
             self._update_actions()
-
-    async def _pick_audio_file(self) -> Path | None:
-        """Ask for an audio or video file; None if the dialog was dismissed."""
-        media = Gtk.FileFilter(name=_("Audio and Video"))
-        media.add_mime_type("audio/*")
-        media.add_mime_type("video/*")
-        filters: Gio.ListStore[Gtk.FileFilter] = Gio.ListStore(item_type=Gtk.FileFilter)
-        filters.append(media)
-        dialog = Gtk.FileDialog(title=_("Import Audio"), filters=filters, default_filter=media)
-        return await self._run_file_dialog(
-            dialog.open, dialog.open_finish, _("Only files on this computer can be imported.")
-        )
 
     async def _import(
         self,
