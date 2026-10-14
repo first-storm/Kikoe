@@ -1,10 +1,12 @@
+from collections.abc import AsyncIterator
 from datetime import timedelta
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx2 as httpx
 import pytest
 
-from helpers import file_caps, run_async
+from helpers import LIVE_ONLY, file_caps, run_async
 from kikoe.core.models import ApiKind, Capabilities, ModelSpec, Provider, Segment
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
 from kikoe.providers.factory import create_client
@@ -240,3 +242,55 @@ async def test_disabling_all_diarization_options_requests_plain_json(audio: Path
         audio, model, TranscriptionOptions(False, False)
     ) == (Segment("Hello."),)
     assert form_field(handler.requests[0], "response_format") == "json"
+
+
+class _ClosedRealtimeConnection:
+    """A realtime socket that the server closes without ever sending session.updated."""
+
+    async def send(self, _payload: object) -> None:
+        pass
+
+    def __aiter__(self) -> AsyncIterator[object]:
+        return self._events()
+
+    async def _events(self) -> AsyncIterator[object]:
+        return
+        yield  # pragma: no cover - makes this an async generator
+
+
+class _Entered:
+    """An async context manager that yields one fixed value."""
+
+    def __init__(self, value: object) -> None:
+        self._value = value
+
+    async def __aenter__(self) -> object:
+        return self._value
+
+    async def __aexit__(self, *_: object) -> None:
+        return None
+
+
+class _FakeRealtimeSdk:
+    def __init__(self, connection: _ClosedRealtimeConnection) -> None:
+        self._connection = connection
+        self.realtime = SimpleNamespace(connect=self._connect)
+
+    def _connect(self, **_: object) -> _Entered:
+        return _Entered(self._connection)
+
+
+@run_async
+async def test_realtime_socket_closed_before_session_ready_is_retryable_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sdk = _FakeRealtimeSdk(_ClosedRealtimeConnection())
+
+    def fake_sdk(_client: OpenAIClient) -> _Entered:
+        return _Entered(sdk)
+
+    monkeypatch.setattr(OpenAIClient, "_sdk", fake_sdk)
+    client = OpenAIClient("https://example.test/v1", "key")
+    with pytest.raises(TranscriptionError) as caught:
+        await client.open_realtime(ModelSpec("live", "Live", LIVE_ONLY), TranscriptionOptions())
+    assert caught.value.retryable

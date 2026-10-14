@@ -205,9 +205,11 @@ class OpenAIClient:
                     },
                 }
             )
+            ready = False
             async with asyncio.timeout(30):
                 async for event in connection:
                     if event.type == "session.updated":
+                        ready = True
                         break
                     if event.type == "error":
                         raise TranscriptionError(
@@ -215,6 +217,15 @@ class OpenAIClient:
                                 host=self._host, message=event.error.message
                             )
                         )
+            # A clean socket close ends the iterator silently; without this check the
+            # session would be returned already dead.
+            if not ready:
+                raise TranscriptionError(
+                    _("{host} closed the realtime connection before it was ready.").format(
+                        host=self._host
+                    ),
+                    retryable=True,
+                )
             return OpenAISession(connection, stack)
         except BaseException:
             await close_stack(stack)
