@@ -5,6 +5,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
+from kikoe.core.listeners import Listeners
 from kikoe.core.models import (
     DisplayOptions,
     Note,
@@ -25,7 +26,7 @@ class NoteRepository:
     def __init__(self, library: Library) -> None:
         self._library = library
         self._notes: tuple[NoteSummary, ...] = ()
-        self._listeners: list[NoteListener] = []
+        self._listeners = Listeners[str | None]()
 
     @property
     def notes(self) -> tuple[NoteSummary, ...]:
@@ -34,8 +35,7 @@ class NoteRepository:
 
     def connect_changed(self, listener: NoteListener) -> Callable[[], None]:
         """Call ``listener`` after every change; returns a function that stops the calls."""
-        self._listeners.append(listener)
-        return lambda: self._listeners.remove(listener) if listener in self._listeners else None
+        return self._listeners.connect(listener)
 
     async def load(self) -> None:
         await asyncio.to_thread(self._library.migrate)
@@ -124,8 +124,7 @@ class NoteRepository:
 
     async def _refresh(self, changed: str | None) -> None:
         self._notes = await asyncio.to_thread(self._library.list_notes)
-        for listener in self._listeners:
-            listener(changed)
+        self._listeners.emit(changed)
 
     async def update_transcription(
         self,

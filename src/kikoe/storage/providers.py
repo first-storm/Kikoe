@@ -6,6 +6,7 @@ import uuid
 from collections.abc import Callable
 from dataclasses import replace
 
+from kikoe.core.listeners import Listeners
 from kikoe.core.model_catalog import ModelCatalog
 from kikoe.core.models import ApiKind, ModelSpec, Provider, UploadSettings
 from kikoe.core.upload import validate_upload
@@ -30,7 +31,7 @@ class ProviderRepository:
     def __init__(self, writer: SettingsWriter, secrets: SecretStore) -> None:
         self._writer = writer
         self._secrets = secrets
-        self._listeners: list[Callable[[], None]] = []
+        self._listeners = Listeners[()]()
 
     @property
     def providers(self) -> tuple[Provider, ...]:
@@ -57,12 +58,11 @@ class ProviderRepository:
 
         Returns a function that stops the calls, for short-lived listeners such as pages.
         """
-        self._listeners.append(listener)
-        return lambda: self._listeners.remove(listener) if listener in self._listeners else None
+        return self._listeners.connect(listener)
 
     async def load(self) -> None:
         await self._writer.load()
-        self._notify()
+        self._listeners.emit()
 
     async def get_api_key(self, provider_id: str) -> str:
         return await asyncio.to_thread(self._secrets.get, provider_id) or ""
@@ -168,8 +168,4 @@ class ProviderRepository:
         await self._writer.update(
             lambda state: replace(state, providers=tuple(self._writer.clamp(p) for p in change()))
         )
-        self._notify()
-
-    def _notify(self) -> None:
-        for listener in self._listeners:
-            listener()
+        self._listeners.emit()

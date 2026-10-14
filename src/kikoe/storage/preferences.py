@@ -3,6 +3,7 @@
 from collections.abc import Callable
 from dataclasses import replace
 
+from kikoe.core.listeners import Listeners
 from kikoe.core.preferences import Preferences
 from kikoe.storage.settings_writer import SettingsWriter
 
@@ -12,7 +13,7 @@ class PreferencesRepository:
 
     def __init__(self, writer: SettingsWriter) -> None:
         self._writer = writer
-        self._listeners: list[Callable[[], None]] = []
+        self._listeners = Listeners[()]()
 
     @property
     def current(self) -> Preferences:
@@ -24,20 +25,15 @@ class PreferencesRepository:
 
         Returns a function that stops the calls.
         """
-        self._listeners.append(listener)
-        return lambda: self._listeners.remove(listener) if listener in self._listeners else None
+        return self._listeners.connect(listener)
 
     async def load(self) -> None:
         await self._writer.ensure_loaded()
-        self._notify()
+        self._listeners.emit()
 
     async def update(self, change: Callable[[Preferences], Preferences]) -> None:
         """Merge a field edit with the latest snapshot inside the same writer lock."""
         await self._writer.update(
             lambda state: replace(state, preferences=change(state.preferences))
         )
-        self._notify()
-
-    def _notify(self) -> None:
-        for listener in tuple(self._listeners):
-            listener()
+        self._listeners.emit()

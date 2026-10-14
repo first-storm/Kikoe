@@ -62,7 +62,9 @@ Top-level helpers (`constants`, `paths`, `i18n`) are importable from any layer.
   import; the database stores the name relative to that directory. Deleting a note
   deletes its files.
 - `storage.notes.NoteRepository` is the async front of the library: it keeps sidebar
-  summaries in memory and tells listeners which note changed.
+  summaries in memory and tells listeners which note changed. It and the settings
+  repositories below notify through `core.listeners.Listeners`, which keeps calling the
+  rest when a listener disconnects while being called.
 - Settings: `paths.config_dir()/settings.json`, written atomically by
   `storage.settings.SettingsStore`. Version 2 stores `providers` plus `preferences`:
   `default_model` and `recent_model` are `[provider_id, model_id]` pairs or null;
