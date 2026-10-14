@@ -11,7 +11,7 @@ from pathlib import Path
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango
 
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models
-from kikoe.core.edit_history import SegmentFields
+from kikoe.core.edit_history import SegmentChange, SegmentFields
 from kikoe.core.export import ExportFormat, export_filename, export_note
 from kikoe.core.models import (
     DisplayOptions,
@@ -295,13 +295,10 @@ class Window(Adw.ApplicationWindow):
     ) -> None:
         if not self.search_bar.get_search_mode():
             self.search_entry.set_text("")
-            self._start_search()
+            self._search.refresh()
 
     @Gtk.Template.Callback()
     def _on_search_entry_search_changed(self, _entry: Gtk.SearchEntry) -> None:
-        self._start_search()
-
-    def _start_search(self) -> None:
         self._search.refresh()
 
     def _refresh_note_list(self, notes: tuple[NoteSummary, ...]) -> None:
@@ -323,14 +320,15 @@ class Window(Adw.ApplicationWindow):
         assert isinstance(item, NoteItem)
         summary = item.summary
         title = Gtk.Label(label=summary.title, xalign=0, ellipsize=Pango.EllipsizeMode.END)
-        session = self._session
-        active = summary.note_id == self._recording_note_id and session is not None
+        state = (
+            self._session.state
+            if self._session is not None and summary.note_id == self._recording_note_id
+            else CaptureState.STOPPED
+        )
         subtitle = Gtk.Label(
-            label=_("Paused")
-            if active and session is not None and session.state is CaptureState.PAUSED
-            else _("Recording")
-            if active and session is not None and session.state is CaptureState.RECORDING
-            else note_subtitle(summary, datetime.now().astimezone()),
+            label=note_subtitle(summary, datetime.now().astimezone())
+            if state is CaptureState.STOPPED
+            else _capture_label(state),
             xalign=0,
             ellipsize=Pango.EllipsizeMode.END,
             css_classes=["caption", "dimmed"],
@@ -339,7 +337,7 @@ class Window(Adw.ApplicationWindow):
             orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=6, margin_bottom=6
         )
         box.append(title)
-        if active and session is not None and session.state is not CaptureState.STOPPED:
+        if state is not CaptureState.STOPPED:
             subtitle.remove_css_class("dimmed")
             subtitle.add_css_class("recording-status")
             indicator = Gtk.Image(icon_name="media-record-symbolic", pixel_size=7)
@@ -350,41 +348,31 @@ class Window(Adw.ApplicationWindow):
             box.append(status)
         else:
             box.append(subtitle)
+
         # Secondary click and long press offer Rename and Delete without opening the note.
+        def on_click(_gesture: Gtk.GestureClick, _n_press: int, x: float, y: float) -> None:
+            self._popup_note_row_menu(box, summary.note_id, x, y)
+
+        def on_long_press(_gesture: Gtk.GestureLongPress, x: float, y: float) -> None:
+            self._popup_note_row_menu(box, summary.note_id, x, y)
+
         secondary = Gtk.GestureClick(button=Gdk.BUTTON_SECONDARY)
-        secondary.connect("pressed", self._on_note_row_menu_requested, box, summary.note_id)
+        secondary.connect("pressed", on_click)
         long_press = Gtk.GestureLongPress()
-        long_press.connect("pressed", self._on_note_row_menu_requested_at, box, summary.note_id)
+        long_press.connect("pressed", on_long_press)
         box.add_controller(secondary)
         box.add_controller(long_press)
         return box
 
-    def _on_note_row_menu_requested(
-        self, _gesture: Gtk.GestureClick, _n_press: int, x: float, y: float, *data: object
-    ) -> None:
-        box, note_id = data
-        assert isinstance(box, Gtk.Widget) and isinstance(note_id, str)
-        self._popup_note_row_menu(box, note_id, x, y)
-
-    def _on_note_row_menu_requested_at(
-        self, _gesture: Gtk.GestureLongPress, x: float, y: float, *data: object
-    ) -> None:
-        box, note_id = data
-        assert isinstance(box, Gtk.Widget) and isinstance(note_id, str)
-        self._popup_note_row_menu(box, note_id, x, y)
-
     def _popup_note_row_menu(self, box: Gtk.Widget, note_id: str, x: float, y: float) -> None:
         row = box.get_ancestor(Gtk.ListBoxRow)
         assert isinstance(row, Gtk.ListBoxRow)
-        rename = Gio.MenuItem()
-        rename.set_label(_("_Rename…"))
-        rename.set_action_and_target_value("win.rename-note-row", GLib.Variant("s", note_id))
-        delete = Gio.MenuItem()
-        delete.set_label(_("_Delete Note"))
-        delete.set_action_and_target_value("win.delete-note-row", GLib.Variant("s", note_id))
+        target = GLib.Variant("s", note_id)
         menu = Gio.Menu()
-        menu.append_item(rename)
-        menu.append_item(delete)
+        menu.append(_("_Rename…"), Gio.Action.print_detailed_name("win.rename-note-row", target))
+        menu.append(
+            _("_Delete Note"), Gio.Action.print_detailed_name("win.delete-note-row", target)
+        )
         popover = Gtk.PopoverMenu.new_from_model(menu)
         popover.set_parent(box)
         popover.set_has_arrow(False)
@@ -447,7 +435,7 @@ class Window(Adw.ApplicationWindow):
         if not self._recovery_checked:
             self._recovery_checked = True
             self._recovery_task = run_task(self._offer_recovery(), self)
-        self._start_search()
+        self._search.refresh()
         current = self._note.note_id if self._note else None
         if current is None:
             self._update_content()
@@ -492,13 +480,9 @@ class Window(Adw.ApplicationWindow):
         for name in _NOTE_ACTIONS:
             self._set_action_enabled(name, note is not None)
         if note is None:
-            self.content_page.set_title(_("Kikoe"))
-            self.window_title.set_title("")
-            self.window_title.set_subtitle("")
+            self._set_titles(_("Kikoe"), "", "")
         else:
-            self.content_page.set_title(note.title)
-            self.window_title.set_title(note.title)
-            self.window_title.set_subtitle(note_title_subtitle(note))
+            self._set_titles(note.title, note.title, note_title_subtitle(note))
             self._set_display_action_state("show-timestamps", note.display.show_timestamps)
             self._set_display_action_state("show-speakers", note.display.show_speakers)
             if self.note_view.show_note(note):
@@ -512,11 +496,14 @@ class Window(Adw.ApplicationWindow):
                 if self._live is not None:
                     self.note_view.update_live(self._live.snapshot())
                 self.note_view.recording_view.set_state(self._session.state)
-                self.window_title.set_subtitle(
-                    _("Paused") if self._session.state is CaptureState.PAUSED else _("Recording")
-                )
+                self.window_title.set_subtitle(_capture_label(self._session.state))
         self._update_content()
         self._update_import_actions()
+
+    def _set_titles(self, page: str, title: str, subtitle: str) -> None:
+        self.content_page.set_title(page)
+        self.window_title.set_title(title)
+        self.window_title.set_subtitle(subtitle)
 
     def _update_content(self) -> None:
         if self._note is not None or self._file_display.active:
@@ -794,15 +781,14 @@ class Window(Adw.ApplicationWindow):
         self._set_action_enabled("redo", enabled and self._editing.history.can_redo)
 
     def _on_undo(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        self.note_view.flush_edits()
-        change = self._editing.undo()
-        if change is not None:
-            self.note_view.focus_segment(change.recording_id, change.position)
-        self._update_history_actions()
+        self._step_history(self._editing.undo)
 
     def _on_redo(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
+        self._step_history(self._editing.redo)
+
+    def _step_history(self, step: Callable[[], SegmentChange | None]) -> None:
         self.note_view.flush_edits()
-        change = self._editing.redo()
+        change = step()
         if change is not None:
             self.note_view.focus_segment(change.recording_id, change.position)
         self._update_history_actions()
@@ -963,8 +949,14 @@ class Window(Adw.ApplicationWindow):
             "match-speakers",
             "retranscribe-recording",
             "delete-recording",
+            "delete-note",
+            "rename-note",
+            "export",
+            "export-audio",
         ):
             self._set_action_enabled(name, not locked and self._note is not None)
+        for name in ("search-notes", "rename-note-row", "delete-note-row"):
+            self._set_action_enabled(name, not busy)
         available = self.bottom_bar.choice is not None and not busy
         choice = self.bottom_bar.choice
         file_available = (
@@ -988,17 +980,10 @@ class Window(Adw.ApplicationWindow):
             "stop-recording", state is not CaptureState.STOPPED and not self._closing
         )
         self.notes_list.set_can_target(not self._switch_locked())
-        self._set_action_enabled("search-notes", not busy)
         self.search_button.set_sensitive(not busy)
         # Typing in the list starts a search, which must not hide the Stop controls.
         self.search_bar.set_key_capture_widget(None if busy else self.notes_list)
         self._set_action_enabled("new-note", not busy and bool(self._providers.providers))
-        self._set_action_enabled("delete-note", not locked and self._note is not None)
-        self._set_action_enabled("rename-note-row", not busy)
-        self._set_action_enabled("delete-note-row", not busy)
-        self._set_action_enabled("rename-note", not locked and self._note is not None)
-        self._set_action_enabled("export", not locked and self._note is not None)
-        self._set_action_enabled("export-audio", not locked and self._note is not None)
         self._edits_blocked = locked
         self.note_view.set_editable(not locked)
         self._update_history_actions()
@@ -1094,7 +1079,7 @@ class Window(Adw.ApplicationWindow):
             )
         except USER_FACING_ERRORS as error:
             log.warning("Import of %s failed: %s", path, error)
-            self._show_import_failure(str(error))
+            show_error(self, str(error), _("Transcription Failed"))
             return
         finally:
             self._end_file_transcription()
@@ -1117,9 +1102,7 @@ class Window(Adw.ApplicationWindow):
             replacing=replacing,
         )
         if self._note is None:
-            self.content_page.set_title(title)
-            self.window_title.set_title(title)
-            self.window_title.set_subtitle(_("Transcribing…"))
+            self._set_titles(title, title, _("Transcribing…"))
         self._update_content()
         self.split_view.set_show_content(True)
 
@@ -1137,13 +1120,8 @@ class Window(Adw.ApplicationWindow):
         self._file_display.end()
         self._committing_transcription = False
         if self._note is None:
-            self.content_page.set_title(_("Kikoe"))
-            self.window_title.set_title("")
-            self.window_title.set_subtitle("")
+            self._set_titles(_("Kikoe"), "", "")
         self._update_content()
-
-    def _show_import_failure(self, message: str) -> None:
-        show_error(self, message, _("Transcription Failed"))
 
     # Recording
 
@@ -1262,7 +1240,7 @@ class Window(Adw.ApplicationWindow):
             self._show_note(self._note)
 
     def _refresh_recording_sidebar(self) -> None:
-        self._start_search()
+        self._search.refresh()
         self._select_row(self._note.note_id if self._note else None)
 
     def _on_live_update(self, snapshot: LiveSnapshot) -> None:
@@ -1272,9 +1250,7 @@ class Window(Adw.ApplicationWindow):
         self.bottom_bar.update_recording(progress)
         self.note_view.recording_view.set_state(progress.state)
         if progress.state is not CaptureState.STOPPED:
-            self.window_title.set_subtitle(
-                _("Paused") if progress.state is CaptureState.PAUSED else _("Recording")
-            )
+            self.window_title.set_subtitle(_capture_label(progress.state))
         self._update_import_actions()
 
     def _on_pause_recording(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
@@ -1361,10 +1337,11 @@ class Window(Adw.ApplicationWindow):
                 on_update=self._on_file_update,
             )
         except USER_FACING_ERRORS as error:
+            # Also covers key and client errors raised before the service could mark it.
             await self._notes.update_transcription(
                 note_id, recording.recording_id, TranscriptionState.FAILED
             )
-            self._show_import_failure(str(error))
+            show_error(self, str(error), _("Transcription Failed"))
             return
         finally:
             self._end_file_transcription()
@@ -1473,3 +1450,7 @@ class Window(Adw.ApplicationWindow):
 
 def _from_ms(value: int) -> timedelta | None:
     return None if value == NO_TIME else timedelta(milliseconds=value)
+
+
+def _capture_label(state: CaptureState) -> str:
+    return _("Paused") if state is CaptureState.PAUSED else _("Recording")
