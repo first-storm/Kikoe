@@ -17,6 +17,7 @@ from kikoe.core.transcription import RealtimeProfile, TranscriptEvent
 from kikoe.core.upload import UploadLimits
 from kikoe.providers.base import (
     FileTranscriptCallback,
+    HttpClient,
     RealtimeSession,
     TranscriptionOptions,
     close_stack,
@@ -39,15 +40,8 @@ class _LiveSession(Protocol):
     def receive(self) -> AsyncIterator[types.LiveServerMessage]: ...
 
 
-class GeminiClient:
+class GeminiClient(HttpClient[httpx.AsyncBaseTransport]):
     """Use the specialized verbatim STT model, not a prompted generative transcript."""
-
-    def __init__(
-        self, base_url: str, api_key: str, transport: httpx.AsyncBaseTransport | None = None
-    ) -> None:
-        self._url = base_url.rstrip("/")
-        self._key = api_key
-        self._transport = transport
 
     def _sdk(self) -> genai.Client:
         return genai.Client(

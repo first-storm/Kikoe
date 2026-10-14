@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
 from typing import Literal
-from urllib.parse import urlsplit
 
 import httpx2 as httpx
 from mistralai.client import Mistral
@@ -19,11 +18,11 @@ from mistralai.extra.exceptions import RealtimeTranscriptionException
 
 from kikoe.core.choice import RequestedFeatures, language_dropped
 from kikoe.core.models import ApiKind, ModelSpec, Segment, TimestampGranularity
-from kikoe.core.transcription import RealtimeProfile
 from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileTranscriptCallback,
+    HttpClient,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
@@ -61,16 +60,8 @@ class _Request:
         return self.granularities == ["word"]
 
 
-class MistralClient:
+class MistralClient(HttpClient[httpx.AsyncBaseTransport]):
     """Keep multipart encoding and transport lifetime inside the official SDK."""
-
-    def __init__(
-        self, base_url: str, api_key: str, transport: httpx.AsyncBaseTransport | None = None
-    ) -> None:
-        self._url = base_url.rstrip("/")
-        self._host = urlsplit(base_url).hostname or base_url
-        self._key = api_key
-        self._transport = transport
 
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
         return UploadLimits(MAX_UPLOAD_BYTES, timedelta(seconds=MAX_UPLOAD_SECONDS))
@@ -138,9 +129,6 @@ class MistralClient:
         if detail and self._key:
             detail = detail.replace(self._key, "[redacted]")
         return status_error(error.status_code, self._host, detail)
-
-    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
-        return RealtimeProfile()
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions

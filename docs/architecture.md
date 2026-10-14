@@ -422,8 +422,9 @@ A new API should need one descriptor, one client and the model presets; no calle
 1. `core.models.ApiKind`: add the member (its value is stored in `settings.json`; never rename).
 2. `core.provider_registry`: add a `ProviderDescriptor` (display name, default base URL, upload
    limits, whether a language excludes timestamps, extra upload hints, SDK logger names).
-3. `providers/<name>.py`: implement `TranscriptionProvider`, including `realtime_profile()`
-   (the default `RealtimeProfile()` for file-only services), and register the class in
+3. `providers/<name>.py`: implement `TranscriptionProvider` on top of `providers.base.HttpClient`
+   (base URL, key, test transport and the default `RealtimeProfile()`), or `FileOnlyClient`
+   for services without live transcription, and register the class in
    `providers.factory.CLIENTS`.
 4. `storage/model_presets.json`: add the API's fallback entry and any model rules.
 5. Tests: a client test against recorded or fake responses; the registry, factory and profile

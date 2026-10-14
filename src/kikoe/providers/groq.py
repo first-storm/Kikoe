@@ -4,18 +4,16 @@ import asyncio
 import mimetypes
 from pathlib import Path
 from typing import Literal
-from urllib.parse import urlsplit
 
 import httpx
 from groq import APIConnectionError, APIError, APIStatusError, APITimeoutError, AsyncGroq, omit
 
 from kikoe.core.models import ModelSpec, Segment
-from kikoe.core.transcription import RealtimeProfile
 from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
+    FileOnlyClient,
     FileTranscriptCallback,
-    RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
     file_capabilities,
@@ -26,16 +24,10 @@ from kikoe.providers.parsing import parse_segments
 MAX_UPLOAD_BYTES = 25_000_000
 
 
-class GroqClient:
+class GroqClient(FileOnlyClient[httpx.AsyncBaseTransport]):
     """Keep multipart encoding and transport lifetime inside the official SDK."""
 
-    def __init__(
-        self, base_url: str, api_key: str, transport: httpx.AsyncBaseTransport | None = None
-    ) -> None:
-        self._url = base_url.rstrip("/")
-        self._host = urlsplit(base_url).hostname or base_url
-        self._key = api_key
-        self._transport = transport
+    name = "Groq"
 
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
         return UploadLimits(MAX_UPLOAD_BYTES)
@@ -94,11 +86,3 @@ class GroqClient:
         else:
             message = _("Could not complete transcription. Check your connection and try again.")
         return TranscriptionError(message.format(host=self._host), retryable=True)
-
-    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
-        return RealtimeProfile()
-
-    async def open_realtime(
-        self, model: ModelSpec, options: TranscriptionOptions
-    ) -> RealtimeSession:
-        raise TranscriptionError(_("Groq supports file transcription only."))

@@ -18,6 +18,7 @@ from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileTranscriptCallback,
+    HttpClient,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
@@ -69,18 +70,12 @@ class _Listen(Protocol):
     ) -> AbstractAsyncContextManager[_Socket]: ...
 
 
-class DeepgramClient:
+class DeepgramClient(HttpClient[httpx.AsyncBaseTransport]):
     """Type the generated SDK's unannotated accessors at the adapter boundary."""
 
-    def __init__(
-        self, base_url: str, api_key: str, transport: httpx.AsyncBaseTransport | None = None
-    ) -> None:
-        self._url = base_url.rstrip("/").removesuffix("/v1")
-        self._key = api_key
-        self._transport = transport
-
     def _listen(self, http: httpx.AsyncClient) -> _Listen:
-        parts = urlsplit(self._url)
+        base = self._url.removesuffix("/v1")  # The SDK adds the API version itself.
+        parts = urlsplit(base)
         ws = urlunsplit(parts._replace(scheme="wss" if parts.scheme == "https" else "ws"))
         sdk = AsyncDeepgramClient(
             api_key=self._key,
@@ -88,7 +83,7 @@ class DeepgramClient:
             max_retries=0,
             httpx_client=http,
             environment=DeepgramClientEnvironment(
-                base=self._url, production=ws, agent=ws, agent_rest=self._url
+                base=base, production=ws, agent=ws, agent_rest=base
             ),
         )
         return cast(_Listen, sdk.listen.v1)

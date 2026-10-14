@@ -6,12 +6,14 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Protocol
+from typing import ClassVar, Protocol
+from urllib.parse import urlsplit
 
 from kikoe.core.choice import RequestedFeatures
 from kikoe.core.models import ModeCapabilities, ModelSpec, Segment, TimestampGranularity
 from kikoe.core.transcription import FileTranscriptSnapshot, RealtimeProfile, TranscriptEvent
 from kikoe.core.upload import UploadLimits
+from kikoe.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +70,34 @@ class RealtimeSession(Protocol):
     async def keep_alive(self) -> None: ...
     async def close(self) -> None: ...
     def events(self) -> AsyncIterator[TranscriptEvent]: ...
+
+
+class HttpClient[T]:
+    """Connection settings every SDK adapter keeps; ``T`` is the SDK's httpx transport type."""
+
+    def __init__(self, base_url: str, api_key: str, transport: T | None = None) -> None:
+        self._url = base_url.rstrip("/")
+        self._host = urlsplit(base_url).hostname or base_url
+        self._key = api_key
+        self._transport = transport
+        """Tests substitute a mock transport; None uses the network."""
+
+    def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
+        return RealtimeProfile()
+
+
+class FileOnlyClient[T](HttpClient[T]):
+    """A service without live transcription."""
+
+    name: ClassVar[str]
+    """Brand name, shown when someone tries to transcribe live."""
+
+    async def open_realtime(
+        self, model: ModelSpec, options: TranscriptionOptions
+    ) -> RealtimeSession:
+        # Translators: {name} is a service name such as Groq.
+        message = _("{name} supports file transcription only.")
+        raise TranscriptionError(message.format(name=self.name))
 
 
 class TranscriptionProvider(Protocol):

@@ -8,7 +8,6 @@ from contextlib import AsyncExitStack
 from datetime import timedelta
 from functools import partial
 from pathlib import Path
-from urllib.parse import urlsplit
 
 import httpx2 as httpx
 from openai import APIError, AsyncOpenAI, omit
@@ -23,6 +22,7 @@ from kikoe.core.upload import UploadLimits
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileTranscriptCallback,
+    HttpClient,
     RealtimeSession,
     TranscriptionError,
     TranscriptionOptions,
@@ -36,29 +36,30 @@ from kikoe.providers.parsing import parse_segments
 MAX_UPLOAD_BYTES = 25_000_000
 
 
-class OpenAIClient:
+def openai_sdk(
+    url: str,
+    key: str,
+    transport: httpx.AsyncBaseTransport | None,
+    *,
+    require_key: bool = True,
+) -> AsyncOpenAI:
+    """An SDK client for OpenAI or a service that speaks its API; retries are Kikoe's job."""
+    return AsyncOpenAI(
+        api_key=key,
+        base_url=url,
+        max_retries=0,
+        _enforce_credentials=require_key,
+        timeout=httpx.Timeout(30, read=900, write=300),
+        http_client=httpx.AsyncClient(transport=transport),
+    )
+
+
+class OpenAIClient(HttpClient[httpx.AsyncBaseTransport]):
     """Keep authentication, retries and multipart encoding inside the official SDK."""
 
-    def __init__(
-        self,
-        base_url: str,
-        api_key: str,
-        transport: httpx.AsyncBaseTransport | None = None,
-    ) -> None:
-        self._url = base_url.rstrip("/")
-        self._host = urlsplit(base_url).hostname or base_url
-        self._key = api_key
-        self._transport = transport
-
     def _sdk(self) -> AsyncOpenAI:
-        return AsyncOpenAI(
-            api_key=self._key,
-            base_url=self._url,
-            max_retries=0,
-            _enforce_credentials=False,  # Compatible local servers may deliberately have no key.
-            timeout=httpx.Timeout(30, read=900, write=300),
-            http_client=httpx.AsyncClient(transport=self._transport),
-        )
+        # Compatible local servers may deliberately have no key.
+        return openai_sdk(self._url, self._key, self._transport, require_key=False)
 
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
         return UploadLimits(MAX_UPLOAD_BYTES)
