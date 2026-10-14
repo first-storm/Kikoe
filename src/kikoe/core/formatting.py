@@ -44,18 +44,8 @@ class TimestampParseError(ValueError):
 
 
 def format_timestamp_range(start: timedelta | None, end: timedelta | None) -> str:
-    """A segment's time span with start and end joined by an en-dash.
-
-    Shows whichever side exists; empty when neither does so the caller can hide
-    the label. The separator has no spaces to fit the narrow meta column.
-    """
-    if start is not None and end is not None:
-        return f"{format_timestamp(start)}{_RANGE_SEPARATOR}{format_timestamp(end)}"
-    if start is not None:
-        return format_timestamp(start)
-    if end is not None:
-        return format_timestamp(end)
-    return ""
+    """A segment's time span; whichever side exists, or empty so the caller can hide it."""
+    return _RANGE_SEPARATOR.join(format_timestamp(t) for t in (start, end) if t is not None)
 
 
 def format_timestamp_input(position: timedelta) -> str:
