@@ -31,11 +31,9 @@ from kikoe.core.transcription import (
     LiveSnapshot,
 )
 from kikoe.i18n import _
-from kikoe.media.ffmpeg import find_ffmpeg
 from kikoe.media.player import PlaybackError
 from kikoe.media.recorder import SoundDeviceRecorder
 from kikoe.providers.base import TranscriptionOptions
-from kikoe.providers.factory import create_client
 from kikoe.services.activity import ActivityTracker
 from kikoe.services.editing import EditingSession
 from kikoe.services.errors import USER_FACING_ERRORS
@@ -44,6 +42,7 @@ from kikoe.services.importer import ImportStage
 from kikoe.services.playback import Playback
 from kikoe.services.realtime import RealtimeRecording
 from kikoe.services.recording import RecordingSession, recover_recording
+from kikoe.services.recording_workflow import RecordingCallbacks, RecordingWorkflow
 from kikoe.storage.captures import CaptureStore, capture_dir
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
@@ -176,10 +175,10 @@ class Window(Adw.ApplicationWindow):
         self._work = ActivityTracker()
         self._transcriptions = FileTranscriptionWorkflow(providers, notes)
         self._file_display = FileTranscriptionDisplay(self.note_view)
-        self._live: RealtimeRecording | None = None
-        self._session: RecordingSession | None = None
+        self._recording: RecordingWorkflow | None = None
         self._recording_note_id: str | None = None
         self._recording_summary = ""
+        self._recording_model = ""
         self._recovery_checked = False
         self._add_action("start-recording", self._on_start_recording)
         self._add_action("pause-recording", self._on_pause_recording)
@@ -214,6 +213,14 @@ class Window(Adw.ApplicationWindow):
             )
             self.connect("destroy", self._on_destroy)
         self._sync_window_controls()
+
+    @property
+    def _session(self) -> RecordingSession | None:
+        return self._recording.session if self._recording is not None else None
+
+    @property
+    def _live(self) -> RealtimeRecording | None:
+        return self._recording.live if self._recording is not None else None
 
     @property
     def note(self) -> Note | None:
@@ -1166,107 +1173,72 @@ class Window(Adw.ApplicationWindow):
     async def _record(
         self, note_id: str | None, choice: ModelChoice, options: TranscriptionOptions
     ) -> None:
-        live_task: asyncio.Task[None] | None = None
-        realtime = choice.model.capabilities.realtime is not None
-        try:
-            await self._playback.finish()
-            await asyncio.to_thread(find_ffmpeg)
-            # Validate the batch backend before opening the microphone.
-            client = create_client(
-                choice.provider,
-                await self._providers.get_api_key(choice.provider.provider_id) if realtime else "",
-            )
-            directory = await asyncio.to_thread(capture_dir)
-            session = RecordingSession(
-                SoundDeviceRecorder(self._providers.preferences.input_device),
-                CaptureStore(directory),
-                self._notes,
-            )
-            self._session = session
-            title = recording_note_title(datetime.now(UTC))
-            note = await session.start(note_id, title, choice)
-            self._recording_note_id = note.note_id
-            self._recording_model = choice.model.display_name
-            labels: list[str] = []
-            if options.timestamps:
-                labels.append(_("Timestamps"))
-            if options.diarization:
-                labels.append(_("Speakers"))
-            self._recording_summary = _("{provider} {model} · {options}").format(
-                provider=choice.provider.name,
-                model=choice.model.display_name,
-                options=_("Text only") if not labels else ", ".join(labels),
-            )
-            if realtime:
-                self._live = RealtimeRecording(
-                    session, choice, client, options, self._on_live_update
-                )
-            self._show_note(note)
-            self._refresh_recording_sidebar()
-            self.split_view.set_show_content(True)
-            self.bottom_bar.show_recording(self._recording_summary)
-            self._on_capture_progress(CaptureProgress(CaptureState.RECORDING, session.elapsed, 0))
-            if self._work.closing:
-                await session.stop()
-            if self._live is not None:
-                live_task = run_task(self._live.run(), self)
-            error = await session.capture(self._on_capture_progress)
-            if live_task is not None:
-                if self._work.closing:
-                    live_task.cancel()
-                else:
-                    try:
-                        async with asyncio.timeout(10):
-                            await asyncio.shield(live_task)
-                    except TimeoutError:
-                        live_task.cancel()
-                await asyncio.gather(live_task, return_exceptions=True)
-            self.note_view.hide_recording()
-            self.bottom_bar.set_progress(_("Saving recording…"))
-            self._update_actions()
-            saved = await session.save()
-            if saved is not None:
-                self._show_note(saved)
-                if self._live is not None:
-                    recording_id = (
-                        session.journal.recording_id if session.journal is not None else ""
-                    )
-                    saved = await self._notes.update_transcription(
-                        saved.note_id,
-                        recording_id,
-                        TranscriptionState.READY
-                        if self._live.complete and error is None
-                        else TranscriptionState.FAILED,
-                        segments=self._live.segments,
-                    )
-                    self._show_note(saved)
-                elif error is None and not self._work.closing:
-                    recording = next(
-                        r
-                        for r in saved.recordings
-                        if session.journal is not None
-                        and r.recording_id == session.journal.recording_id
-                    )
-                    await self._begin_recording_upload(saved.note_id, recording, choice, options)
-            elif error is None:
-                self.add_toast(Adw.Toast(title=_("No audio was recorded")))
-            if error is not None:
-                log.warning("Microphone capture stopped: %s", error)
-                show_error(self, str(error))
-        finally:
-            if live_task is not None and not live_task.done():
-                live_task.cancel()
-                await asyncio.gather(live_task, return_exceptions=True)
-            self._live = None
-            if self._session is not None:
-                await self._session.stop()
-            self._session = None
-            self._recording_note_id = None
-            self._work.recording_task = None
-            self.note_view.hide_recording()
-            self.bottom_bar.set_progress(None)
-            self._refresh_recording_sidebar()
-            self._show_note(self._note)
+        async def upload(saved_note_id: str, recording: Recording) -> None:
+            await self._begin_recording_upload(saved_note_id, recording, choice, options)
+
+        self._recording = RecordingWorkflow(
+            notes=self._notes,
+            keys=self._providers,
+            callbacks=RecordingCallbacks(
+                before_start=self._playback.finish,
+                started=lambda note: self._on_recording_started(note, choice, options),
+                progress=self._on_capture_progress,
+                live_update=self._on_live_update,
+                capture_ended=self._on_recording_capture_ended,
+                saved=self._show_note,
+                nothing_recorded=lambda: self.add_toast(
+                    Adw.Toast(title=_("No audio was recorded"))
+                ),
+                capture_failed=lambda error: show_error(self, str(error)),
+                live_failed=self._on_live_failed,
+                upload=upload,
+                finished=self._on_recording_finished,
+            ),
+            make_recorder=lambda: SoundDeviceRecorder(self._providers.preferences.input_device),
+            open_store=lambda: CaptureStore(capture_dir()),
+            is_closing=lambda: self._work.closing,
+        )
+        await self._recording.run(note_id, recording_note_title(datetime.now(UTC)), choice, options)
+
+    def _on_recording_started(
+        self, note: Note, choice: ModelChoice, options: TranscriptionOptions
+    ) -> None:
+        self._recording_note_id = note.note_id
+        self._recording_model = choice.model.display_name
+        labels: list[str] = []
+        if options.timestamps:
+            labels.append(_("Timestamps"))
+        if options.diarization:
+            labels.append(_("Speakers"))
+        self._recording_summary = _("{provider} {model} · {options}").format(
+            provider=choice.provider.name,
+            model=choice.model.display_name,
+            options=_("Text only") if not labels else ", ".join(labels),
+        )
+        self._show_note(note)
+        self._refresh_recording_sidebar()
+        self.split_view.set_show_content(True)
+        self.bottom_bar.show_recording(self._recording_summary)
+
+    def _on_recording_capture_ended(self) -> None:
+        self.note_view.hide_recording()
+        self.bottom_bar.set_progress(_("Saving recording…"))
+        self._update_actions()
+
+    def _on_live_failed(self, error: Exception) -> None:
+        if isinstance(error, USER_FACING_ERRORS):
+            show_error(self, str(error))
+        else:
+            show_error(self, _("An unexpected error occurred. See the local log for details."))
+
+    def _on_recording_finished(self) -> None:
+        self._recording = None
+        self._recording_note_id = None
+        self._work.recording_task = None
+        self.note_view.hide_recording()
+        self.bottom_bar.set_progress(None)
+        self._refresh_recording_sidebar()
+        self._show_note(self._note)
 
     def _refresh_recording_sidebar(self) -> None:
         self._search.refresh()
