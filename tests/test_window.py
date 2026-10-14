@@ -38,9 +38,16 @@ def test_the_window_opens_without_errors(outcome: dict[str, object]) -> None:
     assert "error" not in outcome, outcome.get("error")
 
 
+def test_every_window_action_is_registered(outcome: dict[str, object]) -> None:
+    assert outcome.get("missing_actions") == []
+
+
 @pytest.mark.parametrize(
     "check",
     [
+        "new_note_waits_for_a_provider",
+        "new_note_enabled_with_a_provider",
+        "new_note_action_creates_and_selects",
         "lists_both_notes",
         "opens_selected_note",
         "highlights_selected_row",

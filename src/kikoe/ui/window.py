@@ -15,7 +15,6 @@ from kikoe.core.edit_history import SegmentChange, SegmentFields
 from kikoe.core.models import (
     DisplayOptions,
     Note,
-    NoteSummary,
     Recording,
     RecordingSource,
     TranscriptionState,
@@ -44,7 +43,6 @@ from kikoe.storage.captures import CaptureStore, capture_dir
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.bottom_bar import BottomBar
-from kikoe.ui.dialogs import confirm_destructive
 from kikoe.ui.export_controller import ExportController
 from kikoe.ui.file_dialogs import pick_audio_file
 from kikoe.ui.file_transcription import FileTranscriptionDisplay
@@ -54,6 +52,7 @@ from kikoe.ui.labels import (
     note_title_subtitle,
     recording_note_title,
 )
+from kikoe.ui.note_actions import NoteActions
 from kikoe.ui.note_sidebar import NoteSidebar
 from kikoe.ui.note_view import NoteView
 from kikoe.ui.recovery_prompt import confirm_recovery
@@ -157,12 +156,7 @@ class Window(Adw.ApplicationWindow):
         self._notes = notes
         self._note: Note | None = None
         self._providers_loaded = False
-        self._add_action("new-note", self._on_new_note)
-        self._add_action("rename-note", self._on_rename_note)
         self._add_action("copy-all-text", self._export.on_copy_all_text)
-        self._add_action("delete-note", self._on_delete_note)
-        self._add_action("rename-note-row", self._on_rename_note_row, GLib.VariantType.new("s"))
-        self._add_action("delete-note-row", self._on_delete_note_row, GLib.VariantType.new("s"))
         self._add_action("export", self._export.on_export)
         self._add_toggle_action("show-timestamps")
         self._add_toggle_action("show-speakers")
@@ -203,6 +197,22 @@ class Window(Adw.ApplicationWindow):
         self._add_action(
             "edit-speaker", self._speakers.on_edit_speaker, GLib.VariantType.new("(ss)")
         )
+        self._note_actions = NoteActions(
+            self,
+            notes,
+            self._playback,
+            lambda: self._note,
+            self.select_note,
+            self._show_note,
+            lambda title: self.add_toast(Adw.Toast(title=title)),
+        )
+        self._add_action("new-note", self._note_actions.on_new_note)
+        self._add_action("rename-note", self._note_actions.on_rename_note)
+        self._add_action("delete-note", self._note_actions.on_delete_note)
+        string = GLib.VariantType.new("s")
+        self._add_action("rename-note-row", self._note_actions.on_rename_note_row, string)
+        self._add_action("delete-note-row", self._note_actions.on_delete_note_row, string)
+        self._add_action("delete-recording", self._note_actions.on_delete_recording, string)
         self._add_action("undo", self._on_undo)
         self._add_action("redo", self._on_redo)
         self._add_action(
@@ -211,7 +221,6 @@ class Window(Adw.ApplicationWindow):
         self._add_action(
             "retranscribe-recording", self._on_retranscribe_recording, GLib.VariantType.new("s")
         )
-        self._add_action("delete-recording", self._on_delete_recording, GLib.VariantType.new("s"))
         self._set_action_enabled("new-note", False)  # Until providers are loaded.
         self._show_note(None)
         providers.connect_changed(self._on_providers_changed)
@@ -440,91 +449,6 @@ class Window(Adw.ApplicationWindow):
             page = "empty"
         self.content_stack.set_visible_child_name(page)
         self.bottom_bar_slot.set_visible(page == "note")
-
-    # Note actions
-
-    def _on_new_note(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        run_task(self._create_note(), self)
-
-    async def _create_note(self) -> None:
-        note = await self._notes.create_note(_("New Note"))
-        self.select_note(note.note_id)
-
-    def _on_rename_note(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        if self._note is not None:
-            self._rename_note(self._note.note_id, self._note.title)
-
-    def _on_rename_note_row(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        summary = self._summary(param.get_string()) if param is not None else None
-        if summary is not None:
-            self._rename_note(summary.note_id, summary.title)
-
-    def _summary(self, note_id: str) -> NoteSummary | None:
-        return next((s for s in self._notes.notes if s.note_id == note_id), None)
-
-    def _rename_note(self, note_id: str, current_title: str) -> None:
-        entry = Gtk.Entry(text=current_title, activates_default=True)
-        entry.update_property([Gtk.AccessibleProperty.LABEL], [_("Note Title")])
-        dialog = Adw.AlertDialog(heading=_("Rename Note"), extra_child=entry)
-        dialog.add_response("cancel", _("_Cancel"))
-        dialog.add_response("rename", _("_Rename"))
-        dialog.set_response_appearance("rename", Adw.ResponseAppearance.SUGGESTED)
-        dialog.set_default_response("rename")
-        dialog.set_close_response("cancel")
-
-        def update_enabled(_entry: Gtk.Entry) -> None:
-            dialog.set_response_enabled("rename", bool(entry.get_text().strip()))
-
-        def respond(_dialog: Adw.AlertDialog, response: str) -> None:
-            title = entry.get_text().strip()
-            if response == "rename" and title and title != current_title:
-                run_task(self._notes.rename_note(note_id, title), self)
-
-        entry.connect("changed", update_enabled)
-        dialog.connect("response", respond)
-        dialog.present(self)
-        entry.grab_focus()
-
-    def _on_delete_note(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        if self._note is not None:
-            self._delete_note(self._note.note_id, self._note.title)
-
-    def _on_delete_note_row(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        summary = self._summary(param.get_string()) if param is not None else None
-        if summary is not None:
-            self._delete_note(summary.note_id, summary.title)
-
-    def _delete_note(self, note_id: str, title: str) -> None:
-        confirm_destructive(
-            self,
-            _("Delete “{title}”?").format(title=title),
-            _("Its transcript and original audio will be deleted. This cannot be undone."),
-            _("_Delete"),
-            lambda: run_task(self._notes.delete_note(note_id), self),
-        )
-
-    def _on_delete_recording(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        note = self._note
-        if note is None or param is None:
-            return
-        recording_id = param.get_string()
-        recording = self._recording_by_id(recording_id)
-        if recording is None:
-            self.add_toast(Adw.Toast(title=_("This recording is no longer available.")))
-            return
-        number = note.recordings.index(recording) + 1
-        self._playback.stop()
-        confirm_destructive(
-            self,
-            _("Delete Recording {number}?").format(number=number),
-            _("Its transcript and original audio will be deleted. This cannot be undone."),
-            _("_Delete"),
-            lambda: run_task(self._delete_recording(note.note_id, recording_id), self),
-        )
-
-    async def _delete_recording(self, note_id: str, recording_id: str) -> None:
-        note = await self._notes.delete_recording(note_id, recording_id)
-        self._show_note(note)
 
     # Speaker identities and playback
 

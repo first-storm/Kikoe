@@ -20,6 +20,7 @@ from gi.events import GLibEventLoopPolicy  # noqa: E402
 from gi.repository import Adw, Gio, GLib  # noqa: E402
 
 from kikoe import i18n  # noqa: E402
+from kikoe.core.models import ApiKind  # noqa: E402
 from kikoe.storage.library import Library  # noqa: E402
 from kikoe.storage.notes import NoteRepository  # noqa: E402
 from kikoe.storage.providers import ProviderRepository  # noqa: E402
@@ -43,11 +44,69 @@ class MemorySecrets:
         self.values.pop(provider_id, None)
 
 
+ACTIONS = (
+    "new-note",
+    "rename-note",
+    "copy-all-text",
+    "delete-note",
+    "rename-note-row",
+    "delete-note-row",
+    "export",
+    "show-timestamps",
+    "show-speakers",
+    "export-audio",
+    "choose-model",
+    "import-audio",
+    "cancel-import",
+    "start-recording",
+    "pause-recording",
+    "resume-recording",
+    "stop-recording",
+    "retry-recording",
+    "play-recording",
+    "play-sample",
+    "edit-speaker",
+    "undo",
+    "redo",
+    "match-speakers",
+    "retranscribe-recording",
+    "delete-recording",
+    "search-notes",
+)
+
+
 async def settle(seconds: float = 0.4) -> None:
     await asyncio.sleep(seconds)
 
 
-async def scenario(window: Window, notes: NoteRepository, result: dict[str, object]) -> None:
+async def scenario(
+    window: Window,
+    providers: ProviderRepository,
+    notes: NoteRepository,
+    result: dict[str, object],
+) -> None:
+    result["missing_actions"] = [name for name in ACTIONS if window.lookup_action(name) is None]
+    new_note = window.lookup_action("new-note")
+    result["new_note_waits_for_a_provider"] = (
+        isinstance(new_note, Gio.SimpleAction) and not new_note.get_enabled()
+    )
+    await providers.add_provider("Test", ApiKind.OPENAI, "https://example.test/v1", "key")
+    await settle()
+    result["new_note_enabled_with_a_provider"] = (
+        isinstance(new_note, Gio.SimpleAction) and new_note.get_enabled()
+    )
+    window.activate_action("win.new-note", None)
+    await settle()
+    created = window.note
+    result["new_note_action_creates_and_selects"] = (
+        created is not None
+        and len(notes.notes) == 1
+        and created.note_id == notes.notes[0].note_id
+        and window.notes_list.get_selected_row() is not None
+    )
+    if created is not None:
+        await notes.delete_note(created.note_id)
+    await settle()
     await notes.create_note("Alpha meeting")
     await notes.create_note("Beta call")
     await settle()
@@ -95,7 +154,7 @@ def main() -> None:
             try:
                 await providers.load()
                 await notes.load()
-                await scenario(window, notes, result)
+                await scenario(window, providers, notes, result)
             except Exception as error:
                 result["error"] = repr(error)
             finally:
