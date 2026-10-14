@@ -12,13 +12,18 @@ Defaults and endpoint limits were checked against official documentation on 2026
 | API | Default / maximum encoded chunk size | Default / maximum chunk length | Default format |
 | --- | --- | --- | --- |
 | OpenAI | 25 MB | Automatic, governed by size | WAV |
+| Groq multipart STT | 25 MB attachment cap | Automatic, governed by size | Ogg Opus |
 | OpenAI-compatible | 25 MB compatibility default | Automatic, governed by size | Ogg Opus |
 | OpenRouter multipart STT | 25 MB | Automatic, governed by size | Ogg Opus |
 | Deepgram pre-recorded | 2,000 MB | Automatic, governed by size | Ogg Opus |
 | Gemini Files + Transcribe | 2,000 MB | 60 minutes; effectively 30 with timestamps or speakers | Ogg Opus |
 | MiMo ASR | 7.5 MB raw audio = 10 MB Base64 | Automatic, governed by size | WAV |
 
-Sources: [OpenAI file transcription](https://developers.openai.com/api/docs/guides/speech-to-text),
+Groq limits were checked on 2026-10-14. Its multipart attachment cap is 25 MB;
+the larger dev-tier URL limit does not apply to local file uploads.
+
+Sources: [Groq speech to text](https://console.groq.com/docs/speech-to-text),
+[OpenAI file transcription](https://developers.openai.com/api/docs/guides/speech-to-text),
 [OpenAI supported file types](https://platform.openai.com/docs/api-reference/audio/createTranscription),
 [OpenRouter multipart STT](https://openrouter.ai/docs/guides/overview/multimodal/stt),
 [Deepgram pre-recorded limits](https://developers.deepgram.com/docs/pre-recorded-audio),

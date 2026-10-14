@@ -16,6 +16,7 @@ dependencies = [
   "PyGObject>=3.58",
   "deepgram-sdk>=7.12.0,<8",
   "google-genai>=2.29.0,<3",
+  "groq>=1.7.0,<2",
   "httpx>=0.28.1",
   "keyring>=25.7.0",
   "openai[realtime]>=3.29.0,<4",

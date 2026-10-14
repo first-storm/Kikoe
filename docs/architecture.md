@@ -159,7 +159,7 @@ and removes scheduled updates when a job ends.
    except OpenAI/MiMo use WAV. ffmpeg's `-progress` output gives the length, so ffprobe
    is not needed.
 4. **Split at the effective upload limit**: `UploadLimits` combines file size with
-   model/option-dependent duration. OpenAI and OpenRouter use 25 MB; Deepgram uses
+   model/option-dependent duration. OpenAI, OpenRouter and Groq use 25 MB; Deepgram uses
    2 GB; MiMo uses WAV and 7.5 MB, since its 10 MB limit applies to Base64;
    Gemini Files accepts 2 GB and Transcribe accepts 60 minutes, or 30 minutes with
    word timestamps/speakers. Per-provider settings can lower these bounds.
@@ -171,8 +171,12 @@ and removes scheduled updates when a job ends.
    workers; `offset_segments` shifts its timestamps before ordered merging.
 5. **Transcribe**: each backend uses an official asynchronous SDK: `openai[realtime]`
    (also for OpenAI-compatible URLs), `openrouter` STT multipart, `google-genai`
-   Interactions/Live, and `deepgram-sdk` Listen v1. Factory clients own their SDK and
-   transport lifetimes. Requests use JSON, verbose JSON or diarized JSON according to
+   Interactions/Live, `deepgram-sdk` Listen v1, and `groq` audio transcriptions.
+   Groq uses the SDK root URL `https://api.groq.com`; the SDK adds `/openai/v1`.
+   Its Whisper models support segment and word timestamps, without diarization,
+   streaming previews or realtime sessions; recordings upload after stopping.
+   Explicit language tags use their primary language code. Factory clients own their
+   SDK and transport lifetimes. Requests use JSON, verbose JSON or diarized JSON according to
    the effective model/option support; provider metadata is normalized into `Segment`.
    Gemini file requests run the async SDK in a cancellable worker loop because its
    resumable-upload retry internals contain blocking waits. Cancellation waits for
@@ -242,6 +246,7 @@ Added only when the feature using them lands (see AGENTS.md, "Dependencies"):
 | --- | --- | --- |
 | SDK HTTP transports | `httpx` | added (M2); SDK requests replace hand-written HTTP |
 | OpenAI file/live and compatible APIs | `openai[realtime]` | added (M5; includes `httpx2`/`websockets`) |
+| Groq file STT | `groq` | official async SDK, segment/word timestamps |
 | OpenRouter file STT | `openrouter` | added (M5) |
 | Gemini file/live STT | `google-genai` | added (M5) |
 | Deepgram file/live STT | `deepgram-sdk` | added (M5) |

@@ -1,6 +1,20 @@
 {
   "version": 1,
   "apis": {
+    "groq": {
+      "file": {
+        "available": "on",
+        "timestamps": "on",
+        "word_timestamps": "on",
+        "diarization": "unsupported",
+        "streaming": "unsupported"
+      },
+      "realtime": {
+        "available": "unsupported",
+        "timestamps": "unsupported",
+        "diarization": "unsupported"
+      }
+    },
     "deepgram": {
       "file": { "available": "on", "timestamps": "on", "diarization": "on" },
       "realtime": { "available": "off", "timestamps": "on", "diarization": "on" }

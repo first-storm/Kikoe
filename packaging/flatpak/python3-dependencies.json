@@ -79,6 +79,11 @@
     },
     {
       "type": "file",
+      "url": "https://files.pythonhosted.org/packages/3f/f6/c3d8ea3194d7d7d8292edd4dbb4b6832d29c2eab04887dda4a742e83902c/groq-1.7.0-py3-none-any.whl",
+      "sha256": "cb1518f823423d4e52445859eb7d2918a927794cec12f8d5e50d9161e3690fc8"
+    },
+    {
+      "type": "file",
       "url": "https://files.pythonhosted.org/packages/04/4b/29cac41a4d98d144bf5f6d33995617b185d14b22401f75ca86f384e87ff1/h11-0.16.0-py3-none-any.whl",
       "sha256": "63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86"
     },

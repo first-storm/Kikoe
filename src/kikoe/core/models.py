@@ -18,6 +18,7 @@ class ApiKind(StrEnum):
     OPENROUTER = "openrouter"
     GEMINI = "gemini"
     MIMO = "mimo"
+    GROQ = "groq"
 
 
 @dataclass(frozen=True, slots=True)

@@ -83,6 +83,7 @@ def configure_logging(level: str = "INFO") -> None:
         root.addHandler(file_handler)
     for name in (
         "openai",
+        "groq",
         "openrouter",
         "deepgram",
         "google.genai",

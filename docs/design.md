@@ -281,14 +281,14 @@ M6 implementation behavior:
   A provider can offer several models.", header button "Add Provider".
 - Rows (navigate to detail): avatar initial + name + subtitle "<API type> API · N
   model(s)", e.g. "Deepgram — Deepgram API · 1 model", "OpenAI — OpenAI API · 2
-  models", "Groq — OpenAI-compatible API · 1 model".
+  models", "Groq — Groq API · 1 model".
 - **Implemented** (`ui/preferences.blp`), including the General page below.
 
 ## 7. Preferences — Provider detail (≈640×780)
 
 Pushed as a subpage (back button) titled with the provider name.
 - Group "Connection": entry "Name"; combo "API Type" (Deepgram / OpenAI /
-  OpenAI-compatible / OpenRouter / Gemini AI Studio / MiMo); entry "Base URL" (e.g. `https://api.groq.com/openai/v1`);
+  OpenAI-compatible / OpenRouter / Gemini AI Studio / MiMo / Groq); entry "Base URL" (e.g. `https://api.groq.com`);
   password entry "API Key" with *Show Key* toggle. Description: "The API type decides
   the request format. Most providers offer an "OpenAI-compatible" API."
 - Group "Models", description "What each model can do is set when you add it.", header

@@ -77,7 +77,7 @@ def test_word_timestamps_are_offered_only_where_a_client_sends_them(
     catalog: ModelCatalog,
 ) -> None:
     allowed = [api for api in ApiKind if catalog.apis[api].file.word_timestamps.allowed]
-    assert allowed == [ApiKind.OPENROUTER]
+    assert allowed == [ApiKind.OPENROUTER, ApiKind.GROQ]
 
 
 def test_a_model_left_without_any_mode_gets_the_defaults(catalog: ModelCatalog) -> None:
