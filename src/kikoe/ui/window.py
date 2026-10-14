@@ -23,7 +23,6 @@ from kikoe.core.models import (
 )
 from kikoe.core.preferences import WindowState, valid_window_state
 from kikoe.core.recording import CaptureProgress, CaptureState
-from kikoe.core.speakers import identity_for
 from kikoe.core.transcription import (
     FileTranscriptSnapshot,
     LiveSnapshot,
@@ -61,8 +60,7 @@ from kikoe.ui.note_sidebar import NoteSidebar
 from kikoe.ui.note_view import NoteView
 from kikoe.ui.recovery_prompt import confirm_recovery
 from kikoe.ui.retranscribe_dialog import RetranscribeDialog
-from kikoe.ui.speaker_dialog import SpeakerDialog
-from kikoe.ui.speaker_editor import SpeakerEditor
+from kikoe.ui.speaker_controller import SpeakerController
 from kikoe.ui.tasks import run_task, show_error
 from kikoe.ui.templates import ui_file
 from kikoe.ui.transcript_row import NO_TIME
@@ -195,12 +193,28 @@ class Window(Adw.ApplicationWindow):
         self._playback = Playback(
             lambda coro: run_task(coro, self), self.note_view.set_playing, self._on_playback_error
         )
-        self._add_action("play-recording", self._on_play_recording, GLib.VariantType.new("s"))
-        self._add_action("play-sample", self._on_play_sample, GLib.VariantType.new("(sdd)"))
-        self._add_action("edit-speaker", self._on_edit_speaker, GLib.VariantType.new("(ss)"))
+        self._speakers = SpeakerController(
+            self,
+            notes,
+            providers,
+            self._playback,
+            lambda: self._note,
+            lambda title: self.add_toast(Adw.Toast(title=title)),
+        )
+        self._add_action(
+            "play-recording", self._speakers.on_play_recording, GLib.VariantType.new("s")
+        )
+        self._add_action(
+            "play-sample", self._speakers.on_play_sample, GLib.VariantType.new("(sdd)")
+        )
+        self._add_action(
+            "edit-speaker", self._speakers.on_edit_speaker, GLib.VariantType.new("(ss)")
+        )
         self._add_action("undo", self._on_undo)
         self._add_action("redo", self._on_redo)
-        self._add_action("match-speakers", self._on_match_speakers, GLib.VariantType.new("s"))
+        self._add_action(
+            "match-speakers", self._speakers.on_match_speakers, GLib.VariantType.new("s")
+        )
         self._add_action(
             "retranscribe-recording", self._on_retranscribe_recording, GLib.VariantType.new("s")
         )
@@ -582,63 +596,9 @@ class Window(Adw.ApplicationWindow):
     def _recording_by_id(self, recording_id: str) -> Recording | None:
         return self._note.recording(recording_id) if self._note else None
 
-    def _on_play_recording(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        if param is not None:
-            self._request_playback(param.get_string(), 0, None)
-
-    def _on_play_sample(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        if param is not None:
-            recording_id, start, end = param.unpack()
-            self._request_playback(str(recording_id), float(start), float(end))
-
-    def _request_playback(self, recording_id: str, start: float, end: float | None) -> None:
-        recording = self._recording_by_id(recording_id)
-        if recording is None or recording.audio_path is None:
-            self.add_toast(Adw.Toast(title=_("The original audio is not available.")))
-            return
-        self._playback.play(
-            recording.audio_path,
-            recording_id,
-            start,
-            end,
-            self._providers.preferences.output_device,
-        )
-
     def _on_playback_error(self, error: PlaybackError) -> None:
         log.warning("Playback failed: %s", error)
         self.add_toast(Adw.Toast(title=str(error)))
-
-    def _on_edit_speaker(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        if self._note is None or param is None:
-            return
-        recording_id, source_id = param.unpack()
-        recording = self._recording_by_id(str(recording_id))
-        if recording is None:
-            return
-        person = identity_for(recording, str(source_id))
-        if not any(s.speaker_id == person for s in self._note.speakers):
-            return
-        dialog = SpeakerEditor(
-            self._notes, self._note, person, lambda: self._present_matching(str(recording_id))
-        )
-        dialog.connect("closed", self._on_audio_dialog_closed)
-        dialog.present(self)
-
-    def _on_match_speakers(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:
-        if param is not None:
-            self._present_matching(param.get_string())
-
-    def _present_matching(self, recording_id: str) -> None:
-        recording = self._recording_by_id(recording_id)
-        if self._note is None or recording is None or not recording.speaker_bindings:
-            self.add_toast(Adw.Toast(title=_("This recording has no detected speakers.")))
-            return
-        dialog = SpeakerDialog(self._notes, self._note, recording)
-        dialog.connect("closed", self._on_audio_dialog_closed)
-        dialog.present(self)
-
-    def _on_audio_dialog_closed(self, _dialog: Adw.Dialog) -> None:
-        self._playback.stop()
 
     def _on_retranscribe_recording(
         self, _action: Gio.SimpleAction, param: GLib.Variant | None
@@ -671,7 +631,7 @@ class Window(Adw.ApplicationWindow):
             self.bottom_bar.choice,
             submit,
         )
-        dialog.connect("closed", self._on_audio_dialog_closed)
+        self._speakers.stop_playback_on_close(dialog)
         dialog.present(self)
 
     async def _retranscribe(
