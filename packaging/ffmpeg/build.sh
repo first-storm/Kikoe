@@ -7,8 +7,10 @@
 # The executable ends up in <prefix>/bin/ffmpeg (ffmpeg.exe on Windows).
 set -euo pipefail
 
+# ffmpeg comes from the GitHub mirror's tag archive: ffmpeg.org often fails to resolve
+# on CI runners. Keep the version in step with the Flatpak manifest's tag and commit.
 FFMPEG_VERSION=8.1.2
-FFMPEG_SHA256=464beb5e7bf0c311e68b45ae2f04e9cc2af88851abb4082231742a74d97b524c
+FFMPEG_SHA256=9fd092511605bbebafe095ea6d38d9e40f34d12f7386e1258372df8be0576eb7
 OPUS_VERSION=1.5.2
 OPUS_SHA256=65c1d2f78b9f2fb20082c38cbe47c951ad5839345876e46941612ee87f9a7ce1
 
@@ -36,7 +38,7 @@ fetch() {
 }
 
 fetch "https://downloads.xiph.org/releases/opus/opus-$OPUS_VERSION.tar.gz" "$OPUS_SHA256"
-fetch "https://ffmpeg.org/releases/ffmpeg-$FFMPEG_VERSION.tar.xz" "$FFMPEG_SHA256"
+fetch "https://github.com/FFmpeg/FFmpeg/archive/refs/tags/n$FFMPEG_VERSION.tar.gz" "$FFMPEG_SHA256"
 
 opus_configure=()
 case "${MSYSTEM:-}" in
@@ -69,7 +71,7 @@ case "$(uname -m)" in
         ;;
 esac
 
-cd "$work/ffmpeg-$FFMPEG_VERSION"
+cd "$work/FFmpeg-n$FFMPEG_VERSION"
 PKG_CONFIG_PATH="$deps/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" \
     bash "$here/configure.sh" \
     --prefix="$prefix" \

@@ -48,9 +48,11 @@ modules:
       - make -j"$(nproc)"
       - install -Dm755 ffmpeg "${FLATPAK_DEST}/bin/ffmpeg"
     sources:
-      - type: archive
-        url: https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz
-        sha256: 464beb5e7bf0c311e68b45ae2f04e9cc2af88851abb4082231742a74d97b524c
+      # GitHub mirror: ffmpeg.org often fails to resolve on CI runners.
+      - type: git
+        url: https://github.com/FFmpeg/FFmpeg.git
+        tag: n8.1.2
+        commit: 38b88335f99e76ed89ff3c93f877fdefce736c13
       - type: file
         path: ../ffmpeg/configure.sh
 

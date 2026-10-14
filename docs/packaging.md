@@ -22,12 +22,13 @@ Actions allowance, so the workflows only run for changes under their own paths.
    the wheel with `uv build` (generated `.ui`/`.mo` files are included via hatch
    `artifacts`) and exports the locked runtime requirements to `requirements.txt`.
 2. `packaging/ffmpeg/build.sh` builds the bundled ffmpeg (AppImage, macOS, Windows):
-   ffmpeg and libopus from pinned, hash-checked source releases, linked statically.
+   ffmpeg (the `FFmpeg/FFmpeg` GitHub tag archive, since ffmpeg.org often fails to
+   resolve on CI runners) and libopus from pinned, hash-checked sources, linked statically.
    `packaging/ffmpeg/configure.sh` keeps all audio decoders, all demuxers and filters,
    but only the libopus/FLAC/PCM encoders, the Ogg/FLAC/WAV/PCM/null muxers and the
    file/pipe protocols; the Flatpak manifest uses the same script. The result is
    cached per architecture. Update `FFMPEG_VERSION`/`OPUS_VERSION` and their hashes
-   together (and the Flatpak manifest's ffmpeg source).
+   together (and the Flatpak manifest's ffmpeg `tag` and `commit`).
 3. The AppImage, macOS and Windows builds freeze the wheel with PyInstaller using
    `packaging/pyinstaller/kikoe.spec` as a one-folder app. ffmpeg goes next to the
    executable, where `kikoe.media.ffmpeg` looks for it. `rthook_portaudio.py` points
