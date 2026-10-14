@@ -1,5 +1,7 @@
 from dataclasses import replace
 
+import pytest
+
 from helpers import file_caps
 from kikoe.core.choice import (
     RequestedFeatures,
@@ -13,6 +15,7 @@ from kikoe.core.models import (
     ApiKind,
     Capabilities,
     ModeCapabilities,
+    ModelKey,
     ModelSpec,
     Provider,
     TimestampGranularity,
@@ -54,6 +57,26 @@ def test_removed_model_falls_back_to_the_first() -> None:
 
 def test_no_models_means_no_choice() -> None:
     assert resolve_choice([EMPTY], None) is None
+    assert resolve_choice([], ("o", "whisper-1"), None) is None
+
+
+@pytest.mark.parametrize(
+    ("current", "recent", "default", "expected"),
+    [
+        (("o", "gpt-4o-transcribe"), ("o", "whisper-1"), None, "gpt-4o-transcribe"),
+        (None, ("o", "gpt-4o-transcribe"), ("o", "whisper-1"), "gpt-4o-transcribe"),
+        (None, ("gone", "x"), ("o", "gpt-4o-transcribe"), "gpt-4o-transcribe"),
+        (("gone", "x"), None, ("o", "gpt-4o-transcribe"), "gpt-4o-transcribe"),
+        (("gone", "x"), ("o", "gone"), ("o", "gone"), "whisper-1"),
+        (None, None, None, "whisper-1"),
+    ],
+)
+def test_wanted_models_are_tried_in_order_before_the_first(
+    current: ModelKey | None, recent: ModelKey | None, default: ModelKey | None, expected: str
+) -> None:
+    choice = resolve_choice([OPENAI], current, recent, default)
+
+    assert choice is not None and choice.model.model_id == expected
 
 
 def test_requested_features_are_limited_to_the_model() -> None:

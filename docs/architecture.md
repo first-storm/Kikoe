@@ -396,7 +396,7 @@ and rejects outdated results; matching summaries retain the existing newest-firs
 This personal-project implementation scans text rather than maintaining an FTS index. List and search queries share summary
 projection and ordering; searches load only matching summaries.
 
-`core.preferences.preferred_model` resolves recent, default, first available, then none.
+`core.choice.resolve_choice` keeps the current model, else recent, default, first, then none.
 The bottom bar persists explicit model selection through the shared settings writer.
 Every import, recording, retry and retranscription captures `TranscriptionOptions.language`
 at request start. Default changes during a busy session apply when the controls return idle.

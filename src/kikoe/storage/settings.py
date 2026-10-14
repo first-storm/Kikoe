@@ -14,6 +14,7 @@ from kikoe.core.models import (
     AudioFormat,
     Capabilities,
     ModeCapabilities,
+    ModelKey,
     ModelSpec,
     Provider,
     UploadSettings,
@@ -254,10 +255,10 @@ def _decode_device(value: object) -> str | None:
     return value
 
 
-def _decode_model_key(value: object) -> tuple[str, str] | None:
+def _decode_model_key(value: object) -> ModelKey | None:
     if value is None:
         return None
     parts = _as_list(value, "a model identity")
     if len(parts) != 2 or not all(isinstance(part, str) and part for part in parts):
         raise ValueError("a model identity must contain a provider ID and model ID")
-    return cast(tuple[str, str], tuple(parts))
+    return cast(ModelKey, tuple(parts))

@@ -106,6 +106,10 @@ class Provider:
     upload: UploadSettings = UploadSettings()
 
 
+type ModelKey = tuple[str, str]
+"""A model's stable identity: provider ID and model ID."""
+
+
 @dataclass(frozen=True, slots=True)
 class Speaker:
     """A note-wide person with a stable display number and theme color slot."""

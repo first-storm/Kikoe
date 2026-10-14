@@ -8,7 +8,6 @@ from gi.repository import Adw, Gdk, GObject, Gtk
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models, resolve_choice
 from kikoe.core.formatting import format_timestamp
 from kikoe.core.models import ModeCapabilities
-from kikoe.core.preferences import preferred_model
 from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.i18n import _
 from kikoe.storage.preferences import PreferencesRepository
@@ -86,9 +85,8 @@ class BottomBar(Adw.Bin):
         if self.state_stack.get_visible_child_name() != "idle":
             self._defaults_pending = True
             return
-        if self._providers is not None and self._preferences is not None:
-            self._choice = preferred_model(self._providers.providers, self._preferences.current)
-            self._refresh()
+        self._choice = None
+        self._refresh()
 
     def set_progress(self, message: str | None) -> None:
         """Show ``message`` with a spinner and a Cancel button, or the controls when None."""
@@ -135,15 +133,15 @@ class BottomBar(Adw.Bin):
         return True
 
     def _refresh(self) -> None:
-        providers = self._providers.providers if self._providers else ()
-        wanted = self._choice.key if self._choice else None
-        choices = available_models(providers)
-        self._choice = (
-            resolve_choice(providers, wanted)
-            if any(c.key == wanted for c in choices)
-            else preferred_model(providers, self._preferences.current)
-            if self._preferences
-            else None
+        """Keep the current model if it still exists, else the recent, default or first one."""
+        if self._providers is None or self._preferences is None:
+            return
+        current = self._preferences.current
+        self._choice = resolve_choice(
+            self._providers.providers,
+            self._choice.key if self._choice else None,
+            current.recent_model,
+            current.default_model,
         )
         self._show_choice()
 
