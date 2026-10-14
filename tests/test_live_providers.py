@@ -83,9 +83,6 @@ class DeepgramSocket:
     async def send_media(self, message: bytes) -> None:
         pass
 
-    async def send_finalize(self) -> None:
-        self.commands.append("Finalize")
-
     async def send_close_stream(self) -> None:
         self.commands.append("CloseStream")
         await self.messages.put(Message(type="Metadata"))

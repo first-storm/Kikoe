@@ -19,11 +19,11 @@ from kikoe.providers.base import (
 from kikoe.providers.errors import sdk_error
 from kikoe.providers.parsing import parse_segments, parse_words
 
+MAX_UPLOAD_BYTES = 25_000_000
+
 
 class OpenRouterClient:
     """Request STT metadata through the SDK's multipart endpoint."""
-
-    max_upload_bytes: int | None = 25_000_000
 
     def __init__(
         self, base_url: str, api_key: str, transport: httpx.AsyncBaseTransport | None = None
@@ -33,7 +33,7 @@ class OpenRouterClient:
         self._transport = transport
 
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-        return UploadLimits(self.max_upload_bytes)
+        return UploadLimits(MAX_UPLOAD_BYTES)
 
     async def transcribe_file(
         self,

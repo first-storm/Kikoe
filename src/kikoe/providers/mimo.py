@@ -7,7 +7,7 @@ from typing import cast
 from urllib.parse import urlsplit
 
 import httpx2 as httpx
-from openai import APIConnectionError, APIError, APIStatusError, APITimeoutError, AsyncOpenAI
+from openai import APIError, AsyncOpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
 from kikoe.core.models import ModelSpec, Segment
@@ -19,7 +19,7 @@ from kikoe.providers.base import (
     TranscriptionError,
     TranscriptionOptions,
 )
-from kikoe.providers.errors import detail_of, status_error
+from kikoe.providers.errors import openai_error
 
 MAX_UPLOAD_BYTES = 7_500_000
 """10 MB of Base64 holds at most 7.5 MB of raw audio."""
@@ -33,8 +33,6 @@ def asr_language(tag: str | None) -> str:
 
 class MiMoClient:
     """Send one MP3 per request and return its plain text; MiMo gives no timestamps."""
-
-    max_upload_bytes: int | None = MAX_UPLOAD_BYTES
 
     def __init__(
         self, base_url: str, api_key: str, transport: httpx.AsyncBaseTransport | None = None
@@ -83,28 +81,8 @@ class MiMoClient:
                     ),
                     extra_body={"asr_options": {"language": asr_language(options.language)}},
                 )
-        except APIStatusError as error:
-            detail = detail_of(error)
-            if detail and self._key:
-                detail = detail.replace(self._key, "[redacted]")
-            raise status_error(error.status_code, self._host, detail) from error
-        except APITimeoutError as error:
-            raise TranscriptionError(
-                _("{host} took too long to respond. Try again later.").format(host=self._host),
-                retryable=True,
-            ) from error
-        except APIConnectionError as error:
-            raise TranscriptionError(
-                _("Could not reach {host}. Try again later.").format(host=self._host),
-                retryable=True,
-            ) from error
         except APIError as error:
-            raise TranscriptionError(
-                _("{host} could not finish transcription. Try again later.").format(
-                    host=self._host
-                ),
-                retryable=True,
-            ) from error
+            raise openai_error(error, self._host, self._key) from error
         text = (completion.choices[0].message.content or "").strip() if completion.choices else ""
         if not text:
             raise TranscriptionError(

@@ -6,12 +6,12 @@ import mimetypes
 from collections.abc import AsyncGenerator
 from contextlib import AsyncExitStack
 from datetime import timedelta
+from functools import partial
 from pathlib import Path
-from typing import cast
 from urllib.parse import urlsplit
 
 import httpx2 as httpx
-from openai import APIConnectionError, APIError, APIStatusError, APITimeoutError, AsyncOpenAI, omit
+from openai import APIError, AsyncOpenAI, omit
 from openai.resources.realtime.realtime import AsyncRealtimeConnection
 from openai.types.realtime.audio_transcription_param import AudioTranscriptionParam
 from pydantic import BaseModel
@@ -29,7 +29,7 @@ from kikoe.providers.base import (
     close_stack,
     file_capabilities,
 )
-from kikoe.providers.errors import status_error
+from kikoe.providers.errors import openai_error
 from kikoe.providers.openai_file_stream import OpenAIFileTranscript
 from kikoe.providers.parsing import parse_segments
 
@@ -38,8 +38,6 @@ MAX_UPLOAD_BYTES = 25_000_000
 
 class OpenAIClient:
     """Keep authentication, retries and multipart encoding inside the official SDK."""
-
-    max_upload_bytes: int | None = MAX_UPLOAD_BYTES
 
     def __init__(
         self,
@@ -85,18 +83,21 @@ class OpenAIClient:
         try:
             result: object
             async with self._sdk() as sdk:
+                create = partial(
+                    sdk.audio.transcriptions.create,
+                    file=(audio.name, content, mime),
+                    model=model.model_id,
+                    language=options.language or omit,
+                    extra_headers={"Authorization": omit} if not self._key else None,
+                )
                 if caps.streaming:
                     transcript = OpenAIFileTranscript(
                         structured=structured, timed=timed, diarize=diarize
                     )
-                    stream = await sdk.audio.transcriptions.create(
-                        file=(audio.name, content, mime),
-                        model=model.model_id,
+                    stream = await create(
                         response_format="diarized_json" if structured else "json",
                         stream=True,
                         chunking_strategy="auto" if caps.diarization else omit,
-                        language=options.language or omit,
-                        extra_headers={"Authorization": omit} if not self._key else None,
                     )
                     async with stream:
                         async for event in stream:
@@ -107,60 +108,19 @@ class OpenAIClient:
                                 break
                     return transcript.result()
                 if structured:
-                    result = await sdk.audio.transcriptions.create(
-                        file=(audio.name, content, mime),
-                        model=model.model_id,
-                        response_format="diarized_json",
-                        stream=False,
-                        chunking_strategy="auto",
-                        language=options.language or omit,
-                        extra_headers={"Authorization": omit} if not self._key else None,
+                    result = await create(
+                        response_format="diarized_json", stream=False, chunking_strategy="auto"
                     )
                 else:
-                    result = await sdk.audio.transcriptions.create(
-                        file=(audio.name, content, mime),
-                        model=model.model_id,
+                    result = await create(
                         response_format="verbose_json" if timed else "json",
                         timestamp_granularities=["segment"] if timed else omit,
-                        language=options.language or omit,
-                        extra_headers={"Authorization": omit} if not self._key else None,
                     )
                 if not isinstance(result, BaseModel):
                     raise ValueError("Unexpected streaming result")
                 return parse_segments(result.model_dump(), timed, diarize)
-        except APIStatusError as error:
-            body: object = error.body
-            message = error.message
-            if isinstance(body, dict):
-                data = cast(dict[str, object], body)
-                if isinstance(data.get("message"), str):
-                    message = str(data["message"])
-                detail = data.get("error")
-                if isinstance(detail, dict):
-                    nested = cast(dict[str, object], detail)
-                    if isinstance(nested.get("message"), str):
-                        message = str(nested["message"])
-            if self._key:
-                message = message.replace(self._key, "[redacted]")
-            raise status_error(error.status_code, self._host, message) from error
-        except APITimeoutError as error:
-            raise TranscriptionError(
-                _("{host} took too long to respond. Try again later.").format(host=self._host),
-                retryable=True,
-            ) from error
-        except APIConnectionError as error:
-            raise TranscriptionError(
-                _("Could not reach {host}. Try again later.").format(host=self._host),
-                retryable=True,
-            ) from error
         except APIError as error:
-            message = error.message.replace(self._key, "[redacted]") if self._key else error.message
-            raise TranscriptionError(
-                _("{host} could not finish transcription: {message}").format(
-                    host=self._host, message=message
-                ),
-                retryable=True,
-            ) from error
+            raise openai_error(error, self._host, self._key) from error
         except (ValueError, TypeError, KeyError, AttributeError) as error:
             raise TranscriptionError(
                 _("{host} sent a response Kikoe does not understand.").format(host=self._host)

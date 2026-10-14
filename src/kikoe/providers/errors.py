@@ -2,6 +2,8 @@
 
 from typing import cast
 
+from openai import APIConnectionError, APIError, APIStatusError, APITimeoutError
+
 from kikoe.core.http_status import StatusKind, classify_status, is_retryable
 from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionError
@@ -89,3 +91,41 @@ def sdk_error(error: Exception) -> TranscriptionError:
     return TranscriptionError(
         _("Could not complete transcription. Check your connection and try again."), retryable=True
     )
+
+
+def openai_error(error: APIError, host: str, key: str) -> TranscriptionError:
+    """Explain an OpenAI SDK failure from OpenAI or a compatible service, hiding the key."""
+
+    def redact(text: str) -> str:
+        return text.replace(key, "[redacted]") if key else text
+
+    match error:
+        case APIStatusError():
+            message = _body_message(error.body) or error.message
+            return status_error(error.status_code, host, redact(message))
+        case APITimeoutError():
+            message = _("{host} took too long to respond. Try again later.")
+        case APIConnectionError():
+            message = _("Could not reach {host}. Try again later.")
+        case _:
+            return TranscriptionError(
+                _("{host} could not finish transcription: {message}").format(
+                    host=host, message=redact(error.message)
+                ),
+                retryable=True,
+            )
+    return TranscriptionError(message.format(host=host), retryable=True)
+
+
+def _body_message(body: object) -> str | None:
+    """Prefer the nested ``error.message`` over a top-level ``message``, as OpenAI nests it."""
+    if not isinstance(body, dict):
+        return None
+    data = cast(dict[str, object], body)
+    nested: object = data.get("error")
+    if isinstance(nested, dict):
+        message = cast(dict[str, object], nested).get("message")
+        if isinstance(message, str):
+            return message
+    message = data.get("message")
+    return message if isinstance(message, str) else None

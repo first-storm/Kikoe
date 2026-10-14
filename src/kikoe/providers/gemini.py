@@ -40,8 +40,6 @@ class _LiveSession(Protocol):
 class GeminiClient:
     """Use the specialized verbatim STT model, not a prompted generative transcript."""
 
-    max_upload_bytes: int | None = None
-
     def __init__(
         self, base_url: str, api_key: str, transport: httpx.AsyncBaseTransport | None = None
     ) -> None:

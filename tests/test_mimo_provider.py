@@ -80,6 +80,7 @@ async def test_mimo_error_does_not_leak_the_api_key(tmp_path: Path) -> None:
     with pytest.raises(TranscriptionError) as error:
         await client.transcribe_file(audio, MODEL, TranscriptionOptions())
     assert "secret-key" not in str(error.value)
+    assert "bad audio for [redacted]" in str(error.value)
     assert not error.value.retryable
 
 

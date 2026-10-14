@@ -116,8 +116,6 @@ class Session:
 
 
 class Client:
-    max_upload_bytes: int | None = None
-
     def __init__(
         self, *, reconnect: bool = False, hang: bool = False, reject: bool = False
     ) -> None:

@@ -27,11 +27,12 @@ from kikoe.providers.base import (
 from kikoe.providers.errors import sdk_error
 from kikoe.providers.parsing import entries, fields, parse_words, seconds
 
+MAX_UPLOAD_BYTES = 2_000_000_000
+
 
 class _Socket(Protocol):
     def __aiter__(self) -> AsyncIterator[object]: ...
     async def send_media(self, message: bytes) -> None: ...
-    async def send_finalize(self) -> None: ...
     async def send_close_stream(self) -> None: ...
     async def send_keep_alive(self) -> None: ...
 
@@ -71,8 +72,6 @@ class _Listen(Protocol):
 class DeepgramClient:
     """Type the generated SDK's unannotated accessors at the adapter boundary."""
 
-    max_upload_bytes: int | None = 2_000_000_000
-
     def __init__(
         self, base_url: str, api_key: str, transport: httpx.AsyncBaseTransport | None = None
     ) -> None:
@@ -95,7 +94,7 @@ class DeepgramClient:
         return cast(_Listen, sdk.listen.v1)
 
     def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-        return UploadLimits(self.max_upload_bytes)
+        return UploadLimits(MAX_UPLOAD_BYTES)
 
     async def transcribe_file(
         self,
@@ -211,7 +210,7 @@ class DeepgramSession:
             if data.get("type") == "Metadata":
                 self._drained.set()
             if data.get("type") == "Error":
-                reason = fields(data).get("description") or fields(data).get("message")
+                reason = data.get("description") or data.get("message")
                 if isinstance(reason, str) and reason:
                     raise TranscriptionError(
                         _("Deepgram rejected realtime transcription: {message}").format(
