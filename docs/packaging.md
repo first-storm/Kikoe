@@ -2,7 +2,8 @@
 
 Every package is built by GitHub Actions from the same wheel. Pull requests that touch
 packaging run the matching workflow; pushing a `v*` tag runs all of them through
-`release.yml` and attaches the results to a **draft** release for review.
+`release.yml` and attaches the results to a **draft** release for review. Publishing
+that release updates the Flatpak repository (see [Flatpak repository](#flatpak-repository)).
 
 | Platform | Format | Architectures | Workflow |
 | --- | --- | --- | --- |
@@ -53,7 +54,36 @@ Actions allowance, so the workflows only run for changes under their own paths.
   and `--talk-name=org.freedesktop.secrets` for python-keyring's Secret Service backend.
   Import/export use the file chooser portal.
 - Install a bundle with `flatpak install --user Kikoe-<version>-linux-<arch>.flatpak`;
-  the GNOME runtime comes from Flathub.
+  the GNOME runtime comes from Flathub. The manifest builds the `stable` branch.
+
+### Flatpak repository
+
+Publishing a release runs `publish-flatpak-repo.yml`, which serves its Flatpak bundles as
+a signed OSTree repository on GitHub Pages, so users get updates through `flatpak update`:
+
+```sh
+flatpak remote-add --user --if-not-exists kikoe https://first-storm.github.io/Kikoe/kikoe.flatpakrepo
+flatpak install --user kikoe io.github.first_storm.Kikoe
+```
+
+- `packaging/flatpak/publish-repo.sh BUNDLE_DIR SITE_DIR` imports the bundles into a new
+  repository, signs it, generates static deltas and writes `kikoe.flatpakrepo`, the
+  `.flatpakref` and an index page. The site is rebuilt from the published release only,
+  so older versions are not kept and nothing accumulates between releases.
+- The workflow also runs by hand (`workflow_dispatch`) with a release tag; the release
+  needs `.flatpak` assets built from a manifest that uses the `stable` branch (v0.2.0 and
+  older use `master`, so they cannot be published this way).
+- One-time setup: in the repository settings, set Pages → Source to **GitHub Actions**,
+  and add the secret `FLATPAK_GPG_PRIVATE_KEY` with an armored private key without a
+  passphrase:
+
+  ```sh
+  gpg --batch --passphrase '' --quick-gen-key 'Kikoe Flatpak <email>' ed25519 sign never
+  gpg --armor --export-secret-keys '<email>'   # paste into the secret
+  ```
+
+  Keep a backup of that key: clients pin its public half, so replacing it means every user
+  must re-add the remote. The public key is embedded in the generated `.flatpakrepo`.
 
 ## Linux — AppImage
 
@@ -100,7 +130,11 @@ Actions allowance, so the workflows only run for changes under their own paths.
 
 - Developer ID signing and notarization (macOS) and Authenticode signing (Windows)
   need certificates stored as repository secrets.
-- Flathub submission (see the Flatpak notes above).
+- Flathub submission (see the Flatpak notes above). The self-hosted repository above
+  is used until then.
+- A real run of `publish-flatpak-repo.yml`: `publish-repo.sh` was verified locally with a
+  dummy app, a throwaway key and `flatpak install` from a local HTTP server, but the
+  Pages deployment and the secret have not been exercised on GitHub yet.
 - Microphone and playback acceptance on real hardware for each package (see the M4–M6
   checklists below); CI only checks that the app starts.
 

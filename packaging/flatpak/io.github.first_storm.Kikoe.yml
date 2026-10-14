@@ -10,6 +10,8 @@ runtime: org.gnome.Platform
 runtime-version: '51'
 sdk: org.gnome.Sdk
 command: kikoe
+# The branch users of the Flatpak repository follow (see publish-repo.sh).
+branch: stable
 finish-args:
   - --share=ipc
   - --socket=wayland

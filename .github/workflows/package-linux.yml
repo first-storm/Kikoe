@@ -150,7 +150,7 @@ jobs:
           mkdir -p out
           flatpak build-bundle --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
             build/flatpak-repo "out/Kikoe-$version-linux-${{ matrix.arch }}.flatpak" \
-            io.github.first_storm.Kikoe
+            io.github.first_storm.Kikoe stable
 
       - uses: actions/upload-artifact@v4
         with:

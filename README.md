@@ -48,7 +48,15 @@ Fresh Linux captures of the current app, using synthetic notes and speaker names
 Packages for Linux (Flatpak, AppImage), macOS (`.dmg`) and Windows (installer or
 portable zip), for x86-64 and ARM, are attached to each
 [release](https://github.com/first-storm/Kikoe/releases); see
-[docs/packaging.md](docs/packaging.md) for requirements. To run from source instead,
+[docs/packaging.md](docs/packaging.md) for requirements. On Linux, the Flatpak
+repository also delivers updates:
+
+```sh
+flatpak remote-add --user --if-not-exists kikoe https://first-storm.github.io/Kikoe/kikoe.flatpakrepo
+flatpak install --user kikoe io.github.first_storm.Kikoe
+```
+
+To run from source instead,
 install [uv](https://docs.astral.sh/uv/), GTK 4, libadwaita ≥ 1.8, ffmpeg, and PortAudio.
 Building PyGObject needs `girepository-2.0` (GLib ≥ 2.80), Cairo headers,
 `pkg-config`, and a C compiler. uv installs Python 3.14 if needed.
