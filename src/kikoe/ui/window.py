@@ -36,6 +36,7 @@ from kikoe.media.player import PlaybackError
 from kikoe.media.recorder import SoundDeviceRecorder
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.providers.factory import create_client
+from kikoe.services.activity import ActivityTracker
 from kikoe.services.editing import EditingSession
 from kikoe.services.importer import ImportStage, import_audio
 from kikoe.services.playback import Playback
@@ -170,18 +171,13 @@ class Window(Adw.ApplicationWindow):
         self._add_action("choose-model", self._on_choose_model)
         self._add_action("import-audio", self._on_import_audio)
         self._add_action("cancel-import", self._on_cancel_import)
-        self._import_task: asyncio.Task[None] | None = None
-        self._committing_transcription = False
+        self._work = ActivityTracker()
         self._file_display = FileTranscriptionDisplay(self.note_view)
-        self._recording_task: asyncio.Task[None] | None = None
         self._live: RealtimeRecording | None = None
         self._session: RecordingSession | None = None
         self._recording_note_id: str | None = None
         self._recording_summary = ""
-        self._closing = False
         self._recovery_checked = False
-        self._recovery_busy = False
-        self._recovery_task: asyncio.Task[None] | None = None
         self._add_action("start-recording", self._on_start_recording)
         self._add_action("pause-recording", self._on_pause_recording)
         self._add_action("resume-recording", self._on_resume_recording)
@@ -480,11 +476,11 @@ class Window(Adw.ApplicationWindow):
         choice = self.bottom_bar.choice
         session = self._session
         return Activity(
-            importing=self._import_task is not None,
-            recording=self._recording_task is not None,
-            recovering=self._recovery_busy,
-            committing=self._committing_transcription,
-            closing=self._closing,
+            importing=self._work.import_task is not None,
+            recording=self._work.recording_task is not None,
+            recovering=self._work.recovery_busy,
+            committing=self._work.committing,
+            closing=self._work.closing,
             capture_state=session.state if session is not None else CaptureState.STOPPED,
             has_note=self._note is not None,
             viewing_transcription=self._viewing_transcription(),
@@ -500,14 +496,14 @@ class Window(Adw.ApplicationWindow):
 
     def _viewing_transcription(self) -> bool:
         """Whether the note on screen is the one a running transcription writes to."""
-        if self._import_task is None:
+        if self._work.import_task is None:
             return False
         return self._note is None or self._note.note_id == self._file_display.note_id
 
     def _on_notes_changed(self, note_id: str | None) -> None:
         if not self._recovery_checked:
             self._recovery_checked = True
-            self._recovery_task = run_task(self._offer_recovery(), self)
+            self._work.recovery_task = run_task(self._offer_recovery(), self)
         self._search.refresh()
         current = self._note.note_id if self._note else None
         if current is None:
@@ -756,7 +752,7 @@ class Window(Adw.ApplicationWindow):
                 self.add_toast(Adw.Toast(title=_("Choose an available file transcription model.")))
                 return
             self._playback.stop()
-            self._import_task = run_task(
+            self._work.import_task = run_task(
                 self._retranscribe(note_id, recording, refreshed, options), self
             )
             self.bottom_bar.set_progress(_("Transcribing…"))
@@ -803,8 +799,8 @@ class Window(Adw.ApplicationWindow):
             )
         finally:
             self._end_file_transcription()
-            self._committing_transcription = False
-            self._import_task = None
+            self._work.committing = False
+            self._work.import_task = None
             self.bottom_bar.set_progress(None)
             self._update_actions()
 
@@ -1029,8 +1025,8 @@ class Window(Adw.ApplicationWindow):
         run_task(self._pick_and_import(), self)
 
     def _on_cancel_import(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        if self._import_task is not None and not self._committing_transcription:
-            self._import_task.cancel()
+        if self._work.import_task is not None and not self._work.committing:
+            self._work.import_task.cancel()
 
     def _transcription_options(self, features: RequestedFeatures) -> TranscriptionOptions:
         """Capture the current language with the entry point's selected features."""
@@ -1047,14 +1043,14 @@ class Window(Adw.ApplicationWindow):
         if (
             path is None
             or choice is None
-            or self._import_task is not None
-            or self._recording_task is not None
+            or self._work.import_task is not None
+            or self._work.recording_task is not None
         ):
             return
         note_id = self._note.note_id if self._note else None
         options = self._transcription_options(self.bottom_bar.file_features)
         task = asyncio.ensure_future(self._import(path, note_id, choice, options))
-        self._import_task = task
+        self._work.import_task = task
         self._update_actions()
         self.bottom_bar.set_progress(import_stage_label(ImportStage.CONVERTING, 1, 1))
         self.split_view.set_show_content(True)
@@ -1065,7 +1061,7 @@ class Window(Adw.ApplicationWindow):
                 raise  # This coroutine itself was cancelled, not the import.
             self.add_toast(Adw.Toast(title=_("Import cancelled")))
         finally:
-            self._import_task = None
+            self._work.import_task = None
             self.bottom_bar.set_progress(None)
             self._update_actions()
 
@@ -1141,8 +1137,8 @@ class Window(Adw.ApplicationWindow):
         self.split_view.set_show_content(True)
 
     def _on_file_progress(self, stage: ImportStage, part: int, parts: int) -> None:
-        self._committing_transcription = stage is ImportStage.SAVING
-        self._set_action_enabled("cancel-import", not self._committing_transcription)
+        self._work.committing = stage is ImportStage.SAVING
+        self._set_action_enabled("cancel-import", not self._work.committing)
         self.bottom_bar.set_progress(import_stage_label(stage, part, parts))
 
     def _on_file_update(self, snapshot: FileTranscriptSnapshot) -> None:
@@ -1152,7 +1148,7 @@ class Window(Adw.ApplicationWindow):
         if not self._file_display.active:
             return
         self._file_display.end()
-        self._committing_transcription = False
+        self._work.committing = False
         if self._note is None:
             self._set_titles(_("Kikoe"), "", "")
         self._update_content()
@@ -1161,11 +1157,15 @@ class Window(Adw.ApplicationWindow):
 
     def _on_start_recording(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         choice = self.bottom_bar.choice
-        if choice is None or self._recording_task is not None or self._import_task is not None:
+        if (
+            choice is None
+            or self._work.recording_task is not None
+            or self._work.import_task is not None
+        ):
             return
         options = self._transcription_options(self.bottom_bar.requested_features)
         note_id = self._note.note_id if self._note else None
-        self._recording_task = run_task(self._record(note_id, choice, options), self)
+        self._work.recording_task = run_task(self._record(note_id, choice, options), self)
         self._update_actions()
 
     async def _record(
@@ -1211,13 +1211,13 @@ class Window(Adw.ApplicationWindow):
             self.split_view.set_show_content(True)
             self.bottom_bar.show_recording(self._recording_summary)
             self._on_capture_progress(CaptureProgress(CaptureState.RECORDING, session.elapsed, 0))
-            if self._closing:
+            if self._work.closing:
                 await session.stop()
             if self._live is not None:
                 live_task = run_task(self._live.run(), self)
             error = await session.capture(self._on_capture_progress)
             if live_task is not None:
-                if self._closing:
+                if self._work.closing:
                     live_task.cancel()
                 else:
                     try:
@@ -1245,7 +1245,7 @@ class Window(Adw.ApplicationWindow):
                         segments=self._live.segments,
                     )
                     self._show_note(saved)
-                elif error is None and not self._closing:
+                elif error is None and not self._work.closing:
                     recording = next(
                         r
                         for r in saved.recordings
@@ -1267,7 +1267,7 @@ class Window(Adw.ApplicationWindow):
                 await self._session.stop()
             self._session = None
             self._recording_note_id = None
-            self._recording_task = None
+            self._work.recording_task = None
             self.note_view.hide_recording()
             self.bottom_bar.set_progress(None)
             self._refresh_recording_sidebar()
@@ -1314,15 +1314,15 @@ class Window(Adw.ApplicationWindow):
             choice is None
             or note is None
             or param is None
-            or self._import_task is not None
-            or self._recording_task is not None
+            or self._work.import_task is not None
+            or self._work.recording_task is not None
         ):
             return
         recording = note.recording(param.get_string())
         if recording is None or recording.transcription_state is TranscriptionState.READY:
             return
         options = self._transcription_options(self.bottom_bar.file_features)
-        self._recording_task = run_task(
+        self._work.recording_task = run_task(
             self._retry_recording(note.note_id, recording, choice, options), self
         )
         self._update_actions()
@@ -1333,26 +1333,26 @@ class Window(Adw.ApplicationWindow):
         try:
             await self._begin_recording_upload(note_id, recording, choice, options)
         finally:
-            self._recording_task = None
+            self._work.recording_task = None
             self.bottom_bar.set_progress(None)
             self._update_actions()
 
     async def _begin_recording_upload(
         self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
     ) -> None:
-        if self._closing:
+        if self._work.closing:
             return
-        self._import_task = run_task(
+        self._work.import_task = run_task(
             self._upload_recording(note_id, recording, choice, options), self
         )
         self.bottom_bar.set_progress(_("Transcribing…"))
         self._update_actions()
         try:
-            await self._import_task
+            await self._work.import_task
         except asyncio.CancelledError:
             self.add_toast(Adw.Toast(title=_("Transcription cancelled")))
         finally:
-            self._import_task = None
+            self._work.import_task = None
 
     async def _upload_recording(
         self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
@@ -1413,7 +1413,7 @@ class Window(Adw.ApplicationWindow):
             dialog.close()
         if response != "recover":
             return
-        self._recovery_busy = True
+        self._work.recovery_busy = True
         self.bottom_bar.set_progress(_("Recovering recordings…"))
         self._update_actions()
         try:
@@ -1424,62 +1424,43 @@ class Window(Adw.ApplicationWindow):
                     self._select_row(note.note_id)
                     self.split_view.set_show_content(True)
         finally:
-            self._recovery_busy = False
+            self._work.recovery_busy = False
             self.bottom_bar.set_progress(None)
             self._update_actions()
 
     @Gtk.Template.Callback()
     def _on_window_close_request(self, _window: Gtk.Window) -> bool:
-        if self._closing:
+        if self._work.closing:
             return True
         self._playback.stop()
         self.note_view.flush_edits()
         self._search.close()
-        recovery_pending = self._recovery_task is not None and not self._recovery_task.done()
         if (
-            self._recording_task is None
-            and self._import_task is None
-            and not recovery_pending
+            not self._work.has_pending_work()
             and not self._playback.pending
             and not self._editing.pending
         ):
             return False
-        self._closing = True
+        self._work.closing = True
         run_task(self._save_and_close(), self)
         return True
 
     async def _save_and_close(self) -> None:
         try:
-            await self._editing.wait_saved()
-            await self._playback.finish()
-            task = self._recording_task
-            if self._session is not None:
-                await self._session.stop()
-            importing = self._import_task
-            if importing is not None:
-                importing.cancel()
-            recovery = self._recovery_task
-            if recovery is not None and not recovery.done():
-                if not self._recovery_busy:
-                    recovery.cancel()
-                try:
-                    await recovery
-                except asyncio.CancelledError:
-                    if not recovery.cancelled():
-                        raise
-            if task is not None:
-                await task
-            elif importing is not None:
-                try:
-                    await importing
-                except asyncio.CancelledError:
-                    if not importing.cancelled():
-                        raise
+            await self._work.wind_down(
+                wait_edits=self._editing.wait_saved,
+                finish_playback=self._playback.finish,
+                stop_recording=self._stop_session,
+            )
             self.destroy()
         except USER_FACING_ERRORS:
-            self._closing = False
+            self._work.closing = False
             self._update_actions()
             raise
+
+    async def _stop_session(self) -> None:
+        if self._session is not None:
+            await self._session.stop()
 
 
 def _from_ms(value: int) -> timedelta | None:
