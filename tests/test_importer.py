@@ -20,7 +20,7 @@ from kikoe.core.models import (
     UploadSettings,
 )
 from kikoe.core.transcription import FileTranscriptSnapshot, RealtimeProfile
-from kikoe.core.upload import FLAC, OGG_OPUS, UploadFormat, UploadLimits
+from kikoe.core.upload import OGG_OPUS, UploadFormat, UploadLimits
 from kikoe.media import transcode
 from kikoe.providers.base import (
     FileTranscriptCallback,
@@ -144,7 +144,7 @@ async def test_upload_limits_and_transcription_receive_the_requested_options(
     client = FakeClient()
 
     duration, segments = await transcribe_audio(
-        source, MODEL, client=client, options=options, work_dir=tmp_path / "work"
+        source, CHOICE, client=client, options=options, work_dir=tmp_path / "work"
     )
 
     assert client.options == [options or TranscriptionOptions()] * 2
@@ -334,19 +334,15 @@ async def test_duration_limit_splits_even_small_compressed_files(
 
 
 @run_async
-async def test_provider_chosen_format_is_used_for_every_part(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, notes: NoteRepository, source: Path
+async def test_registry_format_of_the_api_is_used_for_every_part(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, source: Path
 ) -> None:
-    class FlacClient(FakeClient):
-        def upload_limits(self, model: ModelSpec, options: TranscriptionOptions) -> UploadLimits:
-            return UploadLimits(1000, format=FLAC)
-
     use_converter(monkeypatch, FakeConverter(s(120), size=1500))
-    await notes.load()
-    client = FlacClient()
-    await transcribe_audio(source, MODEL, client=client, work_dir=tmp_path)
+    client = FakeClient(max_upload_bytes=1000)
+    openai = ModelChoice(replace(PROVIDER, api=ApiKind.OPENAI), MODEL)
+    await transcribe_audio(source, openai, client=client, work_dir=tmp_path)
     assert len(client.uploads) >= 2
-    assert {path.suffix for path in client.uploads} == {".flac"}
+    assert {path.suffix for path in client.uploads} == {".wav"}
 
 
 @run_async
@@ -402,7 +398,7 @@ async def test_file_stream_offsets_previews_and_keeps_previous_parts(
     client = StreamingClient()
     duration, result = await transcribe_audio(
         source,
-        MODEL,
+        CHOICE,
         client=client,
         on_update=updates.append,
         work_dir=tmp_path / "work",
@@ -535,9 +531,8 @@ async def test_parallel_chunks_finish_out_of_order_but_transcript_and_previews_s
         task = asyncio.create_task(
             transcribe_audio(
                 source,
-                MODEL,
+                ModelChoice(provider, MODEL),
                 client=client,
-                provider=provider,
                 work_dir=tmp_path / "work",
                 on_progress=stages,
                 on_update=updates.append,
@@ -576,9 +571,8 @@ async def test_cancel_drains_active_requests_and_never_starts_queued_chunks(
         task = asyncio.create_task(
             transcribe_audio(
                 source,
-                MODEL,
+                ModelChoice(provider, MODEL),
                 client=client,
-                provider=provider,
                 work_dir=work,
             )
         )
@@ -617,7 +611,7 @@ async def test_encoded_parts_are_resplit_when_variable_bitrate_exceeds_size_budg
 
     use_converter(monkeypatch, VariableConverter(s(12), size=2000))
     client = FakeClient(max_upload_bytes=1000)
-    await transcribe_audio(source, MODEL, client=client, work_dir=tmp_path / "work")
+    await transcribe_audio(source, CHOICE, client=client, work_dir=tmp_path / "work")
     assert len(client.uploads) > 2
     assert not any(path.exists() for path in client.uploads)
 
@@ -632,7 +626,7 @@ async def test_provider_format_and_size_override_apply_to_every_part(
     use_converter(monkeypatch, converter)
     client = FakeClient(max_upload_bytes=5000)
     provider = replace(PROVIDER, upload=UploadSettings(chunk_bytes=1000, format=AudioFormat.FLAC))
-    await transcribe_audio(source, MODEL, client=client, provider=provider, work_dir=tmp_path)
+    await transcribe_audio(source, ModelChoice(provider, MODEL), client=client, work_dir=tmp_path)
     assert len(client.uploads) >= 2
     assert {path.suffix for path in client.uploads} == {".flac"}
 
@@ -673,9 +667,8 @@ async def test_cancel_waits_for_slow_request_cleanup(
         task = asyncio.create_task(
             transcribe_audio(
                 source,
-                MODEL,
+                ModelChoice(provider, MODEL),
                 client=client,
-                provider=provider,
                 work_dir=tmp_path / "work",
             )
         )

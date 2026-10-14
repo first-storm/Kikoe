@@ -121,9 +121,8 @@ class FileTranscriptionWorkflow:
             )
         _duration, segments = await transcribe_audio(
             recording.audio_path,
-            choice.model,
+            choice,
             client=await self._client(choice.provider),
-            provider=choice.provider,
             options=options,
             on_progress=on_progress,
             on_update=on_update,

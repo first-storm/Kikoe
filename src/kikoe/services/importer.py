@@ -14,11 +14,9 @@ from kikoe.core.chunking import TimeSpan, offset_segments, plan_chunks
 from kikoe.core.models import (
     ModelSpec,
     Note,
-    Provider,
     Recording,
     RecordingSource,
     Segment,
-    UploadSettings,
 )
 from kikoe.core.transcription import FileTranscriptSnapshot, scope_speakers
 from kikoe.core.upload import UploadFormat, UploadLimits, effective_upload_limits
@@ -78,9 +76,8 @@ async def import_audio(
     try:
         duration, segments = await transcribe_audio(
             original,
-            choice.model,
+            choice,
             client=client,
-            provider=choice.provider,
             options=options,
             on_progress=on_progress,
             on_update=on_update,
@@ -107,10 +104,9 @@ async def import_audio(
 
 async def transcribe_audio(
     source: Path,
-    model: ModelSpec,
+    choice: ModelChoice,
     *,
     client: TranscriptionProvider,
-    provider: Provider | None = None,
     options: TranscriptionOptions | None = None,
     on_progress: ProgressCallback = _ignore_progress,
     on_update: FileTranscriptCallback | None = None,
@@ -118,25 +114,25 @@ async def transcribe_audio(
 ) -> tuple[timedelta, tuple[Segment, ...]]:
     """Share conversion and chunk offsets without deciding who owns the original audio."""
     options = options or TranscriptionOptions()
+    provider, model = choice.provider, choice.model
     directory = work_dir or await asyncio.to_thread(paths.cache_dir)
     await asyncio.to_thread(directory.mkdir, parents=True, exist_ok=True)
-    job = _Job(uuid.uuid4().hex, directory, on_progress)
+    job = _Job(directory, on_progress)
     on_progress(ImportStage.CONVERTING, 1, 1)
     try:
-        limits = client.upload_limits(model, options)
-        settings = provider.upload if provider else UploadSettings(parallelism=1)
-        if provider is not None:
-            limits = effective_upload_limits(limits, settings, provider.api)
+        limits = effective_upload_limits(
+            client.upload_limits(model, options), provider.upload, provider.api
+        )
         duration, parts = await job.prepare(source, limits)
         segments = await _transcribe_parts(
             parts,
             model,
             client,
             options,
-            settings.parallelism,
+            provider.upload.parallelism,
             on_progress,
             on_update,
-            provider.provider_id if provider else job.recording_id,
+            provider.provider_id,
         )
         return duration, segments
     finally:
@@ -211,8 +207,8 @@ async def _transcribe_parts(
 class _Job:
     """Temporary upload files of one import, removed when it ends."""
 
-    def __init__(self, recording_id: str, work_dir: Path, on_progress: ProgressCallback) -> None:
-        self.recording_id = recording_id
+    def __init__(self, work_dir: Path, on_progress: ProgressCallback) -> None:
+        self._name = uuid.uuid4().hex
         self._work_dir = work_dir
         self._on_progress = on_progress
         self._files: list[Path] = []
@@ -269,6 +265,6 @@ class _Job:
             await asyncio.to_thread(path.unlink, missing_ok=True)
 
     def _file(self, suffix: str, format: UploadFormat) -> Path:
-        path = self._work_dir / f"{self.recording_id}{suffix}{format.suffix}"
+        path = self._work_dir / f"{self._name}{suffix}{format.suffix}"
         self._files.append(path)
         return path

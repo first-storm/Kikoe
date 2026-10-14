@@ -141,8 +141,7 @@ Per-provider upload settings combine with endpoint/model bounds before conversio
 `core.upload.UploadLimits` and the pure `effective_upload_limits` function describe
 this intersection. Endpoint caps and formats come only from the registry's `UploadPolicy`;
 a client's `upload_limits()` adds model/option-dependent bounds (Gemini's duration) and
-returns no limit otherwise. Without provider settings the client's limits apply unchanged.
-Encoded chunks are checked again against both limits. A bounded worker pool shares
+returns no limit otherwise. Encoded chunks are checked again against both limits. A bounded worker pool shares
 provider slots through `services.upload_queue`, drains cancelled/failed requests before
 cleanup, and publishes only the contiguous prefix of parallel streaming previews.
 See [Provider upload settings](upload-settings.md) for defaults and official sources.
