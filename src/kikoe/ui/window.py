@@ -11,7 +11,6 @@ from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
 from kikoe.core.activity import Activity, action_availability
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models
-from kikoe.core.edit_history import SegmentChange, SegmentFields
 from kikoe.core.models import (
     DisplayOptions,
     Note,
@@ -30,7 +29,6 @@ from kikoe.media.player import PlaybackError
 from kikoe.media.recorder import SoundDeviceRecorder
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.services.activity import ActivityTracker
-from kikoe.services.editing import EditingSession
 from kikoe.services.errors import USER_FACING_ERRORS
 from kikoe.services.file_transcription import FileTranscriptionWorkflow
 from kikoe.services.importer import ImportStage
@@ -57,10 +55,10 @@ from kikoe.ui.note_sidebar import NoteSidebar
 from kikoe.ui.note_view import NoteView
 from kikoe.ui.recovery_prompt import confirm_recovery
 from kikoe.ui.retranscribe_dialog import RetranscribeDialog
+from kikoe.ui.segment_editor import SegmentEditor
 from kikoe.ui.speaker_controller import SpeakerController
 from kikoe.ui.tasks import run_task, show_error
 from kikoe.ui.templates import ui_file
-from kikoe.ui.transcript_row import NO_TIME
 from kikoe.ui.window_chrome import GeometryKeeper, HeaderLayout
 
 log = logging.getLogger(__name__)
@@ -112,18 +110,19 @@ class Window(Adw.ApplicationWindow):
         # Custom widgets are added from code: Blueprint's linter cannot inspect their types.
         self.note_view = NoteView()
         self.note_view_slot.set_child(self.note_view)
-        self.note_view.connect("text-edited", self._on_note_view_text_edited)
-        self.note_view.connect("times-edited", self._on_note_view_times_edited)
-        self.note_view.connect("segment-left", self._on_note_view_segment_left)
-        self._editing = EditingSession(
-            notes, lambda coro: run_task(coro, self), self._on_edit_saved
+        self._editor = SegmentEditor(
+            notes,
+            self.note_view,
+            lambda coro: run_task(coro, self),
+            lambda: self._note,
+            self._show_note,
+            self._set_action_enabled,
         )
-        self._edits_blocked = False
         self._export = ExportController(
             self,
             lambda: self._note,
             self.note_view.flush_edits,
-            self._editing.wait_saved,
+            self._editor.wait_saved,
             lambda title: self.add_toast(Adw.Toast(title=title)),
         )
         self.bottom_bar = BottomBar()
@@ -213,8 +212,8 @@ class Window(Adw.ApplicationWindow):
         self._add_action("rename-note-row", self._note_actions.on_rename_note_row, string)
         self._add_action("delete-note-row", self._note_actions.on_delete_note_row, string)
         self._add_action("delete-recording", self._note_actions.on_delete_recording, string)
-        self._add_action("undo", self._on_undo)
-        self._add_action("redo", self._on_redo)
+        self._add_action("undo", self._editor.on_undo)
+        self._add_action("redo", self._editor.on_redo)
         self._add_action(
             "match-speakers", self._speakers.on_match_speakers, GLib.VariantType.new("s")
         )
@@ -405,9 +404,9 @@ class Window(Adw.ApplicationWindow):
             self._playback.stop()
             # Saved under the note being left, so this must run before it is replaced.
             self.note_view.flush_edits()
-            self._forget_edits()
+            self._editor.forget()
         self._note = note
-        self._editing.set_note(note)
+        self._editor.set_note(note)
         self.note_menu_button.set_visible(note is not None)
         self.display_options_button.set_visible(note is not None)
         for name in _NOTE_ACTIONS:
@@ -419,7 +418,7 @@ class Window(Adw.ApplicationWindow):
             self._set_display_action_state("show-timestamps", note.display.show_timestamps)
             self._set_display_action_state("show-speakers", note.display.show_speakers)
             if self.note_view.show_note(note):
-                self._forget_edits()
+                self._editor.forget()
             self._file_display.show(note)
             self.bottom_bar.set_note(bool(note.recordings))
             if self._session is not None and self._session.state is not CaptureState.STOPPED:
@@ -525,64 +524,6 @@ class Window(Adw.ApplicationWindow):
             self.bottom_bar.set_progress(None)
             self._update_actions()
 
-    # In-place editing
-
-    def _on_note_view_text_edited(
-        self, _view: NoteView, recording_id: str, position: int, text: str
-    ) -> None:
-        self._edit_segment(
-            recording_id, position, lambda fields: replace(fields, text=text.strip())
-        )
-
-    def _on_note_view_times_edited(
-        self, _view: NoteView, recording_id: str, position: int, start_ms: int, end_ms: int
-    ) -> None:
-        self._edit_segment(
-            recording_id,
-            position,
-            lambda fields: replace(fields, start=_from_ms(start_ms), end=_from_ms(end_ms)),
-        )
-
-    def _on_note_view_segment_left(self, _view: NoteView) -> None:
-        self._editing.history.seal()
-
-    def _edit_segment(
-        self,
-        recording_id: str,
-        position: int,
-        change: Callable[[SegmentFields], SegmentFields],
-    ) -> None:
-        if self._edits_blocked:
-            return
-        self._editing.edit(recording_id, position, change)
-        self._update_history_actions()
-
-    def _on_edit_saved(self, note: Note) -> None:
-        if self._note is not None and self._note.note_id == note.note_id:
-            self._show_note(note)
-
-    def _forget_edits(self) -> None:
-        self._editing.reset()
-        self._update_history_actions()
-
-    def _update_history_actions(self) -> None:
-        enabled = not self._edits_blocked and self._note is not None
-        self._set_action_enabled("undo", enabled and self._editing.history.can_undo)
-        self._set_action_enabled("redo", enabled and self._editing.history.can_redo)
-
-    def _on_undo(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        self._step_history(self._editing.undo)
-
-    def _on_redo(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        self._step_history(self._editing.redo)
-
-    def _step_history(self, step: Callable[[], SegmentChange | None]) -> None:
-        self.note_view.flush_edits()
-        change = step()
-        if change is not None:
-            self.note_view.focus_segment(change.recording_id, change.position)
-        self._update_history_actions()
-
     # Import
 
     def _on_bottom_bar_choice_changed(self, _bar: BottomBar) -> None:
@@ -598,9 +539,9 @@ class Window(Adw.ApplicationWindow):
         self.search_button.set_sensitive(not activity.busy)
         # Typing in the list starts a search, which must not hide the Stop controls.
         self._sidebar.allow_typing_to_search(not activity.busy)
-        self._edits_blocked = activity.locked
+        self._editor.blocked = activity.locked
         self.note_view.set_editable(not activity.locked)
-        self._update_history_actions()
+        self._editor.update_actions()
 
     def _on_choose_model(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         self.bottom_bar.present_transcription_dialog()
@@ -940,7 +881,7 @@ class Window(Adw.ApplicationWindow):
         if (
             not self._work.has_pending_work()
             and not self._playback.pending
-            and not self._editing.pending
+            and not self._editor.pending
         ):
             return False
         self._work.closing = True
@@ -950,7 +891,7 @@ class Window(Adw.ApplicationWindow):
     async def _save_and_close(self) -> None:
         try:
             await self._work.wind_down(
-                wait_edits=self._editing.wait_saved,
+                wait_edits=self._editor.wait_saved,
                 finish_playback=self._playback.finish,
                 stop_recording=self._stop_session,
             )
@@ -963,7 +904,3 @@ class Window(Adw.ApplicationWindow):
     async def _stop_session(self) -> None:
         if self._session is not None:
             await self._session.stop()
-
-
-def _from_ms(value: int) -> timedelta | None:
-    return None if value == NO_TIME else timedelta(milliseconds=value)
