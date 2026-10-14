@@ -1,7 +1,7 @@
 """Layer, size and extension rules from AGENTS.md, checked on the source tree.
 
-Some limits are ratchets: the sets below list the current exceptions. They may only
-shrink; fix a violation and delete its entry rather than adding new ones.
+The ``ApiKind`` limit is a ratchet: the set below lists the current exceptions. It may
+only shrink; fix a violation and delete its entry rather than adding new ones.
 """
 
 import ast
@@ -14,11 +14,6 @@ SRC = Path(__file__).resolve().parent.parent / "src" / "kikoe"
 TOP_LEVEL_HELPERS = {"kikoe.constants", "kikoe.paths", "kikoe.i18n"}
 IO_ADAPTERS = ("providers", "media", "storage")
 MAX_MODULE_LINES = 500
-
-OVERSIZED_MODULES = {
-    "ui/note_view.py",
-}
-"""Modules above MAX_MODULE_LINES today; each one is scheduled to be split."""
 
 API_KIND_MEMBER_USERS = {
     "core/provider_registry.py",
@@ -110,8 +105,7 @@ def test_module_size_stays_bounded() -> None:
         for p in _modules()
         if len(p.read_text(encoding="utf-8").splitlines()) > MAX_MODULE_LINES
     }
-    assert oversized - OVERSIZED_MODULES == set(), "new module above the size limit"
-    assert OVERSIZED_MODULES - oversized == set(), "shrunk below the limit: remove its entry"
+    assert oversized == set(), "split these modules by responsibility"
 
 
 def _names_api_kind_member(path: Path) -> bool:

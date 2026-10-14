@@ -22,6 +22,7 @@ from kikoe.core.models import (
 )
 from kikoe.core.provider_registry import ProviderDescriptor, UploadHint, descriptor
 from kikoe.core.recording import CaptureState
+from kikoe.core.transcription import LiveState
 from kikoe.core.validation import Capability, ModelError, ProviderError, capability_list
 from kikoe.i18n import _, ngettext
 from kikoe.services.importer import ImportStage
@@ -42,6 +43,17 @@ def chunk_size_subtitle(provider: ProviderDescriptor, limit_megabytes: float) ->
     if UploadHint.SERVER_MAY_LIMIT_SIZE in provider.upload_hints:
         return _("Defaults to 25 MB; your server may require smaller chunks")
     return _("Maximum {size:g} MB per chunk").format(size=limit_megabytes)
+
+
+def live_status_label(state: LiveState) -> str:
+    return {
+        LiveState.CONNECTING: _("Connecting…"),
+        LiveState.LIVE: _("In progress"),
+        LiveState.RECONNECTING: _("Reconnecting… Audio is saved locally"),
+        LiveState.CATCHING_UP: _("Catching up…"),
+        LiveState.INCOMPLETE: _("Transcription incomplete"),
+        LiveState.PAUSED: _("Paused"),
+    }[state]
 
 
 def capture_label(state: CaptureState) -> str:

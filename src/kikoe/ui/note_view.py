@@ -6,27 +6,28 @@ window saves them and keeps the Undo history.
 """
 
 import sys
-from collections.abc import Iterable
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
-from kikoe.core.formatting import SPEAKER_COLOR_COUNT, speaker_order
-from kikoe.core.models import Note, Recording, RecordingSource, Segment
-from kikoe.core.speakers import (
-    identity_for,
-    live_speaker_numbers,
-    resolved_note,
-    unresolved_recordings,
+from kikoe.core.models import Note, Recording, RecordingSource
+from kikoe.core.speakers import resolved_note
+from kikoe.core.transcript_rows import (
+    plan_overlay,
+    same_structure,
+    transcript_columns,
+    without_recording,
 )
 from kikoe.core.transcription import FileTranscriptSnapshot, LiveSnapshot, LiveState
 from kikoe.i18n import _
 from kikoe.ui.items import TranscriptItem
+from kikoe.ui.labels import live_status_label
 from kikoe.ui.recording_view import RecordingView
-from kikoe.ui.speaker_row import speaker_label
+from kikoe.ui.row_focus import RowFocus
+from kikoe.ui.speaker_banner import update_speaker_banner
 from kikoe.ui.templates import ui_file
 from kikoe.ui.transcript_row import TranscriptRow
+from kikoe.ui.transcript_rows import StreamRenderer, build_rows
 
 _ONE_LINE_ROW_HEIGHT = 32
 """The height of the shortest segment row, used to count the rows that fit in the window."""
@@ -84,6 +85,14 @@ class NoteView(Adw.BreakpointBin):
         self._first_frame: int | None = None
         """The frame that shows a newly opened note; the stale rows are bound after it."""
         self._bind_tick = 0
+        self._focus = RowFocus(
+            self._items, self.transcript_list, self._bound, self._stale, self._bind_row
+        )
+        self._renderer = StreamRenderer(
+            self._items,
+            self.transcript_scroll,
+            lambda: self._live is not None or self._file_recording is not None,
+        )
         factory = Gtk.SignalListItemFactory()
         factory.connect("setup", self._on_factory_setup)
         factory.connect("bind", self._on_factory_bind)
@@ -124,18 +133,7 @@ class NoteView(Adw.BreakpointBin):
             return changed
         previous = self._note
         self._note = note
-        pending = unresolved_recordings(note)
-        self.speaker_banner.set_action_name(None)
-        self.speaker_banner.set_revealed(bool(pending))
-        if pending:
-            recording = pending[0]
-            self.speaker_banner.set_title(
-                _("Recording {number} has speakers that are not yet matched.").format(
-                    number=note.recordings.index(recording) + 1
-                )
-            )
-            self.speaker_banner.set_action_target_value(GLib.Variant("s", recording.recording_id))
-            self.speaker_banner.set_action_name("win.match-speakers")
+        update_speaker_banner(self.speaker_banner, note)
         self.stack.set_visible_child_name("transcript" if note.recordings else "no-recordings")
         same_note = previous is not None and previous.note_id == note.note_id
         if previous is not None and same_note:
@@ -143,13 +141,13 @@ class NoteView(Adw.BreakpointBin):
                 if previous.display != note.display:
                     self._rebind()
                 return False
-            if _same_structure(previous, note):
+            if same_structure(previous, note):
                 self._update_segments(note)
                 return False
-        self._has_timestamps, self._has_speakers = _columns(
+        self._has_timestamps, self._has_speakers = transcript_columns(
             s for r in note.recordings for s in r.segments
         )
-        self._fill_rows(_rows(note), scroll_to_top=not same_note)
+        self._fill_rows(build_rows(note), scroll_to_top=not same_note)
         return True
 
     def _fill_rows(self, rows: list[TranscriptItem], *, scroll_to_top: bool = False) -> None:
@@ -247,50 +245,10 @@ class NoteView(Adw.BreakpointBin):
 
     def focus_segment(self, recording_id: str, position: int) -> None:
         """Scroll to a segment and put the caret at the end of its text."""
-        for index in range(self._items.get_n_items()):
-            item = self._items.get_item(index)
-            if (
-                item is not None
-                and not item.hidden
-                and item.position == position
-                and item.recording.recording_id == recording_id
-            ):
-                self._focus_index(index, at_end=True)
-                return
-
-    def _focus_index(self, index: int, *, at_end: bool) -> None:
-        self.transcript_list.scroll_to(index, Gtk.ListScrollFlags.NONE, None)
-        item = self._items.get_item(index)
-        attempts = 3
-
-        def focus() -> bool:
-            # Rows are bound during the next layout, so the target may not exist yet.
-            nonlocal attempts
-            attempts -= 1
-            for row, data in self._bound.items():
-                if data is item:
-                    if row in self._stale:
-                        self._bind_row(row, data)
-                    row.edit(at_end=at_end)
-                    return False
-            return attempts > 0
-
-        GLib.idle_add(focus)
+        self._focus.focus_segment(recording_id, position)
 
     def _on_row_navigate(self, row: TranscriptRow, step: int) -> None:
-        current = self._bound.get(row)
-        if current is None:
-            return
-        found = self._items.find(current)
-        if not found[0]:
-            return
-        index = found[1] + step
-        while 0 <= index < self._items.get_n_items():
-            item = self._items.get_item(index)
-            if item is not None and not item.hidden and not item.is_live:
-                self._focus_index(index, at_end=step < 0)
-                return
-            index += step
+        self._focus.navigate(row, step)
 
     def _on_row_text_committed(self, row: TranscriptRow, text: str) -> None:
         item = None if row in self._stale else self._bound.get(row)
@@ -342,7 +300,7 @@ class NoteView(Adw.BreakpointBin):
             self._live = None
             self._live_rows = []
             if self._note is not None:
-                self._fill_rows(_rows(self._note))
+                self._fill_rows(build_rows(self._note))
         self.recording_slot.set_visible(False)
         self.stack.set_visible(True)
         self.stack.set_vexpand(True)
@@ -351,16 +309,8 @@ class NoteView(Adw.BreakpointBin):
     def update_live(self, snapshot: LiveSnapshot) -> None:
         if self._live is None or self._note is None:
             return
-        statuses = {
-            LiveState.CONNECTING: _("Connecting…"),
-            LiveState.LIVE: _("In progress"),
-            LiveState.RECONNECTING: _("Reconnecting… Audio is saved locally"),
-            LiveState.CATCHING_UP: _("Catching up…"),
-            LiveState.INCOMPLETE: _("Transcription incomplete"),
-            LiveState.PAUSED: _("Paused"),
-        }
         summary = _("{status} · {summary}").format(
-            status=statuses[snapshot.state], summary=self._live_summary
+            status=live_status_label(snapshot.state), summary=self._live_summary
         )
         self._live_rows = self._render_stream(
             FileTranscriptSnapshot(snapshot.segments, snapshot.preview),
@@ -384,22 +334,12 @@ class NoteView(Adw.BreakpointBin):
         self._file_recording = recording
         self._file_replace_id = replace_recording_id
         self._file_rows = []
-        rows = _rows(context)
-        index = next(
-            (i for i, r in enumerate(context.recordings) if r.recording_id == replace_recording_id),
-            len(context.recordings),
-        )
-        self._file_number = index + 1
-        self._file_base = sum(1 + len(r.segments) for r in context.recordings[:index])
-        if index < len(context.recordings):
-            count = 1 + len(context.recordings[index].segments)
-            del rows[self._file_base : self._file_base + count]
-        self._file_context = replace(
-            context,
-            recordings=tuple(
-                r for r in context.recordings if r.recording_id != replace_recording_id
-            ),
-        )
+        rows = build_rows(context)
+        plan = plan_overlay(context, replace_recording_id)
+        self._file_number = plan.number
+        self._file_base = plan.first_row
+        del rows[plan.first_row : plan.first_row + plan.replaced_rows]
+        self._file_context = without_recording(context, replace_recording_id)
         self._fill_rows(rows)
         self._file_summary = _("Transcribing… · {model}").format(model=recording.model_id)
         self.stack.set_visible(True)
@@ -429,8 +369,8 @@ class NoteView(Adw.BreakpointBin):
         self._file_context = None
         self._file_base_note = None
         self._note = note
-        self._fill_rows(_rows(note) if note else [])
-        self._has_timestamps, self._has_speakers = _columns(
+        self._fill_rows(build_rows(note) if note else [])
+        self._has_timestamps, self._has_speakers = transcript_columns(
             s for r in (note.recordings if note else ()) for s in r.segments
         )
         self.stack.set_visible_child_name(
@@ -448,46 +388,18 @@ class NoteView(Adw.BreakpointBin):
         base: int,
         context: Note,
     ) -> list[TranscriptItem]:
-        existing = [s for r in resolved_note(context).recordings for s in r.segments]
-        all_segments = (*snapshot.segments, *snapshot.preview)
-        numbers = live_speaker_numbers(context, all_segments)
-        previous_columns = self._has_timestamps, self._has_speakers
-        self._has_timestamps, self._has_speakers = _columns((*existing, *all_segments))
-        if previous_columns != (self._has_timestamps, self._has_speakers):
+        existing = (s for r in resolved_note(context).recordings for s in r.segments)
+        self._set_columns(transcript_columns((*existing, *snapshot.segments, *snapshot.preview)))
+        return self._renderer.render(
+            snapshot, recording, number, summary, previous_rows, base, context
+        )
+
+    def _set_columns(self, columns: tuple[bool, bool]) -> None:
+        """Show the time and speaker columns when any row needs them."""
+        previous = self._has_timestamps, self._has_speakers
+        self._has_timestamps, self._has_speakers = columns
+        if previous != columns:
             self._rebind()
-        rows = [TranscriptItem(recording, number, live_summary=summary)]
-        for index, segment in enumerate(all_segments):
-            speaker = segment.speaker_id
-            name = (
-                context.speaker_name(speaker)
-                or _("Speaker {number}").format(number=numbers[speaker])
-                if speaker
-                else None
-            )
-            color = (numbers[speaker] - 1) % SPEAKER_COLOR_COUNT if speaker else None
-            preview = index >= len(snapshot.segments)
-            new = TranscriptItem(recording, number, segment, name, color, preview=preview)
-            old = previous_rows[index + 1] if index + 1 < len(previous_rows) else None
-            rows.append(old if old is not None and old.content_key() == new.content_key() else new)
-        adjustment = self.transcript_scroll.get_vadjustment()
-        follow = adjustment.get_upper() - adjustment.get_value() - adjustment.get_page_size() < 48
-        prefix = 0
-        for old, new in zip(previous_rows, rows, strict=False):
-            if old.content_key() != new.content_key():
-                break
-            prefix += 1
-        self._items.splice(base + prefix, len(previous_rows) - prefix, rows[prefix:])
-        if follow:
-            GLib.idle_add(self._follow_live)
-
-        return rows
-
-    def _follow_live(self) -> bool:
-        if self._live is None and self._file_recording is None:
-            return False
-        adjustment = self.transcript_scroll.get_vadjustment()
-        adjustment.set_value(max(0, adjustment.get_upper() - adjustment.get_page_size()))
-        return False
 
     def _on_factory_setup(self, _factory: Gtk.SignalListItemFactory, item: GObject.Object) -> None:
         assert isinstance(item, Gtk.ListItem)
@@ -570,50 +482,3 @@ class NoteView(Adw.BreakpointBin):
         )
         if data.segment is None:
             row.set_playing(data.recording.recording_id == self._playing)
-
-
-def _rows(note: Note) -> list[TranscriptItem]:
-    order = speaker_order(s for r in resolved_note(note).recordings for s in r.segments)
-    people = {s.speaker_id: s for s in note.speakers}
-    rows: list[TranscriptItem] = []
-    for number, recording in enumerate(note.recordings, start=1):
-        rows.append(TranscriptItem(recording, number))
-        for position, segment in enumerate(recording.segments):
-            speaker = segment.speaker_id
-            if speaker is None:
-                rows.append(TranscriptItem(recording, number, segment, position=position))
-                continue
-            identity = identity_for(recording, speaker)
-            person = people.get(identity)
-            name = (
-                speaker_label(note, identity)
-                if person
-                else _("Speaker {number}").format(number=order[identity] + 1)
-            )
-            slot = (
-                (person.ordinal - 1) if person and person.ordinal else order[identity]
-            ) % SPEAKER_COLOR_COUNT
-            rows.append(TranscriptItem(recording, number, segment, name, slot, position=position))
-    return rows
-
-
-def _columns(segments: Iterable[Segment]) -> tuple[bool, bool]:
-    """Whether any segment has a time, and whether any has a speaker."""
-    has_times = has_speakers = False
-    for segment in segments:
-        has_times = has_times or segment.start is not None or segment.end is not None
-        has_speakers = has_speakers or segment.speaker_id is not None
-    return has_times, has_speakers
-
-
-def _same_structure(previous: Note, note: Note) -> bool:
-    """Whether only segment text or timestamps differ, so rows can be updated in place."""
-    if previous.speakers != note.speakers or len(previous.recordings) != len(note.recordings):
-        return False
-    for old, new in zip(previous.recordings, note.recordings, strict=True):
-        if len(old.segments) != len(new.segments) or replace(new, segments=old.segments) != old:
-            return False
-        pairs = zip(old.segments, new.segments, strict=True)
-        if any(a.speaker_id != b.speaker_id for a, b in pairs):
-            return False
-    return True
