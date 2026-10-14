@@ -55,8 +55,7 @@ class FileTranscriptionWorkflow:
         return await import_audio(
             path,
             note_id,
-            choice.provider,
-            choice.model,
+            choice,
             client=await self._client(choice.provider),
             notes=self._notes,
             options=options,

@@ -9,6 +9,7 @@ from enum import StrEnum
 from pathlib import Path
 
 from kikoe import paths
+from kikoe.core.choice import ModelChoice
 from kikoe.core.chunking import TimeSpan, offset_segments, plan_chunks
 from kikoe.core.models import (
     ModelSpec,
@@ -56,8 +57,7 @@ def _ignore_progress(_stage: ImportStage, _part: int, _parts: int) -> None:
 async def import_audio(
     source: Path,
     note_id: str | None,
-    provider: Provider,
-    model: ModelSpec,
+    choice: ModelChoice,
     *,
     client: TranscriptionProvider,
     notes: NoteRepository,
@@ -72,15 +72,15 @@ async def import_audio(
     cancelled, the copy is removed again and nothing is saved.
     """
     recording_id = uuid.uuid4().hex
-    if model.capabilities.file is None:
+    if choice.model.capabilities.file is None:
         raise TranscriptionError(_("Choose a file transcription model to import audio."))
     original = await notes.store_audio(source, recording_id)
     try:
         duration, segments = await transcribe_audio(
             original,
-            model,
+            choice.model,
             client=client,
-            provider=provider,
+            provider=choice.provider,
             options=options,
             on_progress=on_progress,
             on_update=on_update,
@@ -92,8 +92,8 @@ async def import_audio(
             created_at=datetime.now(UTC),
             duration=duration,
             source=RecordingSource.IMPORTED,
-            provider_name=provider.name,
-            model_id=model.model_id,
+            provider_name=choice.provider.name,
+            model_id=choice.model.model_id,
             segments=scope_speakers(segments, recording_id),
             audio_path=original,
         )

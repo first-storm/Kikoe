@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from helpers import LIVE_ONLY, file_caps, run_async
+from kikoe.core.choice import ModelChoice
 from kikoe.core.chunking import TimeSpan
 from kikoe.core.models import (
     ApiKind,
@@ -33,6 +34,7 @@ from kikoe.storage.notes import NoteRepository
 
 MODEL = ModelSpec("whisper-large-v3", "Whisper", file_caps(timestamps=True))
 PROVIDER = Provider("p1", "Groq", ApiKind.OPENAI_COMPATIBLE, "https://example.test/v1", (MODEL,))
+CHOICE = ModelChoice(PROVIDER, MODEL)
 
 
 def s(seconds: float) -> timedelta:
@@ -163,8 +165,7 @@ async def test_import_creates_a_note_named_after_the_file(
     note = await import_audio(
         source,
         None,
-        PROVIDER,
-        MODEL,
+        CHOICE,
         client=FakeClient(),
         notes=notes,
         on_progress=stages,
@@ -199,8 +200,7 @@ async def test_import_into_an_open_note_appends(
     note = await import_audio(
         source,
         existing.note_id,
-        PROVIDER,
-        MODEL,
+        CHOICE,
         client=FakeClient(),
         notes=notes,
         work_dir=tmp_path,
@@ -208,8 +208,7 @@ async def test_import_into_an_open_note_appends(
     note = await import_audio(
         source,
         existing.note_id,
-        PROVIDER,
-        MODEL,
+        CHOICE,
         client=FakeClient(),
         notes=notes,
         work_dir=tmp_path,
@@ -234,8 +233,7 @@ async def test_oversize_audio_is_split_at_silences_and_times_shifted(
     note = await import_audio(
         source,
         None,
-        PROVIDER,
-        MODEL,
+        CHOICE,
         client=client,
         notes=notes,
         on_progress=stages,
@@ -266,8 +264,7 @@ async def test_failed_transcription_saves_nothing(
         await import_audio(
             source,
             None,
-            PROVIDER,
-            MODEL,
+            CHOICE,
             client=FakeClient(fail=True),
             notes=notes,
             work_dir=work,
@@ -307,7 +304,7 @@ async def test_cancelling_removes_the_copied_audio(
     await notes.load()
     client = HangingClient()
     task = asyncio.create_task(
-        import_audio(source, None, PROVIDER, MODEL, client=client, notes=notes, work_dir=tmp_path)
+        import_audio(source, None, CHOICE, client=client, notes=notes, work_dir=tmp_path)
     )
     await client.started.wait()
 
@@ -331,7 +328,7 @@ async def test_duration_limit_splits_even_small_compressed_files(
     use_converter(monkeypatch, converter)
     await notes.load()
     client = DurationClient()
-    await import_audio(source, None, PROVIDER, MODEL, client=client, notes=notes, work_dir=tmp_path)
+    await import_audio(source, None, CHOICE, client=client, notes=notes, work_dir=tmp_path)
     assert len(client.uploads) >= 2
     assert all(part.end - part.start <= s(60) for part in converter.parts)
 
@@ -363,7 +360,12 @@ async def test_live_only_model_is_refused_before_copying_audio(
     await notes.load()
     with pytest.raises(TranscriptionError, match="file transcription model"):
         await import_audio(
-            source, None, provider, model, client=FakeClient(), notes=notes, work_dir=tmp_path
+            source,
+            None,
+            ModelChoice(provider, model),
+            client=FakeClient(),
+            notes=notes,
+            work_dir=tmp_path,
         )
     assert list((tmp_path / "audio").glob("*")) == []
 
@@ -431,8 +433,7 @@ async def test_failed_later_stream_does_not_save_earlier_completed_parts(
         await import_audio(
             source,
             None,
-            PROVIDER,
-            MODEL,
+            CHOICE,
             client=client,
             notes=notes,
             on_update=updates.append,
@@ -466,8 +467,7 @@ async def test_cancel_during_import_commit_finishes_saving_audio_and_text(
         import_audio(
             source,
             None,
-            PROVIDER,
-            MODEL,
+            CHOICE,
             client=FakeClient(),
             notes=notes,
             work_dir=tmp_path / "work",
