@@ -5,7 +5,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kikoe 0.1.0\n"
 "Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
-"POT-Creation-Date: 2026-10-15 00:27+1100\n"
+"POT-Creation-Date: 2026-10-15 00:47+1100\n"
 "PO-Revision-Date: 2026-10-12 00:00+0000\n"
 "Last-Translator: first-storm\n"
 "Language-Team: Simplified Chinese\n"
@@ -108,7 +108,7 @@ msgid ""
 msgstr "无法读取“{name}”，它可能不是音频文件，或文件已经损坏。（{detail}）"
 
 #. Translators: {name} is a service name such as Groq.
-#: src/kikoe/providers/base.py:103
+#: src/kikoe/providers/base.py:91
 #, python-brace-format
 msgid "{name} supports file transcription only."
 msgstr "{name} 仅支持文件转录。"
@@ -244,7 +244,7 @@ msgstr "{host} 拒绝了实时会话：{message}"
 msgid "Realtime transcription failed. Your audio has been kept."
 msgstr "实时转录失败，已保留音频。"
 
-#: src/kikoe/services/importer.py:76 src/kikoe/ui/bottom_bar.py:170
+#: src/kikoe/services/importer.py:76 src/kikoe/ui/bottom_bar.py:168
 msgid "Choose a file transcription model to import audio."
 msgstr "请选择文件转录模型来导入音频。"
 
@@ -328,51 +328,51 @@ msgid ""
 "Details: {error}"
 msgstr "没有可用的安全凭据存储，无法保存 API 密钥。详情：{error}"
 
-#: src/kikoe/storage/settings.py:62
+#: src/kikoe/storage/settings.py:63
 #, python-brace-format
 msgid "Could not read the settings file: {error}"
 msgstr "无法读取设置文件：{error}"
 
-#: src/kikoe/storage/settings.py:74
+#: src/kikoe/storage/settings.py:75
 #, python-brace-format
 msgid "The settings file {detail} is damaged or not understood: {error}"
 msgstr "设置文件 {detail} 已损坏或无法解析：{error}"
 
-#: src/kikoe/storage/settings.py:99
+#: src/kikoe/storage/settings.py:100
 #, python-brace-format
 msgid "Could not save the settings file: {error}"
 msgstr "无法保存设置文件：{error}"
 
-#: src/kikoe/ui/bottom_bar.py:102
+#: src/kikoe/ui/bottom_bar.py:100
 msgid "_Append Recording"
 msgstr "追加录音(_A)"
 
-#: src/kikoe/ui/bottom_bar.py:102 src/kikoe/ui/bottom_bar.ui:125
+#: src/kikoe/ui/bottom_bar.py:100 src/kikoe/ui/bottom_bar.ui:125
 msgid "_Record"
 msgstr "录音(_R)"
 
-#: src/kikoe/ui/bottom_bar.py:123 src/kikoe/ui/bottom_bar.ui:224
+#: src/kikoe/ui/bottom_bar.py:121 src/kikoe/ui/bottom_bar.ui:224
 #: src/kikoe/ui/bottom_bar.ui:227
 msgid "Pause Recording"
 msgstr "暂停录音"
 
-#: src/kikoe/ui/bottom_bar.py:123
+#: src/kikoe/ui/bottom_bar.py:121
 msgid "Resume Recording"
 msgstr "继续录音"
 
-#: src/kikoe/ui/bottom_bar.py:153
+#: src/kikoe/ui/bottom_bar.py:151
 msgid "No Model"
 msgstr "未选择模型"
 
-#: src/kikoe/ui/bottom_bar.py:155
+#: src/kikoe/ui/bottom_bar.py:153
 msgid "Add a model in Preferences first"
 msgstr "请先在偏好设置中添加模型"
 
-#: src/kikoe/ui/bottom_bar.py:156 src/kikoe/ui/bottom_bar.ui:44
+#: src/kikoe/ui/bottom_bar.py:154 src/kikoe/ui/bottom_bar.ui:44
 msgid "Transcription Model…"
 msgstr "转录模型…"
 
-#: src/kikoe/ui/bottom_bar.py:161
+#: src/kikoe/ui/bottom_bar.py:159
 #, python-brace-format
 msgid ""
 "{model} · {provider}\n"
@@ -381,7 +381,7 @@ msgstr ""
 "{model} · {provider}\n"
 "{hint}"
 
-#: src/kikoe/ui/bottom_bar.py:168 src/kikoe/ui/bottom_bar.ui:90
+#: src/kikoe/ui/bottom_bar.py:166 src/kikoe/ui/bottom_bar.ui:90
 #: src/kikoe/ui/shortcuts.ui:27
 msgid "Import Audio…"
 msgstr "导入音频…"
@@ -411,7 +411,7 @@ msgid "_Stop"
 msgstr "停止(_S)"
 
 #: src/kikoe/ui/content_header.ui:14
-#: src/kikoe/ui/transcription_controller.py:324 src/kikoe/ui/window.py:406
+#: src/kikoe/ui/transcription_controller.py:325 src/kikoe/ui/window.py:406
 #: src/kikoe/ui/window.ui:10 src/kikoe/ui/window.ui:37
 #: src/kikoe/ui/window.ui:119 src/kikoe/ui/window.ui:130
 msgid "Kikoe"
@@ -576,234 +576,234 @@ msgstr "音频和视频"
 msgid "Only files on this computer can be imported."
 msgstr "只能导入此计算机上的文件。"
 
-#: src/kikoe/ui/labels.py:33
+#: src/kikoe/ui/labels.py:29
 msgid "OpenAI-compatible"
 msgstr "OpenAI 兼容"
 
-#: src/kikoe/ui/labels.py:38
+#: src/kikoe/ui/labels.py:34
 msgid "Maximum 60 minutes, or 30 with timestamps or speaker detection"
 msgstr "最长 60 分钟；启用时间戳或说话人识别时为 30 分钟"
 
-#: src/kikoe/ui/labels.py:39 src/kikoe/ui/provider_page.ui:95
+#: src/kikoe/ui/labels.py:35 src/kikoe/ui/provider_page.ui:95
 msgid "0 uses the provider limit; chunks also respect the size limit"
 msgstr "0 表示按服务商上限分块，同时遵守大小限制"
 
-#: src/kikoe/ui/labels.py:44
+#: src/kikoe/ui/labels.py:40
 msgid "Defaults to 25 MB; your server may require smaller chunks"
 msgstr "默认 25 MB；你的服务器可能要求更小的分块"
 
-#: src/kikoe/ui/labels.py:45
+#: src/kikoe/ui/labels.py:41
 #, python-brace-format
 msgid "Maximum {size:g} MB per chunk"
 msgstr "每个分块最大 {size:g} MB"
 
-#: src/kikoe/ui/labels.py:50
+#: src/kikoe/ui/labels.py:46
 msgid "Connecting…"
 msgstr "正在连接…"
 
-#: src/kikoe/ui/labels.py:51
+#: src/kikoe/ui/labels.py:47
 msgid "In progress"
 msgstr "进行中"
 
-#: src/kikoe/ui/labels.py:52
+#: src/kikoe/ui/labels.py:48
 msgid "Reconnecting… Audio is saved locally"
 msgstr "正在重新连接…音频已保存在本地"
 
-#: src/kikoe/ui/labels.py:53
+#: src/kikoe/ui/labels.py:49
 msgid "Catching up…"
 msgstr "正在补录转录内容…"
 
-#: src/kikoe/ui/labels.py:54
+#: src/kikoe/ui/labels.py:50
 msgid "Transcription incomplete"
 msgstr "转录未完成"
 
-#: src/kikoe/ui/labels.py:55 src/kikoe/ui/labels.py:60
+#: src/kikoe/ui/labels.py:51 src/kikoe/ui/labels.py:56
 #: src/kikoe/ui/recording_view.py:33
 msgid "Paused"
 msgstr "已暂停"
 
-#: src/kikoe/ui/labels.py:60 src/kikoe/ui/recording_view.py:24
+#: src/kikoe/ui/labels.py:56 src/kikoe/ui/recording_view.py:24
 #: src/kikoe/ui/recording_view.py:33 src/kikoe/ui/recording_view.ui:69
 msgid "Recording"
 msgstr "录音中"
 
-#: src/kikoe/ui/labels.py:66
+#: src/kikoe/ui/labels.py:62
 msgid "Realtime"
 msgstr "实时"
 
-#: src/kikoe/ui/labels.py:68 src/kikoe/ui/model_dialog.ui:79
+#: src/kikoe/ui/labels.py:64 src/kikoe/ui/model_dialog.ui:79
 #: src/kikoe/ui/model_dialog.ui:140 src/kikoe/ui/recording_controller.py:166
 msgid "Timestamps"
 msgstr "时间戳"
 
-#: src/kikoe/ui/labels.py:70 src/kikoe/ui/model_dialog.ui:92
+#: src/kikoe/ui/labels.py:66 src/kikoe/ui/model_dialog.ui:92
 msgid "Word Timestamps"
 msgstr "逐词时间戳"
 
-#: src/kikoe/ui/labels.py:72 src/kikoe/ui/recording_controller.py:168
+#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:168
 msgid "Speakers"
 msgstr "说话人"
 
-#: src/kikoe/ui/labels.py:74
+#: src/kikoe/ui/labels.py:70
 msgid "Streaming"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:80 src/kikoe/ui/recording_controller.py:172
+#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:172
 msgid "Text only"
 msgstr "仅文字"
 
-#: src/kikoe/ui/labels.py:86
+#: src/kikoe/ui/labels.py:82
 msgid "Plain Text (.txt)"
 msgstr "纯文本（.txt）"
 
-#: src/kikoe/ui/labels.py:88
+#: src/kikoe/ui/labels.py:84
 msgid "Markdown (.md)"
 msgstr "Markdown（.md）"
 
-#: src/kikoe/ui/labels.py:90
+#: src/kikoe/ui/labels.py:86
 msgid "SRT Subtitles (.srt)"
 msgstr "SRT 字幕（.srt）"
 
-#: src/kikoe/ui/labels.py:92
+#: src/kikoe/ui/labels.py:88
 msgid "WebVTT Subtitles (.vtt)"
 msgstr "WebVTT 字幕（.vtt）"
 
-#: src/kikoe/ui/labels.py:98
+#: src/kikoe/ui/labels.py:94
 msgid "Enter a name for this provider."
 msgstr "请输入服务商名称。"
 
-#: src/kikoe/ui/labels.py:100
+#: src/kikoe/ui/labels.py:96
 msgid "Enter the base URL of the API."
 msgstr "请输入 API 的 Base URL。"
 
-#: src/kikoe/ui/labels.py:102
+#: src/kikoe/ui/labels.py:98
 msgid ""
 "The base URL must start with http:// or https:// and include a host name."
 msgstr "Base URL 必须以 http:// 或 https:// 开头，并包含主机名。"
 
-#: src/kikoe/ui/labels.py:108
+#: src/kikoe/ui/labels.py:104
 msgid "Enter the model ID."
 msgstr "请输入模型 ID。"
 
-#: src/kikoe/ui/labels.py:110
+#: src/kikoe/ui/labels.py:106
 msgid "This provider already has a model with that ID."
 msgstr "此服务商已有相同 ID 的模型。"
 
-#: src/kikoe/ui/labels.py:112
+#: src/kikoe/ui/labels.py:108
 #, fuzzy
 msgid "Turn on file or realtime transcription."
 msgstr "实时转录"
 
-#: src/kikoe/ui/labels.py:120
+#: src/kikoe/ui/labels.py:116
 msgid "%H:%M"
 msgstr "%H:%M"
 
 #. Translators: {time} is a time of day formatted with the “%H:%M” string below.
-#: src/kikoe/ui/labels.py:120
+#: src/kikoe/ui/labels.py:116
 #, python-brace-format
 msgid "Today {time}"
 msgstr "今天 {time}"
 
-#: src/kikoe/ui/labels.py:122
+#: src/kikoe/ui/labels.py:118
 msgid "Yesterday"
 msgstr "昨天"
 
 #. Translators: date in this year, see the GLib.DateTime.format documentation.
-#: src/kikoe/ui/labels.py:125
+#: src/kikoe/ui/labels.py:121
 msgid "%b %-d"
 msgstr "%-m月%-d日"
 
 #. Translators: date in another year, see the GLib.DateTime.format documentation.
-#: src/kikoe/ui/labels.py:128
+#: src/kikoe/ui/labels.py:124
 msgid "%b %-d, %Y"
 msgstr "%Y年%-m月%-d日"
 
-#: src/kikoe/ui/labels.py:133
+#: src/kikoe/ui/labels.py:129
 msgid "%b %-d %H:%M"
 msgstr "%-m月%-d日 %H:%M"
 
-#: src/kikoe/ui/labels.py:133
+#: src/kikoe/ui/labels.py:129
 #, python-brace-format
 msgid "{date} Recording"
 msgstr "{date} 录音"
 
-#: src/kikoe/ui/labels.py:143
+#: src/kikoe/ui/labels.py:139
 msgid "Imported audio"
 msgstr "导入音频"
 
-#: src/kikoe/ui/labels.py:151
+#: src/kikoe/ui/labels.py:147
 msgid "No recordings"
 msgstr "暂无录音"
 
-#: src/kikoe/ui/labels.py:156
+#: src/kikoe/ui/labels.py:152
 #, python-brace-format
 msgid "{count} recording"
 msgid_plural "{count} recordings"
 msgstr[0] "{count} 段录音"
 
-#: src/kikoe/ui/labels.py:191
+#: src/kikoe/ui/labels.py:189
 #, python-brace-format
 msgid "Converting part {part} of {parts}…"
 msgstr "正在转换第 {part}/{parts} 部分…"
 
-#: src/kikoe/ui/labels.py:193
+#: src/kikoe/ui/labels.py:191
 msgid "Converting audio…"
 msgstr "正在转换音频…"
 
-#: src/kikoe/ui/labels.py:195
+#: src/kikoe/ui/labels.py:193
 #, python-brace-format
 msgid "Transcribing… {part} of {parts} chunks complete"
 msgstr "正在转录… 已完成 {part}/{parts} 个分块"
 
-#: src/kikoe/ui/labels.py:199 src/kikoe/ui/transcription_controller.py:176
-#: src/kikoe/ui/transcription_controller.py:262
-#: src/kikoe/ui/transcription_controller.py:309
+#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:177
+#: src/kikoe/ui/transcription_controller.py:263
+#: src/kikoe/ui/transcription_controller.py:310
 msgid "Transcribing…"
 msgstr "正在转录…"
 
-#: src/kikoe/ui/labels.py:201
+#: src/kikoe/ui/labels.py:199
 msgid "Saving…"
 msgstr "正在保存…"
 
-#: src/kikoe/ui/labels.py:206
+#: src/kikoe/ui/labels.py:204
 msgid "Not supported by this model"
 msgstr "此模型不支持"
 
-#: src/kikoe/ui/labels.py:212
+#: src/kikoe/ui/labels.py:210
 msgid "Transcribes while recording"
 msgstr "边录边转录"
 
-#: src/kikoe/ui/labels.py:213
+#: src/kikoe/ui/labels.py:211
 msgid "Transcribes after recording"
 msgstr "录音结束后转录"
 
-#: src/kikoe/ui/labels.py:221
+#: src/kikoe/ui/labels.py:219
 #, python-brace-format
 msgid "{mode} · This model does not support {features}"
 msgstr "{mode} · 此模型不支持{features}"
 
-#: src/kikoe/ui/labels.py:231
+#: src/kikoe/ui/labels.py:229
 msgid "realtime transcription"
 msgstr "实时转录"
 
-#: src/kikoe/ui/labels.py:233
+#: src/kikoe/ui/labels.py:231
 msgid "timestamps"
 msgstr "时间戳"
 
-#: src/kikoe/ui/labels.py:235
+#: src/kikoe/ui/labels.py:233
 #, fuzzy
 msgid "word timestamps"
 msgstr "逐词时间戳"
 
-#: src/kikoe/ui/labels.py:237
+#: src/kikoe/ui/labels.py:235
 msgid "speaker detection"
 msgstr "说话人识别"
 
-#: src/kikoe/ui/labels.py:239
+#: src/kikoe/ui/labels.py:237
 msgid "streaming preview"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:243
+#: src/kikoe/ui/labels.py:241
 #, python-brace-format
 msgid "{provider} · {model}"
 msgstr "{provider} · {model}"
@@ -1282,7 +1282,7 @@ msgstr "稍后(_L)"
 msgid "_Recover"
 msgstr "恢复(_R)"
 
-#: src/kikoe/ui/retranscribe_dialog.py:50
+#: src/kikoe/ui/retranscribe_dialog.py:47
 #, python-brace-format
 msgid ""
 "Re-transcribe “Recording {number}” ({duration}) from the kept original "
@@ -1292,7 +1292,7 @@ msgstr ""
 "使用保留的原始音频重新转录“录音 {number}”（{duration}）。可补上原先未启用的时"
 "间戳或说话人识别。"
 
-#: src/kikoe/ui/retranscribe_dialog.py:64
+#: src/kikoe/ui/retranscribe_dialog.py:61
 msgid "Choose a File Model…"
 msgstr "选择文件转录模型…"
 
@@ -1433,36 +1433,36 @@ msgstr ""
 msgid "Rename Speaker"
 msgstr "重命名说话人"
 
-#: src/kikoe/ui/speaker_row.py:15 src/kikoe/ui/transcript_rows.py:37
-#: src/kikoe/ui/transcript_rows.py:77
+#: src/kikoe/ui/speaker_row.py:18 src/kikoe/ui/transcript_rows.py:32
+#: src/kikoe/ui/transcript_rows.py:71
 #, python-brace-format
 msgid "Speaker {number}"
 msgstr "说话人 {number}"
 
-#: src/kikoe/ui/speaker_row.py:66
+#: src/kikoe/ui/speaker_row.py:69
 msgid "No sample available"
 msgstr "暂无示例"
 
-#: src/kikoe/ui/speaker_row.py:66
+#: src/kikoe/ui/speaker_row.py:69
 #, python-brace-format
 msgid "“{text}”"
 msgstr "“{text}”"
 
-#: src/kikoe/ui/speaker_row.py:69
+#: src/kikoe/ui/speaker_row.py:72
 #, python-brace-format
 msgid "Play a sample from “{name}”"
 msgstr "播放“{name}”的示例"
 
-#: src/kikoe/ui/speaker_row.py:70
+#: src/kikoe/ui/speaker_row.py:73
 #, python-brace-format
 msgid "Who is {name}?"
 msgstr "{name} 对应谁？"
 
-#: src/kikoe/ui/speaker_row.py:74
+#: src/kikoe/ui/speaker_row.py:77
 msgid "Sample playback needs reliable timestamps."
 msgstr "播放示例需要可靠的时间戳。"
 
-#: src/kikoe/ui/speaker_row.py:144
+#: src/kikoe/ui/speaker_row.py:147
 msgid "New Speaker"
 msgstr "新说话人"
 
@@ -1581,7 +1581,7 @@ msgid "Import cancelled"
 msgstr "已取消导入"
 
 #: src/kikoe/ui/transcription_controller.py:140
-#: src/kikoe/ui/transcription_controller.py:285
+#: src/kikoe/ui/transcription_controller.py:286
 msgid "Transcription Failed"
 msgstr "转录失败"
 
@@ -1594,11 +1594,11 @@ msgstr "转录失败"
 msgid "Choose an available file transcription model."
 msgstr "请选择可用的文件转录模型。"
 
-#: src/kikoe/ui/transcription_controller.py:207
+#: src/kikoe/ui/transcription_controller.py:208
 msgid "Re-transcription cancelled"
 msgstr "已取消重新转录"
 
-#: src/kikoe/ui/transcription_controller.py:212
+#: src/kikoe/ui/transcription_controller.py:213
 #, python-brace-format
 msgid ""
 "{error}\n"
@@ -1609,11 +1609,11 @@ msgstr ""
 "\n"
 "已保留文字和音频。"
 
-#: src/kikoe/ui/transcription_controller.py:213
+#: src/kikoe/ui/transcription_controller.py:214
 msgid "Re-transcription Failed"
 msgstr "重新转录失败"
 
-#: src/kikoe/ui/transcription_controller.py:267
+#: src/kikoe/ui/transcription_controller.py:268
 msgid "Transcription cancelled"
 msgstr "已取消转录"
 
