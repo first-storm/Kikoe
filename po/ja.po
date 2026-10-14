@@ -1,0 +1,1686 @@
+# Japanese translation of Kikoe.
+# Distributed under GPL-3.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: kikoe 0.1.1\n"
+"Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
+"POT-Creation-Date: 2026-10-15 03:01+1100\n"
+"PO-Revision-Date: 2026-10-15 00:00+0000\n"
+"Last-Translator: Kikoe contributors\n"
+"Language-Team: Japanese\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: src/kikoe/application.py:152
+msgid "Could not open the folder."
+msgstr "フォルダーを開けませんでした。"
+
+#. Translators: replace with your name(s), one per line.
+#: src/kikoe/application.py:177
+msgid "translator-credits"
+msgstr "Kikoe contributors"
+
+#: src/kikoe/media/ffmpeg.py:54
+#, python-brace-format
+msgid "KIKOE_FFMPEG points to a missing file: {path}"
+msgstr "KIKOE_FFMPEG が存在しないファイルを指定しています: {path}"
+
+#: src/kikoe/media/ffmpeg.py:65
+msgid "ffmpeg was not found. Install it or set KIKOE_FFMPEG."
+msgstr ""
+"ffmpeg が見つかりません。インストールするか KIKOE_FFMPEG を設定してください。"
+
+#: src/kikoe/media/ffmpeg.py:107
+#, python-brace-format
+msgid "ffmpeg exited with status {status}: {error}"
+msgstr "ffmpeg がステータス {status} で終了しました: {error}"
+
+#: src/kikoe/media/ffmpeg.py:167
+msgid "The audio converter stopped unexpectedly."
+msgstr "音声変換処理が予期せず停止しました。"
+
+#: src/kikoe/media/ffmpeg.py:183
+#, python-brace-format
+msgid "The audio converter failed: {detail}"
+msgstr "音声変換に失敗しました: {detail}"
+
+#: src/kikoe/media/ffmpeg.py:239
+#, python-brace-format
+msgid "Could not decode the audio: {detail}"
+msgstr "音声をデコードできませんでした: {detail}"
+
+#: src/kikoe/media/player.py:73
+msgid "No default audio output device is available."
+msgstr "既定の音声出力デバイスがありません。"
+
+#: src/kikoe/media/player.py:108
+#, python-brace-format
+msgid "Could not play the audio. Check your output device. ({detail})"
+msgstr "音声を再生できませんでした。出力デバイスを確認してください。({detail})"
+
+#: src/kikoe/media/player.py:119
+#, python-brace-format
+msgid "Could not close the audio output device. ({detail})"
+msgstr "音声出力デバイスを閉じられませんでした。({detail})"
+
+#: src/kikoe/media/recorder.py:107
+#, python-brace-format
+msgid ""
+"Could not open the microphone. Check your input device and microphone "
+"permissions. ({detail})"
+msgstr ""
+"マイクを開けませんでした。入力デバイスとマイクの権限を確認してください。"
+"({detail})"
+
+#: src/kikoe/media/recorder.py:117
+msgid "The microphone lost audio. The captured audio has been kept."
+msgstr "マイクの音声が欠落しました。取得済みの音声は保存されています。"
+
+#: src/kikoe/media/recorder.py:129
+msgid "Audio could not be saved fast enough. The captured audio has been kept."
+msgstr "音声の保存が間に合いませんでした。取得済みの音声は保存されています。"
+
+#: src/kikoe/media/recorder.py:152
+msgid "The microphone disconnected. The captured audio has been kept."
+msgstr "マイクが切断されました。取得済みの音声は保存されています。"
+
+#: src/kikoe/media/recorder.py:177
+#, python-brace-format
+msgid "The microphone stopped responding. ({detail})"
+msgstr "マイクが応答しなくなりました。({detail})"
+
+#: src/kikoe/media/recorder.py:196
+#, python-brace-format
+msgid "Could not close the microphone. ({detail})"
+msgstr "マイクを閉じられませんでした。({detail})"
+
+#: src/kikoe/media/transcode.py:78
+#, python-brace-format
+msgid "“{name}” contains no audio."
+msgstr "“{name}” に音声が含まれていません。"
+
+#: src/kikoe/media/transcode.py:128
+#, python-brace-format
+msgid ""
+"Could not read “{name}”. It may not be an audio file, or it is damaged. "
+"({detail})"
+msgstr ""
+"“{name}” を読み込めませんでした。音声ファイルではないか、破損している可能性が"
+"あります。({detail})"
+
+#. Translators: {name} is a service name such as Groq.
+#: src/kikoe/providers/base.py:91
+#, python-brace-format
+msgid "{name} supports file transcription only."
+msgstr "{name} はファイルの文字起こしのみ対応しています。"
+
+#: src/kikoe/providers/deepgram.py:204
+#, python-brace-format
+msgid "Deepgram rejected realtime transcription: {message}"
+msgstr "Deepgram がリアルタイム文字起こしを拒否しました: {message}"
+
+#: src/kikoe/providers/deepgram.py:209
+#: src/kikoe/providers/mistral_realtime.py:119
+msgid ""
+"The provider rejected realtime transcription. Check the model and API key."
+msgstr ""
+"プロバイダーがリアルタイム文字起こしを拒否しました。モデルと API キーを確認し"
+"てください。"
+
+#: src/kikoe/providers/errors.py:36
+#, python-brace-format
+msgid "{host} sent a response Kikoe does not understand."
+msgstr "{host} から Kikoe が認識できない応答が返されました。"
+
+#: src/kikoe/providers/errors.py:59
+#, python-brace-format
+msgid "{subject} rejected the API key. Check it in Preferences."
+msgstr "{subject} が API キーを拒否しました。設定で確認してください。"
+
+#: src/kikoe/providers/errors.py:62
+#, python-brace-format
+msgid ""
+"{subject} does not allow this API key to use this model, or is not available "
+"in your region. Check your account and the key in Preferences."
+msgstr ""
+"{subject} ではこの API キーでこのモデルを利用できないか、お住まいの地域では利"
+"用できません。アカウントと設定内のキーを確認してください。"
+
+#: src/kikoe/providers/errors.py:66
+#, python-brace-format
+msgid "{subject} reports that your account has run out of credits."
+msgstr "{subject} によると、アカウントのクレジットが不足しています。"
+
+#: src/kikoe/providers/errors.py:68
+#, python-brace-format
+msgid "{subject} could not find this model. Check the model name."
+msgstr ""
+"{subject} でこのモデルが見つかりませんでした。モデル名を確認してください。"
+
+#: src/kikoe/providers/errors.py:70
+#, python-brace-format
+msgid "{subject} took too long to respond. Try again later."
+msgstr "{subject} の応答がタイムアウトしました。後でもう一度お試しください。"
+
+#: src/kikoe/providers/errors.py:72
+#, python-brace-format
+msgid "The audio is too large for {subject}."
+msgstr "この音声は {subject} に送信するには大きすぎます。"
+
+#: src/kikoe/providers/errors.py:75
+#, python-brace-format
+msgid ""
+"{subject} is limiting requests, or your quota is used up. Wait a while and "
+"try again, or check your plan."
+msgstr ""
+"{subject} がリクエストを制限しているか、割り当てを使い切りました。しばらく"
+"待って再試行するか、プランを確認してください。"
+
+#: src/kikoe/providers/errors.py:79
+#, python-brace-format
+msgid "{subject} is having problems (HTTP {status}). Try again later."
+msgstr ""
+"{subject} で問題が発生しています (HTTP {status})。後でもう一度お試しくださ"
+"い。"
+
+#: src/kikoe/providers/errors.py:81
+#, python-brace-format
+msgid "{subject} could not process this audio (HTTP {status})."
+msgstr "{subject} がこの音声を処理できませんでした (HTTP {status})。"
+
+#: src/kikoe/providers/errors.py:84
+#, python-brace-format
+msgid ""
+"{subject} rejected this request (HTTP {status}). Check the model and options."
+msgstr ""
+"{subject} がリクエストを拒否しました (HTTP {status})。モデルとオプションを確"
+"認してください。"
+
+#: src/kikoe/providers/errors.py:87
+#, python-brace-format
+msgid "{subject} returned an unexpected error (HTTP {status})."
+msgstr "{subject} から予期しないエラーが返されました (HTTP {status})。"
+
+#: src/kikoe/providers/errors.py:92
+#, python-brace-format
+msgid "{message} Details: {detail}"
+msgstr "{message} 詳細: {detail}"
+
+#: src/kikoe/providers/errors.py:100
+msgid "The provider sent a response Kikoe does not understand."
+msgstr "プロバイダーから Kikoe が認識できない応答が返されました。"
+
+#: src/kikoe/providers/errors.py:104
+msgid "The provider"
+msgstr "プロバイダー"
+
+#: src/kikoe/providers/errors.py:106
+msgid "Could not complete transcription. Check your connection and try again."
+msgstr ""
+"文字起こしを完了できませんでした。接続を確認してもう一度お試しください。"
+
+#: src/kikoe/providers/errors.py:120 src/kikoe/providers/mistral.py:100
+#, python-brace-format
+msgid "{host} took too long to respond. Try again later."
+msgstr "{host} の応答がタイムアウトしました。後でもう一度お試しください。"
+
+#: src/kikoe/providers/errors.py:122 src/kikoe/providers/mistral.py:103
+#: src/kikoe/providers/mistral.py:146
+#, python-brace-format
+msgid "Could not reach {host}. Try again later."
+msgstr "{host} に接続できませんでした。後でもう一度お試しください。"
+
+#: src/kikoe/providers/errors.py:125
+#, python-brace-format
+msgid "{host} could not finish transcription: {message}"
+msgstr "{host} が文字起こしを完了できませんでした: {message}"
+
+#: src/kikoe/providers/mistral_file_stream.py:61
+#: src/kikoe/providers/openai_file_stream.py:66
+msgid "Transcription ended before it was complete. Try again."
+msgstr "文字起こしが完了する前に終了しました。もう一度お試しください。"
+
+#: src/kikoe/providers/mistral_realtime.py:114
+#, python-brace-format
+msgid "Mistral rejected realtime transcription: {message}"
+msgstr "Mistral がリアルタイム文字起こしを拒否しました: {message}"
+
+#: src/kikoe/providers/openai.py:165
+#, python-brace-format
+msgid "{host} rejected the realtime session: {message}"
+msgstr "{host} がリアルタイムセッションを拒否しました: {message}"
+
+#: src/kikoe/providers/openai.py:180
+#, python-brace-format
+msgid ""
+"{host} does not support transcription while recording. Turn off “Transcribe "
+"While Recording” for this model in Preferences."
+msgstr ""
+"{host} は録音中の文字起こしに対応していません。設定でこのモデルの“録音中に文"
+"字起こし”を無効にしてください。"
+
+#: src/kikoe/providers/openai.py:242
+msgid "Realtime transcription failed. Your audio has been kept."
+msgstr "リアルタイム文字起こしに失敗しました。音声は保存されています。"
+
+#: src/kikoe/services/file_transcription.py:120
+msgid "Choose a file transcription model to retry this recording."
+msgstr "この録音を再試行するにはファイル文字起こしモデルを選択してください。"
+
+#: src/kikoe/services/importer.py:74 src/kikoe/ui/bottom_bar.py:166
+msgid "Choose a file transcription model to import audio."
+msgstr "音声をインポートするにはファイル文字起こしモデルを選択してください。"
+
+#: src/kikoe/services/importer.py:258
+msgid "The chunk size is too small for this audio format."
+msgstr "この音声形式には分割サイズが小さすぎます。"
+
+#: src/kikoe/storage/audio_files.py:33
+#, python-brace-format
+msgid "Could not copy the audio file into the library: {error}"
+msgstr "音声ファイルをライブラリにコピーできませんでした: {error}"
+
+#: src/kikoe/storage/captures.py:142
+msgid "Could not read the saved transcript. Its audio has been kept."
+msgstr "保存済みの文字起こしを読み込めませんでした。音声は保存されています。"
+
+#: src/kikoe/storage/captures.py:167
+#, python-brace-format
+msgid "Could not read a saved recording. Its audio has been kept. ({detail})"
+msgstr ""
+"保存済みの録音を読み込めませんでした。音声は保存されています。({detail})"
+
+#: src/kikoe/storage/captures.py:231
+#, python-brace-format
+msgid "Could not save the recording. ({detail})"
+msgstr "録音を保存できませんでした。({detail})"
+
+#: src/kikoe/storage/library.py:67
+msgid ""
+"The note library was created by a newer version of Kikoe. Update Kikoe to "
+"open it."
+msgstr ""
+"このノートライブラリは新しいバージョンの Kikoe で作成されています。開くには "
+"Kikoe を更新してください。"
+
+#: src/kikoe/storage/library.py:182 src/kikoe/storage/library.py:295
+#: src/kikoe/storage/library.py:317
+msgid "This recording no longer exists."
+msgstr "この録音はもう存在しません。"
+
+#: src/kikoe/storage/library.py:284
+msgid "Enter transcript text."
+msgstr "文字起こしのテキストを入力してください。"
+
+#: src/kikoe/storage/library.py:286
+msgid "The end time must be after the start time."
+msgstr "終了時刻は開始時刻より後にしてください。"
+
+#: src/kikoe/storage/library.py:301
+msgid "Enter a speaker name."
+msgstr "話者の名前を入力してください。"
+
+#: src/kikoe/storage/library.py:323
+msgid "The speaker selection is no longer available."
+msgstr "選択した話者はもう利用できません。"
+
+#: src/kikoe/storage/library.py:409
+#, python-brace-format
+msgid "The note library could not be read or saved: {error}"
+msgstr "ノートライブラリの読み込みまたは保存に失敗しました: {error}"
+
+#: src/kikoe/storage/note_rows.py:27
+msgid "This note no longer exists."
+msgstr "このノートはもう存在しません。"
+
+#: src/kikoe/storage/providers.py:52
+#, python-brace-format
+msgid "Provider {provider_id} no longer exists."
+msgstr "プロバイダー {provider_id} はもう存在しません。"
+
+#: src/kikoe/storage/providers.py:147
+#, python-brace-format
+msgid "Model {replacing_id} no longer exists."
+msgstr "モデル {replacing_id} はもう存在しません。"
+
+#: src/kikoe/storage/secrets.py:57
+#, python-brace-format
+msgid ""
+"API keys could not be saved because no secure credential store is available. "
+"Details: {error}"
+msgstr ""
+"安全な認証情報ストアがないため、API キーを保存できませんでした。詳細: {error}"
+
+#: src/kikoe/storage/settings.py:63
+#, python-brace-format
+msgid "Could not read the settings file: {error}"
+msgstr "設定ファイルを読み込めませんでした: {error}"
+
+#: src/kikoe/storage/settings.py:75
+#, python-brace-format
+msgid "The settings file {detail} is damaged or not understood: {error}"
+msgstr "設定ファイル {detail} が破損しているか、認識できません: {error}"
+
+#: src/kikoe/storage/settings.py:100
+#, python-brace-format
+msgid "Could not save the settings file: {error}"
+msgstr "設定ファイルを保存できませんでした: {error}"
+
+#: src/kikoe/ui/bottom_bar.py:98
+msgid "_Append Recording"
+msgstr "録音を追加(_A)"
+
+#: src/kikoe/ui/bottom_bar.py:98 src/kikoe/ui/bottom_bar.ui:125
+msgid "_Record"
+msgstr "録音(_R)"
+
+#: src/kikoe/ui/bottom_bar.py:119 src/kikoe/ui/bottom_bar.ui:224
+#: src/kikoe/ui/bottom_bar.ui:227
+msgid "Pause Recording"
+msgstr "録音を一時停止"
+
+#: src/kikoe/ui/bottom_bar.py:119
+msgid "Resume Recording"
+msgstr "録音を再開"
+
+#: src/kikoe/ui/bottom_bar.py:149
+msgid "No Model"
+msgstr "モデルなし"
+
+#: src/kikoe/ui/bottom_bar.py:151
+msgid "Add a model in Preferences first"
+msgstr "まず設定でモデルを追加してください"
+
+#: src/kikoe/ui/bottom_bar.py:152 src/kikoe/ui/bottom_bar.ui:44
+msgid "Transcription Model…"
+msgstr "文字起こしモデル…"
+
+#: src/kikoe/ui/bottom_bar.py:157
+#, python-brace-format
+msgid ""
+"{model} · {provider}\n"
+"{hint}"
+msgstr ""
+"{model} · {provider}\n"
+"{hint}"
+
+#: src/kikoe/ui/bottom_bar.py:164 src/kikoe/ui/bottom_bar.ui:90
+#: src/kikoe/ui/shortcuts.ui:27
+msgid "Import Audio…"
+msgstr "音声をインポート…"
+
+#: src/kikoe/ui/bottom_bar.ui:46 src/kikoe/ui/transcription_dialog.ui:10
+msgid "Transcription Model"
+msgstr "文字起こしモデル"
+
+#: src/kikoe/ui/bottom_bar.ui:92 src/kikoe/ui/file_dialogs.py:68
+msgid "Import Audio"
+msgstr "音声をインポート"
+
+#: src/kikoe/ui/bottom_bar.ui:104 src/kikoe/ui/sidebar_header.ui:49
+#: src/kikoe/ui/window.ui:266
+msgid "_Import Audio…"
+msgstr "音声をインポート…(_I)"
+
+#: src/kikoe/ui/bottom_bar.ui:158 src/kikoe/ui/dialogs.py:66
+#: src/kikoe/ui/export_dialog.ui:21 src/kikoe/ui/model_dialog.ui:21
+#: src/kikoe/ui/note_actions.py:56 src/kikoe/ui/retranscribe_dialog.ui:21
+#: src/kikoe/ui/speaker_dialog.ui:21 src/kikoe/ui/speaker_editor.ui:20
+msgid "_Cancel"
+msgstr "キャンセル(_C)"
+
+#: src/kikoe/ui/bottom_bar.ui:243
+msgid "_Stop"
+msgstr "停止(_S)"
+
+#: src/kikoe/ui/content_header.ui:14
+#: src/kikoe/ui/transcription_controller.py:323 src/kikoe/ui/window.py:388
+#: src/kikoe/ui/window.ui:10 src/kikoe/ui/window.ui:37
+#: src/kikoe/ui/window.ui:119 src/kikoe/ui/window.ui:130
+msgid "Kikoe"
+msgstr "Kikoe"
+
+#: src/kikoe/ui/content_header.ui:20 src/kikoe/ui/content_header.ui:24
+#: src/kikoe/ui/shortcuts.ui:56 src/kikoe/ui/window.ui:136
+#: src/kikoe/ui/window.ui:140
+msgid "Undo"
+msgstr "元に戻す"
+
+#: src/kikoe/ui/content_header.ui:31 src/kikoe/ui/content_header.ui:35
+#: src/kikoe/ui/shortcuts.ui:62 src/kikoe/ui/window.ui:147
+#: src/kikoe/ui/window.ui:151
+msgid "Redo"
+msgstr "やり直す"
+
+#: src/kikoe/ui/content_header.ui:42 src/kikoe/ui/content_header.ui:44
+#: src/kikoe/ui/window.ui:158 src/kikoe/ui/window.ui:160
+msgid "Note Menu"
+msgstr "ノートメニュー"
+
+#: src/kikoe/ui/content_header.ui:54 src/kikoe/ui/content_header.ui:56
+#: src/kikoe/ui/window.ui:170 src/kikoe/ui/window.ui:172
+msgid "Display Options"
+msgstr "表示オプション"
+
+#: src/kikoe/ui/content_header.ui:68 src/kikoe/ui/export_dialog.ui:106
+#: src/kikoe/ui/window.ui:288
+msgid "Show _Timestamps"
+msgstr "タイムスタンプを表示(_T)"
+
+#: src/kikoe/ui/content_header.ui:72 src/kikoe/ui/export_dialog.ui:113
+#: src/kikoe/ui/window.ui:292
+msgid "Show _Speakers"
+msgstr "話者を表示(_S)"
+
+#: src/kikoe/ui/content_header.ui:80 src/kikoe/ui/note_sidebar.py:172
+#: src/kikoe/ui/window.ui:300
+msgid "_Rename…"
+msgstr "名前を変更…(_R)"
+
+#: src/kikoe/ui/content_header.ui:84 src/kikoe/ui/window.ui:304
+msgid "_Copy All Text"
+msgstr "すべてのテキストをコピー(_C)"
+
+#: src/kikoe/ui/content_header.ui:88 src/kikoe/ui/export_dialog.ui:28
+#: src/kikoe/ui/window.ui:308
+msgid "_Export…"
+msgstr "エクスポート…(_E)"
+
+#: src/kikoe/ui/content_header.ui:94 src/kikoe/ui/note_sidebar.py:174
+#: src/kikoe/ui/window.ui:314
+msgid "_Delete Note"
+msgstr "ノートを削除(_D)"
+
+#: src/kikoe/ui/dialogs.py:51
+msgid "Discard Changes?"
+msgstr "変更を破棄しますか？"
+
+#: src/kikoe/ui/dialogs.py:52
+msgid "Your changes have not been saved and will be lost."
+msgstr "変更は保存されておらず、失われます。"
+
+#: src/kikoe/ui/dialogs.py:53
+msgid "_Keep Editing"
+msgstr "編集を続ける(_K)"
+
+#: src/kikoe/ui/dialogs.py:54
+msgid "_Discard"
+msgstr "破棄(_D)"
+
+#: src/kikoe/ui/export_controller.py:62
+msgid "Copied to clipboard"
+msgstr "クリップボードにコピーしました"
+
+#: src/kikoe/ui/export_controller.py:70 src/kikoe/ui/export_dialog.ui:10
+msgid "Export Note"
+msgstr "ノートをエクスポート"
+
+#: src/kikoe/ui/export_controller.py:83 src/kikoe/ui/note_actions.py:86
+msgid "This recording is no longer available."
+msgstr "この録音はもう利用できません。"
+
+#: src/kikoe/ui/export_controller.py:94
+msgid "Export Original Audio"
+msgstr "元の音声をエクスポート"
+
+#: src/kikoe/ui/export_controller.py:96
+msgid "Audio Files"
+msgstr "音声ファイル"
+
+#: src/kikoe/ui/export_controller.py:99 src/kikoe/ui/speaker_controller.py:56
+#: src/kikoe/ui/transcription_controller.py:160
+msgid "The original audio is not available."
+msgstr "元の音声は利用できません。"
+
+#: src/kikoe/ui/export_controller.py:122
+#, python-brace-format
+msgid "Could not save “{name}”: {error}"
+msgstr "“{name}” を保存できませんでした: {error}"
+
+#: src/kikoe/ui/export_controller.py:125
+#, python-brace-format
+msgid "Exported “{name}”"
+msgstr "“{name}” をエクスポートしました"
+
+#: src/kikoe/ui/export_dialog.py:45
+msgid "This note has no speakers"
+msgstr "このノートには話者がいません"
+
+#: src/kikoe/ui/export_dialog.py:48
+#, python-brace-format
+msgid "{extension} · Unavailable because this note has no timestamps"
+msgstr "{extension} · このノートにタイムスタンプがないため利用できません"
+
+#: src/kikoe/ui/export_dialog.py:82
+msgid "Always included in subtitle formats"
+msgstr "字幕形式には必ず含まれます"
+
+#: src/kikoe/ui/export_dialog.py:86
+msgid "This note has no timestamps"
+msgstr "このノートにはタイムスタンプがありません"
+
+#: src/kikoe/ui/export_dialog.ui:42
+msgid "Format"
+msgstr "形式"
+
+#: src/kikoe/ui/export_dialog.ui:45
+msgid "Plain Text"
+msgstr "プレーンテキスト"
+
+#: src/kikoe/ui/export_dialog.ui:59
+msgid "Markdown"
+msgstr "Markdown"
+
+#: src/kikoe/ui/export_dialog.ui:73
+msgid "SRT Subtitles"
+msgstr "SRT 字幕"
+
+#: src/kikoe/ui/export_dialog.ui:87
+msgid "WebVTT Subtitles"
+msgstr "WebVTT 字幕"
+
+#: src/kikoe/ui/export_dialog.ui:103 src/kikoe/ui/options_group.ui:10
+msgid "Options"
+msgstr "オプション"
+
+#: src/kikoe/ui/file_dialogs.py:48
+msgid "All Files"
+msgstr "すべてのファイル"
+
+#: src/kikoe/ui/file_dialogs.py:57
+msgid "Only locations on this computer can be used."
+msgstr "このコンピューター上の場所のみ利用できます。"
+
+#: src/kikoe/ui/file_dialogs.py:63
+msgid "Audio and Video"
+msgstr "音声と動画"
+
+#: src/kikoe/ui/file_dialogs.py:70
+msgid "Only files on this computer can be imported."
+msgstr "このコンピューター上のファイルのみインポートできます。"
+
+#: src/kikoe/ui/labels.py:29
+msgid "OpenAI-compatible"
+msgstr "OpenAI 互換"
+
+#: src/kikoe/ui/labels.py:34
+msgid "Maximum 60 minutes, or 30 with timestamps or speaker detection"
+msgstr "最大 60 分、タイムスタンプまたは話者検出を使用する場合は 30 分"
+
+#: src/kikoe/ui/labels.py:35 src/kikoe/ui/provider_page.ui:95
+msgid "0 uses the provider limit; chunks also respect the size limit"
+msgstr "0 はプロバイダーの上限を使用します。分割にはサイズの上限も適用されます"
+
+#: src/kikoe/ui/labels.py:40
+msgid "Defaults to 25 MB; your server may require smaller chunks"
+msgstr "既定は 25 MB です。サーバーによってはさらに小さい分割が必要です"
+
+#: src/kikoe/ui/labels.py:41
+#, python-brace-format
+msgid "Maximum {size:g} MB per chunk"
+msgstr "分割ごとに最大 {size:g} MB"
+
+#: src/kikoe/ui/labels.py:46
+msgid "Connecting…"
+msgstr "接続中…"
+
+#: src/kikoe/ui/labels.py:47
+msgid "In progress"
+msgstr "処理中"
+
+#: src/kikoe/ui/labels.py:48
+msgid "Reconnecting… Audio is saved locally"
+msgstr "再接続中… 音声はローカルに保存されています"
+
+#: src/kikoe/ui/labels.py:49
+msgid "Catching up…"
+msgstr "遅れを処理中…"
+
+#: src/kikoe/ui/labels.py:50
+msgid "Transcription incomplete"
+msgstr "文字起こし未完了"
+
+#: src/kikoe/ui/labels.py:51 src/kikoe/ui/labels.py:56
+#: src/kikoe/ui/recording_view.py:33
+msgid "Paused"
+msgstr "一時停止中"
+
+#: src/kikoe/ui/labels.py:56 src/kikoe/ui/recording_view.py:24
+#: src/kikoe/ui/recording_view.py:33 src/kikoe/ui/recording_view.ui:69
+msgid "Recording"
+msgstr "録音"
+
+#: src/kikoe/ui/labels.py:62
+msgid "Realtime"
+msgstr "リアルタイム"
+
+#: src/kikoe/ui/labels.py:64 src/kikoe/ui/model_dialog.ui:79
+#: src/kikoe/ui/model_dialog.ui:140 src/kikoe/ui/recording_controller.py:164
+msgid "Timestamps"
+msgstr "タイムスタンプ"
+
+#: src/kikoe/ui/labels.py:66 src/kikoe/ui/model_dialog.ui:92
+msgid "Word Timestamps"
+msgstr "単語のタイムスタンプ"
+
+#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:166
+msgid "Speakers"
+msgstr "話者"
+
+#: src/kikoe/ui/labels.py:70
+msgid "Streaming"
+msgstr "ストリーミング"
+
+#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:170
+msgid "Text only"
+msgstr "テキストのみ"
+
+#: src/kikoe/ui/labels.py:82
+msgid "Plain Text (.txt)"
+msgstr "プレーンテキスト (.txt)"
+
+#: src/kikoe/ui/labels.py:84
+msgid "Markdown (.md)"
+msgstr "Markdown (.md)"
+
+#: src/kikoe/ui/labels.py:86
+msgid "SRT Subtitles (.srt)"
+msgstr "SRT 字幕 (.srt)"
+
+#: src/kikoe/ui/labels.py:88
+msgid "WebVTT Subtitles (.vtt)"
+msgstr "WebVTT 字幕 (.vtt)"
+
+#: src/kikoe/ui/labels.py:94
+msgid "Enter a name for this provider."
+msgstr "プロバイダー名を入力してください。"
+
+#: src/kikoe/ui/labels.py:96
+msgid "Enter the base URL of the API."
+msgstr "API のベース URL を入力してください。"
+
+#: src/kikoe/ui/labels.py:98
+msgid ""
+"The base URL must start with http:// or https:// and include a host name."
+msgstr ""
+"ベース URL は http:// または https:// で始まり、ホスト名を含む必要がありま"
+"す。"
+
+#: src/kikoe/ui/labels.py:104
+msgid "Enter the model ID."
+msgstr "モデル ID を入力してください。"
+
+#: src/kikoe/ui/labels.py:106
+msgid "This provider already has a model with that ID."
+msgstr "このプロバイダーには同じ ID のモデルが既にあります。"
+
+#: src/kikoe/ui/labels.py:108
+msgid "Turn on file or realtime transcription."
+msgstr "ファイルまたはリアルタイム文字起こしを有効にしてください。"
+
+#: src/kikoe/ui/labels.py:116
+msgid "%H:%M"
+msgstr "%H:%M"
+
+#. Translators: {time} is a time of day formatted with the “%H:%M” string below.
+#: src/kikoe/ui/labels.py:116
+#, python-brace-format
+msgid "Today {time}"
+msgstr "今日 {time}"
+
+#: src/kikoe/ui/labels.py:118
+msgid "Yesterday"
+msgstr "昨日"
+
+#. Translators: date in this year, see the GLib.DateTime.format documentation.
+#: src/kikoe/ui/labels.py:121
+msgid "%b %-d"
+msgstr "%-m月%-d日"
+
+#. Translators: date in another year, see the GLib.DateTime.format documentation.
+#: src/kikoe/ui/labels.py:124
+msgid "%b %-d, %Y"
+msgstr "%Y年%-m月%-d日"
+
+#: src/kikoe/ui/labels.py:129
+msgid "%b %-d %H:%M"
+msgstr "%-m月%-d日 %H:%M"
+
+#: src/kikoe/ui/labels.py:129
+#, python-brace-format
+msgid "{date} Recording"
+msgstr "{date} の録音"
+
+#: src/kikoe/ui/labels.py:139
+msgid "Imported audio"
+msgstr "インポートした音声"
+
+#: src/kikoe/ui/labels.py:147
+msgid "No recordings"
+msgstr "録音なし"
+
+#: src/kikoe/ui/labels.py:152
+#, python-brace-format
+msgid "{count} recording"
+msgid_plural "{count} recordings"
+msgstr[0] "{count} 件の録音"
+
+#: src/kikoe/ui/labels.py:189
+#, python-brace-format
+msgid "Converting part {part} of {parts}…"
+msgstr "{parts} 個中 {part} 個目を変換中…"
+
+#: src/kikoe/ui/labels.py:191
+msgid "Converting audio…"
+msgstr "音声を変換中…"
+
+#: src/kikoe/ui/labels.py:193
+#, python-brace-format
+msgid "Transcribing… {part} of {parts} chunks complete"
+msgstr "文字起こし中… {parts} 個中 {part} 個の分割を完了"
+
+#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:175
+#: src/kikoe/ui/transcription_controller.py:261
+#: src/kikoe/ui/transcription_controller.py:308
+msgid "Transcribing…"
+msgstr "文字起こし中…"
+
+#: src/kikoe/ui/labels.py:199
+msgid "Saving…"
+msgstr "保存中…"
+
+#: src/kikoe/ui/labels.py:204
+msgid "Not supported by this model"
+msgstr "このモデルでは非対応"
+
+#: src/kikoe/ui/labels.py:210
+msgid "Transcribes while recording"
+msgstr "録音中に文字起こし"
+
+#: src/kikoe/ui/labels.py:211
+msgid "Transcribes after recording"
+msgstr "録音後に文字起こし"
+
+#: src/kikoe/ui/labels.py:219
+#, python-brace-format
+msgid "{mode} · This model does not support {features}"
+msgstr "{mode} · このモデルは {features} に対応していません"
+
+#: src/kikoe/ui/labels.py:229
+msgid "realtime transcription"
+msgstr "リアルタイム文字起こし"
+
+#: src/kikoe/ui/labels.py:231
+msgid "timestamps"
+msgstr "タイムスタンプ"
+
+#: src/kikoe/ui/labels.py:233
+msgid "word timestamps"
+msgstr "単語のタイムスタンプ"
+
+#: src/kikoe/ui/labels.py:235
+msgid "speaker detection"
+msgstr "話者検出"
+
+#: src/kikoe/ui/labels.py:237
+msgid "streaming preview"
+msgstr "ストリーミングプレビュー"
+
+#: src/kikoe/ui/labels.py:241
+#, python-brace-format
+msgid "{provider} · {model}"
+msgstr "{provider} · {model}"
+
+#: src/kikoe/ui/level_meter.ui:16
+msgid "Microphone Level"
+msgstr "マイクレベル"
+
+#: src/kikoe/ui/model_dialog.py:64 src/kikoe/ui/provider_page.py:115
+#: src/kikoe/ui/provider_page.py:119
+msgid "Edit Model"
+msgstr "モデルを編集"
+
+#: src/kikoe/ui/model_dialog.py:65 src/kikoe/ui/speaker_editor.ui:27
+msgid "_Save"
+msgstr "保存(_S)"
+
+#: src/kikoe/ui/model_dialog.py:146 src/kikoe/ui/model_dialog.py:160
+msgid "This model does not support this option."
+msgstr "このモデルはこのオプションに対応していません。"
+
+#: src/kikoe/ui/model_dialog.ui:10
+msgid "Add Model"
+msgstr "モデルを追加"
+
+#: src/kikoe/ui/model_dialog.ui:28 src/kikoe/ui/provider_page.ui:18
+msgid "_Add"
+msgstr "追加(_A)"
+
+#: src/kikoe/ui/model_dialog.ui:45
+msgid "Model ID"
+msgstr "モデル ID"
+
+#: src/kikoe/ui/model_dialog.ui:50
+msgid "Display Name"
+msgstr "表示名"
+
+#: src/kikoe/ui/model_dialog.ui:68
+msgid "What This Model Supports"
+msgstr "このモデルの対応機能"
+
+#: src/kikoe/ui/model_dialog.ui:69
+msgid ""
+"Known models are filled in automatically. Options the provider rejects for "
+"this model are unavailable."
+msgstr ""
+"既知のモデルは自動入力されます。プロバイダーがこのモデルで拒否するオプション"
+"は利用できません。"
+
+#: src/kikoe/ui/model_dialog.ui:72
+msgid "Transcribe _Files"
+msgstr "ファイルを文字起こし(_F)"
+
+#: src/kikoe/ui/model_dialog.ui:73
+msgid "Imported files, and recordings uploaded after they stop."
+msgstr "インポートしたファイルと、録音停止後にアップロードする録音。"
+
+#: src/kikoe/ui/model_dialog.ui:80
+msgid "Each segment carries a time. Needed for subtitle export."
+msgstr "各セグメントに時刻が付きます。字幕のエクスポートに必要です。"
+
+#: src/kikoe/ui/model_dialog.ui:93
+msgid "Times can be requested for single words."
+msgstr "単語ごとの時刻をリクエストできます。"
+
+#: src/kikoe/ui/model_dialog.ui:105 src/kikoe/ui/model_dialog.ui:152
+msgid "Speaker Detection"
+msgstr "話者検出"
+
+#: src/kikoe/ui/model_dialog.ui:106
+msgid "Tells different people apart and labels them."
+msgstr "人物を区別してラベルを付けます。"
+
+#: src/kikoe/ui/model_dialog.ui:118
+msgid "Streaming Preview"
+msgstr "ストリーミングプレビュー"
+
+#: src/kikoe/ui/model_dialog.ui:119
+msgid "Text appears while a file is transcribed."
+msgstr "ファイルの文字起こし中にテキストが表示されます。"
+
+#: src/kikoe/ui/model_dialog.ui:133
+msgid "Transcribe While _Recording"
+msgstr "録音中に文字起こし(_R)"
+
+#: src/kikoe/ui/model_dialog.ui:134
+msgid ""
+"Text appears while recording. If off, the whole recording is uploaded after "
+"it stops."
+msgstr ""
+"録音中にテキストが表示されます。無効の場合は録音停止後に全体をアップロードし"
+"ます。"
+
+#: src/kikoe/ui/model_dialog.ui:171
+msgid "_Remove Model"
+msgstr "モデルを削除(_R)"
+
+#: src/kikoe/ui/note_actions.py:32 src/kikoe/ui/shortcuts.ui:15
+#: src/kikoe/ui/sidebar_header.ui:15 src/kikoe/ui/sidebar_header.ui:17
+#: src/kikoe/ui/window.ui:45 src/kikoe/ui/window.ui:47
+msgid "New Note"
+msgstr "新しいノート"
+
+#: src/kikoe/ui/note_actions.py:49
+msgid "Note Title"
+msgstr "ノートのタイトル"
+
+#: src/kikoe/ui/note_actions.py:56
+msgid "Rename Note"
+msgstr "ノート名を変更"
+
+#: src/kikoe/ui/note_actions.py:56
+msgid "_Rename"
+msgstr "名前を変更(_R)"
+
+#: src/kikoe/ui/note_actions.py:73
+#, python-brace-format
+msgid "Delete “{title}”?"
+msgstr "“{title}” を削除しますか？"
+
+#: src/kikoe/ui/note_actions.py:74 src/kikoe/ui/note_actions.py:93
+msgid ""
+"Its transcript and original audio will be deleted. This cannot be undone."
+msgstr "文字起こしと元の音声が削除されます。この操作は元に戻せません。"
+
+#: src/kikoe/ui/note_actions.py:75 src/kikoe/ui/note_actions.py:94
+msgid "_Delete"
+msgstr "削除(_D)"
+
+#: src/kikoe/ui/note_actions.py:92
+#, python-brace-format
+msgid "Delete Recording {number}?"
+msgstr "録音 {number} を削除しますか？"
+
+#: src/kikoe/ui/note_sidebar.py:87
+msgid "No Matching Notes"
+msgstr "一致するノートはありません"
+
+#: src/kikoe/ui/note_sidebar.py:87 src/kikoe/ui/window.ui:102
+msgid "No Notes Yet"
+msgstr "ノートはまだありません"
+
+#: src/kikoe/ui/note_view.py:312
+#, python-brace-format
+msgid "{status} · {summary}"
+msgstr "{status} · {summary}"
+
+#: src/kikoe/ui/note_view.py:344
+#, python-brace-format
+msgid "Transcribing… · {model}"
+msgstr "文字起こし中… · {model}"
+
+#: src/kikoe/ui/note_view.ui:25 src/kikoe/ui/speaker_editor.ui:49
+#: src/kikoe/ui/transcript_row.py:482
+msgid "Match Speakers…"
+msgstr "話者を対応付け…"
+
+#: src/kikoe/ui/note_view.ui:67
+msgid "No Recordings Yet"
+msgstr "録音はまだありません"
+
+#: src/kikoe/ui/note_view.ui:68
+msgid "Record or import audio to add a transcript to this note."
+msgstr ""
+"音声を録音またはインポートして、このノートに文字起こしを追加してください。"
+
+#: src/kikoe/ui/options_group.ui:13
+msgid "_Timestamps"
+msgstr "タイムスタンプ(_T)"
+
+#: src/kikoe/ui/options_group.ui:20
+msgid "Timestamp _Detail"
+msgstr "タイムスタンプの詳細(_D)"
+
+#: src/kikoe/ui/options_group.ui:26
+msgid "Segments"
+msgstr "セグメント"
+
+#: src/kikoe/ui/options_group.ui:27
+msgid "Words"
+msgstr "単語"
+
+#: src/kikoe/ui/options_group.ui:28
+msgid "Segments and Words"
+msgstr "セグメントと単語"
+
+#: src/kikoe/ui/options_group.ui:36
+msgid "_Speakers"
+msgstr "話者(_S)"
+
+#: src/kikoe/ui/options_group.ui:43
+msgid ""
+"The transcription language is not used while timestamps or speakers are on. "
+"The language is detected automatically."
+msgstr ""
+"タイムスタンプまたは話者が有効な場合、文字起こし言語の指定は使われません。言"
+"語は自動検出されます。"
+
+#: src/kikoe/ui/preferences.py:92
+#, python-brace-format
+msgid "{device} (Unavailable)"
+msgstr "{device} (利用不可)"
+
+#: src/kikoe/ui/preferences.py:96
+msgid "System Default"
+msgstr "システムの既定"
+
+#: src/kikoe/ui/preferences.py:132
+msgid "No Default Model"
+msgstr "既定のモデルなし"
+
+#: src/kikoe/ui/preferences.py:215 src/kikoe/ui/preferences.ui:39
+msgid "Enter a language code such as zh, en, or ja."
+msgstr "zh、en、ja などの言語コードを入力してください。"
+
+#: src/kikoe/ui/preferences.py:230
+#, python-brace-format
+msgid "{api} API · {count} model"
+msgid_plural "{api} API · {count} models"
+msgstr[0] "{api} API · {count} 個のモデル"
+
+#: src/kikoe/ui/preferences.ui:10 src/kikoe/ui/shortcuts.ui:97
+msgid "Preferences"
+msgstr "設定"
+
+#: src/kikoe/ui/preferences.ui:17 src/kikoe/ui/shortcuts.ui:88
+msgid "General"
+msgstr "一般"
+
+#: src/kikoe/ui/preferences.ui:21
+msgid "Transcription"
+msgstr "文字起こし"
+
+#: src/kikoe/ui/preferences.ui:22
+msgid ""
+"Defaults for the next transcription. Language is detected automatically when "
+"left empty. To set it, enter a language code such as zh, en, or ja."
+msgstr ""
+"次回の文字起こしの既定値です。空欄の場合は言語を自動検出します。指定するには "
+"zh、en、ja などの言語コードを入力してください。"
+
+#: src/kikoe/ui/preferences.ui:25
+msgid "Default Model"
+msgstr "既定のモデル"
+
+#: src/kikoe/ui/preferences.ui:32
+msgid "Transcription Language"
+msgstr "文字起こしの言語"
+
+#: src/kikoe/ui/preferences.ui:53
+msgid "Audio"
+msgstr "音声"
+
+#: src/kikoe/ui/preferences.ui:56
+msgid "Microphone"
+msgstr "マイク"
+
+#: src/kikoe/ui/preferences.ui:57
+msgid "Used for new recordings"
+msgstr "新しい録音に使用"
+
+#: src/kikoe/ui/preferences.ui:64
+msgid "Audio Output"
+msgstr "音声出力"
+
+#: src/kikoe/ui/preferences.ui:65
+msgid "Used for playback"
+msgstr "再生に使用"
+
+#: src/kikoe/ui/preferences.ui:74
+msgid "Storage"
+msgstr "ストレージ"
+
+#: src/kikoe/ui/preferences.ui:77
+msgid "Data Folder"
+msgstr "データフォルダー"
+
+#: src/kikoe/ui/preferences.ui:93
+msgid "Troubleshooting"
+msgstr "トラブルシューティング"
+
+#: src/kikoe/ui/preferences.ui:94
+msgid ""
+"Logs stay on this device. Nothing is uploaded automatically. You can attach "
+"a log when reporting a problem."
+msgstr ""
+"ログはこのデバイスに保存され、自動ではアップロードされません。問題を報告する"
+"際にログを添付できます。"
+
+#: src/kikoe/ui/preferences.ui:97
+msgid "Log Folder"
+msgstr "ログフォルダー"
+
+#: src/kikoe/ui/preferences.ui:116 src/kikoe/ui/preferences.ui:120
+msgid "Providers"
+msgstr "プロバイダー"
+
+#: src/kikoe/ui/preferences.ui:121
+msgid ""
+"Transcription happens in the cloud. A provider can offer several models."
+msgstr ""
+"文字起こしはクラウドで行われます。プロバイダーは複数のモデルを提供できます。"
+
+#: src/kikoe/ui/preferences.ui:129 src/kikoe/ui/window.ui:225
+msgid "_Add Provider"
+msgstr "プロバイダーを追加(_A)"
+
+#: src/kikoe/ui/preferences.ui:143
+msgid "No Providers Yet"
+msgstr "プロバイダーはまだありません"
+
+#: src/kikoe/ui/provider_page.py:274
+#, python-brace-format
+msgid "Remove “{name}”?"
+msgstr "“{name}” を削除しますか？"
+
+#: src/kikoe/ui/provider_page.py:275
+msgid "Its models and API key will be deleted."
+msgstr "モデルと API キーが削除されます。"
+
+#: src/kikoe/ui/provider_page.py:276
+msgid "_Remove"
+msgstr "削除(_R)"
+
+#: src/kikoe/ui/provider_page.ui:10
+msgid "Add Provider"
+msgstr "プロバイダーを追加"
+
+#: src/kikoe/ui/provider_page.ui:32
+msgid "Connection"
+msgstr "接続"
+
+#: src/kikoe/ui/provider_page.ui:33
+msgid ""
+"The API type decides the request format. Most providers offer an “OpenAI-"
+"compatible” API."
+msgstr ""
+"API の種類がリクエスト形式を決めます。多くのプロバイダーは“OpenAI 互換”の "
+"API を提供しています。"
+
+#: src/kikoe/ui/provider_page.ui:36 src/kikoe/ui/speaker_editor.ui:43
+msgid "Name"
+msgstr "名前"
+
+#: src/kikoe/ui/provider_page.ui:42
+msgid "API Type"
+msgstr "API の種類"
+
+#: src/kikoe/ui/provider_page.ui:48
+msgid "Base URL"
+msgstr "ベース URL"
+
+#: src/kikoe/ui/provider_page.ui:55
+msgid "API Key"
+msgstr "API キー"
+
+#: src/kikoe/ui/provider_page.ui:76
+msgid "File Transcription"
+msgstr "ファイル文字起こし"
+
+#: src/kikoe/ui/provider_page.ui:77
+msgid ""
+"Applies to imported audio, recordings transcribed after stopping, and re-"
+"transcription. Smaller chunks allow more parallel requests."
+msgstr ""
+"インポートした音声、録音停止後の文字起こし、再文字起こしに適用されます。分割"
+"を小さくすると並列リクエストを増やせます。"
+
+#: src/kikoe/ui/provider_page.ui:80
+msgid "Parallel Requests"
+msgstr "並列リクエスト数"
+
+#: src/kikoe/ui/provider_page.ui:81
+msgid "1 processes chunks one at a time; account rate limits still apply"
+msgstr ""
+"1 は分割を順番に処理します。アカウントのレート制限は引き続き適用されます"
+
+#: src/kikoe/ui/provider_page.ui:94
+msgid "Chunk Length (Minutes)"
+msgstr "分割の長さ (分)"
+
+#: src/kikoe/ui/provider_page.ui:109
+msgid "Chunk Size (MB)"
+msgstr "分割のサイズ (MB)"
+
+#: src/kikoe/ui/provider_page.ui:123
+msgid "Audio Format"
+msgstr "音声形式"
+
+#: src/kikoe/ui/provider_page.ui:129
+msgid "Reset Transcription Defaults"
+msgstr "文字起こしの既定値をリセット"
+
+#: src/kikoe/ui/provider_page.ui:137
+msgid "Models"
+msgstr "モデル"
+
+#: src/kikoe/ui/provider_page.ui:138
+msgid "What each model can do is set when you add it."
+msgstr "各モデルの機能は追加時に設定します。"
+
+#: src/kikoe/ui/provider_page.ui:147
+msgid "Add _Model"
+msgstr "モデルを追加(_M)"
+
+#: src/kikoe/ui/provider_page.ui:161
+msgid "No Models Yet"
+msgstr "モデルはまだありません"
+
+#: src/kikoe/ui/provider_page.ui:178
+msgid "_Remove Provider"
+msgstr "プロバイダーを削除(_R)"
+
+#: src/kikoe/ui/recording_controller.py:147
+msgid "No audio was recorded"
+msgstr "音声が録音されていません"
+
+#: src/kikoe/ui/recording_controller.py:167
+#, python-brace-format
+msgid "{provider} {model} · {options}"
+msgstr "{provider} {model} · {options}"
+
+#: src/kikoe/ui/recording_controller.py:179
+msgid "Saving recording…"
+msgstr "録音を保存中…"
+
+#: src/kikoe/ui/recording_controller.py:187 src/kikoe/ui/tasks.py:59
+msgid "An unexpected error occurred. See the local log for details."
+msgstr ""
+"予期しないエラーが発生しました。詳細はローカルのログを確認してください。"
+
+#: src/kikoe/ui/recording_controller.py:221
+msgid "Recovering recordings…"
+msgstr "録音を復元中…"
+
+#: src/kikoe/ui/recording_header.ui:31 src/kikoe/ui/recording_header.ui:34
+#: src/kikoe/ui/transcript_header.ui:31 src/kikoe/ui/transcript_header.ui:34
+#: src/kikoe/ui/transcript_row.py:273 src/kikoe/ui/transcript_row.ui:38
+#: src/kikoe/ui/transcript_row.ui:41
+msgid "Play This Recording"
+msgstr "この録音を再生"
+
+#: src/kikoe/ui/recording_header.ui:45 src/kikoe/ui/recording_header.ui:49
+#: src/kikoe/ui/transcript_header.ui:45 src/kikoe/ui/transcript_header.ui:49
+#: src/kikoe/ui/transcript_row.ui:52 src/kikoe/ui/transcript_row.ui:56
+msgid "Recording Menu"
+msgstr "録音メニュー"
+
+#: src/kikoe/ui/recording_header.ui:87 src/kikoe/ui/transcript_header.ui:87
+#: src/kikoe/ui/transcript_row.ui:94
+msgid "_Retry Transcription"
+msgstr "文字起こしを再試行(_R)"
+
+#: src/kikoe/ui/recording_view.py:22 src/kikoe/ui/transcript_row.py:179
+#, python-brace-format
+msgid "Recording {number}"
+msgstr "録音 {number}"
+
+#: src/kikoe/ui/recording_view.py:23
+#, python-brace-format
+msgid "In progress · {summary}"
+msgstr "処理中 · {summary}"
+
+#: src/kikoe/ui/recording_view.py:27
+#, python-brace-format
+msgid ""
+"Kikoe will upload the audio to {model} and transcribe it automatically after "
+"you stop. The text will appear here."
+msgstr ""
+"停止後に Kikoe が音声を {model} にアップロードし、自動で文字起こしします。テ"
+"キストはここに表示されます。"
+
+#: src/kikoe/ui/recovery_prompt.py:14
+msgid "Recover Recordings?"
+msgstr "録音を復元しますか？"
+
+#: src/kikoe/ui/recovery_prompt.py:16
+msgid ""
+"Kikoe found unfinished recordings. Recover their audio now, then choose a "
+"model to transcribe them."
+msgstr ""
+"Kikoe が未完了の録音を見つけました。音声を復元してから、文字起こしに使うモデ"
+"ルを選択してください。"
+
+#: src/kikoe/ui/recovery_prompt.py:19
+msgid "_Later"
+msgstr "後で(_L)"
+
+#: src/kikoe/ui/recovery_prompt.py:20
+msgid "_Recover"
+msgstr "復元(_R)"
+
+#: src/kikoe/ui/retranscribe_dialog.py:47
+#, python-brace-format
+msgid ""
+"Re-transcribe “Recording {number}” ({duration}) from the kept original "
+"audio. Timestamps or speaker detection that were off during transcription "
+"can be added this way."
+msgstr ""
+"保存された元の音声から“録音 {number}” ({duration}) を再文字起こしします。以前"
+"無効だったタイムスタンプや話者検出を追加できます。"
+
+#: src/kikoe/ui/retranscribe_dialog.py:61
+msgid "Choose a File Model…"
+msgstr "ファイルモデルを選択…"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:10
+msgid "Re-transcribe"
+msgstr "再文字起こし"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:28
+msgid "_Transcribe"
+msgstr "文字起こし(_T)"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:44
+#: src/kikoe/ui/transcription_dialog.py:52
+msgid "Model"
+msgstr "モデル"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:64
+msgid "Existing Text Is Replaced"
+msgstr "既存のテキストを置き換えます"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:65
+msgid ""
+"The text of this recording will be replaced, including any manual edits. "
+"Other recordings in the note are not affected. Speaker names are kept where "
+"possible."
+msgstr ""
+"この録音のテキストは手動編集も含めて置き換えられます。ノート内のほかの録音に"
+"は影響しません。話者名は可能な限り保持します。"
+
+#: src/kikoe/ui/segment_editor.ui:26 src/kikoe/ui/segment_text.ui:19
+#: src/kikoe/ui/transcript_preview.ui:78
+msgid "Transcript Text"
+msgstr "文字起こしのテキスト"
+
+#: src/kikoe/ui/shortcuts.ui:12
+msgid "Notes"
+msgstr "ノート"
+
+#: src/kikoe/ui/shortcuts.ui:21 src/kikoe/ui/sidebar_header.ui:36
+#: src/kikoe/ui/sidebar_header.ui:39 src/kikoe/ui/window.ui:66
+#: src/kikoe/ui/window.ui:69 src/kikoe/ui/window.ui:80
+msgid "Search Notes"
+msgstr "ノートを検索"
+
+#: src/kikoe/ui/shortcuts.ui:33
+msgid "Rename Note…"
+msgstr "ノート名を変更…"
+
+#: src/kikoe/ui/shortcuts.ui:39
+msgid "Export Note…"
+msgstr "ノートをエクスポート…"
+
+#: src/kikoe/ui/shortcuts.ui:45
+msgid "Close Search"
+msgstr "検索を閉じる"
+
+#: src/kikoe/ui/shortcuts.ui:53
+msgid "Editing"
+msgstr "編集"
+
+#: src/kikoe/ui/shortcuts.ui:68
+msgid "Next Segment"
+msgstr "次のセグメント"
+
+#: src/kikoe/ui/shortcuts.ui:74
+msgid "New Line in Segment"
+msgstr "セグメント内で改行"
+
+#: src/kikoe/ui/shortcuts.ui:80
+msgid "Revert Unsaved Typing"
+msgstr "未保存の入力を元に戻す"
+
+#: src/kikoe/ui/shortcuts.ui:91 src/kikoe/ui/sidebar_header.ui:26
+#: src/kikoe/ui/sidebar_header.ui:28 src/kikoe/ui/window.ui:56
+#: src/kikoe/ui/window.ui:58
+msgid "Main Menu"
+msgstr "メインメニュー"
+
+#: src/kikoe/ui/shortcuts.ui:103
+msgid "Keyboard Shortcuts"
+msgstr "キーボードショートカット"
+
+#: src/kikoe/ui/shortcuts.ui:109
+msgid "Close Window"
+msgstr "ウィンドウを閉じる"
+
+#: src/kikoe/ui/shortcuts.ui:115
+msgid "Quit"
+msgstr "終了"
+
+#: src/kikoe/ui/sidebar_header.ui:55 src/kikoe/ui/window.ui:272
+msgid "_Preferences"
+msgstr "設定(_P)"
+
+#: src/kikoe/ui/sidebar_header.ui:59 src/kikoe/ui/window.ui:276
+msgid "_Keyboard Shortcuts"
+msgstr "キーボードショートカット(_K)"
+
+#: src/kikoe/ui/sidebar_header.ui:63 src/kikoe/ui/window.ui:280
+msgid "_About Kikoe"
+msgstr "Kikoe について(_A)"
+
+#: src/kikoe/ui/speaker_banner.py:19
+#, python-brace-format
+msgid "Recording {number} has speakers that are not yet matched."
+msgstr "録音 {number} に未対応付けの話者がいます。"
+
+#: src/kikoe/ui/speaker_controller.py:91
+msgid "This recording has no detected speakers."
+msgstr "この録音では話者が検出されていません。"
+
+#: src/kikoe/ui/speaker_dialog.py:38
+#, python-brace-format
+msgid ""
+"Recording {number} has independently numbered speakers. Listen to the "
+"samples and choose who they are."
+msgstr ""
+"録音 {number} の話者には独立した番号が付いています。サンプルを聴いて人物を選"
+"択してください。"
+
+#: src/kikoe/ui/speaker_dialog.ui:10
+msgid "Match Speakers"
+msgstr "話者を対応付け"
+
+#: src/kikoe/ui/speaker_dialog.ui:28
+msgid "_Apply"
+msgstr "適用(_A)"
+
+#: src/kikoe/ui/speaker_dialog.ui:68
+msgid ""
+"Two numbers can map to the same person. You can rename or re-match a speaker "
+"at any time by clicking their name in the note."
+msgstr ""
+"2 つの番号を同じ人物に対応付けできます。ノート内の名前をクリックすると、いつ"
+"でも話者名や対応付けを変更できます。"
+
+#: src/kikoe/ui/speaker_editor.ui:10
+msgid "Rename Speaker"
+msgstr "話者名を変更"
+
+#: src/kikoe/ui/speaker_row.py:18 src/kikoe/ui/transcript_rows.py:32
+#: src/kikoe/ui/transcript_rows.py:71
+#, python-brace-format
+msgid "Speaker {number}"
+msgstr "話者 {number}"
+
+#: src/kikoe/ui/speaker_row.py:68
+msgid "No sample available"
+msgstr "サンプルはありません"
+
+#: src/kikoe/ui/speaker_row.py:68
+#, python-brace-format
+msgid "“{text}”"
+msgstr "“{text}”"
+
+#: src/kikoe/ui/speaker_row.py:71
+#, python-brace-format
+msgid "Play a sample from “{name}”"
+msgstr "“{name}” のサンプルを再生"
+
+#: src/kikoe/ui/speaker_row.py:72
+#, python-brace-format
+msgid "Who is {name}?"
+msgstr "{name} は誰ですか？"
+
+#: src/kikoe/ui/speaker_row.py:76
+msgid "Sample playback needs reliable timestamps."
+msgstr "サンプルの再生には正確なタイムスタンプが必要です。"
+
+#: src/kikoe/ui/speaker_row.py:146
+msgid "New Speaker"
+msgstr "新しい話者"
+
+#: src/kikoe/ui/speaker_row.ui:54
+msgid "Existing Speakers"
+msgstr "既存の話者"
+
+#: src/kikoe/ui/speaker_row.ui:81
+msgid "Keep as New Speaker"
+msgstr "新しい話者として保持"
+
+#: src/kikoe/ui/tasks.py:18
+msgid "Something Went Wrong"
+msgstr "問題が発生しました"
+
+#: src/kikoe/ui/tasks.py:19
+msgid "_Close"
+msgstr "閉じる(_C)"
+
+#: src/kikoe/ui/timestamp_popover.ui:26 src/kikoe/ui/transcript_row.ui:174
+#: src/kikoe/ui/transcript_times.ui:26
+msgid "_Start"
+msgstr "開始(_S)"
+
+#: src/kikoe/ui/timestamp_popover.ui:44 src/kikoe/ui/transcript_row.ui:192
+#: src/kikoe/ui/transcript_times.ui:44
+msgid "Start"
+msgstr "開始"
+
+#: src/kikoe/ui/timestamp_popover.ui:54 src/kikoe/ui/transcript_row.ui:202
+#: src/kikoe/ui/transcript_times.ui:54
+msgid "_End"
+msgstr "終了(_E)"
+
+#: src/kikoe/ui/timestamp_popover.ui:72 src/kikoe/ui/transcript_row.ui:220
+#: src/kikoe/ui/transcript_times.ui:72
+msgid "End"
+msgstr "終了"
+
+#: src/kikoe/ui/timestamp_popover.ui:84 src/kikoe/ui/transcript_row.ui:232
+#: src/kikoe/ui/transcript_times.ui:84
+msgid ""
+"Use MM:SS or H:MM:SS, with optional decimal seconds (e.g. 00:26.860). Leave "
+"empty to clear"
+msgstr ""
+"MM:SS または H:MM:SS を使用してください。小数秒も指定できます (例: "
+"00:26.860)。空欄にすると削除します"
+
+#: src/kikoe/ui/transcript_preview.ui:19 src/kikoe/ui/transcript_preview.ui:21
+#: src/kikoe/ui/transcript_row.ui:115 src/kikoe/ui/transcript_row.ui:117
+msgid "Rename or Match Speaker"
+msgstr "話者名の変更または対応付け"
+
+#: src/kikoe/ui/transcript_preview.ui:41 src/kikoe/ui/transcript_preview.ui:43
+#: src/kikoe/ui/transcript_row.ui:137 src/kikoe/ui/transcript_row.ui:139
+msgid "Edit Timestamps"
+msgstr "タイムスタンプを編集"
+
+#: src/kikoe/ui/transcript_row.py:195
+msgid "Transcription incomplete. Your text and audio have been kept."
+msgstr "文字起こし未完了。テキストと音声は保存されています。"
+
+#: src/kikoe/ui/transcript_row.py:197
+msgid "Transcription failed. Your audio has been kept."
+msgstr "文字起こしに失敗しました。音声は保存されています。"
+
+#: src/kikoe/ui/transcript_row.py:200
+msgid "Audio saved. Transcription is pending."
+msgstr "音声は保存済みです。文字起こし待ちです。"
+
+#: src/kikoe/ui/transcript_row.py:245
+msgid "Add Time"
+msgstr "時刻を追加"
+
+#: src/kikoe/ui/transcript_row.py:247
+msgid "No timestamp"
+msgstr "タイムスタンプなし"
+
+#: src/kikoe/ui/transcript_row.py:273
+msgid "Stop Playback"
+msgstr "再生を停止"
+
+#: src/kikoe/ui/transcript_row.py:331
+msgid "Segment text cannot be empty"
+msgstr "セグメントのテキストは空にできません"
+
+#: src/kikoe/ui/transcript_row.py:400
+msgid "End time must not be earlier than start time"
+msgstr "終了時刻は開始時刻より前にできません"
+
+#: src/kikoe/ui/transcript_row.py:431
+msgid "Timestamps were not saved because the input is invalid"
+msgstr "入力が無効なためタイムスタンプは保存されませんでした"
+
+#: src/kikoe/ui/transcript_row.py:468
+msgid "Use MM:SS or H:MM:SS, with optional decimal seconds"
+msgstr "MM:SS または H:MM:SS を使用してください。小数秒も指定できます"
+
+#: src/kikoe/ui/transcript_row.py:480
+msgid "Re-transcribe…"
+msgstr "再文字起こし…"
+
+#: src/kikoe/ui/transcript_row.py:481
+msgid "Export Original Audio…"
+msgstr "元の音声をエクスポート…"
+
+#: src/kikoe/ui/transcript_row.py:483
+msgid "Delete Recording"
+msgstr "録音を削除"
+
+#: src/kikoe/ui/transcription_controller.py:106
+msgid "Import cancelled"
+msgstr "インポートをキャンセルしました"
+
+#: src/kikoe/ui/transcription_controller.py:140
+#: src/kikoe/ui/transcription_controller.py:284
+msgid "Transcription Failed"
+msgstr "文字起こしに失敗"
+
+#: src/kikoe/ui/transcription_controller.py:148
+msgid "Transcription finished"
+msgstr "文字起こしが完了しました"
+
+#: src/kikoe/ui/transcription_controller.py:168
+msgid "Choose an available file transcription model."
+msgstr "利用可能なファイル文字起こしモデルを選択してください。"
+
+#: src/kikoe/ui/transcription_controller.py:206
+msgid "Re-transcription cancelled"
+msgstr "再文字起こしをキャンセルしました"
+
+#: src/kikoe/ui/transcription_controller.py:211
+#, python-brace-format
+msgid ""
+"{error}\n"
+"\n"
+"Your text and audio have been kept."
+msgstr ""
+"{error}\n"
+"\n"
+"テキストと音声は保存されています。"
+
+#: src/kikoe/ui/transcription_controller.py:212
+msgid "Re-transcription Failed"
+msgstr "再文字起こしに失敗"
+
+#: src/kikoe/ui/transcription_controller.py:266
+msgid "Transcription cancelled"
+msgstr "文字起こしをキャンセルしました"
+
+#: src/kikoe/ui/transcription_dialog.py:53
+msgid "Add a provider and a model to start transcribing."
+msgstr "プロバイダーとモデルを追加すると文字起こしを開始できます。"
+
+#: src/kikoe/ui/transcription_dialog.ui:42
+msgid "_Manage Providers and Models…"
+msgstr "プロバイダーとモデルを管理…(_M)"
+
+#: src/kikoe/ui/window.ui:197
+msgid "No Note Selected"
+msgstr "ノートが選択されていません"
+
+#: src/kikoe/ui/window.ui:198
+msgid "Create a note, then record or import audio into it."
+msgstr "ノートを作成してから、音声を録音またはインポートしてください。"
+
+#: src/kikoe/ui/window.ui:201
+msgid "_New Note"
+msgstr "新しいノート(_N)"
+
+#: src/kikoe/ui/window.ui:221
+msgid "Welcome to Kikoe"
+msgstr "Kikoe へようこそ"
+
+#: src/kikoe/ui/window.ui:222
+msgid ""
+"Kikoe turns speech into text using cloud services. Add a provider and a "
+"model first, then record or import audio."
+msgstr ""
+"Kikoe はクラウドサービスで音声をテキストに変換します。まずプロバイダーとモデ"
+"ルを追加してから、音声を録音またはインポートしてください。"

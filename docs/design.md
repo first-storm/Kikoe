@@ -355,8 +355,11 @@ Pushed as a subpage (back button) titled with the provider name.
 - Most recently selected model takes priority on restart, followed by the default model,
   then the first configured model. Missing models fall back in that order. Changing the
   default selects it when idle; running tasks keep the model/language captured at start.
-- Interface language follows the system; English and Simplified Chinese (`zh_CN`) are
-  included. This is separate from the transcription language hint.
+- Interface language follows the system. English and 14 translations are included:
+  Simplified Chinese (`zh-Hans`), Traditional Chinese (`zh-Hant`), Spanish, French,
+  German, Japanese, Korean, Brazilian Portuguese (`pt-BR`), Russian, Italian, Arabic,
+  Hindi, Indonesian and Turkish. Chinese regional system locales remain supported;
+  Arabic uses a right-to-left layout. This is separate from the transcription language hint.
 
 ## 10. Keyboard and accessibility (M7)
 

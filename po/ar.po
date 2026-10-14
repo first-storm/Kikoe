@@ -1,0 +1,1670 @@
+# Arabic translation of Kikoe.
+# Distributed under GPL-3.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: kikoe 0.1.1\n"
+"Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
+"POT-Creation-Date: 2026-10-15 03:01+1100\n"
+"PO-Revision-Date: 2026-10-15 00:00+0000\n"
+"Last-Translator: Kikoe contributors\n"
+"Language-Team: Arabic\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=(n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 "
+"&& n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5);\n"
+
+#: src/kikoe/application.py:152
+msgid "Could not open the folder."
+msgstr "تعذّر فتح المجلد."
+
+#. Translators: replace with your name(s), one per line.
+#: src/kikoe/application.py:177
+msgid "translator-credits"
+msgstr "Kikoe contributors"
+
+#: src/kikoe/media/ffmpeg.py:54
+#, python-brace-format
+msgid "KIKOE_FFMPEG points to a missing file: {path}"
+msgstr "يشير KIKOE_FFMPEG إلى ملف غير موجود: {path}"
+
+#: src/kikoe/media/ffmpeg.py:65
+msgid "ffmpeg was not found. Install it or set KIKOE_FFMPEG."
+msgstr "لم يُعثر على ffmpeg. ثبّته أو اضبط KIKOE_FFMPEG."
+
+#: src/kikoe/media/ffmpeg.py:107
+#, python-brace-format
+msgid "ffmpeg exited with status {status}: {error}"
+msgstr "انتهى ffmpeg بالحالة {status}: {error}"
+
+#: src/kikoe/media/ffmpeg.py:167
+msgid "The audio converter stopped unexpectedly."
+msgstr "توقف محوّل الصوت بشكل غير متوقع."
+
+#: src/kikoe/media/ffmpeg.py:183
+#, python-brace-format
+msgid "The audio converter failed: {detail}"
+msgstr "فشل تحويل الصوت: {detail}"
+
+#: src/kikoe/media/ffmpeg.py:239
+#, python-brace-format
+msgid "Could not decode the audio: {detail}"
+msgstr "تعذّر فك ترميز الصوت: {detail}"
+
+#: src/kikoe/media/player.py:73
+msgid "No default audio output device is available."
+msgstr "لا يوجد جهاز إخراج صوت افتراضي متاح."
+
+#: src/kikoe/media/player.py:108
+#, python-brace-format
+msgid "Could not play the audio. Check your output device. ({detail})"
+msgstr "تعذّر تشغيل الصوت. تحقق من جهاز الإخراج. ({detail})"
+
+#: src/kikoe/media/player.py:119
+#, python-brace-format
+msgid "Could not close the audio output device. ({detail})"
+msgstr "تعذّر إغلاق جهاز إخراج الصوت. ({detail})"
+
+#: src/kikoe/media/recorder.py:107
+#, python-brace-format
+msgid ""
+"Could not open the microphone. Check your input device and microphone "
+"permissions. ({detail})"
+msgstr ""
+"تعذّر فتح الميكروفون. تحقق من جهاز الإدخال وأذونات الميكروفون. ({detail})"
+
+#: src/kikoe/media/recorder.py:117
+msgid "The microphone lost audio. The captured audio has been kept."
+msgstr "فقد الميكروفون بعض الصوت. تم الاحتفاظ بالصوت الملتقط."
+
+#: src/kikoe/media/recorder.py:129
+msgid "Audio could not be saved fast enough. The captured audio has been kept."
+msgstr "تعذّر حفظ الصوت بالسرعة اللازمة. تم الاحتفاظ بالصوت الملتقط."
+
+#: src/kikoe/media/recorder.py:152
+msgid "The microphone disconnected. The captured audio has been kept."
+msgstr "انقطع اتصال الميكروفون. تم الاحتفاظ بالصوت الملتقط."
+
+#: src/kikoe/media/recorder.py:177
+#, python-brace-format
+msgid "The microphone stopped responding. ({detail})"
+msgstr "توقف الميكروفون عن الاستجابة. ({detail})"
+
+#: src/kikoe/media/recorder.py:196
+#, python-brace-format
+msgid "Could not close the microphone. ({detail})"
+msgstr "تعذّر إغلاق الميكروفون. ({detail})"
+
+#: src/kikoe/media/transcode.py:78
+#, python-brace-format
+msgid "“{name}” contains no audio."
+msgstr "لا يحتوي “{name}” على صوت."
+
+#: src/kikoe/media/transcode.py:128
+#, python-brace-format
+msgid ""
+"Could not read “{name}”. It may not be an audio file, or it is damaged. "
+"({detail})"
+msgstr ""
+"تعذّرت قراءة “{name}”. قد لا يكون ملفًا صوتيًا أو قد يكون تالفًا. ({detail})"
+
+#. Translators: {name} is a service name such as Groq.
+#: src/kikoe/providers/base.py:91
+#, python-brace-format
+msgid "{name} supports file transcription only."
+msgstr "يدعم {name} تفريغ الملفات فقط."
+
+#: src/kikoe/providers/deepgram.py:204
+#, python-brace-format
+msgid "Deepgram rejected realtime transcription: {message}"
+msgstr "رفض Deepgram التفريغ الفوري: {message}"
+
+#: src/kikoe/providers/deepgram.py:209
+#: src/kikoe/providers/mistral_realtime.py:119
+msgid ""
+"The provider rejected realtime transcription. Check the model and API key."
+msgstr "رفض مزوّد الخدمة التفريغ الفوري. تحقق من النموذج ومفتاح API."
+
+#: src/kikoe/providers/errors.py:36
+#, python-brace-format
+msgid "{host} sent a response Kikoe does not understand."
+msgstr "أرسل {host} استجابة لا يفهمها Kikoe."
+
+#: src/kikoe/providers/errors.py:59
+#, python-brace-format
+msgid "{subject} rejected the API key. Check it in Preferences."
+msgstr "رفض {subject} مفتاح API. تحقّق منه في التفضيلات."
+
+#: src/kikoe/providers/errors.py:62
+#, python-brace-format
+msgid ""
+"{subject} does not allow this API key to use this model, or is not available "
+"in your region. Check your account and the key in Preferences."
+msgstr ""
+"لا يسمح {subject} لهذا المفتاح باستخدام النموذج، أو ليس متاحًا في منطقتك. "
+"تحقق من حسابك والمفتاح في التفضيلات."
+
+#: src/kikoe/providers/errors.py:66
+#, python-brace-format
+msgid "{subject} reports that your account has run out of credits."
+msgstr "يفيد {subject} بأن رصيد حسابك قد نفد."
+
+#: src/kikoe/providers/errors.py:68
+#, python-brace-format
+msgid "{subject} could not find this model. Check the model name."
+msgstr "لم يجد {subject} هذا النموذج. تحقق من اسم النموذج."
+
+#: src/kikoe/providers/errors.py:70
+#, python-brace-format
+msgid "{subject} took too long to respond. Try again later."
+msgstr "استغرق {subject} وقتًا طويلًا للاستجابة. حاول لاحقًا."
+
+#: src/kikoe/providers/errors.py:72
+#, python-brace-format
+msgid "The audio is too large for {subject}."
+msgstr "الصوت أكبر من الحد المسموح لدى {subject}."
+
+#: src/kikoe/providers/errors.py:75
+#, python-brace-format
+msgid ""
+"{subject} is limiting requests, or your quota is used up. Wait a while and "
+"try again, or check your plan."
+msgstr ""
+"يحدّ {subject} من الطلبات، أو نفدت حصتك. انتظر ثم حاول مجددًا، أو تحقق من خطتك."
+
+#: src/kikoe/providers/errors.py:79
+#, python-brace-format
+msgid "{subject} is having problems (HTTP {status}). Try again later."
+msgstr "يواجه {subject} مشكلات (HTTP {status}). حاول لاحقًا."
+
+#: src/kikoe/providers/errors.py:81
+#, python-brace-format
+msgid "{subject} could not process this audio (HTTP {status})."
+msgstr "تعذّر على {subject} معالجة هذا الصوت (HTTP {status})."
+
+#: src/kikoe/providers/errors.py:84
+#, python-brace-format
+msgid ""
+"{subject} rejected this request (HTTP {status}). Check the model and options."
+msgstr "رفض {subject} هذا الطلب (HTTP {status}). تحقق من النموذج والخيارات."
+
+#: src/kikoe/providers/errors.py:87
+#, python-brace-format
+msgid "{subject} returned an unexpected error (HTTP {status})."
+msgstr "أعاد {subject} خطأً غير متوقع (HTTP {status})."
+
+#: src/kikoe/providers/errors.py:92
+#, python-brace-format
+msgid "{message} Details: {detail}"
+msgstr "{message} التفاصيل: {detail}"
+
+#: src/kikoe/providers/errors.py:100
+msgid "The provider sent a response Kikoe does not understand."
+msgstr "أرسل مزوّد الخدمة استجابة لا يفهمها Kikoe."
+
+#: src/kikoe/providers/errors.py:104
+msgid "The provider"
+msgstr "مزوّد الخدمة"
+
+#: src/kikoe/providers/errors.py:106
+msgid "Could not complete transcription. Check your connection and try again."
+msgstr "تعذّر إكمال التفريغ. تحقق من اتصالك وحاول مجددًا."
+
+#: src/kikoe/providers/errors.py:120 src/kikoe/providers/mistral.py:100
+#, python-brace-format
+msgid "{host} took too long to respond. Try again later."
+msgstr "استغرق {host} وقتًا طويلًا للاستجابة. حاول لاحقًا."
+
+#: src/kikoe/providers/errors.py:122 src/kikoe/providers/mistral.py:103
+#: src/kikoe/providers/mistral.py:146
+#, python-brace-format
+msgid "Could not reach {host}. Try again later."
+msgstr "تعذّر الوصول إلى {host}. حاول لاحقًا."
+
+#: src/kikoe/providers/errors.py:125
+#, python-brace-format
+msgid "{host} could not finish transcription: {message}"
+msgstr "تعذّر على {host} إكمال التفريغ: {message}"
+
+#: src/kikoe/providers/mistral_file_stream.py:61
+#: src/kikoe/providers/openai_file_stream.py:66
+msgid "Transcription ended before it was complete. Try again."
+msgstr "انتهى التفريغ قبل اكتماله. حاول مجددًا."
+
+#: src/kikoe/providers/mistral_realtime.py:114
+#, python-brace-format
+msgid "Mistral rejected realtime transcription: {message}"
+msgstr "رفض Mistral التفريغ الفوري: {message}"
+
+#: src/kikoe/providers/openai.py:165
+#, python-brace-format
+msgid "{host} rejected the realtime session: {message}"
+msgstr "رفض {host} الجلسة الفورية: {message}"
+
+#: src/kikoe/providers/openai.py:180
+#, python-brace-format
+msgid ""
+"{host} does not support transcription while recording. Turn off “Transcribe "
+"While Recording” for this model in Preferences."
+msgstr ""
+"لا يدعم {host} التفريغ أثناء التسجيل. عطّل “التفريغ أثناء التسجيل” لهذا "
+"النموذج في التفضيلات."
+
+#: src/kikoe/providers/openai.py:242
+msgid "Realtime transcription failed. Your audio has been kept."
+msgstr "فشل التفريغ الفوري. تم الاحتفاظ بالصوت."
+
+#: src/kikoe/services/file_transcription.py:120
+msgid "Choose a file transcription model to retry this recording."
+msgstr "اختر نموذج تفريغ ملفات لإعادة محاولة هذا التسجيل."
+
+#: src/kikoe/services/importer.py:74 src/kikoe/ui/bottom_bar.py:166
+msgid "Choose a file transcription model to import audio."
+msgstr "اختر نموذج تفريغ ملفات لاستيراد الصوت."
+
+#: src/kikoe/services/importer.py:258
+msgid "The chunk size is too small for this audio format."
+msgstr "حجم المقطع صغير جدًا لهذا التنسيق الصوتي."
+
+#: src/kikoe/storage/audio_files.py:33
+#, python-brace-format
+msgid "Could not copy the audio file into the library: {error}"
+msgstr "تعذّر نسخ الملف الصوتي إلى المكتبة: {error}"
+
+#: src/kikoe/storage/captures.py:142
+msgid "Could not read the saved transcript. Its audio has been kept."
+msgstr "تعذّرت قراءة النص المحفوظ. تم الاحتفاظ بالصوت."
+
+#: src/kikoe/storage/captures.py:167
+#, python-brace-format
+msgid "Could not read a saved recording. Its audio has been kept. ({detail})"
+msgstr "تعذّرت قراءة تسجيل محفوظ. تم الاحتفاظ بالصوت. ({detail})"
+
+#: src/kikoe/storage/captures.py:231
+#, python-brace-format
+msgid "Could not save the recording. ({detail})"
+msgstr "تعذّر حفظ التسجيل. ({detail})"
+
+#: src/kikoe/storage/library.py:67
+msgid ""
+"The note library was created by a newer version of Kikoe. Update Kikoe to "
+"open it."
+msgstr "أُنشئت مكتبة الملاحظات بإصدار أحدث من Kikoe. حدّث Kikoe لفتحها."
+
+#: src/kikoe/storage/library.py:182 src/kikoe/storage/library.py:295
+#: src/kikoe/storage/library.py:317
+msgid "This recording no longer exists."
+msgstr "لم يعد هذا التسجيل موجودًا."
+
+#: src/kikoe/storage/library.py:284
+msgid "Enter transcript text."
+msgstr "أدخل نص التفريغ."
+
+#: src/kikoe/storage/library.py:286
+msgid "The end time must be after the start time."
+msgstr "يجب أن يكون وقت النهاية بعد وقت البداية."
+
+#: src/kikoe/storage/library.py:301
+msgid "Enter a speaker name."
+msgstr "أدخل اسم المتحدث."
+
+#: src/kikoe/storage/library.py:323
+msgid "The speaker selection is no longer available."
+msgstr "لم يعد المتحدث المحدد متاحًا."
+
+#: src/kikoe/storage/library.py:409
+#, python-brace-format
+msgid "The note library could not be read or saved: {error}"
+msgstr "تعذّرت قراءة مكتبة الملاحظات أو حفظها: {error}"
+
+#: src/kikoe/storage/note_rows.py:27
+msgid "This note no longer exists."
+msgstr "لم تعد هذه الملاحظة موجودة."
+
+#: src/kikoe/storage/providers.py:52
+#, python-brace-format
+msgid "Provider {provider_id} no longer exists."
+msgstr "لم يعد مزوّد الخدمة {provider_id} موجودًا."
+
+#: src/kikoe/storage/providers.py:147
+#, python-brace-format
+msgid "Model {replacing_id} no longer exists."
+msgstr "لم يعد النموذج {replacing_id} موجودًا."
+
+#: src/kikoe/storage/secrets.py:57
+#, python-brace-format
+msgid ""
+"API keys could not be saved because no secure credential store is available. "
+"Details: {error}"
+msgstr ""
+"تعذّر حفظ مفاتيح API لعدم توفر مخزن آمن لبيانات الاعتماد. التفاصيل: {error}"
+
+#: src/kikoe/storage/settings.py:63
+#, python-brace-format
+msgid "Could not read the settings file: {error}"
+msgstr "تعذّرت قراءة ملف الإعدادات: {error}"
+
+#: src/kikoe/storage/settings.py:75
+#, python-brace-format
+msgid "The settings file {detail} is damaged or not understood: {error}"
+msgstr "ملف الإعدادات {detail} تالف أو غير مفهوم: {error}"
+
+#: src/kikoe/storage/settings.py:100
+#, python-brace-format
+msgid "Could not save the settings file: {error}"
+msgstr "تعذّر حفظ ملف الإعدادات: {error}"
+
+#: src/kikoe/ui/bottom_bar.py:98
+msgid "_Append Recording"
+msgstr "إلحاق تسجيل(_A)"
+
+#: src/kikoe/ui/bottom_bar.py:98 src/kikoe/ui/bottom_bar.ui:125
+msgid "_Record"
+msgstr "تسجيل(_R)"
+
+#: src/kikoe/ui/bottom_bar.py:119 src/kikoe/ui/bottom_bar.ui:224
+#: src/kikoe/ui/bottom_bar.ui:227
+msgid "Pause Recording"
+msgstr "إيقاف التسجيل مؤقتًا"
+
+#: src/kikoe/ui/bottom_bar.py:119
+msgid "Resume Recording"
+msgstr "استئناف التسجيل"
+
+#: src/kikoe/ui/bottom_bar.py:149
+msgid "No Model"
+msgstr "لا يوجد نموذج"
+
+#: src/kikoe/ui/bottom_bar.py:151
+msgid "Add a model in Preferences first"
+msgstr "أضف نموذجًا في التفضيلات أولًا"
+
+#: src/kikoe/ui/bottom_bar.py:152 src/kikoe/ui/bottom_bar.ui:44
+msgid "Transcription Model…"
+msgstr "نموذج التفريغ…"
+
+#: src/kikoe/ui/bottom_bar.py:157
+#, python-brace-format
+msgid ""
+"{model} · {provider}\n"
+"{hint}"
+msgstr ""
+"{model} · {provider}\n"
+"{hint}"
+
+#: src/kikoe/ui/bottom_bar.py:164 src/kikoe/ui/bottom_bar.ui:90
+#: src/kikoe/ui/shortcuts.ui:27
+msgid "Import Audio…"
+msgstr "استيراد صوت…"
+
+#: src/kikoe/ui/bottom_bar.ui:46 src/kikoe/ui/transcription_dialog.ui:10
+msgid "Transcription Model"
+msgstr "نموذج التفريغ"
+
+#: src/kikoe/ui/bottom_bar.ui:92 src/kikoe/ui/file_dialogs.py:68
+msgid "Import Audio"
+msgstr "استيراد صوت"
+
+#: src/kikoe/ui/bottom_bar.ui:104 src/kikoe/ui/sidebar_header.ui:49
+#: src/kikoe/ui/window.ui:266
+msgid "_Import Audio…"
+msgstr "استيراد صوت…(_I)"
+
+#: src/kikoe/ui/bottom_bar.ui:158 src/kikoe/ui/dialogs.py:66
+#: src/kikoe/ui/export_dialog.ui:21 src/kikoe/ui/model_dialog.ui:21
+#: src/kikoe/ui/note_actions.py:56 src/kikoe/ui/retranscribe_dialog.ui:21
+#: src/kikoe/ui/speaker_dialog.ui:21 src/kikoe/ui/speaker_editor.ui:20
+msgid "_Cancel"
+msgstr "إلغاء(_C)"
+
+#: src/kikoe/ui/bottom_bar.ui:243
+msgid "_Stop"
+msgstr "إيقاف(_S)"
+
+#: src/kikoe/ui/content_header.ui:14
+#: src/kikoe/ui/transcription_controller.py:323 src/kikoe/ui/window.py:388
+#: src/kikoe/ui/window.ui:10 src/kikoe/ui/window.ui:37
+#: src/kikoe/ui/window.ui:119 src/kikoe/ui/window.ui:130
+msgid "Kikoe"
+msgstr "Kikoe"
+
+#: src/kikoe/ui/content_header.ui:20 src/kikoe/ui/content_header.ui:24
+#: src/kikoe/ui/shortcuts.ui:56 src/kikoe/ui/window.ui:136
+#: src/kikoe/ui/window.ui:140
+msgid "Undo"
+msgstr "تراجع"
+
+#: src/kikoe/ui/content_header.ui:31 src/kikoe/ui/content_header.ui:35
+#: src/kikoe/ui/shortcuts.ui:62 src/kikoe/ui/window.ui:147
+#: src/kikoe/ui/window.ui:151
+msgid "Redo"
+msgstr "إعادة"
+
+#: src/kikoe/ui/content_header.ui:42 src/kikoe/ui/content_header.ui:44
+#: src/kikoe/ui/window.ui:158 src/kikoe/ui/window.ui:160
+msgid "Note Menu"
+msgstr "قائمة الملاحظة"
+
+#: src/kikoe/ui/content_header.ui:54 src/kikoe/ui/content_header.ui:56
+#: src/kikoe/ui/window.ui:170 src/kikoe/ui/window.ui:172
+msgid "Display Options"
+msgstr "خيارات العرض"
+
+#: src/kikoe/ui/content_header.ui:68 src/kikoe/ui/export_dialog.ui:106
+#: src/kikoe/ui/window.ui:288
+msgid "Show _Timestamps"
+msgstr "عرض الطوابع الزمنية(_T)"
+
+#: src/kikoe/ui/content_header.ui:72 src/kikoe/ui/export_dialog.ui:113
+#: src/kikoe/ui/window.ui:292
+msgid "Show _Speakers"
+msgstr "عرض المتحدثين(_S)"
+
+#: src/kikoe/ui/content_header.ui:80 src/kikoe/ui/note_sidebar.py:172
+#: src/kikoe/ui/window.ui:300
+msgid "_Rename…"
+msgstr "إعادة تسمية…(_R)"
+
+#: src/kikoe/ui/content_header.ui:84 src/kikoe/ui/window.ui:304
+msgid "_Copy All Text"
+msgstr "نسخ النص كاملًا(_C)"
+
+#: src/kikoe/ui/content_header.ui:88 src/kikoe/ui/export_dialog.ui:28
+#: src/kikoe/ui/window.ui:308
+msgid "_Export…"
+msgstr "تصدير…(_E)"
+
+#: src/kikoe/ui/content_header.ui:94 src/kikoe/ui/note_sidebar.py:174
+#: src/kikoe/ui/window.ui:314
+msgid "_Delete Note"
+msgstr "حذف الملاحظة(_D)"
+
+#: src/kikoe/ui/dialogs.py:51
+msgid "Discard Changes?"
+msgstr "تجاهل التغييرات؟"
+
+#: src/kikoe/ui/dialogs.py:52
+msgid "Your changes have not been saved and will be lost."
+msgstr "لم تُحفظ تغييراتك وستُفقد."
+
+#: src/kikoe/ui/dialogs.py:53
+msgid "_Keep Editing"
+msgstr "متابعة التحرير(_K)"
+
+#: src/kikoe/ui/dialogs.py:54
+msgid "_Discard"
+msgstr "تجاهل(_D)"
+
+#: src/kikoe/ui/export_controller.py:62
+msgid "Copied to clipboard"
+msgstr "نُسخ إلى الحافظة"
+
+#: src/kikoe/ui/export_controller.py:70 src/kikoe/ui/export_dialog.ui:10
+msgid "Export Note"
+msgstr "تصدير الملاحظة"
+
+#: src/kikoe/ui/export_controller.py:83 src/kikoe/ui/note_actions.py:86
+msgid "This recording is no longer available."
+msgstr "لم يعد هذا التسجيل متاحًا."
+
+#: src/kikoe/ui/export_controller.py:94
+msgid "Export Original Audio"
+msgstr "تصدير الصوت الأصلي"
+
+#: src/kikoe/ui/export_controller.py:96
+msgid "Audio Files"
+msgstr "الملفات الصوتية"
+
+#: src/kikoe/ui/export_controller.py:99 src/kikoe/ui/speaker_controller.py:56
+#: src/kikoe/ui/transcription_controller.py:160
+msgid "The original audio is not available."
+msgstr "الصوت الأصلي غير متاح."
+
+#: src/kikoe/ui/export_controller.py:122
+#, python-brace-format
+msgid "Could not save “{name}”: {error}"
+msgstr "تعذّر حفظ “{name}”: {error}"
+
+#: src/kikoe/ui/export_controller.py:125
+#, python-brace-format
+msgid "Exported “{name}”"
+msgstr "تم تصدير “{name}”"
+
+#: src/kikoe/ui/export_dialog.py:45
+msgid "This note has no speakers"
+msgstr "لا تحتوي هذه الملاحظة على متحدثين"
+
+#: src/kikoe/ui/export_dialog.py:48
+#, python-brace-format
+msgid "{extension} · Unavailable because this note has no timestamps"
+msgstr "{extension} · غير متاح لعدم وجود طوابع زمنية في الملاحظة"
+
+#: src/kikoe/ui/export_dialog.py:82
+msgid "Always included in subtitle formats"
+msgstr "تُضمّن دائمًا في تنسيقات الترجمة النصية"
+
+#: src/kikoe/ui/export_dialog.py:86
+msgid "This note has no timestamps"
+msgstr "لا تحتوي هذه الملاحظة على طوابع زمنية"
+
+#: src/kikoe/ui/export_dialog.ui:42
+msgid "Format"
+msgstr "التنسيق"
+
+#: src/kikoe/ui/export_dialog.ui:45
+msgid "Plain Text"
+msgstr "نص عادي"
+
+#: src/kikoe/ui/export_dialog.ui:59
+msgid "Markdown"
+msgstr "Markdown"
+
+#: src/kikoe/ui/export_dialog.ui:73
+msgid "SRT Subtitles"
+msgstr "ترجمة نصية SRT"
+
+#: src/kikoe/ui/export_dialog.ui:87
+msgid "WebVTT Subtitles"
+msgstr "ترجمة نصية WebVTT"
+
+#: src/kikoe/ui/export_dialog.ui:103 src/kikoe/ui/options_group.ui:10
+msgid "Options"
+msgstr "الخيارات"
+
+#: src/kikoe/ui/file_dialogs.py:48
+msgid "All Files"
+msgstr "كل الملفات"
+
+#: src/kikoe/ui/file_dialogs.py:57
+msgid "Only locations on this computer can be used."
+msgstr "يمكن استخدام المواقع على هذا الحاسوب فقط."
+
+#: src/kikoe/ui/file_dialogs.py:63
+msgid "Audio and Video"
+msgstr "صوت وفيديو"
+
+#: src/kikoe/ui/file_dialogs.py:70
+msgid "Only files on this computer can be imported."
+msgstr "يمكن استيراد الملفات على هذا الحاسوب فقط."
+
+#: src/kikoe/ui/labels.py:29
+msgid "OpenAI-compatible"
+msgstr "متوافق مع OpenAI"
+
+#: src/kikoe/ui/labels.py:34
+msgid "Maximum 60 minutes, or 30 with timestamps or speaker detection"
+msgstr "بحد أقصى 60 دقيقة، أو 30 مع الطوابع الزمنية أو كشف المتحدثين"
+
+#: src/kikoe/ui/labels.py:35 src/kikoe/ui/provider_page.ui:95
+msgid "0 uses the provider limit; chunks also respect the size limit"
+msgstr "تستخدم القيمة 0 حدّ المزوّد؛ تخضع المقاطع أيضًا لحدّ الحجم"
+
+#: src/kikoe/ui/labels.py:40
+msgid "Defaults to 25 MB; your server may require smaller chunks"
+msgstr "الافتراضي 25 MB؛ قد يتطلب خادمك مقاطع أصغر"
+
+#: src/kikoe/ui/labels.py:41
+#, python-brace-format
+msgid "Maximum {size:g} MB per chunk"
+msgstr "بحد أقصى {size:g} MB لكل مقطع"
+
+#: src/kikoe/ui/labels.py:46
+msgid "Connecting…"
+msgstr "جارٍ الاتصال…"
+
+#: src/kikoe/ui/labels.py:47
+msgid "In progress"
+msgstr "قيد التنفيذ"
+
+#: src/kikoe/ui/labels.py:48
+msgid "Reconnecting… Audio is saved locally"
+msgstr "جارٍ إعادة الاتصال… يُحفظ الصوت محليًا"
+
+#: src/kikoe/ui/labels.py:49
+msgid "Catching up…"
+msgstr "جارٍ تدارك التأخر…"
+
+#: src/kikoe/ui/labels.py:50
+msgid "Transcription incomplete"
+msgstr "التفريغ غير مكتمل"
+
+#: src/kikoe/ui/labels.py:51 src/kikoe/ui/labels.py:56
+#: src/kikoe/ui/recording_view.py:33
+msgid "Paused"
+msgstr "متوقف مؤقتًا"
+
+#: src/kikoe/ui/labels.py:56 src/kikoe/ui/recording_view.py:24
+#: src/kikoe/ui/recording_view.py:33 src/kikoe/ui/recording_view.ui:69
+msgid "Recording"
+msgstr "تسجيل"
+
+#: src/kikoe/ui/labels.py:62
+msgid "Realtime"
+msgstr "فوري"
+
+#: src/kikoe/ui/labels.py:64 src/kikoe/ui/model_dialog.ui:79
+#: src/kikoe/ui/model_dialog.ui:140 src/kikoe/ui/recording_controller.py:164
+msgid "Timestamps"
+msgstr "الطوابع الزمنية"
+
+#: src/kikoe/ui/labels.py:66 src/kikoe/ui/model_dialog.ui:92
+msgid "Word Timestamps"
+msgstr "الطوابع الزمنية للكلمات"
+
+#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:166
+msgid "Speakers"
+msgstr "المتحدثون"
+
+#: src/kikoe/ui/labels.py:70
+msgid "Streaming"
+msgstr "البث التدريجي"
+
+#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:170
+msgid "Text only"
+msgstr "نص فقط"
+
+#: src/kikoe/ui/labels.py:82
+msgid "Plain Text (.txt)"
+msgstr "نص عادي (.txt)"
+
+#: src/kikoe/ui/labels.py:84
+msgid "Markdown (.md)"
+msgstr "Markdown (.md)"
+
+#: src/kikoe/ui/labels.py:86
+msgid "SRT Subtitles (.srt)"
+msgstr "ترجمة نصية SRT (.srt)"
+
+#: src/kikoe/ui/labels.py:88
+msgid "WebVTT Subtitles (.vtt)"
+msgstr "ترجمة نصية WebVTT (.vtt)"
+
+#: src/kikoe/ui/labels.py:94
+msgid "Enter a name for this provider."
+msgstr "أدخل اسمًا لمزوّد الخدمة."
+
+#: src/kikoe/ui/labels.py:96
+msgid "Enter the base URL of the API."
+msgstr "أدخل عنوان URL الأساسي لواجهة API."
+
+#: src/kikoe/ui/labels.py:98
+msgid ""
+"The base URL must start with http:// or https:// and include a host name."
+msgstr "يجب أن يبدأ العنوان الأساسي بـ http:// أو https:// وأن يتضمن اسم مضيف."
+
+#: src/kikoe/ui/labels.py:104
+msgid "Enter the model ID."
+msgstr "أدخل معرّف النموذج."
+
+#: src/kikoe/ui/labels.py:106
+msgid "This provider already has a model with that ID."
+msgstr "لدى هذا المزوّد نموذج بهذا المعرّف بالفعل."
+
+#: src/kikoe/ui/labels.py:108
+msgid "Turn on file or realtime transcription."
+msgstr "فعّل تفريغ الملفات أو التفريغ الفوري."
+
+#: src/kikoe/ui/labels.py:116
+msgid "%H:%M"
+msgstr "%H:%M"
+
+#. Translators: {time} is a time of day formatted with the “%H:%M” string below.
+#: src/kikoe/ui/labels.py:116
+#, python-brace-format
+msgid "Today {time}"
+msgstr "اليوم {time}"
+
+#: src/kikoe/ui/labels.py:118
+msgid "Yesterday"
+msgstr "أمس"
+
+#. Translators: date in this year, see the GLib.DateTime.format documentation.
+#: src/kikoe/ui/labels.py:121
+msgid "%b %-d"
+msgstr "%-d %b"
+
+#. Translators: date in another year, see the GLib.DateTime.format documentation.
+#: src/kikoe/ui/labels.py:124
+msgid "%b %-d, %Y"
+msgstr "%-d %b %Y"
+
+#: src/kikoe/ui/labels.py:129
+msgid "%b %-d %H:%M"
+msgstr "%-d %b %H:%M"
+
+#: src/kikoe/ui/labels.py:129
+#, python-brace-format
+msgid "{date} Recording"
+msgstr "تسجيل {date}"
+
+#: src/kikoe/ui/labels.py:139
+msgid "Imported audio"
+msgstr "صوت مستورد"
+
+#: src/kikoe/ui/labels.py:147
+msgid "No recordings"
+msgstr "لا توجد تسجيلات"
+
+#: src/kikoe/ui/labels.py:152
+#, python-brace-format
+msgid "{count} recording"
+msgid_plural "{count} recordings"
+msgstr[0] "{count} تسجيل"
+msgstr[1] "{count} تسجيل"
+msgstr[2] "{count} تسجيلان"
+msgstr[3] "{count} تسجيلات"
+msgstr[4] "{count} تسجيلًا"
+msgstr[5] "{count} تسجيل"
+
+#: src/kikoe/ui/labels.py:189
+#, python-brace-format
+msgid "Converting part {part} of {parts}…"
+msgstr "جارٍ تحويل الجزء {part} من {parts}…"
+
+#: src/kikoe/ui/labels.py:191
+msgid "Converting audio…"
+msgstr "جارٍ تحويل الصوت…"
+
+#: src/kikoe/ui/labels.py:193
+#, python-brace-format
+msgid "Transcribing… {part} of {parts} chunks complete"
+msgstr "جارٍ التفريغ… اكتمل {part} من {parts} مقطعًا"
+
+#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:175
+#: src/kikoe/ui/transcription_controller.py:261
+#: src/kikoe/ui/transcription_controller.py:308
+msgid "Transcribing…"
+msgstr "جارٍ التفريغ…"
+
+#: src/kikoe/ui/labels.py:199
+msgid "Saving…"
+msgstr "جارٍ الحفظ…"
+
+#: src/kikoe/ui/labels.py:204
+msgid "Not supported by this model"
+msgstr "غير مدعوم في هذا النموذج"
+
+#: src/kikoe/ui/labels.py:210
+msgid "Transcribes while recording"
+msgstr "يفرّغ أثناء التسجيل"
+
+#: src/kikoe/ui/labels.py:211
+msgid "Transcribes after recording"
+msgstr "يفرّغ بعد التسجيل"
+
+#: src/kikoe/ui/labels.py:219
+#, python-brace-format
+msgid "{mode} · This model does not support {features}"
+msgstr "{mode} · لا يدعم هذا النموذج: {features}"
+
+#: src/kikoe/ui/labels.py:229
+msgid "realtime transcription"
+msgstr "التفريغ الفوري"
+
+#: src/kikoe/ui/labels.py:231
+msgid "timestamps"
+msgstr "الطوابع الزمنية"
+
+#: src/kikoe/ui/labels.py:233
+msgid "word timestamps"
+msgstr "الطوابع الزمنية للكلمات"
+
+#: src/kikoe/ui/labels.py:235
+msgid "speaker detection"
+msgstr "كشف المتحدثين"
+
+#: src/kikoe/ui/labels.py:237
+msgid "streaming preview"
+msgstr "المعاينة التدريجية"
+
+#: src/kikoe/ui/labels.py:241
+#, python-brace-format
+msgid "{provider} · {model}"
+msgstr "{provider} · {model}"
+
+#: src/kikoe/ui/level_meter.ui:16
+msgid "Microphone Level"
+msgstr "مستوى الميكروفون"
+
+#: src/kikoe/ui/model_dialog.py:64 src/kikoe/ui/provider_page.py:115
+#: src/kikoe/ui/provider_page.py:119
+msgid "Edit Model"
+msgstr "تحرير النموذج"
+
+#: src/kikoe/ui/model_dialog.py:65 src/kikoe/ui/speaker_editor.ui:27
+msgid "_Save"
+msgstr "حفظ(_S)"
+
+#: src/kikoe/ui/model_dialog.py:146 src/kikoe/ui/model_dialog.py:160
+msgid "This model does not support this option."
+msgstr "لا يدعم هذا النموذج هذا الخيار."
+
+#: src/kikoe/ui/model_dialog.ui:10
+msgid "Add Model"
+msgstr "إضافة نموذج"
+
+#: src/kikoe/ui/model_dialog.ui:28 src/kikoe/ui/provider_page.ui:18
+msgid "_Add"
+msgstr "إضافة(_A)"
+
+#: src/kikoe/ui/model_dialog.ui:45
+msgid "Model ID"
+msgstr "معرّف النموذج"
+
+#: src/kikoe/ui/model_dialog.ui:50
+msgid "Display Name"
+msgstr "اسم العرض"
+
+#: src/kikoe/ui/model_dialog.ui:68
+msgid "What This Model Supports"
+msgstr "ما يدعمه هذا النموذج"
+
+#: src/kikoe/ui/model_dialog.ui:69
+msgid ""
+"Known models are filled in automatically. Options the provider rejects for "
+"this model are unavailable."
+msgstr ""
+"تُملأ النماذج المعروفة تلقائيًا. الخيارات التي يرفضها المزوّد لهذا النموذج غير "
+"متاحة."
+
+#: src/kikoe/ui/model_dialog.ui:72
+msgid "Transcribe _Files"
+msgstr "تفريغ الملفات(_F)"
+
+#: src/kikoe/ui/model_dialog.ui:73
+msgid "Imported files, and recordings uploaded after they stop."
+msgstr "الملفات المستوردة والتسجيلات التي تُرفع بعد إيقافها."
+
+#: src/kikoe/ui/model_dialog.ui:80
+msgid "Each segment carries a time. Needed for subtitle export."
+msgstr "يحمل كل مقطع وقتًا. مطلوب لتصدير الترجمة النصية."
+
+#: src/kikoe/ui/model_dialog.ui:93
+msgid "Times can be requested for single words."
+msgstr "يمكن طلب أوقات الكلمات المفردة."
+
+#: src/kikoe/ui/model_dialog.ui:105 src/kikoe/ui/model_dialog.ui:152
+msgid "Speaker Detection"
+msgstr "كشف المتحدثين"
+
+#: src/kikoe/ui/model_dialog.ui:106
+msgid "Tells different people apart and labels them."
+msgstr "يميّز الأشخاص ويضع تسميات لهم."
+
+#: src/kikoe/ui/model_dialog.ui:118
+msgid "Streaming Preview"
+msgstr "المعاينة التدريجية"
+
+#: src/kikoe/ui/model_dialog.ui:119
+msgid "Text appears while a file is transcribed."
+msgstr "يظهر النص أثناء تفريغ الملف."
+
+#: src/kikoe/ui/model_dialog.ui:133
+msgid "Transcribe While _Recording"
+msgstr "التفريغ أثناء التسجيل(_R)"
+
+#: src/kikoe/ui/model_dialog.ui:134
+msgid ""
+"Text appears while recording. If off, the whole recording is uploaded after "
+"it stops."
+msgstr "يظهر النص أثناء التسجيل. عند التعطيل، يُرفع التسجيل كاملًا بعد إيقافه."
+
+#: src/kikoe/ui/model_dialog.ui:171
+msgid "_Remove Model"
+msgstr "إزالة النموذج(_R)"
+
+#: src/kikoe/ui/note_actions.py:32 src/kikoe/ui/shortcuts.ui:15
+#: src/kikoe/ui/sidebar_header.ui:15 src/kikoe/ui/sidebar_header.ui:17
+#: src/kikoe/ui/window.ui:45 src/kikoe/ui/window.ui:47
+msgid "New Note"
+msgstr "ملاحظة جديدة"
+
+#: src/kikoe/ui/note_actions.py:49
+msgid "Note Title"
+msgstr "عنوان الملاحظة"
+
+#: src/kikoe/ui/note_actions.py:56
+msgid "Rename Note"
+msgstr "إعادة تسمية الملاحظة"
+
+#: src/kikoe/ui/note_actions.py:56
+msgid "_Rename"
+msgstr "إعادة تسمية(_R)"
+
+#: src/kikoe/ui/note_actions.py:73
+#, python-brace-format
+msgid "Delete “{title}”?"
+msgstr "حذف “{title}”؟"
+
+#: src/kikoe/ui/note_actions.py:74 src/kikoe/ui/note_actions.py:93
+msgid ""
+"Its transcript and original audio will be deleted. This cannot be undone."
+msgstr "سيُحذف النص والصوت الأصلي. لا يمكن التراجع عن ذلك."
+
+#: src/kikoe/ui/note_actions.py:75 src/kikoe/ui/note_actions.py:94
+msgid "_Delete"
+msgstr "حذف(_D)"
+
+#: src/kikoe/ui/note_actions.py:92
+#, python-brace-format
+msgid "Delete Recording {number}?"
+msgstr "حذف التسجيل {number}؟"
+
+#: src/kikoe/ui/note_sidebar.py:87
+msgid "No Matching Notes"
+msgstr "لا توجد ملاحظات مطابقة"
+
+#: src/kikoe/ui/note_sidebar.py:87 src/kikoe/ui/window.ui:102
+msgid "No Notes Yet"
+msgstr "لا توجد ملاحظات بعد"
+
+#: src/kikoe/ui/note_view.py:312
+#, python-brace-format
+msgid "{status} · {summary}"
+msgstr "{status} · {summary}"
+
+#: src/kikoe/ui/note_view.py:344
+#, python-brace-format
+msgid "Transcribing… · {model}"
+msgstr "جارٍ التفريغ… · {model}"
+
+#: src/kikoe/ui/note_view.ui:25 src/kikoe/ui/speaker_editor.ui:49
+#: src/kikoe/ui/transcript_row.py:482
+msgid "Match Speakers…"
+msgstr "مطابقة المتحدثين…"
+
+#: src/kikoe/ui/note_view.ui:67
+msgid "No Recordings Yet"
+msgstr "لا توجد تسجيلات بعد"
+
+#: src/kikoe/ui/note_view.ui:68
+msgid "Record or import audio to add a transcript to this note."
+msgstr "سجّل صوتًا أو استورده لإضافة نص إلى هذه الملاحظة."
+
+#: src/kikoe/ui/options_group.ui:13
+msgid "_Timestamps"
+msgstr "الطوابع الزمنية(_T)"
+
+#: src/kikoe/ui/options_group.ui:20
+msgid "Timestamp _Detail"
+msgstr "تفاصيل الطوابع الزمنية(_D)"
+
+#: src/kikoe/ui/options_group.ui:26
+msgid "Segments"
+msgstr "المقاطع"
+
+#: src/kikoe/ui/options_group.ui:27
+msgid "Words"
+msgstr "الكلمات"
+
+#: src/kikoe/ui/options_group.ui:28
+msgid "Segments and Words"
+msgstr "المقاطع والكلمات"
+
+#: src/kikoe/ui/options_group.ui:36
+msgid "_Speakers"
+msgstr "المتحدثون(_S)"
+
+#: src/kikoe/ui/options_group.ui:43
+msgid ""
+"The transcription language is not used while timestamps or speakers are on. "
+"The language is detected automatically."
+msgstr ""
+"لا تُستخدم لغة التفريغ عند تفعيل الطوابع الزمنية أو المتحدثين. تُكتشف اللغة "
+"تلقائيًا."
+
+#: src/kikoe/ui/preferences.py:92
+#, python-brace-format
+msgid "{device} (Unavailable)"
+msgstr "{device} (غير متاح)"
+
+#: src/kikoe/ui/preferences.py:96
+msgid "System Default"
+msgstr "افتراضي النظام"
+
+#: src/kikoe/ui/preferences.py:132
+msgid "No Default Model"
+msgstr "لا يوجد نموذج افتراضي"
+
+#: src/kikoe/ui/preferences.py:215 src/kikoe/ui/preferences.ui:39
+msgid "Enter a language code such as zh, en, or ja."
+msgstr "أدخل رمز لغة مثل zh أو en أو ja."
+
+#: src/kikoe/ui/preferences.py:230
+#, python-brace-format
+msgid "{api} API · {count} model"
+msgid_plural "{api} API · {count} models"
+msgstr[0] "واجهة {api} · {count} نموذج"
+msgstr[1] "واجهة {api} · {count} نموذج"
+msgstr[2] "واجهة {api} · {count} نموذجان"
+msgstr[3] "واجهة {api} · {count} نماذج"
+msgstr[4] "واجهة {api} · {count} نموذجًا"
+msgstr[5] "واجهة {api} · {count} نموذج"
+
+#: src/kikoe/ui/preferences.ui:10 src/kikoe/ui/shortcuts.ui:97
+msgid "Preferences"
+msgstr "التفضيلات"
+
+#: src/kikoe/ui/preferences.ui:17 src/kikoe/ui/shortcuts.ui:88
+msgid "General"
+msgstr "عام"
+
+#: src/kikoe/ui/preferences.ui:21
+msgid "Transcription"
+msgstr "التفريغ"
+
+#: src/kikoe/ui/preferences.ui:22
+msgid ""
+"Defaults for the next transcription. Language is detected automatically when "
+"left empty. To set it, enter a language code such as zh, en, or ja."
+msgstr ""
+"الإعدادات الافتراضية للتفريغ القادم. تُكتشف اللغة تلقائيًا عند ترك الحقل "
+"فارغًا. لتحديدها، أدخل رمزًا مثل zh أو en أو ja."
+
+#: src/kikoe/ui/preferences.ui:25
+msgid "Default Model"
+msgstr "النموذج الافتراضي"
+
+#: src/kikoe/ui/preferences.ui:32
+msgid "Transcription Language"
+msgstr "لغة التفريغ"
+
+#: src/kikoe/ui/preferences.ui:53
+msgid "Audio"
+msgstr "الصوت"
+
+#: src/kikoe/ui/preferences.ui:56
+msgid "Microphone"
+msgstr "الميكروفون"
+
+#: src/kikoe/ui/preferences.ui:57
+msgid "Used for new recordings"
+msgstr "يُستخدم للتسجيلات الجديدة"
+
+#: src/kikoe/ui/preferences.ui:64
+msgid "Audio Output"
+msgstr "إخراج الصوت"
+
+#: src/kikoe/ui/preferences.ui:65
+msgid "Used for playback"
+msgstr "يُستخدم للتشغيل"
+
+#: src/kikoe/ui/preferences.ui:74
+msgid "Storage"
+msgstr "التخزين"
+
+#: src/kikoe/ui/preferences.ui:77
+msgid "Data Folder"
+msgstr "مجلد البيانات"
+
+#: src/kikoe/ui/preferences.ui:93
+msgid "Troubleshooting"
+msgstr "استكشاف الأخطاء"
+
+#: src/kikoe/ui/preferences.ui:94
+msgid ""
+"Logs stay on this device. Nothing is uploaded automatically. You can attach "
+"a log when reporting a problem."
+msgstr ""
+"تبقى السجلات على هذا الجهاز. لا يُرفع شيء تلقائيًا. يمكنك إرفاق سجل عند "
+"الإبلاغ عن مشكلة."
+
+#: src/kikoe/ui/preferences.ui:97
+msgid "Log Folder"
+msgstr "مجلد السجلات"
+
+#: src/kikoe/ui/preferences.ui:116 src/kikoe/ui/preferences.ui:120
+msgid "Providers"
+msgstr "مزوّدو الخدمة"
+
+#: src/kikoe/ui/preferences.ui:121
+msgid ""
+"Transcription happens in the cloud. A provider can offer several models."
+msgstr "يتم التفريغ في السحابة. يمكن لمزوّد واحد تقديم عدة نماذج."
+
+#: src/kikoe/ui/preferences.ui:129 src/kikoe/ui/window.ui:225
+msgid "_Add Provider"
+msgstr "إضافة مزوّد خدمة(_A)"
+
+#: src/kikoe/ui/preferences.ui:143
+msgid "No Providers Yet"
+msgstr "لا يوجد مزوّدو خدمة بعد"
+
+#: src/kikoe/ui/provider_page.py:274
+#, python-brace-format
+msgid "Remove “{name}”?"
+msgstr "إزالة “{name}”؟"
+
+#: src/kikoe/ui/provider_page.py:275
+msgid "Its models and API key will be deleted."
+msgstr "ستُحذف نماذجه ومفتاح API الخاص به."
+
+#: src/kikoe/ui/provider_page.py:276
+msgid "_Remove"
+msgstr "إزالة(_R)"
+
+#: src/kikoe/ui/provider_page.ui:10
+msgid "Add Provider"
+msgstr "إضافة مزوّد خدمة"
+
+#: src/kikoe/ui/provider_page.ui:32
+msgid "Connection"
+msgstr "الاتصال"
+
+#: src/kikoe/ui/provider_page.ui:33
+msgid ""
+"The API type decides the request format. Most providers offer an “OpenAI-"
+"compatible” API."
+msgstr ""
+"يحدد نوع API تنسيق الطلبات. يقدم معظم المزوّدين واجهة “متوافقة مع OpenAI”."
+
+#: src/kikoe/ui/provider_page.ui:36 src/kikoe/ui/speaker_editor.ui:43
+msgid "Name"
+msgstr "الاسم"
+
+#: src/kikoe/ui/provider_page.ui:42
+msgid "API Type"
+msgstr "نوع API"
+
+#: src/kikoe/ui/provider_page.ui:48
+msgid "Base URL"
+msgstr "عنوان URL الأساسي"
+
+#: src/kikoe/ui/provider_page.ui:55
+msgid "API Key"
+msgstr "مفتاح API"
+
+#: src/kikoe/ui/provider_page.ui:76
+msgid "File Transcription"
+msgstr "تفريغ الملفات"
+
+#: src/kikoe/ui/provider_page.ui:77
+msgid ""
+"Applies to imported audio, recordings transcribed after stopping, and re-"
+"transcription. Smaller chunks allow more parallel requests."
+msgstr ""
+"ينطبق على الصوت المستورد والتسجيلات المفرّغة بعد الإيقاف وإعادة التفريغ. تسمح "
+"المقاطع الأصغر بطلبات متوازية أكثر."
+
+#: src/kikoe/ui/provider_page.ui:80
+msgid "Parallel Requests"
+msgstr "الطلبات المتوازية"
+
+#: src/kikoe/ui/provider_page.ui:81
+msgid "1 processes chunks one at a time; account rate limits still apply"
+msgstr "تعالج القيمة 1 المقاطع تباعًا؛ تبقى حدود معدل الطلبات للحساب سارية"
+
+#: src/kikoe/ui/provider_page.ui:94
+msgid "Chunk Length (Minutes)"
+msgstr "طول المقطع (دقائق)"
+
+#: src/kikoe/ui/provider_page.ui:109
+msgid "Chunk Size (MB)"
+msgstr "حجم المقطع (MB)"
+
+#: src/kikoe/ui/provider_page.ui:123
+msgid "Audio Format"
+msgstr "تنسيق الصوت"
+
+#: src/kikoe/ui/provider_page.ui:129
+msgid "Reset Transcription Defaults"
+msgstr "إعادة ضبط إعدادات التفريغ الافتراضية"
+
+#: src/kikoe/ui/provider_page.ui:137
+msgid "Models"
+msgstr "النماذج"
+
+#: src/kikoe/ui/provider_page.ui:138
+msgid "What each model can do is set when you add it."
+msgstr "تُحدد قدرات كل نموذج عند إضافته."
+
+#: src/kikoe/ui/provider_page.ui:147
+msgid "Add _Model"
+msgstr "إضافة نموذج(_M)"
+
+#: src/kikoe/ui/provider_page.ui:161
+msgid "No Models Yet"
+msgstr "لا توجد نماذج بعد"
+
+#: src/kikoe/ui/provider_page.ui:178
+msgid "_Remove Provider"
+msgstr "إزالة مزوّد الخدمة(_R)"
+
+#: src/kikoe/ui/recording_controller.py:147
+msgid "No audio was recorded"
+msgstr "لم يُسجّل صوت"
+
+#: src/kikoe/ui/recording_controller.py:167
+#, python-brace-format
+msgid "{provider} {model} · {options}"
+msgstr "{provider} {model} · {options}"
+
+#: src/kikoe/ui/recording_controller.py:179
+msgid "Saving recording…"
+msgstr "جارٍ حفظ التسجيل…"
+
+#: src/kikoe/ui/recording_controller.py:187 src/kikoe/ui/tasks.py:59
+msgid "An unexpected error occurred. See the local log for details."
+msgstr "حدث خطأ غير متوقع. راجع السجل المحلي للتفاصيل."
+
+#: src/kikoe/ui/recording_controller.py:221
+msgid "Recovering recordings…"
+msgstr "جارٍ استعادة التسجيلات…"
+
+#: src/kikoe/ui/recording_header.ui:31 src/kikoe/ui/recording_header.ui:34
+#: src/kikoe/ui/transcript_header.ui:31 src/kikoe/ui/transcript_header.ui:34
+#: src/kikoe/ui/transcript_row.py:273 src/kikoe/ui/transcript_row.ui:38
+#: src/kikoe/ui/transcript_row.ui:41
+msgid "Play This Recording"
+msgstr "تشغيل هذا التسجيل"
+
+#: src/kikoe/ui/recording_header.ui:45 src/kikoe/ui/recording_header.ui:49
+#: src/kikoe/ui/transcript_header.ui:45 src/kikoe/ui/transcript_header.ui:49
+#: src/kikoe/ui/transcript_row.ui:52 src/kikoe/ui/transcript_row.ui:56
+msgid "Recording Menu"
+msgstr "قائمة التسجيل"
+
+#: src/kikoe/ui/recording_header.ui:87 src/kikoe/ui/transcript_header.ui:87
+#: src/kikoe/ui/transcript_row.ui:94
+msgid "_Retry Transcription"
+msgstr "إعادة محاولة التفريغ(_R)"
+
+#: src/kikoe/ui/recording_view.py:22 src/kikoe/ui/transcript_row.py:179
+#, python-brace-format
+msgid "Recording {number}"
+msgstr "تسجيل {number}"
+
+#: src/kikoe/ui/recording_view.py:23
+#, python-brace-format
+msgid "In progress · {summary}"
+msgstr "قيد التنفيذ · {summary}"
+
+#: src/kikoe/ui/recording_view.py:27
+#, python-brace-format
+msgid ""
+"Kikoe will upload the audio to {model} and transcribe it automatically after "
+"you stop. The text will appear here."
+msgstr ""
+"سيرفع Kikoe الصوت إلى {model} ويفرّغه تلقائيًا بعد الإيقاف. سيظهر النص هنا."
+
+#: src/kikoe/ui/recovery_prompt.py:14
+msgid "Recover Recordings?"
+msgstr "استعادة التسجيلات؟"
+
+#: src/kikoe/ui/recovery_prompt.py:16
+msgid ""
+"Kikoe found unfinished recordings. Recover their audio now, then choose a "
+"model to transcribe them."
+msgstr ""
+"عثر Kikoe على تسجيلات غير مكتملة. استعد صوتها الآن، ثم اختر نموذجًا لتفريغها."
+
+#: src/kikoe/ui/recovery_prompt.py:19
+msgid "_Later"
+msgstr "لاحقًا(_L)"
+
+#: src/kikoe/ui/recovery_prompt.py:20
+msgid "_Recover"
+msgstr "استعادة(_R)"
+
+#: src/kikoe/ui/retranscribe_dialog.py:47
+#, python-brace-format
+msgid ""
+"Re-transcribe “Recording {number}” ({duration}) from the kept original "
+"audio. Timestamps or speaker detection that were off during transcription "
+"can be added this way."
+msgstr ""
+"أعد تفريغ “تسجيل {number}” ({duration}) من الصوت الأصلي المحفوظ. يمكنك إضافة "
+"الطوابع الزمنية أو كشف المتحدثين اللذين كانا معطلين سابقًا."
+
+#: src/kikoe/ui/retranscribe_dialog.py:61
+msgid "Choose a File Model…"
+msgstr "اختيار نموذج ملفات…"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:10
+msgid "Re-transcribe"
+msgstr "إعادة التفريغ"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:28
+msgid "_Transcribe"
+msgstr "تفريغ(_T)"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:44
+#: src/kikoe/ui/transcription_dialog.py:52
+msgid "Model"
+msgstr "النموذج"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:64
+msgid "Existing Text Is Replaced"
+msgstr "سيُستبدل النص الموجود"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:65
+msgid ""
+"The text of this recording will be replaced, including any manual edits. "
+"Other recordings in the note are not affected. Speaker names are kept where "
+"possible."
+msgstr ""
+"سيُستبدل نص هذا التسجيل، بما في ذلك التعديلات اليدوية. لن تتأثر التسجيلات "
+"الأخرى في الملاحظة. تُحفظ أسماء المتحدثين متى أمكن."
+
+#: src/kikoe/ui/segment_editor.ui:26 src/kikoe/ui/segment_text.ui:19
+#: src/kikoe/ui/transcript_preview.ui:78
+msgid "Transcript Text"
+msgstr "نص التفريغ"
+
+#: src/kikoe/ui/shortcuts.ui:12
+msgid "Notes"
+msgstr "الملاحظات"
+
+#: src/kikoe/ui/shortcuts.ui:21 src/kikoe/ui/sidebar_header.ui:36
+#: src/kikoe/ui/sidebar_header.ui:39 src/kikoe/ui/window.ui:66
+#: src/kikoe/ui/window.ui:69 src/kikoe/ui/window.ui:80
+msgid "Search Notes"
+msgstr "البحث في الملاحظات"
+
+#: src/kikoe/ui/shortcuts.ui:33
+msgid "Rename Note…"
+msgstr "إعادة تسمية الملاحظة…"
+
+#: src/kikoe/ui/shortcuts.ui:39
+msgid "Export Note…"
+msgstr "تصدير الملاحظة…"
+
+#: src/kikoe/ui/shortcuts.ui:45
+msgid "Close Search"
+msgstr "إغلاق البحث"
+
+#: src/kikoe/ui/shortcuts.ui:53
+msgid "Editing"
+msgstr "التحرير"
+
+#: src/kikoe/ui/shortcuts.ui:68
+msgid "Next Segment"
+msgstr "المقطع التالي"
+
+#: src/kikoe/ui/shortcuts.ui:74
+msgid "New Line in Segment"
+msgstr "سطر جديد في المقطع"
+
+#: src/kikoe/ui/shortcuts.ui:80
+msgid "Revert Unsaved Typing"
+msgstr "التراجع عن الكتابة غير المحفوظة"
+
+#: src/kikoe/ui/shortcuts.ui:91 src/kikoe/ui/sidebar_header.ui:26
+#: src/kikoe/ui/sidebar_header.ui:28 src/kikoe/ui/window.ui:56
+#: src/kikoe/ui/window.ui:58
+msgid "Main Menu"
+msgstr "القائمة الرئيسية"
+
+#: src/kikoe/ui/shortcuts.ui:103
+msgid "Keyboard Shortcuts"
+msgstr "اختصارات لوحة المفاتيح"
+
+#: src/kikoe/ui/shortcuts.ui:109
+msgid "Close Window"
+msgstr "إغلاق النافذة"
+
+#: src/kikoe/ui/shortcuts.ui:115
+msgid "Quit"
+msgstr "خروج"
+
+#: src/kikoe/ui/sidebar_header.ui:55 src/kikoe/ui/window.ui:272
+msgid "_Preferences"
+msgstr "التفضيلات(_P)"
+
+#: src/kikoe/ui/sidebar_header.ui:59 src/kikoe/ui/window.ui:276
+msgid "_Keyboard Shortcuts"
+msgstr "اختصارات لوحة المفاتيح(_K)"
+
+#: src/kikoe/ui/sidebar_header.ui:63 src/kikoe/ui/window.ui:280
+msgid "_About Kikoe"
+msgstr "عن Kikoe(_A)"
+
+#: src/kikoe/ui/speaker_banner.py:19
+#, python-brace-format
+msgid "Recording {number} has speakers that are not yet matched."
+msgstr "يحتوي التسجيل {number} على متحدثين لم تتم مطابقتهم بعد."
+
+#: src/kikoe/ui/speaker_controller.py:91
+msgid "This recording has no detected speakers."
+msgstr "لم يُكتشف متحدثون في هذا التسجيل."
+
+#: src/kikoe/ui/speaker_dialog.py:38
+#, python-brace-format
+msgid ""
+"Recording {number} has independently numbered speakers. Listen to the "
+"samples and choose who they are."
+msgstr ""
+"متحدثو التسجيل {number} مرقّمون بشكل مستقل. استمع إلى العينات واختر هوياتهم."
+
+#: src/kikoe/ui/speaker_dialog.ui:10
+msgid "Match Speakers"
+msgstr "مطابقة المتحدثين"
+
+#: src/kikoe/ui/speaker_dialog.ui:28
+msgid "_Apply"
+msgstr "تطبيق(_A)"
+
+#: src/kikoe/ui/speaker_dialog.ui:68
+msgid ""
+"Two numbers can map to the same person. You can rename or re-match a speaker "
+"at any time by clicking their name in the note."
+msgstr ""
+"يمكن ربط رقمين بالشخص نفسه. يمكنك إعادة تسمية المتحدث أو مطابقته بالنقر على "
+"اسمه في الملاحظة في أي وقت."
+
+#: src/kikoe/ui/speaker_editor.ui:10
+msgid "Rename Speaker"
+msgstr "إعادة تسمية المتحدث"
+
+#: src/kikoe/ui/speaker_row.py:18 src/kikoe/ui/transcript_rows.py:32
+#: src/kikoe/ui/transcript_rows.py:71
+#, python-brace-format
+msgid "Speaker {number}"
+msgstr "المتحدث {number}"
+
+#: src/kikoe/ui/speaker_row.py:68
+msgid "No sample available"
+msgstr "لا توجد عينة متاحة"
+
+#: src/kikoe/ui/speaker_row.py:68
+#, python-brace-format
+msgid "“{text}”"
+msgstr "“{text}”"
+
+#: src/kikoe/ui/speaker_row.py:71
+#, python-brace-format
+msgid "Play a sample from “{name}”"
+msgstr "تشغيل عينة من “{name}”"
+
+#: src/kikoe/ui/speaker_row.py:72
+#, python-brace-format
+msgid "Who is {name}?"
+msgstr "من هو {name}؟"
+
+#: src/kikoe/ui/speaker_row.py:76
+msgid "Sample playback needs reliable timestamps."
+msgstr "يتطلب تشغيل العينات طوابع زمنية موثوقة."
+
+#: src/kikoe/ui/speaker_row.py:146
+msgid "New Speaker"
+msgstr "متحدث جديد"
+
+#: src/kikoe/ui/speaker_row.ui:54
+msgid "Existing Speakers"
+msgstr "المتحدثون الموجودون"
+
+#: src/kikoe/ui/speaker_row.ui:81
+msgid "Keep as New Speaker"
+msgstr "إبقاء كمتحدث جديد"
+
+#: src/kikoe/ui/tasks.py:18
+msgid "Something Went Wrong"
+msgstr "حدث خطأ"
+
+#: src/kikoe/ui/tasks.py:19
+msgid "_Close"
+msgstr "إغلاق(_C)"
+
+#: src/kikoe/ui/timestamp_popover.ui:26 src/kikoe/ui/transcript_row.ui:174
+#: src/kikoe/ui/transcript_times.ui:26
+msgid "_Start"
+msgstr "البداية(_S)"
+
+#: src/kikoe/ui/timestamp_popover.ui:44 src/kikoe/ui/transcript_row.ui:192
+#: src/kikoe/ui/transcript_times.ui:44
+msgid "Start"
+msgstr "البداية"
+
+#: src/kikoe/ui/timestamp_popover.ui:54 src/kikoe/ui/transcript_row.ui:202
+#: src/kikoe/ui/transcript_times.ui:54
+msgid "_End"
+msgstr "النهاية(_E)"
+
+#: src/kikoe/ui/timestamp_popover.ui:72 src/kikoe/ui/transcript_row.ui:220
+#: src/kikoe/ui/transcript_times.ui:72
+msgid "End"
+msgstr "النهاية"
+
+#: src/kikoe/ui/timestamp_popover.ui:84 src/kikoe/ui/transcript_row.ui:232
+#: src/kikoe/ui/transcript_times.ui:84
+msgid ""
+"Use MM:SS or H:MM:SS, with optional decimal seconds (e.g. 00:26.860). Leave "
+"empty to clear"
+msgstr ""
+"استخدم MM:SS أو H:MM:SS، مع ثوانٍ عشرية اختياريًا (مثل 00:26.860). اتركه فارغًا "
+"للمسح"
+
+#: src/kikoe/ui/transcript_preview.ui:19 src/kikoe/ui/transcript_preview.ui:21
+#: src/kikoe/ui/transcript_row.ui:115 src/kikoe/ui/transcript_row.ui:117
+msgid "Rename or Match Speaker"
+msgstr "إعادة تسمية المتحدث أو مطابقته"
+
+#: src/kikoe/ui/transcript_preview.ui:41 src/kikoe/ui/transcript_preview.ui:43
+#: src/kikoe/ui/transcript_row.ui:137 src/kikoe/ui/transcript_row.ui:139
+msgid "Edit Timestamps"
+msgstr "تحرير الطوابع الزمنية"
+
+#: src/kikoe/ui/transcript_row.py:195
+msgid "Transcription incomplete. Your text and audio have been kept."
+msgstr "التفريغ غير مكتمل. تم الاحتفاظ بالنص والصوت."
+
+#: src/kikoe/ui/transcript_row.py:197
+msgid "Transcription failed. Your audio has been kept."
+msgstr "فشل التفريغ. تم الاحتفاظ بالصوت."
+
+#: src/kikoe/ui/transcript_row.py:200
+msgid "Audio saved. Transcription is pending."
+msgstr "تم حفظ الصوت. التفريغ قيد الانتظار."
+
+#: src/kikoe/ui/transcript_row.py:245
+msgid "Add Time"
+msgstr "إضافة وقت"
+
+#: src/kikoe/ui/transcript_row.py:247
+msgid "No timestamp"
+msgstr "لا يوجد طابع زمني"
+
+#: src/kikoe/ui/transcript_row.py:273
+msgid "Stop Playback"
+msgstr "إيقاف التشغيل"
+
+#: src/kikoe/ui/transcript_row.py:331
+msgid "Segment text cannot be empty"
+msgstr "لا يمكن أن يكون نص المقطع فارغًا"
+
+#: src/kikoe/ui/transcript_row.py:400
+msgid "End time must not be earlier than start time"
+msgstr "لا يمكن أن يكون وقت النهاية قبل وقت البداية"
+
+#: src/kikoe/ui/transcript_row.py:431
+msgid "Timestamps were not saved because the input is invalid"
+msgstr "لم تُحفظ الطوابع الزمنية لأن الإدخال غير صالح"
+
+#: src/kikoe/ui/transcript_row.py:468
+msgid "Use MM:SS or H:MM:SS, with optional decimal seconds"
+msgstr "استخدم MM:SS أو H:MM:SS، مع ثوانٍ عشرية اختياريًا"
+
+#: src/kikoe/ui/transcript_row.py:480
+msgid "Re-transcribe…"
+msgstr "إعادة التفريغ…"
+
+#: src/kikoe/ui/transcript_row.py:481
+msgid "Export Original Audio…"
+msgstr "تصدير الصوت الأصلي…"
+
+#: src/kikoe/ui/transcript_row.py:483
+msgid "Delete Recording"
+msgstr "حذف التسجيل"
+
+#: src/kikoe/ui/transcription_controller.py:106
+msgid "Import cancelled"
+msgstr "أُلغي الاستيراد"
+
+#: src/kikoe/ui/transcription_controller.py:140
+#: src/kikoe/ui/transcription_controller.py:284
+msgid "Transcription Failed"
+msgstr "فشل التفريغ"
+
+#: src/kikoe/ui/transcription_controller.py:148
+msgid "Transcription finished"
+msgstr "اكتمل التفريغ"
+
+#: src/kikoe/ui/transcription_controller.py:168
+msgid "Choose an available file transcription model."
+msgstr "اختر نموذج تفريغ ملفات متاحًا."
+
+#: src/kikoe/ui/transcription_controller.py:206
+msgid "Re-transcription cancelled"
+msgstr "أُلغيت إعادة التفريغ"
+
+#: src/kikoe/ui/transcription_controller.py:211
+#, python-brace-format
+msgid ""
+"{error}\n"
+"\n"
+"Your text and audio have been kept."
+msgstr ""
+"{error}\n"
+"\n"
+"تم الاحتفاظ بالنص والصوت."
+
+#: src/kikoe/ui/transcription_controller.py:212
+msgid "Re-transcription Failed"
+msgstr "فشلت إعادة التفريغ"
+
+#: src/kikoe/ui/transcription_controller.py:266
+msgid "Transcription cancelled"
+msgstr "أُلغي التفريغ"
+
+#: src/kikoe/ui/transcription_dialog.py:53
+msgid "Add a provider and a model to start transcribing."
+msgstr "أضف مزوّد خدمة ونموذجًا لبدء التفريغ."
+
+#: src/kikoe/ui/transcription_dialog.ui:42
+msgid "_Manage Providers and Models…"
+msgstr "إدارة المزوّدين والنماذج…(_M)"
+
+#: src/kikoe/ui/window.ui:197
+msgid "No Note Selected"
+msgstr "لم تُحدد ملاحظة"
+
+#: src/kikoe/ui/window.ui:198
+msgid "Create a note, then record or import audio into it."
+msgstr "أنشئ ملاحظة، ثم سجّل صوتًا أو استورده إليها."
+
+#: src/kikoe/ui/window.ui:201
+msgid "_New Note"
+msgstr "ملاحظة جديدة(_N)"
+
+#: src/kikoe/ui/window.ui:221
+msgid "Welcome to Kikoe"
+msgstr "مرحبًا بك في Kikoe"
+
+#: src/kikoe/ui/window.ui:222
+msgid ""
+"Kikoe turns speech into text using cloud services. Add a provider and a "
+"model first, then record or import audio."
+msgstr ""
+"يحوّل Kikoe الكلام إلى نص باستخدام خدمات سحابية. أضف مزوّد خدمة ونموذجًا أولًا، "
+"ثم سجّل الصوت أو استورده."

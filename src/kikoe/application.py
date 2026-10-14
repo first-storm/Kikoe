@@ -10,7 +10,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
 from kikoe.constants import APP_ID, APP_NAME, ISSUE_URL, VERSION, WEBSITE
 from kikoe.core.preferences import WindowState
-from kikoe.i18n import _
+from kikoe.i18n import _, is_right_to_left
 from kikoe.paths import data_dir, log_dir
 from kikoe.storage.library import Library, audio_dir, database_path
 from kikoe.storage.model_catalog import load_catalog
@@ -56,6 +56,9 @@ class Application(Adw.Application):
 
     def do_startup(self) -> None:
         Adw.Application.do_startup(self)
+        Gtk.Widget.set_default_direction(
+            Gtk.TextDirection.RTL if is_right_to_left() else Gtk.TextDirection.LTR
+        )
         self._load_style()
 
     def do_activate(self) -> None:

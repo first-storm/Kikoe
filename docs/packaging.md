@@ -90,8 +90,10 @@ Actions allowance, so the workflows only run for changes under their own paths.
   installer also runs on Windows on Arm through emulation; the arm64 one is native.
 - The executables are not code-signed, so SmartScreen warns on first start.
 - Python gettext translates `.ui` templates into the user cache before GTK loads them,
-  including on systems without `locale.bindtextdomain`, so the bundled `zh_CN` catalog
-  covers both template and Python labels.
+  including on systems without `locale.bindtextdomain`, so all 14 bundled catalogs
+  cover both template and Python labels. Chinese catalogs use `zh_Hans` and `zh_Hant`;
+  the loader also accepts regional system locales. PyInstaller collects GTK's own
+  translated labels for the supported languages using GTK's regional catalog names.
 
 ## Not done yet
 

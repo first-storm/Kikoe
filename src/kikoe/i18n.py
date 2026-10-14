@@ -23,6 +23,34 @@ LOCALE_DIR = PACKAGE_DIR / "locale"
 _translation: gettext.NullTranslations = gettext.NullTranslations()
 
 
+def _catalog_language(language: str) -> str:
+    """Map system locale and BCP 47 spellings to the shipped gettext catalogs."""
+    tag, separator, encoding = language.partition(".")
+    language = tag.replace("-", "_") + separator + encoding
+    parts = language.split(".", 1)[0].split("@", 1)[0].lower().split("_")
+    if parts[:2] == ["pt", "br"]:
+        return "pt_BR"
+    if parts[0] != "zh":
+        return language
+    if "hant" in parts:
+        return "zh_Hant"
+    if "hans" in parts:
+        return "zh_Hans"
+    return "zh_Hant" if any(region in parts for region in ("tw", "hk", "mo")) else "zh_Hans"
+
+
+def _preferred_languages() -> list[str]:
+    """Preserve gettext's environment precedence and ordered fallback choices."""
+    for name in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG"):
+        if value := os.environ.get(name):
+            return [_catalog_language(lang) for lang in value.split(":") if lang]
+    try:
+        language = locale.getlocale()[0]
+    except ValueError:
+        language = None
+    return [_catalog_language(language)] if language else ["C"]
+
+
 def setup() -> None:
     """Install translations for Python strings and, where possible, for GtkBuilder."""
     global _translation  # noqa: PLW0603 - module-level singleton set once at startup
@@ -31,16 +59,8 @@ def setup() -> None:
     except locale.Error:
         log.warning("Unsupported locale; falling back to the C locale")
 
-    languages: list[str] | None = None
-    if not any(os.environ.get(name) for name in ("LANGUAGE", "LC_ALL", "LC_MESSAGES", "LANG")):
-        try:
-            language = locale.getlocale()[0]
-        except ValueError:
-            language = None
-        if language:
-            languages = [language]
     _translation = gettext.translation(
-        GETTEXT_DOMAIN, LOCALE_DIR, languages=languages, fallback=True
+        GETTEXT_DOMAIN, LOCALE_DIR, languages=_preferred_languages(), fallback=True
     )
 
     # Python also translates template XML, so GTK uses the same catalog on every OS.
@@ -57,6 +77,11 @@ def _(message: str) -> str:
 def ngettext(singular: str, plural: str, n: int) -> str:
     """Translate a message that depends on a count."""
     return _translation.ngettext(singular, plural, n)
+
+
+def is_right_to_left() -> bool:
+    """Use the loaded catalog so direction also follows language fallbacks."""
+    return _translation.info().get("language", "").replace("-", "_").split("_")[0] == "ar"
 
 
 def translated_ui(path: Path) -> Path:

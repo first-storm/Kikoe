@@ -417,6 +417,11 @@ from translating twice. Original compiled files remain untouched. This also work
 `locale.bindtextdomain` on Windows/macOS. Cache failure is logged and falls back to the
 original template/native GTK translation. Catalogs and templates must be built before
 packaging. There is no application-level interface language override.
+The loader preserves gettext environment precedence and ordered language fallbacks,
+normalizes BCP 47 tags to gettext directory names, and maps regional Chinese locales
+to `zh_Hans` or `zh_Hant` (explicit script takes priority; bare `zh` uses `zh_Hans`).
+Application startup sets GTK's standard text direction from the loaded catalog,
+including Arabic selected through a fallback. The supported catalog list is in `po/LINGUAS`.
 
 `diagnostics.configure_logging` writes terminal diagnostics and `paths.log_dir()/kikoe.log`.
 Files rotate at 2 MiB, with three backups. The formatter keeps numeric arguments and

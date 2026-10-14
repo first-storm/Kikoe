@@ -1,0 +1,1681 @@
+# Indonesian translation of Kikoe.
+# Distributed under GPL-3.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: kikoe 0.1.1\n"
+"Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
+"POT-Creation-Date: 2026-10-15 03:01+1100\n"
+"PO-Revision-Date: 2026-10-15 00:00+0000\n"
+"Last-Translator: Kikoe contributors\n"
+"Language-Team: Indonesian\n"
+"Language: id\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: src/kikoe/application.py:152
+msgid "Could not open the folder."
+msgstr "Tidak dapat membuka folder."
+
+#. Translators: replace with your name(s), one per line.
+#: src/kikoe/application.py:177
+msgid "translator-credits"
+msgstr "Kikoe contributors"
+
+#: src/kikoe/media/ffmpeg.py:54
+#, python-brace-format
+msgid "KIKOE_FFMPEG points to a missing file: {path}"
+msgstr "KIKOE_FFMPEG menunjuk ke berkas yang tidak ada: {path}"
+
+#: src/kikoe/media/ffmpeg.py:65
+msgid "ffmpeg was not found. Install it or set KIKOE_FFMPEG."
+msgstr "ffmpeg tidak ditemukan. Instal atau atur KIKOE_FFMPEG."
+
+#: src/kikoe/media/ffmpeg.py:107
+#, python-brace-format
+msgid "ffmpeg exited with status {status}: {error}"
+msgstr "ffmpeg berhenti dengan status {status}: {error}"
+
+#: src/kikoe/media/ffmpeg.py:167
+msgid "The audio converter stopped unexpectedly."
+msgstr "Konverter audio berhenti secara tak terduga."
+
+#: src/kikoe/media/ffmpeg.py:183
+#, python-brace-format
+msgid "The audio converter failed: {detail}"
+msgstr "Konversi audio gagal: {detail}"
+
+#: src/kikoe/media/ffmpeg.py:239
+#, python-brace-format
+msgid "Could not decode the audio: {detail}"
+msgstr "Tidak dapat mendekode audio: {detail}"
+
+#: src/kikoe/media/player.py:73
+msgid "No default audio output device is available."
+msgstr "Tidak ada perangkat keluaran audio bawaan yang tersedia."
+
+#: src/kikoe/media/player.py:108
+#, python-brace-format
+msgid "Could not play the audio. Check your output device. ({detail})"
+msgstr "Tidak dapat memutar audio. Periksa perangkat keluaran Anda. ({detail})"
+
+#: src/kikoe/media/player.py:119
+#, python-brace-format
+msgid "Could not close the audio output device. ({detail})"
+msgstr "Tidak dapat menutup perangkat keluaran audio. ({detail})"
+
+#: src/kikoe/media/recorder.py:107
+#, python-brace-format
+msgid ""
+"Could not open the microphone. Check your input device and microphone "
+"permissions. ({detail})"
+msgstr ""
+"Tidak dapat membuka mikrofon. Periksa perangkat masukan dan izin mikrofon. "
+"({detail})"
+
+#: src/kikoe/media/recorder.py:117
+msgid "The microphone lost audio. The captured audio has been kept."
+msgstr "Mikrofon kehilangan audio. Audio yang direkam telah disimpan."
+
+#: src/kikoe/media/recorder.py:129
+msgid "Audio could not be saved fast enough. The captured audio has been kept."
+msgstr ""
+"Audio tidak dapat disimpan cukup cepat. Audio yang direkam telah disimpan."
+
+#: src/kikoe/media/recorder.py:152
+msgid "The microphone disconnected. The captured audio has been kept."
+msgstr "Mikrofon terputus. Audio yang direkam telah disimpan."
+
+#: src/kikoe/media/recorder.py:177
+#, python-brace-format
+msgid "The microphone stopped responding. ({detail})"
+msgstr "Mikrofon berhenti merespons. ({detail})"
+
+#: src/kikoe/media/recorder.py:196
+#, python-brace-format
+msgid "Could not close the microphone. ({detail})"
+msgstr "Tidak dapat menutup mikrofon. ({detail})"
+
+#: src/kikoe/media/transcode.py:78
+#, python-brace-format
+msgid "“{name}” contains no audio."
+msgstr "“{name}” tidak berisi audio."
+
+#: src/kikoe/media/transcode.py:128
+#, python-brace-format
+msgid ""
+"Could not read “{name}”. It may not be an audio file, or it is damaged. "
+"({detail})"
+msgstr ""
+"Tidak dapat membaca “{name}”. Berkas mungkin bukan audio atau rusak. "
+"({detail})"
+
+#. Translators: {name} is a service name such as Groq.
+#: src/kikoe/providers/base.py:91
+#, python-brace-format
+msgid "{name} supports file transcription only."
+msgstr "{name} hanya mendukung transkripsi berkas."
+
+#: src/kikoe/providers/deepgram.py:204
+#, python-brace-format
+msgid "Deepgram rejected realtime transcription: {message}"
+msgstr "Deepgram menolak transkripsi waktu nyata: {message}"
+
+#: src/kikoe/providers/deepgram.py:209
+#: src/kikoe/providers/mistral_realtime.py:119
+msgid ""
+"The provider rejected realtime transcription. Check the model and API key."
+msgstr "Penyedia menolak transkripsi waktu nyata. Periksa model dan kunci API."
+
+#: src/kikoe/providers/errors.py:36
+#, python-brace-format
+msgid "{host} sent a response Kikoe does not understand."
+msgstr "{host} mengirim respons yang tidak dipahami Kikoe."
+
+#: src/kikoe/providers/errors.py:59
+#, python-brace-format
+msgid "{subject} rejected the API key. Check it in Preferences."
+msgstr "{subject} menolak kunci API. Periksa di Preferensi."
+
+#: src/kikoe/providers/errors.py:62
+#, python-brace-format
+msgid ""
+"{subject} does not allow this API key to use this model, or is not available "
+"in your region. Check your account and the key in Preferences."
+msgstr ""
+"{subject} tidak mengizinkan kunci API ini menggunakan model ini atau tidak "
+"tersedia di wilayah Anda. Periksa akun dan kunci di Preferensi."
+
+#: src/kikoe/providers/errors.py:66
+#, python-brace-format
+msgid "{subject} reports that your account has run out of credits."
+msgstr "{subject} melaporkan bahwa kredit akun Anda telah habis."
+
+#: src/kikoe/providers/errors.py:68
+#, python-brace-format
+msgid "{subject} could not find this model. Check the model name."
+msgstr "{subject} tidak menemukan model ini. Periksa nama model."
+
+#: src/kikoe/providers/errors.py:70
+#, python-brace-format
+msgid "{subject} took too long to respond. Try again later."
+msgstr "{subject} terlalu lama merespons. Coba lagi nanti."
+
+#: src/kikoe/providers/errors.py:72
+#, python-brace-format
+msgid "The audio is too large for {subject}."
+msgstr "Audio terlalu besar untuk {subject}."
+
+#: src/kikoe/providers/errors.py:75
+#, python-brace-format
+msgid ""
+"{subject} is limiting requests, or your quota is used up. Wait a while and "
+"try again, or check your plan."
+msgstr ""
+"{subject} membatasi permintaan atau kuota Anda habis. Tunggu lalu coba lagi, "
+"atau periksa paket Anda."
+
+#: src/kikoe/providers/errors.py:79
+#, python-brace-format
+msgid "{subject} is having problems (HTTP {status}). Try again later."
+msgstr "{subject} mengalami masalah (HTTP {status}). Coba lagi nanti."
+
+#: src/kikoe/providers/errors.py:81
+#, python-brace-format
+msgid "{subject} could not process this audio (HTTP {status})."
+msgstr "{subject} tidak dapat memproses audio ini (HTTP {status})."
+
+#: src/kikoe/providers/errors.py:84
+#, python-brace-format
+msgid ""
+"{subject} rejected this request (HTTP {status}). Check the model and options."
+msgstr ""
+"{subject} menolak permintaan ini (HTTP {status}). Periksa model dan opsi."
+
+#: src/kikoe/providers/errors.py:87
+#, python-brace-format
+msgid "{subject} returned an unexpected error (HTTP {status})."
+msgstr "{subject} mengembalikan kesalahan tak terduga (HTTP {status})."
+
+#: src/kikoe/providers/errors.py:92
+#, python-brace-format
+msgid "{message} Details: {detail}"
+msgstr "{message} Detail: {detail}"
+
+#: src/kikoe/providers/errors.py:100
+msgid "The provider sent a response Kikoe does not understand."
+msgstr "Penyedia mengirim respons yang tidak dipahami Kikoe."
+
+#: src/kikoe/providers/errors.py:104
+msgid "The provider"
+msgstr "Penyedia"
+
+#: src/kikoe/providers/errors.py:106
+msgid "Could not complete transcription. Check your connection and try again."
+msgstr "Tidak dapat menyelesaikan transkripsi. Periksa koneksi dan coba lagi."
+
+#: src/kikoe/providers/errors.py:120 src/kikoe/providers/mistral.py:100
+#, python-brace-format
+msgid "{host} took too long to respond. Try again later."
+msgstr "{host} terlalu lama merespons. Coba lagi nanti."
+
+#: src/kikoe/providers/errors.py:122 src/kikoe/providers/mistral.py:103
+#: src/kikoe/providers/mistral.py:146
+#, python-brace-format
+msgid "Could not reach {host}. Try again later."
+msgstr "Tidak dapat menghubungi {host}. Coba lagi nanti."
+
+#: src/kikoe/providers/errors.py:125
+#, python-brace-format
+msgid "{host} could not finish transcription: {message}"
+msgstr "{host} tidak dapat menyelesaikan transkripsi: {message}"
+
+#: src/kikoe/providers/mistral_file_stream.py:61
+#: src/kikoe/providers/openai_file_stream.py:66
+msgid "Transcription ended before it was complete. Try again."
+msgstr "Transkripsi berakhir sebelum selesai. Coba lagi."
+
+#: src/kikoe/providers/mistral_realtime.py:114
+#, python-brace-format
+msgid "Mistral rejected realtime transcription: {message}"
+msgstr "Mistral menolak transkripsi waktu nyata: {message}"
+
+#: src/kikoe/providers/openai.py:165
+#, python-brace-format
+msgid "{host} rejected the realtime session: {message}"
+msgstr "{host} menolak sesi waktu nyata: {message}"
+
+#: src/kikoe/providers/openai.py:180
+#, python-brace-format
+msgid ""
+"{host} does not support transcription while recording. Turn off “Transcribe "
+"While Recording” for this model in Preferences."
+msgstr ""
+"{host} tidak mendukung transkripsi saat merekam. Nonaktifkan “Transkripsikan "
+"saat merekam” untuk model ini di Preferensi."
+
+#: src/kikoe/providers/openai.py:242
+msgid "Realtime transcription failed. Your audio has been kept."
+msgstr "Transkripsi waktu nyata gagal. Audio Anda telah disimpan."
+
+#: src/kikoe/services/file_transcription.py:120
+msgid "Choose a file transcription model to retry this recording."
+msgstr "Pilih model transkripsi berkas untuk mencoba lagi rekaman ini."
+
+#: src/kikoe/services/importer.py:74 src/kikoe/ui/bottom_bar.py:166
+msgid "Choose a file transcription model to import audio."
+msgstr "Pilih model transkripsi berkas untuk mengimpor audio."
+
+#: src/kikoe/services/importer.py:258
+msgid "The chunk size is too small for this audio format."
+msgstr "Ukuran potongan terlalu kecil untuk format audio ini."
+
+#: src/kikoe/storage/audio_files.py:33
+#, python-brace-format
+msgid "Could not copy the audio file into the library: {error}"
+msgstr "Tidak dapat menyalin berkas audio ke pustaka: {error}"
+
+#: src/kikoe/storage/captures.py:142
+msgid "Could not read the saved transcript. Its audio has been kept."
+msgstr "Tidak dapat membaca transkrip yang disimpan. Audionya telah disimpan."
+
+#: src/kikoe/storage/captures.py:167
+#, python-brace-format
+msgid "Could not read a saved recording. Its audio has been kept. ({detail})"
+msgstr ""
+"Tidak dapat membaca rekaman yang disimpan. Audionya telah disimpan. "
+"({detail})"
+
+#: src/kikoe/storage/captures.py:231
+#, python-brace-format
+msgid "Could not save the recording. ({detail})"
+msgstr "Tidak dapat menyimpan rekaman. ({detail})"
+
+#: src/kikoe/storage/library.py:67
+msgid ""
+"The note library was created by a newer version of Kikoe. Update Kikoe to "
+"open it."
+msgstr ""
+"Pustaka catatan dibuat oleh versi Kikoe yang lebih baru. Perbarui Kikoe "
+"untuk membukanya."
+
+#: src/kikoe/storage/library.py:182 src/kikoe/storage/library.py:295
+#: src/kikoe/storage/library.py:317
+msgid "This recording no longer exists."
+msgstr "Rekaman ini tidak ada lagi."
+
+#: src/kikoe/storage/library.py:284
+msgid "Enter transcript text."
+msgstr "Masukkan teks transkrip."
+
+#: src/kikoe/storage/library.py:286
+msgid "The end time must be after the start time."
+msgstr "Waktu akhir harus setelah waktu mulai."
+
+#: src/kikoe/storage/library.py:301
+msgid "Enter a speaker name."
+msgstr "Masukkan nama pembicara."
+
+#: src/kikoe/storage/library.py:323
+msgid "The speaker selection is no longer available."
+msgstr "Pilihan pembicara tidak lagi tersedia."
+
+#: src/kikoe/storage/library.py:409
+#, python-brace-format
+msgid "The note library could not be read or saved: {error}"
+msgstr "Pustaka catatan tidak dapat dibaca atau disimpan: {error}"
+
+#: src/kikoe/storage/note_rows.py:27
+msgid "This note no longer exists."
+msgstr "Catatan ini tidak ada lagi."
+
+#: src/kikoe/storage/providers.py:52
+#, python-brace-format
+msgid "Provider {provider_id} no longer exists."
+msgstr "Penyedia {provider_id} tidak ada lagi."
+
+#: src/kikoe/storage/providers.py:147
+#, python-brace-format
+msgid "Model {replacing_id} no longer exists."
+msgstr "Model {replacing_id} tidak ada lagi."
+
+#: src/kikoe/storage/secrets.py:57
+#, python-brace-format
+msgid ""
+"API keys could not be saved because no secure credential store is available. "
+"Details: {error}"
+msgstr ""
+"Kunci API tidak dapat disimpan karena penyimpanan kredensial yang aman tidak "
+"tersedia. Detail: {error}"
+
+#: src/kikoe/storage/settings.py:63
+#, python-brace-format
+msgid "Could not read the settings file: {error}"
+msgstr "Tidak dapat membaca berkas pengaturan: {error}"
+
+#: src/kikoe/storage/settings.py:75
+#, python-brace-format
+msgid "The settings file {detail} is damaged or not understood: {error}"
+msgstr "Berkas pengaturan {detail} rusak atau tidak dipahami: {error}"
+
+#: src/kikoe/storage/settings.py:100
+#, python-brace-format
+msgid "Could not save the settings file: {error}"
+msgstr "Tidak dapat menyimpan berkas pengaturan: {error}"
+
+#: src/kikoe/ui/bottom_bar.py:98
+msgid "_Append Recording"
+msgstr "_Tambahkan Rekaman"
+
+#: src/kikoe/ui/bottom_bar.py:98 src/kikoe/ui/bottom_bar.ui:125
+msgid "_Record"
+msgstr "_Rekam"
+
+#: src/kikoe/ui/bottom_bar.py:119 src/kikoe/ui/bottom_bar.ui:224
+#: src/kikoe/ui/bottom_bar.ui:227
+msgid "Pause Recording"
+msgstr "Jeda Rekaman"
+
+#: src/kikoe/ui/bottom_bar.py:119
+msgid "Resume Recording"
+msgstr "Lanjutkan Rekaman"
+
+#: src/kikoe/ui/bottom_bar.py:149
+msgid "No Model"
+msgstr "Tanpa Model"
+
+#: src/kikoe/ui/bottom_bar.py:151
+msgid "Add a model in Preferences first"
+msgstr "Tambahkan model di Preferensi terlebih dahulu"
+
+#: src/kikoe/ui/bottom_bar.py:152 src/kikoe/ui/bottom_bar.ui:44
+msgid "Transcription Model…"
+msgstr "Model Transkripsi…"
+
+#: src/kikoe/ui/bottom_bar.py:157
+#, python-brace-format
+msgid ""
+"{model} · {provider}\n"
+"{hint}"
+msgstr ""
+"{model} · {provider}\n"
+"{hint}"
+
+#: src/kikoe/ui/bottom_bar.py:164 src/kikoe/ui/bottom_bar.ui:90
+#: src/kikoe/ui/shortcuts.ui:27
+msgid "Import Audio…"
+msgstr "Impor Audio…"
+
+#: src/kikoe/ui/bottom_bar.ui:46 src/kikoe/ui/transcription_dialog.ui:10
+msgid "Transcription Model"
+msgstr "Model Transkripsi"
+
+#: src/kikoe/ui/bottom_bar.ui:92 src/kikoe/ui/file_dialogs.py:68
+msgid "Import Audio"
+msgstr "Impor Audio"
+
+#: src/kikoe/ui/bottom_bar.ui:104 src/kikoe/ui/sidebar_header.ui:49
+#: src/kikoe/ui/window.ui:266
+msgid "_Import Audio…"
+msgstr "_Impor Audio…"
+
+#: src/kikoe/ui/bottom_bar.ui:158 src/kikoe/ui/dialogs.py:66
+#: src/kikoe/ui/export_dialog.ui:21 src/kikoe/ui/model_dialog.ui:21
+#: src/kikoe/ui/note_actions.py:56 src/kikoe/ui/retranscribe_dialog.ui:21
+#: src/kikoe/ui/speaker_dialog.ui:21 src/kikoe/ui/speaker_editor.ui:20
+msgid "_Cancel"
+msgstr "_Batal"
+
+#: src/kikoe/ui/bottom_bar.ui:243
+msgid "_Stop"
+msgstr "_Hentikan"
+
+#: src/kikoe/ui/content_header.ui:14
+#: src/kikoe/ui/transcription_controller.py:323 src/kikoe/ui/window.py:388
+#: src/kikoe/ui/window.ui:10 src/kikoe/ui/window.ui:37
+#: src/kikoe/ui/window.ui:119 src/kikoe/ui/window.ui:130
+msgid "Kikoe"
+msgstr "Kikoe"
+
+#: src/kikoe/ui/content_header.ui:20 src/kikoe/ui/content_header.ui:24
+#: src/kikoe/ui/shortcuts.ui:56 src/kikoe/ui/window.ui:136
+#: src/kikoe/ui/window.ui:140
+msgid "Undo"
+msgstr "Urungkan"
+
+#: src/kikoe/ui/content_header.ui:31 src/kikoe/ui/content_header.ui:35
+#: src/kikoe/ui/shortcuts.ui:62 src/kikoe/ui/window.ui:147
+#: src/kikoe/ui/window.ui:151
+msgid "Redo"
+msgstr "Ulangi"
+
+#: src/kikoe/ui/content_header.ui:42 src/kikoe/ui/content_header.ui:44
+#: src/kikoe/ui/window.ui:158 src/kikoe/ui/window.ui:160
+msgid "Note Menu"
+msgstr "Menu Catatan"
+
+#: src/kikoe/ui/content_header.ui:54 src/kikoe/ui/content_header.ui:56
+#: src/kikoe/ui/window.ui:170 src/kikoe/ui/window.ui:172
+msgid "Display Options"
+msgstr "Opsi Tampilan"
+
+#: src/kikoe/ui/content_header.ui:68 src/kikoe/ui/export_dialog.ui:106
+#: src/kikoe/ui/window.ui:288
+msgid "Show _Timestamps"
+msgstr "Tampilkan Penanda _Waktu"
+
+#: src/kikoe/ui/content_header.ui:72 src/kikoe/ui/export_dialog.ui:113
+#: src/kikoe/ui/window.ui:292
+msgid "Show _Speakers"
+msgstr "Tampilkan _Pembicara"
+
+#: src/kikoe/ui/content_header.ui:80 src/kikoe/ui/note_sidebar.py:172
+#: src/kikoe/ui/window.ui:300
+msgid "_Rename…"
+msgstr "_Ubah Nama…"
+
+#: src/kikoe/ui/content_header.ui:84 src/kikoe/ui/window.ui:304
+msgid "_Copy All Text"
+msgstr "_Salin Semua Teks"
+
+#: src/kikoe/ui/content_header.ui:88 src/kikoe/ui/export_dialog.ui:28
+#: src/kikoe/ui/window.ui:308
+msgid "_Export…"
+msgstr "_Ekspor…"
+
+#: src/kikoe/ui/content_header.ui:94 src/kikoe/ui/note_sidebar.py:174
+#: src/kikoe/ui/window.ui:314
+msgid "_Delete Note"
+msgstr "_Hapus Catatan"
+
+#: src/kikoe/ui/dialogs.py:51
+msgid "Discard Changes?"
+msgstr "Buang Perubahan?"
+
+#: src/kikoe/ui/dialogs.py:52
+msgid "Your changes have not been saved and will be lost."
+msgstr "Perubahan Anda belum disimpan dan akan hilang."
+
+#: src/kikoe/ui/dialogs.py:53
+msgid "_Keep Editing"
+msgstr "_Lanjutkan Mengedit"
+
+#: src/kikoe/ui/dialogs.py:54
+msgid "_Discard"
+msgstr "_Buang"
+
+#: src/kikoe/ui/export_controller.py:62
+msgid "Copied to clipboard"
+msgstr "Disalin ke papan klip"
+
+#: src/kikoe/ui/export_controller.py:70 src/kikoe/ui/export_dialog.ui:10
+msgid "Export Note"
+msgstr "Ekspor Catatan"
+
+#: src/kikoe/ui/export_controller.py:83 src/kikoe/ui/note_actions.py:86
+msgid "This recording is no longer available."
+msgstr "Rekaman ini tidak lagi tersedia."
+
+#: src/kikoe/ui/export_controller.py:94
+msgid "Export Original Audio"
+msgstr "Ekspor Audio Asli"
+
+#: src/kikoe/ui/export_controller.py:96
+msgid "Audio Files"
+msgstr "Berkas Audio"
+
+#: src/kikoe/ui/export_controller.py:99 src/kikoe/ui/speaker_controller.py:56
+#: src/kikoe/ui/transcription_controller.py:160
+msgid "The original audio is not available."
+msgstr "Audio asli tidak tersedia."
+
+#: src/kikoe/ui/export_controller.py:122
+#, python-brace-format
+msgid "Could not save “{name}”: {error}"
+msgstr "Tidak dapat menyimpan “{name}”: {error}"
+
+#: src/kikoe/ui/export_controller.py:125
+#, python-brace-format
+msgid "Exported “{name}”"
+msgstr "“{name}” diekspor"
+
+#: src/kikoe/ui/export_dialog.py:45
+msgid "This note has no speakers"
+msgstr "Catatan ini tidak memiliki pembicara"
+
+#: src/kikoe/ui/export_dialog.py:48
+#, python-brace-format
+msgid "{extension} · Unavailable because this note has no timestamps"
+msgstr ""
+"{extension} · Tidak tersedia karena catatan ini tidak memiliki penanda waktu"
+
+#: src/kikoe/ui/export_dialog.py:82
+msgid "Always included in subtitle formats"
+msgstr "Selalu disertakan dalam format subtitel"
+
+#: src/kikoe/ui/export_dialog.py:86
+msgid "This note has no timestamps"
+msgstr "Catatan ini tidak memiliki penanda waktu"
+
+#: src/kikoe/ui/export_dialog.ui:42
+msgid "Format"
+msgstr "Format"
+
+#: src/kikoe/ui/export_dialog.ui:45
+msgid "Plain Text"
+msgstr "Teks Biasa"
+
+#: src/kikoe/ui/export_dialog.ui:59
+msgid "Markdown"
+msgstr "Markdown"
+
+#: src/kikoe/ui/export_dialog.ui:73
+msgid "SRT Subtitles"
+msgstr "Subtitel SRT"
+
+#: src/kikoe/ui/export_dialog.ui:87
+msgid "WebVTT Subtitles"
+msgstr "Subtitel WebVTT"
+
+#: src/kikoe/ui/export_dialog.ui:103 src/kikoe/ui/options_group.ui:10
+msgid "Options"
+msgstr "Opsi"
+
+#: src/kikoe/ui/file_dialogs.py:48
+msgid "All Files"
+msgstr "Semua Berkas"
+
+#: src/kikoe/ui/file_dialogs.py:57
+msgid "Only locations on this computer can be used."
+msgstr "Hanya lokasi di komputer ini yang dapat digunakan."
+
+#: src/kikoe/ui/file_dialogs.py:63
+msgid "Audio and Video"
+msgstr "Audio dan Video"
+
+#: src/kikoe/ui/file_dialogs.py:70
+msgid "Only files on this computer can be imported."
+msgstr "Hanya berkas di komputer ini yang dapat diimpor."
+
+#: src/kikoe/ui/labels.py:29
+msgid "OpenAI-compatible"
+msgstr "Kompatibel dengan OpenAI"
+
+#: src/kikoe/ui/labels.py:34
+msgid "Maximum 60 minutes, or 30 with timestamps or speaker detection"
+msgstr "Maksimum 60 menit, atau 30 dengan penanda waktu atau deteksi pembicara"
+
+#: src/kikoe/ui/labels.py:35 src/kikoe/ui/provider_page.ui:95
+msgid "0 uses the provider limit; chunks also respect the size limit"
+msgstr "0 menggunakan batas penyedia; potongan juga mematuhi batas ukuran"
+
+#: src/kikoe/ui/labels.py:40
+msgid "Defaults to 25 MB; your server may require smaller chunks"
+msgstr "Bawaan 25 MB; server Anda mungkin memerlukan potongan lebih kecil"
+
+#: src/kikoe/ui/labels.py:41
+#, python-brace-format
+msgid "Maximum {size:g} MB per chunk"
+msgstr "Maksimum {size:g} MB per potongan"
+
+#: src/kikoe/ui/labels.py:46
+msgid "Connecting…"
+msgstr "Menghubungkan…"
+
+#: src/kikoe/ui/labels.py:47
+msgid "In progress"
+msgstr "Sedang berlangsung"
+
+#: src/kikoe/ui/labels.py:48
+msgid "Reconnecting… Audio is saved locally"
+msgstr "Menghubungkan kembali… Audio disimpan secara lokal"
+
+#: src/kikoe/ui/labels.py:49
+msgid "Catching up…"
+msgstr "Mengejar ketertinggalan…"
+
+#: src/kikoe/ui/labels.py:50
+msgid "Transcription incomplete"
+msgstr "Transkripsi belum selesai"
+
+#: src/kikoe/ui/labels.py:51 src/kikoe/ui/labels.py:56
+#: src/kikoe/ui/recording_view.py:33
+msgid "Paused"
+msgstr "Dijeda"
+
+#: src/kikoe/ui/labels.py:56 src/kikoe/ui/recording_view.py:24
+#: src/kikoe/ui/recording_view.py:33 src/kikoe/ui/recording_view.ui:69
+msgid "Recording"
+msgstr "Rekaman"
+
+#: src/kikoe/ui/labels.py:62
+msgid "Realtime"
+msgstr "Waktu Nyata"
+
+#: src/kikoe/ui/labels.py:64 src/kikoe/ui/model_dialog.ui:79
+#: src/kikoe/ui/model_dialog.ui:140 src/kikoe/ui/recording_controller.py:164
+msgid "Timestamps"
+msgstr "Penanda Waktu"
+
+#: src/kikoe/ui/labels.py:66 src/kikoe/ui/model_dialog.ui:92
+msgid "Word Timestamps"
+msgstr "Penanda Waktu Kata"
+
+#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:166
+msgid "Speakers"
+msgstr "Pembicara"
+
+#: src/kikoe/ui/labels.py:70
+msgid "Streaming"
+msgstr "Streaming"
+
+#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:170
+msgid "Text only"
+msgstr "Hanya teks"
+
+#: src/kikoe/ui/labels.py:82
+msgid "Plain Text (.txt)"
+msgstr "Teks Biasa (.txt)"
+
+#: src/kikoe/ui/labels.py:84
+msgid "Markdown (.md)"
+msgstr "Markdown (.md)"
+
+#: src/kikoe/ui/labels.py:86
+msgid "SRT Subtitles (.srt)"
+msgstr "Subtitel SRT (.srt)"
+
+#: src/kikoe/ui/labels.py:88
+msgid "WebVTT Subtitles (.vtt)"
+msgstr "Subtitel WebVTT (.vtt)"
+
+#: src/kikoe/ui/labels.py:94
+msgid "Enter a name for this provider."
+msgstr "Masukkan nama untuk penyedia ini."
+
+#: src/kikoe/ui/labels.py:96
+msgid "Enter the base URL of the API."
+msgstr "Masukkan URL dasar API."
+
+#: src/kikoe/ui/labels.py:98
+msgid ""
+"The base URL must start with http:// or https:// and include a host name."
+msgstr ""
+"URL dasar harus diawali http:// atau https:// dan menyertakan nama host."
+
+#: src/kikoe/ui/labels.py:104
+msgid "Enter the model ID."
+msgstr "Masukkan ID model."
+
+#: src/kikoe/ui/labels.py:106
+msgid "This provider already has a model with that ID."
+msgstr "Penyedia ini sudah memiliki model dengan ID tersebut."
+
+#: src/kikoe/ui/labels.py:108
+msgid "Turn on file or realtime transcription."
+msgstr "Aktifkan transkripsi berkas atau waktu nyata."
+
+#: src/kikoe/ui/labels.py:116
+msgid "%H:%M"
+msgstr "%H:%M"
+
+#. Translators: {time} is a time of day formatted with the “%H:%M” string below.
+#: src/kikoe/ui/labels.py:116
+#, python-brace-format
+msgid "Today {time}"
+msgstr "Hari ini {time}"
+
+#: src/kikoe/ui/labels.py:118
+msgid "Yesterday"
+msgstr "Kemarin"
+
+#. Translators: date in this year, see the GLib.DateTime.format documentation.
+#: src/kikoe/ui/labels.py:121
+msgid "%b %-d"
+msgstr "%-d %b"
+
+#. Translators: date in another year, see the GLib.DateTime.format documentation.
+#: src/kikoe/ui/labels.py:124
+msgid "%b %-d, %Y"
+msgstr "%-d %b %Y"
+
+#: src/kikoe/ui/labels.py:129
+msgid "%b %-d %H:%M"
+msgstr "%-d %b %H:%M"
+
+#: src/kikoe/ui/labels.py:129
+#, python-brace-format
+msgid "{date} Recording"
+msgstr "Rekaman {date}"
+
+#: src/kikoe/ui/labels.py:139
+msgid "Imported audio"
+msgstr "Audio yang diimpor"
+
+#: src/kikoe/ui/labels.py:147
+msgid "No recordings"
+msgstr "Tidak ada rekaman"
+
+#: src/kikoe/ui/labels.py:152
+#, python-brace-format
+msgid "{count} recording"
+msgid_plural "{count} recordings"
+msgstr[0] "{count} rekaman"
+
+#: src/kikoe/ui/labels.py:189
+#, python-brace-format
+msgid "Converting part {part} of {parts}…"
+msgstr "Mengonversi bagian {part} dari {parts}…"
+
+#: src/kikoe/ui/labels.py:191
+msgid "Converting audio…"
+msgstr "Mengonversi audio…"
+
+#: src/kikoe/ui/labels.py:193
+#, python-brace-format
+msgid "Transcribing… {part} of {parts} chunks complete"
+msgstr "Mentranskripsi… {part} dari {parts} potongan selesai"
+
+#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:175
+#: src/kikoe/ui/transcription_controller.py:261
+#: src/kikoe/ui/transcription_controller.py:308
+msgid "Transcribing…"
+msgstr "Mentranskripsi…"
+
+#: src/kikoe/ui/labels.py:199
+msgid "Saving…"
+msgstr "Menyimpan…"
+
+#: src/kikoe/ui/labels.py:204
+msgid "Not supported by this model"
+msgstr "Tidak didukung model ini"
+
+#: src/kikoe/ui/labels.py:210
+msgid "Transcribes while recording"
+msgstr "Mentranskripsi saat merekam"
+
+#: src/kikoe/ui/labels.py:211
+msgid "Transcribes after recording"
+msgstr "Mentranskripsi setelah merekam"
+
+#: src/kikoe/ui/labels.py:219
+#, python-brace-format
+msgid "{mode} · This model does not support {features}"
+msgstr "{mode} · Model ini tidak mendukung {features}"
+
+#: src/kikoe/ui/labels.py:229
+msgid "realtime transcription"
+msgstr "transkripsi waktu nyata"
+
+#: src/kikoe/ui/labels.py:231
+msgid "timestamps"
+msgstr "penanda waktu"
+
+#: src/kikoe/ui/labels.py:233
+msgid "word timestamps"
+msgstr "penanda waktu kata"
+
+#: src/kikoe/ui/labels.py:235
+msgid "speaker detection"
+msgstr "deteksi pembicara"
+
+#: src/kikoe/ui/labels.py:237
+msgid "streaming preview"
+msgstr "pratinjau streaming"
+
+#: src/kikoe/ui/labels.py:241
+#, python-brace-format
+msgid "{provider} · {model}"
+msgstr "{provider} · {model}"
+
+#: src/kikoe/ui/level_meter.ui:16
+msgid "Microphone Level"
+msgstr "Level Mikrofon"
+
+#: src/kikoe/ui/model_dialog.py:64 src/kikoe/ui/provider_page.py:115
+#: src/kikoe/ui/provider_page.py:119
+msgid "Edit Model"
+msgstr "Edit Model"
+
+#: src/kikoe/ui/model_dialog.py:65 src/kikoe/ui/speaker_editor.ui:27
+msgid "_Save"
+msgstr "_Simpan"
+
+#: src/kikoe/ui/model_dialog.py:146 src/kikoe/ui/model_dialog.py:160
+msgid "This model does not support this option."
+msgstr "Model ini tidak mendukung opsi ini."
+
+#: src/kikoe/ui/model_dialog.ui:10
+msgid "Add Model"
+msgstr "Tambah Model"
+
+#: src/kikoe/ui/model_dialog.ui:28 src/kikoe/ui/provider_page.ui:18
+msgid "_Add"
+msgstr "_Tambah"
+
+#: src/kikoe/ui/model_dialog.ui:45
+msgid "Model ID"
+msgstr "ID Model"
+
+#: src/kikoe/ui/model_dialog.ui:50
+msgid "Display Name"
+msgstr "Nama Tampilan"
+
+#: src/kikoe/ui/model_dialog.ui:68
+msgid "What This Model Supports"
+msgstr "Dukungan Model Ini"
+
+#: src/kikoe/ui/model_dialog.ui:69
+msgid ""
+"Known models are filled in automatically. Options the provider rejects for "
+"this model are unavailable."
+msgstr ""
+"Model yang dikenal diisi otomatis. Opsi yang ditolak penyedia untuk model "
+"ini tidak tersedia."
+
+#: src/kikoe/ui/model_dialog.ui:72
+msgid "Transcribe _Files"
+msgstr "Transkripsikan _Berkas"
+
+#: src/kikoe/ui/model_dialog.ui:73
+msgid "Imported files, and recordings uploaded after they stop."
+msgstr "Berkas yang diimpor dan rekaman yang diunggah setelah dihentikan."
+
+#: src/kikoe/ui/model_dialog.ui:80
+msgid "Each segment carries a time. Needed for subtitle export."
+msgstr "Setiap segmen memiliki waktu. Diperlukan untuk ekspor subtitel."
+
+#: src/kikoe/ui/model_dialog.ui:93
+msgid "Times can be requested for single words."
+msgstr "Waktu dapat diminta untuk kata individual."
+
+#: src/kikoe/ui/model_dialog.ui:105 src/kikoe/ui/model_dialog.ui:152
+msgid "Speaker Detection"
+msgstr "Deteksi Pembicara"
+
+#: src/kikoe/ui/model_dialog.ui:106
+msgid "Tells different people apart and labels them."
+msgstr "Membedakan orang dan memberi label."
+
+#: src/kikoe/ui/model_dialog.ui:118
+msgid "Streaming Preview"
+msgstr "Pratinjau Streaming"
+
+#: src/kikoe/ui/model_dialog.ui:119
+msgid "Text appears while a file is transcribed."
+msgstr "Teks muncul saat berkas ditranskripsi."
+
+#: src/kikoe/ui/model_dialog.ui:133
+msgid "Transcribe While _Recording"
+msgstr "Transkripsikan Saat _Merekam"
+
+#: src/kikoe/ui/model_dialog.ui:134
+msgid ""
+"Text appears while recording. If off, the whole recording is uploaded after "
+"it stops."
+msgstr ""
+"Teks muncul saat merekam. Jika nonaktif, seluruh rekaman diunggah setelah "
+"dihentikan."
+
+#: src/kikoe/ui/model_dialog.ui:171
+msgid "_Remove Model"
+msgstr "_Hapus Model"
+
+#: src/kikoe/ui/note_actions.py:32 src/kikoe/ui/shortcuts.ui:15
+#: src/kikoe/ui/sidebar_header.ui:15 src/kikoe/ui/sidebar_header.ui:17
+#: src/kikoe/ui/window.ui:45 src/kikoe/ui/window.ui:47
+msgid "New Note"
+msgstr "Catatan Baru"
+
+#: src/kikoe/ui/note_actions.py:49
+msgid "Note Title"
+msgstr "Judul Catatan"
+
+#: src/kikoe/ui/note_actions.py:56
+msgid "Rename Note"
+msgstr "Ubah Nama Catatan"
+
+#: src/kikoe/ui/note_actions.py:56
+msgid "_Rename"
+msgstr "_Ubah Nama"
+
+#: src/kikoe/ui/note_actions.py:73
+#, python-brace-format
+msgid "Delete “{title}”?"
+msgstr "Hapus “{title}”?"
+
+#: src/kikoe/ui/note_actions.py:74 src/kikoe/ui/note_actions.py:93
+msgid ""
+"Its transcript and original audio will be deleted. This cannot be undone."
+msgstr "Transkrip dan audio aslinya akan dihapus. Ini tidak dapat diurungkan."
+
+#: src/kikoe/ui/note_actions.py:75 src/kikoe/ui/note_actions.py:94
+msgid "_Delete"
+msgstr "_Hapus"
+
+#: src/kikoe/ui/note_actions.py:92
+#, python-brace-format
+msgid "Delete Recording {number}?"
+msgstr "Hapus Rekaman {number}?"
+
+#: src/kikoe/ui/note_sidebar.py:87
+msgid "No Matching Notes"
+msgstr "Tidak Ada Catatan yang Cocok"
+
+#: src/kikoe/ui/note_sidebar.py:87 src/kikoe/ui/window.ui:102
+msgid "No Notes Yet"
+msgstr "Belum Ada Catatan"
+
+#: src/kikoe/ui/note_view.py:312
+#, python-brace-format
+msgid "{status} · {summary}"
+msgstr "{status} · {summary}"
+
+#: src/kikoe/ui/note_view.py:344
+#, python-brace-format
+msgid "Transcribing… · {model}"
+msgstr "Mentranskripsi… · {model}"
+
+#: src/kikoe/ui/note_view.ui:25 src/kikoe/ui/speaker_editor.ui:49
+#: src/kikoe/ui/transcript_row.py:482
+msgid "Match Speakers…"
+msgstr "Cocokkan Pembicara…"
+
+#: src/kikoe/ui/note_view.ui:67
+msgid "No Recordings Yet"
+msgstr "Belum Ada Rekaman"
+
+#: src/kikoe/ui/note_view.ui:68
+msgid "Record or import audio to add a transcript to this note."
+msgstr "Rekam atau impor audio untuk menambahkan transkrip ke catatan ini."
+
+#: src/kikoe/ui/options_group.ui:13
+msgid "_Timestamps"
+msgstr "Penanda _Waktu"
+
+#: src/kikoe/ui/options_group.ui:20
+msgid "Timestamp _Detail"
+msgstr "_Detail Penanda Waktu"
+
+#: src/kikoe/ui/options_group.ui:26
+msgid "Segments"
+msgstr "Segmen"
+
+#: src/kikoe/ui/options_group.ui:27
+msgid "Words"
+msgstr "Kata"
+
+#: src/kikoe/ui/options_group.ui:28
+msgid "Segments and Words"
+msgstr "Segmen dan Kata"
+
+#: src/kikoe/ui/options_group.ui:36
+msgid "_Speakers"
+msgstr "_Pembicara"
+
+#: src/kikoe/ui/options_group.ui:43
+msgid ""
+"The transcription language is not used while timestamps or speakers are on. "
+"The language is detected automatically."
+msgstr ""
+"Bahasa transkripsi tidak digunakan saat penanda waktu atau pembicara aktif. "
+"Bahasa dideteksi otomatis."
+
+#: src/kikoe/ui/preferences.py:92
+#, python-brace-format
+msgid "{device} (Unavailable)"
+msgstr "{device} (Tidak Tersedia)"
+
+#: src/kikoe/ui/preferences.py:96
+msgid "System Default"
+msgstr "Bawaan Sistem"
+
+#: src/kikoe/ui/preferences.py:132
+msgid "No Default Model"
+msgstr "Tanpa Model Bawaan"
+
+#: src/kikoe/ui/preferences.py:215 src/kikoe/ui/preferences.ui:39
+msgid "Enter a language code such as zh, en, or ja."
+msgstr "Masukkan kode bahasa seperti zh, en, atau ja."
+
+#: src/kikoe/ui/preferences.py:230
+#, python-brace-format
+msgid "{api} API · {count} model"
+msgid_plural "{api} API · {count} models"
+msgstr[0] "API {api} · {count} model"
+
+#: src/kikoe/ui/preferences.ui:10 src/kikoe/ui/shortcuts.ui:97
+msgid "Preferences"
+msgstr "Preferensi"
+
+#: src/kikoe/ui/preferences.ui:17 src/kikoe/ui/shortcuts.ui:88
+msgid "General"
+msgstr "Umum"
+
+#: src/kikoe/ui/preferences.ui:21
+msgid "Transcription"
+msgstr "Transkripsi"
+
+#: src/kikoe/ui/preferences.ui:22
+msgid ""
+"Defaults for the next transcription. Language is detected automatically when "
+"left empty. To set it, enter a language code such as zh, en, or ja."
+msgstr ""
+"Bawaan untuk transkripsi berikutnya. Bahasa dideteksi otomatis jika kosong. "
+"Untuk mengaturnya, masukkan kode bahasa seperti zh, en, atau ja."
+
+#: src/kikoe/ui/preferences.ui:25
+msgid "Default Model"
+msgstr "Model Bawaan"
+
+#: src/kikoe/ui/preferences.ui:32
+msgid "Transcription Language"
+msgstr "Bahasa Transkripsi"
+
+#: src/kikoe/ui/preferences.ui:53
+msgid "Audio"
+msgstr "Audio"
+
+#: src/kikoe/ui/preferences.ui:56
+msgid "Microphone"
+msgstr "Mikrofon"
+
+#: src/kikoe/ui/preferences.ui:57
+msgid "Used for new recordings"
+msgstr "Digunakan untuk rekaman baru"
+
+#: src/kikoe/ui/preferences.ui:64
+msgid "Audio Output"
+msgstr "Keluaran Audio"
+
+#: src/kikoe/ui/preferences.ui:65
+msgid "Used for playback"
+msgstr "Digunakan untuk pemutaran"
+
+#: src/kikoe/ui/preferences.ui:74
+msgid "Storage"
+msgstr "Penyimpanan"
+
+#: src/kikoe/ui/preferences.ui:77
+msgid "Data Folder"
+msgstr "Folder Data"
+
+#: src/kikoe/ui/preferences.ui:93
+msgid "Troubleshooting"
+msgstr "Pemecahan Masalah"
+
+#: src/kikoe/ui/preferences.ui:94
+msgid ""
+"Logs stay on this device. Nothing is uploaded automatically. You can attach "
+"a log when reporting a problem."
+msgstr ""
+"Log tetap di perangkat ini. Tidak ada yang diunggah otomatis. Anda dapat "
+"melampirkan log saat melaporkan masalah."
+
+#: src/kikoe/ui/preferences.ui:97
+msgid "Log Folder"
+msgstr "Folder Log"
+
+#: src/kikoe/ui/preferences.ui:116 src/kikoe/ui/preferences.ui:120
+msgid "Providers"
+msgstr "Penyedia"
+
+#: src/kikoe/ui/preferences.ui:121
+msgid ""
+"Transcription happens in the cloud. A provider can offer several models."
+msgstr ""
+"Transkripsi dilakukan di cloud. Penyedia dapat menawarkan beberapa model."
+
+#: src/kikoe/ui/preferences.ui:129 src/kikoe/ui/window.ui:225
+msgid "_Add Provider"
+msgstr "_Tambah Penyedia"
+
+#: src/kikoe/ui/preferences.ui:143
+msgid "No Providers Yet"
+msgstr "Belum Ada Penyedia"
+
+#: src/kikoe/ui/provider_page.py:274
+#, python-brace-format
+msgid "Remove “{name}”?"
+msgstr "Hapus “{name}”?"
+
+#: src/kikoe/ui/provider_page.py:275
+msgid "Its models and API key will be deleted."
+msgstr "Model dan kunci API-nya akan dihapus."
+
+#: src/kikoe/ui/provider_page.py:276
+msgid "_Remove"
+msgstr "_Hapus"
+
+#: src/kikoe/ui/provider_page.ui:10
+msgid "Add Provider"
+msgstr "Tambah Penyedia"
+
+#: src/kikoe/ui/provider_page.ui:32
+msgid "Connection"
+msgstr "Koneksi"
+
+#: src/kikoe/ui/provider_page.ui:33
+msgid ""
+"The API type decides the request format. Most providers offer an “OpenAI-"
+"compatible” API."
+msgstr ""
+"Jenis API menentukan format permintaan. Kebanyakan penyedia menawarkan API "
+"“kompatibel dengan OpenAI”."
+
+#: src/kikoe/ui/provider_page.ui:36 src/kikoe/ui/speaker_editor.ui:43
+msgid "Name"
+msgstr "Nama"
+
+#: src/kikoe/ui/provider_page.ui:42
+msgid "API Type"
+msgstr "Jenis API"
+
+#: src/kikoe/ui/provider_page.ui:48
+msgid "Base URL"
+msgstr "URL Dasar"
+
+#: src/kikoe/ui/provider_page.ui:55
+msgid "API Key"
+msgstr "Kunci API"
+
+#: src/kikoe/ui/provider_page.ui:76
+msgid "File Transcription"
+msgstr "Transkripsi Berkas"
+
+#: src/kikoe/ui/provider_page.ui:77
+msgid ""
+"Applies to imported audio, recordings transcribed after stopping, and re-"
+"transcription. Smaller chunks allow more parallel requests."
+msgstr ""
+"Berlaku untuk audio yang diimpor, rekaman yang ditranskripsi setelah "
+"berhenti, dan transkripsi ulang. Potongan lebih kecil memungkinkan lebih "
+"banyak permintaan paralel."
+
+#: src/kikoe/ui/provider_page.ui:80
+msgid "Parallel Requests"
+msgstr "Permintaan Paralel"
+
+#: src/kikoe/ui/provider_page.ui:81
+msgid "1 processes chunks one at a time; account rate limits still apply"
+msgstr "1 memproses potongan satu per satu; batas laju akun tetap berlaku"
+
+#: src/kikoe/ui/provider_page.ui:94
+msgid "Chunk Length (Minutes)"
+msgstr "Durasi Potongan (Menit)"
+
+#: src/kikoe/ui/provider_page.ui:109
+msgid "Chunk Size (MB)"
+msgstr "Ukuran Potongan (MB)"
+
+#: src/kikoe/ui/provider_page.ui:123
+msgid "Audio Format"
+msgstr "Format Audio"
+
+#: src/kikoe/ui/provider_page.ui:129
+msgid "Reset Transcription Defaults"
+msgstr "Atur Ulang Bawaan Transkripsi"
+
+#: src/kikoe/ui/provider_page.ui:137
+msgid "Models"
+msgstr "Model"
+
+#: src/kikoe/ui/provider_page.ui:138
+msgid "What each model can do is set when you add it."
+msgstr "Kemampuan setiap model diatur saat Anda menambahkannya."
+
+#: src/kikoe/ui/provider_page.ui:147
+msgid "Add _Model"
+msgstr "Tambah _Model"
+
+#: src/kikoe/ui/provider_page.ui:161
+msgid "No Models Yet"
+msgstr "Belum Ada Model"
+
+#: src/kikoe/ui/provider_page.ui:178
+msgid "_Remove Provider"
+msgstr "_Hapus Penyedia"
+
+#: src/kikoe/ui/recording_controller.py:147
+msgid "No audio was recorded"
+msgstr "Tidak ada audio yang direkam"
+
+#: src/kikoe/ui/recording_controller.py:167
+#, python-brace-format
+msgid "{provider} {model} · {options}"
+msgstr "{provider} {model} · {options}"
+
+#: src/kikoe/ui/recording_controller.py:179
+msgid "Saving recording…"
+msgstr "Menyimpan rekaman…"
+
+#: src/kikoe/ui/recording_controller.py:187 src/kikoe/ui/tasks.py:59
+msgid "An unexpected error occurred. See the local log for details."
+msgstr "Terjadi kesalahan tak terduga. Lihat log lokal untuk detailnya."
+
+#: src/kikoe/ui/recording_controller.py:221
+msgid "Recovering recordings…"
+msgstr "Memulihkan rekaman…"
+
+#: src/kikoe/ui/recording_header.ui:31 src/kikoe/ui/recording_header.ui:34
+#: src/kikoe/ui/transcript_header.ui:31 src/kikoe/ui/transcript_header.ui:34
+#: src/kikoe/ui/transcript_row.py:273 src/kikoe/ui/transcript_row.ui:38
+#: src/kikoe/ui/transcript_row.ui:41
+msgid "Play This Recording"
+msgstr "Putar Rekaman Ini"
+
+#: src/kikoe/ui/recording_header.ui:45 src/kikoe/ui/recording_header.ui:49
+#: src/kikoe/ui/transcript_header.ui:45 src/kikoe/ui/transcript_header.ui:49
+#: src/kikoe/ui/transcript_row.ui:52 src/kikoe/ui/transcript_row.ui:56
+msgid "Recording Menu"
+msgstr "Menu Rekaman"
+
+#: src/kikoe/ui/recording_header.ui:87 src/kikoe/ui/transcript_header.ui:87
+#: src/kikoe/ui/transcript_row.ui:94
+msgid "_Retry Transcription"
+msgstr "_Coba Lagi Transkripsi"
+
+#: src/kikoe/ui/recording_view.py:22 src/kikoe/ui/transcript_row.py:179
+#, python-brace-format
+msgid "Recording {number}"
+msgstr "Rekaman {number}"
+
+#: src/kikoe/ui/recording_view.py:23
+#, python-brace-format
+msgid "In progress · {summary}"
+msgstr "Sedang berlangsung · {summary}"
+
+#: src/kikoe/ui/recording_view.py:27
+#, python-brace-format
+msgid ""
+"Kikoe will upload the audio to {model} and transcribe it automatically after "
+"you stop. The text will appear here."
+msgstr ""
+"Kikoe akan mengunggah audio ke {model} dan mentranskripsinya otomatis "
+"setelah Anda berhenti. Teks akan muncul di sini."
+
+#: src/kikoe/ui/recovery_prompt.py:14
+msgid "Recover Recordings?"
+msgstr "Pulihkan Rekaman?"
+
+#: src/kikoe/ui/recovery_prompt.py:16
+msgid ""
+"Kikoe found unfinished recordings. Recover their audio now, then choose a "
+"model to transcribe them."
+msgstr ""
+"Kikoe menemukan rekaman yang belum selesai. Pulihkan audionya sekarang, lalu "
+"pilih model untuk mentranskripsinya."
+
+#: src/kikoe/ui/recovery_prompt.py:19
+msgid "_Later"
+msgstr "_Nanti"
+
+#: src/kikoe/ui/recovery_prompt.py:20
+msgid "_Recover"
+msgstr "_Pulihkan"
+
+#: src/kikoe/ui/retranscribe_dialog.py:47
+#, python-brace-format
+msgid ""
+"Re-transcribe “Recording {number}” ({duration}) from the kept original "
+"audio. Timestamps or speaker detection that were off during transcription "
+"can be added this way."
+msgstr ""
+"Transkripsikan ulang “Rekaman {number}” ({duration}) dari audio asli yang "
+"disimpan. Penanda waktu atau deteksi pembicara yang sebelumnya nonaktif "
+"dapat ditambahkan dengan cara ini."
+
+#: src/kikoe/ui/retranscribe_dialog.py:61
+msgid "Choose a File Model…"
+msgstr "Pilih Model Berkas…"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:10
+msgid "Re-transcribe"
+msgstr "Transkripsikan Ulang"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:28
+msgid "_Transcribe"
+msgstr "_Transkripsikan"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:44
+#: src/kikoe/ui/transcription_dialog.py:52
+msgid "Model"
+msgstr "Model"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:64
+msgid "Existing Text Is Replaced"
+msgstr "Teks yang Ada Diganti"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:65
+msgid ""
+"The text of this recording will be replaced, including any manual edits. "
+"Other recordings in the note are not affected. Speaker names are kept where "
+"possible."
+msgstr ""
+"Teks rekaman ini akan diganti, termasuk edit manual. Rekaman lain dalam "
+"catatan tidak terpengaruh. Nama pembicara dipertahankan jika memungkinkan."
+
+#: src/kikoe/ui/segment_editor.ui:26 src/kikoe/ui/segment_text.ui:19
+#: src/kikoe/ui/transcript_preview.ui:78
+msgid "Transcript Text"
+msgstr "Teks Transkrip"
+
+#: src/kikoe/ui/shortcuts.ui:12
+msgid "Notes"
+msgstr "Catatan"
+
+#: src/kikoe/ui/shortcuts.ui:21 src/kikoe/ui/sidebar_header.ui:36
+#: src/kikoe/ui/sidebar_header.ui:39 src/kikoe/ui/window.ui:66
+#: src/kikoe/ui/window.ui:69 src/kikoe/ui/window.ui:80
+msgid "Search Notes"
+msgstr "Cari Catatan"
+
+#: src/kikoe/ui/shortcuts.ui:33
+msgid "Rename Note…"
+msgstr "Ubah Nama Catatan…"
+
+#: src/kikoe/ui/shortcuts.ui:39
+msgid "Export Note…"
+msgstr "Ekspor Catatan…"
+
+#: src/kikoe/ui/shortcuts.ui:45
+msgid "Close Search"
+msgstr "Tutup Pencarian"
+
+#: src/kikoe/ui/shortcuts.ui:53
+msgid "Editing"
+msgstr "Pengeditan"
+
+#: src/kikoe/ui/shortcuts.ui:68
+msgid "Next Segment"
+msgstr "Segmen Berikutnya"
+
+#: src/kikoe/ui/shortcuts.ui:74
+msgid "New Line in Segment"
+msgstr "Baris Baru dalam Segmen"
+
+#: src/kikoe/ui/shortcuts.ui:80
+msgid "Revert Unsaved Typing"
+msgstr "Kembalikan Ketikan yang Belum Disimpan"
+
+#: src/kikoe/ui/shortcuts.ui:91 src/kikoe/ui/sidebar_header.ui:26
+#: src/kikoe/ui/sidebar_header.ui:28 src/kikoe/ui/window.ui:56
+#: src/kikoe/ui/window.ui:58
+msgid "Main Menu"
+msgstr "Menu Utama"
+
+#: src/kikoe/ui/shortcuts.ui:103
+msgid "Keyboard Shortcuts"
+msgstr "Pintasan Papan Ketik"
+
+#: src/kikoe/ui/shortcuts.ui:109
+msgid "Close Window"
+msgstr "Tutup Jendela"
+
+#: src/kikoe/ui/shortcuts.ui:115
+msgid "Quit"
+msgstr "Keluar"
+
+#: src/kikoe/ui/sidebar_header.ui:55 src/kikoe/ui/window.ui:272
+msgid "_Preferences"
+msgstr "_Preferensi"
+
+#: src/kikoe/ui/sidebar_header.ui:59 src/kikoe/ui/window.ui:276
+msgid "_Keyboard Shortcuts"
+msgstr "_Pintasan Papan Ketik"
+
+#: src/kikoe/ui/sidebar_header.ui:63 src/kikoe/ui/window.ui:280
+msgid "_About Kikoe"
+msgstr "_Tentang Kikoe"
+
+#: src/kikoe/ui/speaker_banner.py:19
+#, python-brace-format
+msgid "Recording {number} has speakers that are not yet matched."
+msgstr "Rekaman {number} memiliki pembicara yang belum dicocokkan."
+
+#: src/kikoe/ui/speaker_controller.py:91
+msgid "This recording has no detected speakers."
+msgstr "Tidak ada pembicara yang terdeteksi dalam rekaman ini."
+
+#: src/kikoe/ui/speaker_dialog.py:38
+#, python-brace-format
+msgid ""
+"Recording {number} has independently numbered speakers. Listen to the "
+"samples and choose who they are."
+msgstr ""
+"Rekaman {number} memiliki pembicara bernomor independen. Dengarkan sampel "
+"dan pilih siapa mereka."
+
+#: src/kikoe/ui/speaker_dialog.ui:10
+msgid "Match Speakers"
+msgstr "Cocokkan Pembicara"
+
+#: src/kikoe/ui/speaker_dialog.ui:28
+msgid "_Apply"
+msgstr "_Terapkan"
+
+#: src/kikoe/ui/speaker_dialog.ui:68
+msgid ""
+"Two numbers can map to the same person. You can rename or re-match a speaker "
+"at any time by clicking their name in the note."
+msgstr ""
+"Dua nomor dapat merujuk ke orang yang sama. Anda dapat mengubah nama atau "
+"mencocokkan ulang pembicara kapan saja dengan mengeklik namanya dalam "
+"catatan."
+
+#: src/kikoe/ui/speaker_editor.ui:10
+msgid "Rename Speaker"
+msgstr "Ubah Nama Pembicara"
+
+#: src/kikoe/ui/speaker_row.py:18 src/kikoe/ui/transcript_rows.py:32
+#: src/kikoe/ui/transcript_rows.py:71
+#, python-brace-format
+msgid "Speaker {number}"
+msgstr "Pembicara {number}"
+
+#: src/kikoe/ui/speaker_row.py:68
+msgid "No sample available"
+msgstr "Tidak ada sampel tersedia"
+
+#: src/kikoe/ui/speaker_row.py:68
+#, python-brace-format
+msgid "“{text}”"
+msgstr "“{text}”"
+
+#: src/kikoe/ui/speaker_row.py:71
+#, python-brace-format
+msgid "Play a sample from “{name}”"
+msgstr "Putar sampel dari “{name}”"
+
+#: src/kikoe/ui/speaker_row.py:72
+#, python-brace-format
+msgid "Who is {name}?"
+msgstr "Siapa {name}?"
+
+#: src/kikoe/ui/speaker_row.py:76
+msgid "Sample playback needs reliable timestamps."
+msgstr "Pemutaran sampel memerlukan penanda waktu yang andal."
+
+#: src/kikoe/ui/speaker_row.py:146
+msgid "New Speaker"
+msgstr "Pembicara Baru"
+
+#: src/kikoe/ui/speaker_row.ui:54
+msgid "Existing Speakers"
+msgstr "Pembicara yang Ada"
+
+#: src/kikoe/ui/speaker_row.ui:81
+msgid "Keep as New Speaker"
+msgstr "Pertahankan sebagai Pembicara Baru"
+
+#: src/kikoe/ui/tasks.py:18
+msgid "Something Went Wrong"
+msgstr "Terjadi Kesalahan"
+
+#: src/kikoe/ui/tasks.py:19
+msgid "_Close"
+msgstr "_Tutup"
+
+#: src/kikoe/ui/timestamp_popover.ui:26 src/kikoe/ui/transcript_row.ui:174
+#: src/kikoe/ui/transcript_times.ui:26
+msgid "_Start"
+msgstr "_Mulai"
+
+#: src/kikoe/ui/timestamp_popover.ui:44 src/kikoe/ui/transcript_row.ui:192
+#: src/kikoe/ui/transcript_times.ui:44
+msgid "Start"
+msgstr "Mulai"
+
+#: src/kikoe/ui/timestamp_popover.ui:54 src/kikoe/ui/transcript_row.ui:202
+#: src/kikoe/ui/transcript_times.ui:54
+msgid "_End"
+msgstr "_Akhir"
+
+#: src/kikoe/ui/timestamp_popover.ui:72 src/kikoe/ui/transcript_row.ui:220
+#: src/kikoe/ui/transcript_times.ui:72
+msgid "End"
+msgstr "Akhir"
+
+#: src/kikoe/ui/timestamp_popover.ui:84 src/kikoe/ui/transcript_row.ui:232
+#: src/kikoe/ui/transcript_times.ui:84
+msgid ""
+"Use MM:SS or H:MM:SS, with optional decimal seconds (e.g. 00:26.860). Leave "
+"empty to clear"
+msgstr ""
+"Gunakan MM:SS atau H:MM:SS, dengan detik desimal opsional (mis. 00:26.860). "
+"Kosongkan untuk menghapus"
+
+#: src/kikoe/ui/transcript_preview.ui:19 src/kikoe/ui/transcript_preview.ui:21
+#: src/kikoe/ui/transcript_row.ui:115 src/kikoe/ui/transcript_row.ui:117
+msgid "Rename or Match Speaker"
+msgstr "Ubah Nama atau Cocokkan Pembicara"
+
+#: src/kikoe/ui/transcript_preview.ui:41 src/kikoe/ui/transcript_preview.ui:43
+#: src/kikoe/ui/transcript_row.ui:137 src/kikoe/ui/transcript_row.ui:139
+msgid "Edit Timestamps"
+msgstr "Edit Penanda Waktu"
+
+#: src/kikoe/ui/transcript_row.py:195
+msgid "Transcription incomplete. Your text and audio have been kept."
+msgstr "Transkripsi belum selesai. Teks dan audio Anda telah disimpan."
+
+#: src/kikoe/ui/transcript_row.py:197
+msgid "Transcription failed. Your audio has been kept."
+msgstr "Transkripsi gagal. Audio Anda telah disimpan."
+
+#: src/kikoe/ui/transcript_row.py:200
+msgid "Audio saved. Transcription is pending."
+msgstr "Audio disimpan. Transkripsi menunggu."
+
+#: src/kikoe/ui/transcript_row.py:245
+msgid "Add Time"
+msgstr "Tambah Waktu"
+
+#: src/kikoe/ui/transcript_row.py:247
+msgid "No timestamp"
+msgstr "Tanpa penanda waktu"
+
+#: src/kikoe/ui/transcript_row.py:273
+msgid "Stop Playback"
+msgstr "Hentikan Pemutaran"
+
+#: src/kikoe/ui/transcript_row.py:331
+msgid "Segment text cannot be empty"
+msgstr "Teks segmen tidak boleh kosong"
+
+#: src/kikoe/ui/transcript_row.py:400
+msgid "End time must not be earlier than start time"
+msgstr "Waktu akhir tidak boleh sebelum waktu mulai"
+
+#: src/kikoe/ui/transcript_row.py:431
+msgid "Timestamps were not saved because the input is invalid"
+msgstr "Penanda waktu tidak disimpan karena masukan tidak valid"
+
+#: src/kikoe/ui/transcript_row.py:468
+msgid "Use MM:SS or H:MM:SS, with optional decimal seconds"
+msgstr "Gunakan MM:SS atau H:MM:SS, dengan detik desimal opsional"
+
+#: src/kikoe/ui/transcript_row.py:480
+msgid "Re-transcribe…"
+msgstr "Transkripsikan Ulang…"
+
+#: src/kikoe/ui/transcript_row.py:481
+msgid "Export Original Audio…"
+msgstr "Ekspor Audio Asli…"
+
+#: src/kikoe/ui/transcript_row.py:483
+msgid "Delete Recording"
+msgstr "Hapus Rekaman"
+
+#: src/kikoe/ui/transcription_controller.py:106
+msgid "Import cancelled"
+msgstr "Impor dibatalkan"
+
+#: src/kikoe/ui/transcription_controller.py:140
+#: src/kikoe/ui/transcription_controller.py:284
+msgid "Transcription Failed"
+msgstr "Transkripsi Gagal"
+
+#: src/kikoe/ui/transcription_controller.py:148
+msgid "Transcription finished"
+msgstr "Transkripsi selesai"
+
+#: src/kikoe/ui/transcription_controller.py:168
+msgid "Choose an available file transcription model."
+msgstr "Pilih model transkripsi berkas yang tersedia."
+
+#: src/kikoe/ui/transcription_controller.py:206
+msgid "Re-transcription cancelled"
+msgstr "Transkripsi ulang dibatalkan"
+
+#: src/kikoe/ui/transcription_controller.py:211
+#, python-brace-format
+msgid ""
+"{error}\n"
+"\n"
+"Your text and audio have been kept."
+msgstr ""
+"{error}\n"
+"\n"
+"Teks dan audio Anda telah disimpan."
+
+#: src/kikoe/ui/transcription_controller.py:212
+msgid "Re-transcription Failed"
+msgstr "Transkripsi Ulang Gagal"
+
+#: src/kikoe/ui/transcription_controller.py:266
+msgid "Transcription cancelled"
+msgstr "Transkripsi dibatalkan"
+
+#: src/kikoe/ui/transcription_dialog.py:53
+msgid "Add a provider and a model to start transcribing."
+msgstr "Tambahkan penyedia dan model untuk mulai mentranskripsi."
+
+#: src/kikoe/ui/transcription_dialog.ui:42
+msgid "_Manage Providers and Models…"
+msgstr "_Kelola Penyedia dan Model…"
+
+#: src/kikoe/ui/window.ui:197
+msgid "No Note Selected"
+msgstr "Tidak Ada Catatan Dipilih"
+
+#: src/kikoe/ui/window.ui:198
+msgid "Create a note, then record or import audio into it."
+msgstr "Buat catatan, lalu rekam atau impor audio ke dalamnya."
+
+#: src/kikoe/ui/window.ui:201
+msgid "_New Note"
+msgstr "Catatan _Baru"
+
+#: src/kikoe/ui/window.ui:221
+msgid "Welcome to Kikoe"
+msgstr "Selamat Datang di Kikoe"
+
+#: src/kikoe/ui/window.ui:222
+msgid ""
+"Kikoe turns speech into text using cloud services. Add a provider and a "
+"model first, then record or import audio."
+msgstr ""
+"Kikoe mengubah ucapan menjadi teks menggunakan layanan cloud. Tambahkan "
+"penyedia dan model dahulu, lalu rekam atau impor audio."

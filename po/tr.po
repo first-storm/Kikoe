@@ -1,0 +1,1677 @@
+# Turkish translation of Kikoe.
+# Distributed under GPL-3.0-or-later.
+msgid ""
+msgstr ""
+"Project-Id-Version: kikoe 0.1.1\n"
+"Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
+"POT-Creation-Date: 2026-10-15 03:01+1100\n"
+"PO-Revision-Date: 2026-10-15 00:00+0000\n"
+"Last-Translator: Kikoe contributors\n"
+"Language-Team: Turkish\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/kikoe/application.py:152
+msgid "Could not open the folder."
+msgstr "Klasör açılamadı."
+
+#. Translators: replace with your name(s), one per line.
+#: src/kikoe/application.py:177
+msgid "translator-credits"
+msgstr "Kikoe contributors"
+
+#: src/kikoe/media/ffmpeg.py:54
+#, python-brace-format
+msgid "KIKOE_FFMPEG points to a missing file: {path}"
+msgstr "KIKOE_FFMPEG var olmayan bir dosyayı gösteriyor: {path}"
+
+#: src/kikoe/media/ffmpeg.py:65
+msgid "ffmpeg was not found. Install it or set KIKOE_FFMPEG."
+msgstr "ffmpeg bulunamadı. Yükleyin veya KIKOE_FFMPEG değişkenini ayarlayın."
+
+#: src/kikoe/media/ffmpeg.py:107
+#, python-brace-format
+msgid "ffmpeg exited with status {status}: {error}"
+msgstr "ffmpeg {status} durumuyla sonlandı: {error}"
+
+#: src/kikoe/media/ffmpeg.py:167
+msgid "The audio converter stopped unexpectedly."
+msgstr "Ses dönüştürücü beklenmedik şekilde durdu."
+
+#: src/kikoe/media/ffmpeg.py:183
+#, python-brace-format
+msgid "The audio converter failed: {detail}"
+msgstr "Ses dönüştürme başarısız oldu: {detail}"
+
+#: src/kikoe/media/ffmpeg.py:239
+#, python-brace-format
+msgid "Could not decode the audio: {detail}"
+msgstr "Ses çözümlenemedi: {detail}"
+
+#: src/kikoe/media/player.py:73
+msgid "No default audio output device is available."
+msgstr "Kullanılabilir varsayılan ses çıkış aygıtı yok."
+
+#: src/kikoe/media/player.py:108
+#, python-brace-format
+msgid "Could not play the audio. Check your output device. ({detail})"
+msgstr "Ses oynatılamadı. Çıkış aygıtınızı denetleyin. ({detail})"
+
+#: src/kikoe/media/player.py:119
+#, python-brace-format
+msgid "Could not close the audio output device. ({detail})"
+msgstr "Ses çıkış aygıtı kapatılamadı. ({detail})"
+
+#: src/kikoe/media/recorder.py:107
+#, python-brace-format
+msgid ""
+"Could not open the microphone. Check your input device and microphone "
+"permissions. ({detail})"
+msgstr ""
+"Mikrofon açılamadı. Giriş aygıtınızı ve mikrofon izinlerini denetleyin. "
+"({detail})"
+
+#: src/kikoe/media/recorder.py:117
+msgid "The microphone lost audio. The captured audio has been kept."
+msgstr "Mikrofon ses kaybetti. Kaydedilen ses korundu."
+
+#: src/kikoe/media/recorder.py:129
+msgid "Audio could not be saved fast enough. The captured audio has been kept."
+msgstr "Ses yeterince hızlı kaydedilemedi. Kaydedilen ses korundu."
+
+#: src/kikoe/media/recorder.py:152
+msgid "The microphone disconnected. The captured audio has been kept."
+msgstr "Mikrofonun bağlantısı kesildi. Kaydedilen ses korundu."
+
+#: src/kikoe/media/recorder.py:177
+#, python-brace-format
+msgid "The microphone stopped responding. ({detail})"
+msgstr "Mikrofon yanıt vermeyi durdurdu. ({detail})"
+
+#: src/kikoe/media/recorder.py:196
+#, python-brace-format
+msgid "Could not close the microphone. ({detail})"
+msgstr "Mikrofon kapatılamadı. ({detail})"
+
+#: src/kikoe/media/transcode.py:78
+#, python-brace-format
+msgid "“{name}” contains no audio."
+msgstr "“{name}” ses içermiyor."
+
+#: src/kikoe/media/transcode.py:128
+#, python-brace-format
+msgid ""
+"Could not read “{name}”. It may not be an audio file, or it is damaged. "
+"({detail})"
+msgstr ""
+"“{name}” okunamadı. Ses dosyası olmayabilir veya bozuk olabilir. ({detail})"
+
+#. Translators: {name} is a service name such as Groq.
+#: src/kikoe/providers/base.py:91
+#, python-brace-format
+msgid "{name} supports file transcription only."
+msgstr "{name} yalnızca dosyadan yazıya dökmeyi destekler."
+
+#: src/kikoe/providers/deepgram.py:204
+#, python-brace-format
+msgid "Deepgram rejected realtime transcription: {message}"
+msgstr "Deepgram gerçek zamanlı yazıya dökmeyi reddetti: {message}"
+
+#: src/kikoe/providers/deepgram.py:209
+#: src/kikoe/providers/mistral_realtime.py:119
+msgid ""
+"The provider rejected realtime transcription. Check the model and API key."
+msgstr ""
+"Sağlayıcı gerçek zamanlı yazıya dökmeyi reddetti. Modeli ve API anahtarını "
+"denetleyin."
+
+#: src/kikoe/providers/errors.py:36
+#, python-brace-format
+msgid "{host} sent a response Kikoe does not understand."
+msgstr "{host}, Kikoe’nin anlayamadığı bir yanıt gönderdi."
+
+#: src/kikoe/providers/errors.py:59
+#, python-brace-format
+msgid "{subject} rejected the API key. Check it in Preferences."
+msgstr "{subject} API anahtarını reddetti. Tercihler’den denetleyin."
+
+#: src/kikoe/providers/errors.py:62
+#, python-brace-format
+msgid ""
+"{subject} does not allow this API key to use this model, or is not available "
+"in your region. Check your account and the key in Preferences."
+msgstr ""
+"{subject} bu API anahtarının modeli kullanmasına izin vermiyor veya "
+"bölgenizde kullanılamıyor. Hesabınızı ve Tercihler’deki anahtarı denetleyin."
+
+#: src/kikoe/providers/errors.py:66
+#, python-brace-format
+msgid "{subject} reports that your account has run out of credits."
+msgstr "{subject}, hesabınızın kredisinin tükendiğini bildiriyor."
+
+#: src/kikoe/providers/errors.py:68
+#, python-brace-format
+msgid "{subject} could not find this model. Check the model name."
+msgstr "{subject} bu modeli bulamadı. Model adını denetleyin."
+
+#: src/kikoe/providers/errors.py:70
+#, python-brace-format
+msgid "{subject} took too long to respond. Try again later."
+msgstr "{subject} çok geç yanıt verdi. Daha sonra yeniden deneyin."
+
+#: src/kikoe/providers/errors.py:72
+#, python-brace-format
+msgid "The audio is too large for {subject}."
+msgstr "Ses {subject} için çok büyük."
+
+#: src/kikoe/providers/errors.py:75
+#, python-brace-format
+msgid ""
+"{subject} is limiting requests, or your quota is used up. Wait a while and "
+"try again, or check your plan."
+msgstr ""
+"{subject} istekleri sınırlıyor veya kotanız tükendi. Bir süre bekleyip "
+"yeniden deneyin veya planınızı denetleyin."
+
+#: src/kikoe/providers/errors.py:79
+#, python-brace-format
+msgid "{subject} is having problems (HTTP {status}). Try again later."
+msgstr "{subject} sorun yaşıyor (HTTP {status}). Daha sonra yeniden deneyin."
+
+#: src/kikoe/providers/errors.py:81
+#, python-brace-format
+msgid "{subject} could not process this audio (HTTP {status})."
+msgstr "{subject} bu sesi işleyemedi (HTTP {status})."
+
+#: src/kikoe/providers/errors.py:84
+#, python-brace-format
+msgid ""
+"{subject} rejected this request (HTTP {status}). Check the model and options."
+msgstr ""
+"{subject} bu isteği reddetti (HTTP {status}). Modeli ve seçenekleri "
+"denetleyin."
+
+#: src/kikoe/providers/errors.py:87
+#, python-brace-format
+msgid "{subject} returned an unexpected error (HTTP {status})."
+msgstr "{subject} beklenmedik bir hata döndürdü (HTTP {status})."
+
+#: src/kikoe/providers/errors.py:92
+#, python-brace-format
+msgid "{message} Details: {detail}"
+msgstr "{message} Ayrıntılar: {detail}"
+
+#: src/kikoe/providers/errors.py:100
+msgid "The provider sent a response Kikoe does not understand."
+msgstr "Sağlayıcı, Kikoe’nin anlayamadığı bir yanıt gönderdi."
+
+#: src/kikoe/providers/errors.py:104
+msgid "The provider"
+msgstr "Sağlayıcı"
+
+#: src/kikoe/providers/errors.py:106
+msgid "Could not complete transcription. Check your connection and try again."
+msgstr "Yazıya dökme tamamlanamadı. Bağlantınızı denetleyip yeniden deneyin."
+
+#: src/kikoe/providers/errors.py:120 src/kikoe/providers/mistral.py:100
+#, python-brace-format
+msgid "{host} took too long to respond. Try again later."
+msgstr "{host} çok geç yanıt verdi. Daha sonra yeniden deneyin."
+
+#: src/kikoe/providers/errors.py:122 src/kikoe/providers/mistral.py:103
+#: src/kikoe/providers/mistral.py:146
+#, python-brace-format
+msgid "Could not reach {host}. Try again later."
+msgstr "{host} adresine ulaşılamadı. Daha sonra yeniden deneyin."
+
+#: src/kikoe/providers/errors.py:125
+#, python-brace-format
+msgid "{host} could not finish transcription: {message}"
+msgstr "{host} yazıya dökmeyi tamamlayamadı: {message}"
+
+#: src/kikoe/providers/mistral_file_stream.py:61
+#: src/kikoe/providers/openai_file_stream.py:66
+msgid "Transcription ended before it was complete. Try again."
+msgstr "Yazıya dökme tamamlanmadan sonlandı. Yeniden deneyin."
+
+#: src/kikoe/providers/mistral_realtime.py:114
+#, python-brace-format
+msgid "Mistral rejected realtime transcription: {message}"
+msgstr "Mistral gerçek zamanlı yazıya dökmeyi reddetti: {message}"
+
+#: src/kikoe/providers/openai.py:165
+#, python-brace-format
+msgid "{host} rejected the realtime session: {message}"
+msgstr "{host} gerçek zamanlı oturumu reddetti: {message}"
+
+#: src/kikoe/providers/openai.py:180
+#, python-brace-format
+msgid ""
+"{host} does not support transcription while recording. Turn off “Transcribe "
+"While Recording” for this model in Preferences."
+msgstr ""
+"{host} kayıt sırasında yazıya dökmeyi desteklemiyor. Tercihler’de bu model "
+"için “Kayıt Sırasında Yazıya Dök” seçeneğini kapatın."
+
+#: src/kikoe/providers/openai.py:242
+msgid "Realtime transcription failed. Your audio has been kept."
+msgstr "Gerçek zamanlı yazıya dökme başarısız oldu. Sesiniz korundu."
+
+#: src/kikoe/services/file_transcription.py:120
+msgid "Choose a file transcription model to retry this recording."
+msgstr "Bu kaydı yeniden denemek için dosyadan yazıya dökme modeli seçin."
+
+#: src/kikoe/services/importer.py:74 src/kikoe/ui/bottom_bar.py:166
+msgid "Choose a file transcription model to import audio."
+msgstr "Ses içe aktarmak için dosyadan yazıya dökme modeli seçin."
+
+#: src/kikoe/services/importer.py:258
+msgid "The chunk size is too small for this audio format."
+msgstr "Parça boyutu bu ses biçimi için çok küçük."
+
+#: src/kikoe/storage/audio_files.py:33
+#, python-brace-format
+msgid "Could not copy the audio file into the library: {error}"
+msgstr "Ses dosyası kitaplığa kopyalanamadı: {error}"
+
+#: src/kikoe/storage/captures.py:142
+msgid "Could not read the saved transcript. Its audio has been kept."
+msgstr "Kaydedilen döküm okunamadı. Sesi korundu."
+
+#: src/kikoe/storage/captures.py:167
+#, python-brace-format
+msgid "Could not read a saved recording. Its audio has been kept. ({detail})"
+msgstr "Kaydedilen bir kayıt okunamadı. Sesi korundu. ({detail})"
+
+#: src/kikoe/storage/captures.py:231
+#, python-brace-format
+msgid "Could not save the recording. ({detail})"
+msgstr "Kayıt kaydedilemedi. ({detail})"
+
+#: src/kikoe/storage/library.py:67
+msgid ""
+"The note library was created by a newer version of Kikoe. Update Kikoe to "
+"open it."
+msgstr ""
+"Not kitaplığı daha yeni bir Kikoe sürümüyle oluşturuldu. Açmak için Kikoe’yi "
+"güncelleyin."
+
+#: src/kikoe/storage/library.py:182 src/kikoe/storage/library.py:295
+#: src/kikoe/storage/library.py:317
+msgid "This recording no longer exists."
+msgstr "Bu kayıt artık yok."
+
+#: src/kikoe/storage/library.py:284
+msgid "Enter transcript text."
+msgstr "Döküm metnini girin."
+
+#: src/kikoe/storage/library.py:286
+msgid "The end time must be after the start time."
+msgstr "Bitiş zamanı başlangıç zamanından sonra olmalı."
+
+#: src/kikoe/storage/library.py:301
+msgid "Enter a speaker name."
+msgstr "Konuşmacı adı girin."
+
+#: src/kikoe/storage/library.py:323
+msgid "The speaker selection is no longer available."
+msgstr "Konuşmacı seçimi artık kullanılamıyor."
+
+#: src/kikoe/storage/library.py:409
+#, python-brace-format
+msgid "The note library could not be read or saved: {error}"
+msgstr "Not kitaplığı okunamadı veya kaydedilemedi: {error}"
+
+#: src/kikoe/storage/note_rows.py:27
+msgid "This note no longer exists."
+msgstr "Bu not artık yok."
+
+#: src/kikoe/storage/providers.py:52
+#, python-brace-format
+msgid "Provider {provider_id} no longer exists."
+msgstr "{provider_id} sağlayıcısı artık yok."
+
+#: src/kikoe/storage/providers.py:147
+#, python-brace-format
+msgid "Model {replacing_id} no longer exists."
+msgstr "{replacing_id} modeli artık yok."
+
+#: src/kikoe/storage/secrets.py:57
+#, python-brace-format
+msgid ""
+"API keys could not be saved because no secure credential store is available. "
+"Details: {error}"
+msgstr ""
+"Güvenli kimlik bilgisi deposu olmadığından API anahtarları kaydedilemedi. "
+"Ayrıntılar: {error}"
+
+#: src/kikoe/storage/settings.py:63
+#, python-brace-format
+msgid "Could not read the settings file: {error}"
+msgstr "Ayarlar dosyası okunamadı: {error}"
+
+#: src/kikoe/storage/settings.py:75
+#, python-brace-format
+msgid "The settings file {detail} is damaged or not understood: {error}"
+msgstr "{detail} ayarlar dosyası bozuk veya anlaşılamıyor: {error}"
+
+#: src/kikoe/storage/settings.py:100
+#, python-brace-format
+msgid "Could not save the settings file: {error}"
+msgstr "Ayarlar dosyası kaydedilemedi: {error}"
+
+#: src/kikoe/ui/bottom_bar.py:98
+msgid "_Append Recording"
+msgstr "Kayıt _Ekle"
+
+#: src/kikoe/ui/bottom_bar.py:98 src/kikoe/ui/bottom_bar.ui:125
+msgid "_Record"
+msgstr "_Kaydet"
+
+#: src/kikoe/ui/bottom_bar.py:119 src/kikoe/ui/bottom_bar.ui:224
+#: src/kikoe/ui/bottom_bar.ui:227
+msgid "Pause Recording"
+msgstr "Kaydı Duraklat"
+
+#: src/kikoe/ui/bottom_bar.py:119
+msgid "Resume Recording"
+msgstr "Kaydı Sürdür"
+
+#: src/kikoe/ui/bottom_bar.py:149
+msgid "No Model"
+msgstr "Model Yok"
+
+#: src/kikoe/ui/bottom_bar.py:151
+msgid "Add a model in Preferences first"
+msgstr "Önce Tercihler’de model ekleyin"
+
+#: src/kikoe/ui/bottom_bar.py:152 src/kikoe/ui/bottom_bar.ui:44
+msgid "Transcription Model…"
+msgstr "Yazıya Dökme Modeli…"
+
+#: src/kikoe/ui/bottom_bar.py:157
+#, python-brace-format
+msgid ""
+"{model} · {provider}\n"
+"{hint}"
+msgstr ""
+"{model} · {provider}\n"
+"{hint}"
+
+#: src/kikoe/ui/bottom_bar.py:164 src/kikoe/ui/bottom_bar.ui:90
+#: src/kikoe/ui/shortcuts.ui:27
+msgid "Import Audio…"
+msgstr "Ses İçe Aktar…"
+
+#: src/kikoe/ui/bottom_bar.ui:46 src/kikoe/ui/transcription_dialog.ui:10
+msgid "Transcription Model"
+msgstr "Yazıya Dökme Modeli"
+
+#: src/kikoe/ui/bottom_bar.ui:92 src/kikoe/ui/file_dialogs.py:68
+msgid "Import Audio"
+msgstr "Ses İçe Aktar"
+
+#: src/kikoe/ui/bottom_bar.ui:104 src/kikoe/ui/sidebar_header.ui:49
+#: src/kikoe/ui/window.ui:266
+msgid "_Import Audio…"
+msgstr "Ses _İçe Aktar…"
+
+#: src/kikoe/ui/bottom_bar.ui:158 src/kikoe/ui/dialogs.py:66
+#: src/kikoe/ui/export_dialog.ui:21 src/kikoe/ui/model_dialog.ui:21
+#: src/kikoe/ui/note_actions.py:56 src/kikoe/ui/retranscribe_dialog.ui:21
+#: src/kikoe/ui/speaker_dialog.ui:21 src/kikoe/ui/speaker_editor.ui:20
+msgid "_Cancel"
+msgstr "_İptal"
+
+#: src/kikoe/ui/bottom_bar.ui:243
+msgid "_Stop"
+msgstr "_Durdur"
+
+#: src/kikoe/ui/content_header.ui:14
+#: src/kikoe/ui/transcription_controller.py:323 src/kikoe/ui/window.py:388
+#: src/kikoe/ui/window.ui:10 src/kikoe/ui/window.ui:37
+#: src/kikoe/ui/window.ui:119 src/kikoe/ui/window.ui:130
+msgid "Kikoe"
+msgstr "Kikoe"
+
+#: src/kikoe/ui/content_header.ui:20 src/kikoe/ui/content_header.ui:24
+#: src/kikoe/ui/shortcuts.ui:56 src/kikoe/ui/window.ui:136
+#: src/kikoe/ui/window.ui:140
+msgid "Undo"
+msgstr "Geri Al"
+
+#: src/kikoe/ui/content_header.ui:31 src/kikoe/ui/content_header.ui:35
+#: src/kikoe/ui/shortcuts.ui:62 src/kikoe/ui/window.ui:147
+#: src/kikoe/ui/window.ui:151
+msgid "Redo"
+msgstr "Yinele"
+
+#: src/kikoe/ui/content_header.ui:42 src/kikoe/ui/content_header.ui:44
+#: src/kikoe/ui/window.ui:158 src/kikoe/ui/window.ui:160
+msgid "Note Menu"
+msgstr "Not Menüsü"
+
+#: src/kikoe/ui/content_header.ui:54 src/kikoe/ui/content_header.ui:56
+#: src/kikoe/ui/window.ui:170 src/kikoe/ui/window.ui:172
+msgid "Display Options"
+msgstr "Görüntüleme Seçenekleri"
+
+#: src/kikoe/ui/content_header.ui:68 src/kikoe/ui/export_dialog.ui:106
+#: src/kikoe/ui/window.ui:288
+msgid "Show _Timestamps"
+msgstr "_Zaman Damgalarını Göster"
+
+#: src/kikoe/ui/content_header.ui:72 src/kikoe/ui/export_dialog.ui:113
+#: src/kikoe/ui/window.ui:292
+msgid "Show _Speakers"
+msgstr "_Konuşmacıları Göster"
+
+#: src/kikoe/ui/content_header.ui:80 src/kikoe/ui/note_sidebar.py:172
+#: src/kikoe/ui/window.ui:300
+msgid "_Rename…"
+msgstr "Yeniden _Adlandır…"
+
+#: src/kikoe/ui/content_header.ui:84 src/kikoe/ui/window.ui:304
+msgid "_Copy All Text"
+msgstr "Tüm Metni _Kopyala"
+
+#: src/kikoe/ui/content_header.ui:88 src/kikoe/ui/export_dialog.ui:28
+#: src/kikoe/ui/window.ui:308
+msgid "_Export…"
+msgstr "_Dışa Aktar…"
+
+#: src/kikoe/ui/content_header.ui:94 src/kikoe/ui/note_sidebar.py:174
+#: src/kikoe/ui/window.ui:314
+msgid "_Delete Note"
+msgstr "Notu _Sil"
+
+#: src/kikoe/ui/dialogs.py:51
+msgid "Discard Changes?"
+msgstr "Değişiklikler Atılsın mı?"
+
+#: src/kikoe/ui/dialogs.py:52
+msgid "Your changes have not been saved and will be lost."
+msgstr "Değişiklikleriniz kaydedilmedi ve kaybolacak."
+
+#: src/kikoe/ui/dialogs.py:53
+msgid "_Keep Editing"
+msgstr "Düzenlemeye _Devam Et"
+
+#: src/kikoe/ui/dialogs.py:54
+msgid "_Discard"
+msgstr "_At"
+
+#: src/kikoe/ui/export_controller.py:62
+msgid "Copied to clipboard"
+msgstr "Panoya kopyalandı"
+
+#: src/kikoe/ui/export_controller.py:70 src/kikoe/ui/export_dialog.ui:10
+msgid "Export Note"
+msgstr "Notu Dışa Aktar"
+
+#: src/kikoe/ui/export_controller.py:83 src/kikoe/ui/note_actions.py:86
+msgid "This recording is no longer available."
+msgstr "Bu kayıt artık kullanılamıyor."
+
+#: src/kikoe/ui/export_controller.py:94
+msgid "Export Original Audio"
+msgstr "Özgün Sesi Dışa Aktar"
+
+#: src/kikoe/ui/export_controller.py:96
+msgid "Audio Files"
+msgstr "Ses Dosyaları"
+
+#: src/kikoe/ui/export_controller.py:99 src/kikoe/ui/speaker_controller.py:56
+#: src/kikoe/ui/transcription_controller.py:160
+msgid "The original audio is not available."
+msgstr "Özgün ses kullanılamıyor."
+
+#: src/kikoe/ui/export_controller.py:122
+#, python-brace-format
+msgid "Could not save “{name}”: {error}"
+msgstr "“{name}” kaydedilemedi: {error}"
+
+#: src/kikoe/ui/export_controller.py:125
+#, python-brace-format
+msgid "Exported “{name}”"
+msgstr "“{name}” dışa aktarıldı"
+
+#: src/kikoe/ui/export_dialog.py:45
+msgid "This note has no speakers"
+msgstr "Bu notta konuşmacı yok"
+
+#: src/kikoe/ui/export_dialog.py:48
+#, python-brace-format
+msgid "{extension} · Unavailable because this note has no timestamps"
+msgstr "{extension} · Bu notta zaman damgası olmadığından kullanılamıyor"
+
+#: src/kikoe/ui/export_dialog.py:82
+msgid "Always included in subtitle formats"
+msgstr "Altyazı biçimlerine her zaman dahil edilir"
+
+#: src/kikoe/ui/export_dialog.py:86
+msgid "This note has no timestamps"
+msgstr "Bu notta zaman damgası yok"
+
+#: src/kikoe/ui/export_dialog.ui:42
+msgid "Format"
+msgstr "Biçim"
+
+#: src/kikoe/ui/export_dialog.ui:45
+msgid "Plain Text"
+msgstr "Düz Metin"
+
+#: src/kikoe/ui/export_dialog.ui:59
+msgid "Markdown"
+msgstr "Markdown"
+
+#: src/kikoe/ui/export_dialog.ui:73
+msgid "SRT Subtitles"
+msgstr "SRT Altyazıları"
+
+#: src/kikoe/ui/export_dialog.ui:87
+msgid "WebVTT Subtitles"
+msgstr "WebVTT Altyazıları"
+
+#: src/kikoe/ui/export_dialog.ui:103 src/kikoe/ui/options_group.ui:10
+msgid "Options"
+msgstr "Seçenekler"
+
+#: src/kikoe/ui/file_dialogs.py:48
+msgid "All Files"
+msgstr "Tüm Dosyalar"
+
+#: src/kikoe/ui/file_dialogs.py:57
+msgid "Only locations on this computer can be used."
+msgstr "Yalnızca bu bilgisayardaki konumlar kullanılabilir."
+
+#: src/kikoe/ui/file_dialogs.py:63
+msgid "Audio and Video"
+msgstr "Ses ve Video"
+
+#: src/kikoe/ui/file_dialogs.py:70
+msgid "Only files on this computer can be imported."
+msgstr "Yalnızca bu bilgisayardaki dosyalar içe aktarılabilir."
+
+#: src/kikoe/ui/labels.py:29
+msgid "OpenAI-compatible"
+msgstr "OpenAI uyumlu"
+
+#: src/kikoe/ui/labels.py:34
+msgid "Maximum 60 minutes, or 30 with timestamps or speaker detection"
+msgstr "En çok 60 dakika; zaman damgası veya konuşmacı algılamayla 30 dakika"
+
+#: src/kikoe/ui/labels.py:35 src/kikoe/ui/provider_page.ui:95
+msgid "0 uses the provider limit; chunks also respect the size limit"
+msgstr "0 sağlayıcı sınırını kullanır; parçalar boyut sınırına da uyar"
+
+#: src/kikoe/ui/labels.py:40
+msgid "Defaults to 25 MB; your server may require smaller chunks"
+msgstr "Varsayılan 25 MB; sunucunuz daha küçük parçalar gerektirebilir"
+
+#: src/kikoe/ui/labels.py:41
+#, python-brace-format
+msgid "Maximum {size:g} MB per chunk"
+msgstr "Parça başına en çok {size:g} MB"
+
+#: src/kikoe/ui/labels.py:46
+msgid "Connecting…"
+msgstr "Bağlanıyor…"
+
+#: src/kikoe/ui/labels.py:47
+msgid "In progress"
+msgstr "Sürüyor"
+
+#: src/kikoe/ui/labels.py:48
+msgid "Reconnecting… Audio is saved locally"
+msgstr "Yeniden bağlanıyor… Ses yerel olarak kaydediliyor"
+
+#: src/kikoe/ui/labels.py:49
+msgid "Catching up…"
+msgstr "Gecikme gideriliyor…"
+
+#: src/kikoe/ui/labels.py:50
+msgid "Transcription incomplete"
+msgstr "Yazıya dökme eksik"
+
+#: src/kikoe/ui/labels.py:51 src/kikoe/ui/labels.py:56
+#: src/kikoe/ui/recording_view.py:33
+msgid "Paused"
+msgstr "Duraklatıldı"
+
+#: src/kikoe/ui/labels.py:56 src/kikoe/ui/recording_view.py:24
+#: src/kikoe/ui/recording_view.py:33 src/kikoe/ui/recording_view.ui:69
+msgid "Recording"
+msgstr "Kayıt"
+
+#: src/kikoe/ui/labels.py:62
+msgid "Realtime"
+msgstr "Gerçek Zamanlı"
+
+#: src/kikoe/ui/labels.py:64 src/kikoe/ui/model_dialog.ui:79
+#: src/kikoe/ui/model_dialog.ui:140 src/kikoe/ui/recording_controller.py:164
+msgid "Timestamps"
+msgstr "Zaman Damgaları"
+
+#: src/kikoe/ui/labels.py:66 src/kikoe/ui/model_dialog.ui:92
+msgid "Word Timestamps"
+msgstr "Sözcük Zaman Damgaları"
+
+#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:166
+msgid "Speakers"
+msgstr "Konuşmacılar"
+
+#: src/kikoe/ui/labels.py:70
+msgid "Streaming"
+msgstr "Akış"
+
+#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:170
+msgid "Text only"
+msgstr "Yalnızca metin"
+
+#: src/kikoe/ui/labels.py:82
+msgid "Plain Text (.txt)"
+msgstr "Düz Metin (.txt)"
+
+#: src/kikoe/ui/labels.py:84
+msgid "Markdown (.md)"
+msgstr "Markdown (.md)"
+
+#: src/kikoe/ui/labels.py:86
+msgid "SRT Subtitles (.srt)"
+msgstr "SRT Altyazıları (.srt)"
+
+#: src/kikoe/ui/labels.py:88
+msgid "WebVTT Subtitles (.vtt)"
+msgstr "WebVTT Altyazıları (.vtt)"
+
+#: src/kikoe/ui/labels.py:94
+msgid "Enter a name for this provider."
+msgstr "Bu sağlayıcı için ad girin."
+
+#: src/kikoe/ui/labels.py:96
+msgid "Enter the base URL of the API."
+msgstr "API’nin temel URL’sini girin."
+
+#: src/kikoe/ui/labels.py:98
+msgid ""
+"The base URL must start with http:// or https:// and include a host name."
+msgstr "Temel URL http:// veya https:// ile başlamalı ve sunucu adı içermeli."
+
+#: src/kikoe/ui/labels.py:104
+msgid "Enter the model ID."
+msgstr "Model kimliğini girin."
+
+#: src/kikoe/ui/labels.py:106
+msgid "This provider already has a model with that ID."
+msgstr "Bu sağlayıcıda bu kimliğe sahip model zaten var."
+
+#: src/kikoe/ui/labels.py:108
+msgid "Turn on file or realtime transcription."
+msgstr "Dosyadan veya gerçek zamanlı yazıya dökmeyi açın."
+
+#: src/kikoe/ui/labels.py:116
+msgid "%H:%M"
+msgstr "%H:%M"
+
+#. Translators: {time} is a time of day formatted with the “%H:%M” string below.
+#: src/kikoe/ui/labels.py:116
+#, python-brace-format
+msgid "Today {time}"
+msgstr "Bugün {time}"
+
+#: src/kikoe/ui/labels.py:118
+msgid "Yesterday"
+msgstr "Dün"
+
+#. Translators: date in this year, see the GLib.DateTime.format documentation.
+#: src/kikoe/ui/labels.py:121
+msgid "%b %-d"
+msgstr "%-d %b"
+
+#. Translators: date in another year, see the GLib.DateTime.format documentation.
+#: src/kikoe/ui/labels.py:124
+msgid "%b %-d, %Y"
+msgstr "%-d %b %Y"
+
+#: src/kikoe/ui/labels.py:129
+msgid "%b %-d %H:%M"
+msgstr "%-d %b %H:%M"
+
+#: src/kikoe/ui/labels.py:129
+#, python-brace-format
+msgid "{date} Recording"
+msgstr "{date} Kaydı"
+
+#: src/kikoe/ui/labels.py:139
+msgid "Imported audio"
+msgstr "İçe aktarılan ses"
+
+#: src/kikoe/ui/labels.py:147
+msgid "No recordings"
+msgstr "Kayıt yok"
+
+#: src/kikoe/ui/labels.py:152
+#, python-brace-format
+msgid "{count} recording"
+msgid_plural "{count} recordings"
+msgstr[0] "{count} kayıt"
+msgstr[1] "{count} kayıt"
+
+#: src/kikoe/ui/labels.py:189
+#, python-brace-format
+msgid "Converting part {part} of {parts}…"
+msgstr "{part}/{parts} parçası dönüştürülüyor…"
+
+#: src/kikoe/ui/labels.py:191
+msgid "Converting audio…"
+msgstr "Ses dönüştürülüyor…"
+
+#: src/kikoe/ui/labels.py:193
+#, python-brace-format
+msgid "Transcribing… {part} of {parts} chunks complete"
+msgstr "Yazıya dökülüyor… {parts} parçanın {part} tanesi tamamlandı"
+
+#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:175
+#: src/kikoe/ui/transcription_controller.py:261
+#: src/kikoe/ui/transcription_controller.py:308
+msgid "Transcribing…"
+msgstr "Yazıya dökülüyor…"
+
+#: src/kikoe/ui/labels.py:199
+msgid "Saving…"
+msgstr "Kaydediliyor…"
+
+#: src/kikoe/ui/labels.py:204
+msgid "Not supported by this model"
+msgstr "Bu model desteklemiyor"
+
+#: src/kikoe/ui/labels.py:210
+msgid "Transcribes while recording"
+msgstr "Kayıt sırasında yazıya döker"
+
+#: src/kikoe/ui/labels.py:211
+msgid "Transcribes after recording"
+msgstr "Kayıttan sonra yazıya döker"
+
+#: src/kikoe/ui/labels.py:219
+#, python-brace-format
+msgid "{mode} · This model does not support {features}"
+msgstr "{mode} · Bu model şunları desteklemiyor: {features}"
+
+#: src/kikoe/ui/labels.py:229
+msgid "realtime transcription"
+msgstr "gerçek zamanlı yazıya dökme"
+
+#: src/kikoe/ui/labels.py:231
+msgid "timestamps"
+msgstr "zaman damgaları"
+
+#: src/kikoe/ui/labels.py:233
+msgid "word timestamps"
+msgstr "sözcük zaman damgaları"
+
+#: src/kikoe/ui/labels.py:235
+msgid "speaker detection"
+msgstr "konuşmacı algılama"
+
+#: src/kikoe/ui/labels.py:237
+msgid "streaming preview"
+msgstr "akış önizlemesi"
+
+#: src/kikoe/ui/labels.py:241
+#, python-brace-format
+msgid "{provider} · {model}"
+msgstr "{provider} · {model}"
+
+#: src/kikoe/ui/level_meter.ui:16
+msgid "Microphone Level"
+msgstr "Mikrofon Düzeyi"
+
+#: src/kikoe/ui/model_dialog.py:64 src/kikoe/ui/provider_page.py:115
+#: src/kikoe/ui/provider_page.py:119
+msgid "Edit Model"
+msgstr "Modeli Düzenle"
+
+#: src/kikoe/ui/model_dialog.py:65 src/kikoe/ui/speaker_editor.ui:27
+msgid "_Save"
+msgstr "_Kaydet"
+
+#: src/kikoe/ui/model_dialog.py:146 src/kikoe/ui/model_dialog.py:160
+msgid "This model does not support this option."
+msgstr "Bu model bu seçeneği desteklemiyor."
+
+#: src/kikoe/ui/model_dialog.ui:10
+msgid "Add Model"
+msgstr "Model Ekle"
+
+#: src/kikoe/ui/model_dialog.ui:28 src/kikoe/ui/provider_page.ui:18
+msgid "_Add"
+msgstr "_Ekle"
+
+#: src/kikoe/ui/model_dialog.ui:45
+msgid "Model ID"
+msgstr "Model Kimliği"
+
+#: src/kikoe/ui/model_dialog.ui:50
+msgid "Display Name"
+msgstr "Görünen Ad"
+
+#: src/kikoe/ui/model_dialog.ui:68
+msgid "What This Model Supports"
+msgstr "Bu Modelin Destekledikleri"
+
+#: src/kikoe/ui/model_dialog.ui:69
+msgid ""
+"Known models are filled in automatically. Options the provider rejects for "
+"this model are unavailable."
+msgstr ""
+"Bilinen modeller otomatik doldurulur. Sağlayıcının bu model için reddettiği "
+"seçenekler kullanılamaz."
+
+#: src/kikoe/ui/model_dialog.ui:72
+msgid "Transcribe _Files"
+msgstr "_Dosyaları Yazıya Dök"
+
+#: src/kikoe/ui/model_dialog.ui:73
+msgid "Imported files, and recordings uploaded after they stop."
+msgstr "İçe aktarılan dosyalar ve durdurulduktan sonra yüklenen kayıtlar."
+
+#: src/kikoe/ui/model_dialog.ui:80
+msgid "Each segment carries a time. Needed for subtitle export."
+msgstr "Her bölümün zamanı vardır. Altyazı dışa aktarmak için gereklidir."
+
+#: src/kikoe/ui/model_dialog.ui:93
+msgid "Times can be requested for single words."
+msgstr "Tek tek sözcüklerin zamanı istenebilir."
+
+#: src/kikoe/ui/model_dialog.ui:105 src/kikoe/ui/model_dialog.ui:152
+msgid "Speaker Detection"
+msgstr "Konuşmacı Algılama"
+
+#: src/kikoe/ui/model_dialog.ui:106
+msgid "Tells different people apart and labels them."
+msgstr "Kişileri ayırt eder ve etiketler."
+
+#: src/kikoe/ui/model_dialog.ui:118
+msgid "Streaming Preview"
+msgstr "Akış Önizlemesi"
+
+#: src/kikoe/ui/model_dialog.ui:119
+msgid "Text appears while a file is transcribed."
+msgstr "Dosya yazıya dökülürken metin görünür."
+
+#: src/kikoe/ui/model_dialog.ui:133
+msgid "Transcribe While _Recording"
+msgstr "_Kayıt Sırasında Yazıya Dök"
+
+#: src/kikoe/ui/model_dialog.ui:134
+msgid ""
+"Text appears while recording. If off, the whole recording is uploaded after "
+"it stops."
+msgstr ""
+"Kayıt sırasında metin görünür. Kapalıysa tüm kayıt durdurulduktan sonra "
+"yüklenir."
+
+#: src/kikoe/ui/model_dialog.ui:171
+msgid "_Remove Model"
+msgstr "Modeli _Kaldır"
+
+#: src/kikoe/ui/note_actions.py:32 src/kikoe/ui/shortcuts.ui:15
+#: src/kikoe/ui/sidebar_header.ui:15 src/kikoe/ui/sidebar_header.ui:17
+#: src/kikoe/ui/window.ui:45 src/kikoe/ui/window.ui:47
+msgid "New Note"
+msgstr "Yeni Not"
+
+#: src/kikoe/ui/note_actions.py:49
+msgid "Note Title"
+msgstr "Not Başlığı"
+
+#: src/kikoe/ui/note_actions.py:56
+msgid "Rename Note"
+msgstr "Notu Yeniden Adlandır"
+
+#: src/kikoe/ui/note_actions.py:56
+msgid "_Rename"
+msgstr "Yeniden _Adlandır"
+
+#: src/kikoe/ui/note_actions.py:73
+#, python-brace-format
+msgid "Delete “{title}”?"
+msgstr "“{title}” Silinsin mi?"
+
+#: src/kikoe/ui/note_actions.py:74 src/kikoe/ui/note_actions.py:93
+msgid ""
+"Its transcript and original audio will be deleted. This cannot be undone."
+msgstr "Dökümü ve özgün sesi silinecek. Bu işlem geri alınamaz."
+
+#: src/kikoe/ui/note_actions.py:75 src/kikoe/ui/note_actions.py:94
+msgid "_Delete"
+msgstr "_Sil"
+
+#: src/kikoe/ui/note_actions.py:92
+#, python-brace-format
+msgid "Delete Recording {number}?"
+msgstr "Kayıt {number} Silinsin mi?"
+
+#: src/kikoe/ui/note_sidebar.py:87
+msgid "No Matching Notes"
+msgstr "Eşleşen Not Yok"
+
+#: src/kikoe/ui/note_sidebar.py:87 src/kikoe/ui/window.ui:102
+msgid "No Notes Yet"
+msgstr "Henüz Not Yok"
+
+#: src/kikoe/ui/note_view.py:312
+#, python-brace-format
+msgid "{status} · {summary}"
+msgstr "{status} · {summary}"
+
+#: src/kikoe/ui/note_view.py:344
+#, python-brace-format
+msgid "Transcribing… · {model}"
+msgstr "Yazıya dökülüyor… · {model}"
+
+#: src/kikoe/ui/note_view.ui:25 src/kikoe/ui/speaker_editor.ui:49
+#: src/kikoe/ui/transcript_row.py:482
+msgid "Match Speakers…"
+msgstr "Konuşmacıları Eşleştir…"
+
+#: src/kikoe/ui/note_view.ui:67
+msgid "No Recordings Yet"
+msgstr "Henüz Kayıt Yok"
+
+#: src/kikoe/ui/note_view.ui:68
+msgid "Record or import audio to add a transcript to this note."
+msgstr "Bu nota döküm eklemek için ses kaydedin veya içe aktarın."
+
+#: src/kikoe/ui/options_group.ui:13
+msgid "_Timestamps"
+msgstr "_Zaman Damgaları"
+
+#: src/kikoe/ui/options_group.ui:20
+msgid "Timestamp _Detail"
+msgstr "Zaman Damgası _Ayrıntısı"
+
+#: src/kikoe/ui/options_group.ui:26
+msgid "Segments"
+msgstr "Bölümler"
+
+#: src/kikoe/ui/options_group.ui:27
+msgid "Words"
+msgstr "Sözcükler"
+
+#: src/kikoe/ui/options_group.ui:28
+msgid "Segments and Words"
+msgstr "Bölümler ve Sözcükler"
+
+#: src/kikoe/ui/options_group.ui:36
+msgid "_Speakers"
+msgstr "_Konuşmacılar"
+
+#: src/kikoe/ui/options_group.ui:43
+msgid ""
+"The transcription language is not used while timestamps or speakers are on. "
+"The language is detected automatically."
+msgstr ""
+"Zaman damgaları veya konuşmacılar açıkken yazıya dökme dili kullanılmaz. Dil "
+"otomatik algılanır."
+
+#: src/kikoe/ui/preferences.py:92
+#, python-brace-format
+msgid "{device} (Unavailable)"
+msgstr "{device} (Kullanılamıyor)"
+
+#: src/kikoe/ui/preferences.py:96
+msgid "System Default"
+msgstr "Sistem Varsayılanı"
+
+#: src/kikoe/ui/preferences.py:132
+msgid "No Default Model"
+msgstr "Varsayılan Model Yok"
+
+#: src/kikoe/ui/preferences.py:215 src/kikoe/ui/preferences.ui:39
+msgid "Enter a language code such as zh, en, or ja."
+msgstr "zh, en veya ja gibi bir dil kodu girin."
+
+#: src/kikoe/ui/preferences.py:230
+#, python-brace-format
+msgid "{api} API · {count} model"
+msgid_plural "{api} API · {count} models"
+msgstr[0] "{api} API · {count} model"
+msgstr[1] "{api} API · {count} model"
+
+#: src/kikoe/ui/preferences.ui:10 src/kikoe/ui/shortcuts.ui:97
+msgid "Preferences"
+msgstr "Tercihler"
+
+#: src/kikoe/ui/preferences.ui:17 src/kikoe/ui/shortcuts.ui:88
+msgid "General"
+msgstr "Genel"
+
+#: src/kikoe/ui/preferences.ui:21
+msgid "Transcription"
+msgstr "Yazıya Dökme"
+
+#: src/kikoe/ui/preferences.ui:22
+msgid ""
+"Defaults for the next transcription. Language is detected automatically when "
+"left empty. To set it, enter a language code such as zh, en, or ja."
+msgstr ""
+"Sonraki yazıya dökme için varsayılanlar. Boş bırakılırsa dil otomatik "
+"algılanır. Belirlemek için zh, en veya ja gibi bir dil kodu girin."
+
+#: src/kikoe/ui/preferences.ui:25
+msgid "Default Model"
+msgstr "Varsayılan Model"
+
+#: src/kikoe/ui/preferences.ui:32
+msgid "Transcription Language"
+msgstr "Yazıya Dökme Dili"
+
+#: src/kikoe/ui/preferences.ui:53
+msgid "Audio"
+msgstr "Ses"
+
+#: src/kikoe/ui/preferences.ui:56
+msgid "Microphone"
+msgstr "Mikrofon"
+
+#: src/kikoe/ui/preferences.ui:57
+msgid "Used for new recordings"
+msgstr "Yeni kayıtlarda kullanılır"
+
+#: src/kikoe/ui/preferences.ui:64
+msgid "Audio Output"
+msgstr "Ses Çıkışı"
+
+#: src/kikoe/ui/preferences.ui:65
+msgid "Used for playback"
+msgstr "Oynatmada kullanılır"
+
+#: src/kikoe/ui/preferences.ui:74
+msgid "Storage"
+msgstr "Depolama"
+
+#: src/kikoe/ui/preferences.ui:77
+msgid "Data Folder"
+msgstr "Veri Klasörü"
+
+#: src/kikoe/ui/preferences.ui:93
+msgid "Troubleshooting"
+msgstr "Sorun Giderme"
+
+#: src/kikoe/ui/preferences.ui:94
+msgid ""
+"Logs stay on this device. Nothing is uploaded automatically. You can attach "
+"a log when reporting a problem."
+msgstr ""
+"Günlükler bu aygıtta kalır. Hiçbir şey otomatik yüklenmez. Sorun bildirirken "
+"günlük ekleyebilirsiniz."
+
+#: src/kikoe/ui/preferences.ui:97
+msgid "Log Folder"
+msgstr "Günlük Klasörü"
+
+#: src/kikoe/ui/preferences.ui:116 src/kikoe/ui/preferences.ui:120
+msgid "Providers"
+msgstr "Sağlayıcılar"
+
+#: src/kikoe/ui/preferences.ui:121
+msgid ""
+"Transcription happens in the cloud. A provider can offer several models."
+msgstr ""
+"Yazıya dökme bulutta yapılır. Bir sağlayıcı birden çok model sunabilir."
+
+#: src/kikoe/ui/preferences.ui:129 src/kikoe/ui/window.ui:225
+msgid "_Add Provider"
+msgstr "Sağlayıcı _Ekle"
+
+#: src/kikoe/ui/preferences.ui:143
+msgid "No Providers Yet"
+msgstr "Henüz Sağlayıcı Yok"
+
+#: src/kikoe/ui/provider_page.py:274
+#, python-brace-format
+msgid "Remove “{name}”?"
+msgstr "“{name}” Kaldırılsın mı?"
+
+#: src/kikoe/ui/provider_page.py:275
+msgid "Its models and API key will be deleted."
+msgstr "Modelleri ve API anahtarı silinecek."
+
+#: src/kikoe/ui/provider_page.py:276
+msgid "_Remove"
+msgstr "_Kaldır"
+
+#: src/kikoe/ui/provider_page.ui:10
+msgid "Add Provider"
+msgstr "Sağlayıcı Ekle"
+
+#: src/kikoe/ui/provider_page.ui:32
+msgid "Connection"
+msgstr "Bağlantı"
+
+#: src/kikoe/ui/provider_page.ui:33
+msgid ""
+"The API type decides the request format. Most providers offer an “OpenAI-"
+"compatible” API."
+msgstr ""
+"API türü istek biçimini belirler. Çoğu sağlayıcı “OpenAI uyumlu” API sunar."
+
+#: src/kikoe/ui/provider_page.ui:36 src/kikoe/ui/speaker_editor.ui:43
+msgid "Name"
+msgstr "Ad"
+
+#: src/kikoe/ui/provider_page.ui:42
+msgid "API Type"
+msgstr "API Türü"
+
+#: src/kikoe/ui/provider_page.ui:48
+msgid "Base URL"
+msgstr "Temel URL"
+
+#: src/kikoe/ui/provider_page.ui:55
+msgid "API Key"
+msgstr "API Anahtarı"
+
+#: src/kikoe/ui/provider_page.ui:76
+msgid "File Transcription"
+msgstr "Dosyadan Yazıya Dökme"
+
+#: src/kikoe/ui/provider_page.ui:77
+msgid ""
+"Applies to imported audio, recordings transcribed after stopping, and re-"
+"transcription. Smaller chunks allow more parallel requests."
+msgstr ""
+"İçe aktarılan ses, durduktan sonra yazıya dökülen kayıtlar ve yeniden yazıya "
+"dökme için geçerlidir. Küçük parçalar daha çok paralel isteğe izin verir."
+
+#: src/kikoe/ui/provider_page.ui:80
+msgid "Parallel Requests"
+msgstr "Paralel İstekler"
+
+#: src/kikoe/ui/provider_page.ui:81
+msgid "1 processes chunks one at a time; account rate limits still apply"
+msgstr "1 parçaları sırayla işler; hesabın istek hızı sınırları geçerlidir"
+
+#: src/kikoe/ui/provider_page.ui:94
+msgid "Chunk Length (Minutes)"
+msgstr "Parça Süresi (Dakika)"
+
+#: src/kikoe/ui/provider_page.ui:109
+msgid "Chunk Size (MB)"
+msgstr "Parça Boyutu (MB)"
+
+#: src/kikoe/ui/provider_page.ui:123
+msgid "Audio Format"
+msgstr "Ses Biçimi"
+
+#: src/kikoe/ui/provider_page.ui:129
+msgid "Reset Transcription Defaults"
+msgstr "Yazıya Dökme Varsayılanlarını Sıfırla"
+
+#: src/kikoe/ui/provider_page.ui:137
+msgid "Models"
+msgstr "Modeller"
+
+#: src/kikoe/ui/provider_page.ui:138
+msgid "What each model can do is set when you add it."
+msgstr "Her modelin yetenekleri eklenirken belirlenir."
+
+#: src/kikoe/ui/provider_page.ui:147
+msgid "Add _Model"
+msgstr "_Model Ekle"
+
+#: src/kikoe/ui/provider_page.ui:161
+msgid "No Models Yet"
+msgstr "Henüz Model Yok"
+
+#: src/kikoe/ui/provider_page.ui:178
+msgid "_Remove Provider"
+msgstr "Sağlayıcıyı _Kaldır"
+
+#: src/kikoe/ui/recording_controller.py:147
+msgid "No audio was recorded"
+msgstr "Ses kaydedilmedi"
+
+#: src/kikoe/ui/recording_controller.py:167
+#, python-brace-format
+msgid "{provider} {model} · {options}"
+msgstr "{provider} {model} · {options}"
+
+#: src/kikoe/ui/recording_controller.py:179
+msgid "Saving recording…"
+msgstr "Kayıt kaydediliyor…"
+
+#: src/kikoe/ui/recording_controller.py:187 src/kikoe/ui/tasks.py:59
+msgid "An unexpected error occurred. See the local log for details."
+msgstr "Beklenmedik bir hata oluştu. Ayrıntılar için yerel günlüğe bakın."
+
+#: src/kikoe/ui/recording_controller.py:221
+msgid "Recovering recordings…"
+msgstr "Kayıtlar kurtarılıyor…"
+
+#: src/kikoe/ui/recording_header.ui:31 src/kikoe/ui/recording_header.ui:34
+#: src/kikoe/ui/transcript_header.ui:31 src/kikoe/ui/transcript_header.ui:34
+#: src/kikoe/ui/transcript_row.py:273 src/kikoe/ui/transcript_row.ui:38
+#: src/kikoe/ui/transcript_row.ui:41
+msgid "Play This Recording"
+msgstr "Bu Kaydı Oynat"
+
+#: src/kikoe/ui/recording_header.ui:45 src/kikoe/ui/recording_header.ui:49
+#: src/kikoe/ui/transcript_header.ui:45 src/kikoe/ui/transcript_header.ui:49
+#: src/kikoe/ui/transcript_row.ui:52 src/kikoe/ui/transcript_row.ui:56
+msgid "Recording Menu"
+msgstr "Kayıt Menüsü"
+
+#: src/kikoe/ui/recording_header.ui:87 src/kikoe/ui/transcript_header.ui:87
+#: src/kikoe/ui/transcript_row.ui:94
+msgid "_Retry Transcription"
+msgstr "Yazıya Dökmeyi _Yeniden Dene"
+
+#: src/kikoe/ui/recording_view.py:22 src/kikoe/ui/transcript_row.py:179
+#, python-brace-format
+msgid "Recording {number}"
+msgstr "Kayıt {number}"
+
+#: src/kikoe/ui/recording_view.py:23
+#, python-brace-format
+msgid "In progress · {summary}"
+msgstr "Sürüyor · {summary}"
+
+#: src/kikoe/ui/recording_view.py:27
+#, python-brace-format
+msgid ""
+"Kikoe will upload the audio to {model} and transcribe it automatically after "
+"you stop. The text will appear here."
+msgstr ""
+"Durdurduğunuzda Kikoe sesi {model} modeline yükleyip otomatik yazıya "
+"dökecek. Metin burada görünecek."
+
+#: src/kikoe/ui/recovery_prompt.py:14
+msgid "Recover Recordings?"
+msgstr "Kayıtlar Kurtarılsın mı?"
+
+#: src/kikoe/ui/recovery_prompt.py:16
+msgid ""
+"Kikoe found unfinished recordings. Recover their audio now, then choose a "
+"model to transcribe them."
+msgstr ""
+"Kikoe tamamlanmamış kayıtlar buldu. Önce seslerini kurtarın, ardından yazıya "
+"dökmek için model seçin."
+
+#: src/kikoe/ui/recovery_prompt.py:19
+msgid "_Later"
+msgstr "_Daha Sonra"
+
+#: src/kikoe/ui/recovery_prompt.py:20
+msgid "_Recover"
+msgstr "_Kurtar"
+
+#: src/kikoe/ui/retranscribe_dialog.py:47
+#, python-brace-format
+msgid ""
+"Re-transcribe “Recording {number}” ({duration}) from the kept original "
+"audio. Timestamps or speaker detection that were off during transcription "
+"can be added this way."
+msgstr ""
+"Korunan özgün sesten “Kayıt {number}” ({duration}) yeniden yazıya dökülür. "
+"Daha önce kapalı olan zaman damgası veya konuşmacı algılama bu şekilde "
+"eklenebilir."
+
+#: src/kikoe/ui/retranscribe_dialog.py:61
+msgid "Choose a File Model…"
+msgstr "Dosya Modeli Seç…"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:10
+msgid "Re-transcribe"
+msgstr "Yeniden Yazıya Dök"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:28
+msgid "_Transcribe"
+msgstr "_Yazıya Dök"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:44
+#: src/kikoe/ui/transcription_dialog.py:52
+msgid "Model"
+msgstr "Model"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:64
+msgid "Existing Text Is Replaced"
+msgstr "Var Olan Metin Değiştirilir"
+
+#: src/kikoe/ui/retranscribe_dialog.ui:65
+msgid ""
+"The text of this recording will be replaced, including any manual edits. "
+"Other recordings in the note are not affected. Speaker names are kept where "
+"possible."
+msgstr ""
+"Bu kaydın metni, elle yapılan düzenlemeler dahil, değiştirilecek. Nottaki "
+"diğer kayıtlar etkilenmez. Konuşmacı adları mümkün olduğunca korunur."
+
+#: src/kikoe/ui/segment_editor.ui:26 src/kikoe/ui/segment_text.ui:19
+#: src/kikoe/ui/transcript_preview.ui:78
+msgid "Transcript Text"
+msgstr "Döküm Metni"
+
+#: src/kikoe/ui/shortcuts.ui:12
+msgid "Notes"
+msgstr "Notlar"
+
+#: src/kikoe/ui/shortcuts.ui:21 src/kikoe/ui/sidebar_header.ui:36
+#: src/kikoe/ui/sidebar_header.ui:39 src/kikoe/ui/window.ui:66
+#: src/kikoe/ui/window.ui:69 src/kikoe/ui/window.ui:80
+msgid "Search Notes"
+msgstr "Not Ara"
+
+#: src/kikoe/ui/shortcuts.ui:33
+msgid "Rename Note…"
+msgstr "Notu Yeniden Adlandır…"
+
+#: src/kikoe/ui/shortcuts.ui:39
+msgid "Export Note…"
+msgstr "Notu Dışa Aktar…"
+
+#: src/kikoe/ui/shortcuts.ui:45
+msgid "Close Search"
+msgstr "Aramayı Kapat"
+
+#: src/kikoe/ui/shortcuts.ui:53
+msgid "Editing"
+msgstr "Düzenleme"
+
+#: src/kikoe/ui/shortcuts.ui:68
+msgid "Next Segment"
+msgstr "Sonraki Bölüm"
+
+#: src/kikoe/ui/shortcuts.ui:74
+msgid "New Line in Segment"
+msgstr "Bölümde Yeni Satır"
+
+#: src/kikoe/ui/shortcuts.ui:80
+msgid "Revert Unsaved Typing"
+msgstr "Kaydedilmemiş Yazıyı Geri Al"
+
+#: src/kikoe/ui/shortcuts.ui:91 src/kikoe/ui/sidebar_header.ui:26
+#: src/kikoe/ui/sidebar_header.ui:28 src/kikoe/ui/window.ui:56
+#: src/kikoe/ui/window.ui:58
+msgid "Main Menu"
+msgstr "Ana Menü"
+
+#: src/kikoe/ui/shortcuts.ui:103
+msgid "Keyboard Shortcuts"
+msgstr "Klavye Kısayolları"
+
+#: src/kikoe/ui/shortcuts.ui:109
+msgid "Close Window"
+msgstr "Pencereyi Kapat"
+
+#: src/kikoe/ui/shortcuts.ui:115
+msgid "Quit"
+msgstr "Çık"
+
+#: src/kikoe/ui/sidebar_header.ui:55 src/kikoe/ui/window.ui:272
+msgid "_Preferences"
+msgstr "_Tercihler"
+
+#: src/kikoe/ui/sidebar_header.ui:59 src/kikoe/ui/window.ui:276
+msgid "_Keyboard Shortcuts"
+msgstr "Klavye _Kısayolları"
+
+#: src/kikoe/ui/sidebar_header.ui:63 src/kikoe/ui/window.ui:280
+msgid "_About Kikoe"
+msgstr "Kikoe _Hakkında"
+
+#: src/kikoe/ui/speaker_banner.py:19
+#, python-brace-format
+msgid "Recording {number} has speakers that are not yet matched."
+msgstr "Kayıt {number} henüz eşleştirilmemiş konuşmacılar içeriyor."
+
+#: src/kikoe/ui/speaker_controller.py:91
+msgid "This recording has no detected speakers."
+msgstr "Bu kayıtta konuşmacı algılanmadı."
+
+#: src/kikoe/ui/speaker_dialog.py:38
+#, python-brace-format
+msgid ""
+"Recording {number} has independently numbered speakers. Listen to the "
+"samples and choose who they are."
+msgstr ""
+"Kayıt {number} bağımsız numaralanmış konuşmacılara sahip. Örnekleri dinleyip "
+"kim olduklarını seçin."
+
+#: src/kikoe/ui/speaker_dialog.ui:10
+msgid "Match Speakers"
+msgstr "Konuşmacıları Eşleştir"
+
+#: src/kikoe/ui/speaker_dialog.ui:28
+msgid "_Apply"
+msgstr "_Uygula"
+
+#: src/kikoe/ui/speaker_dialog.ui:68
+msgid ""
+"Two numbers can map to the same person. You can rename or re-match a speaker "
+"at any time by clicking their name in the note."
+msgstr ""
+"İki numara aynı kişiye eşlenebilir. Nottaki adına tıklayarak konuşmacıyı "
+"istediğiniz zaman yeniden adlandırabilir veya eşleştirebilirsiniz."
+
+#: src/kikoe/ui/speaker_editor.ui:10
+msgid "Rename Speaker"
+msgstr "Konuşmacıyı Yeniden Adlandır"
+
+#: src/kikoe/ui/speaker_row.py:18 src/kikoe/ui/transcript_rows.py:32
+#: src/kikoe/ui/transcript_rows.py:71
+#, python-brace-format
+msgid "Speaker {number}"
+msgstr "Konuşmacı {number}"
+
+#: src/kikoe/ui/speaker_row.py:68
+msgid "No sample available"
+msgstr "Örnek yok"
+
+#: src/kikoe/ui/speaker_row.py:68
+#, python-brace-format
+msgid "“{text}”"
+msgstr "“{text}”"
+
+#: src/kikoe/ui/speaker_row.py:71
+#, python-brace-format
+msgid "Play a sample from “{name}”"
+msgstr "“{name}” için örnek oynat"
+
+#: src/kikoe/ui/speaker_row.py:72
+#, python-brace-format
+msgid "Who is {name}?"
+msgstr "{name} kim?"
+
+#: src/kikoe/ui/speaker_row.py:76
+msgid "Sample playback needs reliable timestamps."
+msgstr "Örnek oynatmak için güvenilir zaman damgaları gerekir."
+
+#: src/kikoe/ui/speaker_row.py:146
+msgid "New Speaker"
+msgstr "Yeni Konuşmacı"
+
+#: src/kikoe/ui/speaker_row.ui:54
+msgid "Existing Speakers"
+msgstr "Var Olan Konuşmacılar"
+
+#: src/kikoe/ui/speaker_row.ui:81
+msgid "Keep as New Speaker"
+msgstr "Yeni Konuşmacı Olarak Tut"
+
+#: src/kikoe/ui/tasks.py:18
+msgid "Something Went Wrong"
+msgstr "Bir Sorun Oluştu"
+
+#: src/kikoe/ui/tasks.py:19
+msgid "_Close"
+msgstr "_Kapat"
+
+#: src/kikoe/ui/timestamp_popover.ui:26 src/kikoe/ui/transcript_row.ui:174
+#: src/kikoe/ui/transcript_times.ui:26
+msgid "_Start"
+msgstr "_Başlangıç"
+
+#: src/kikoe/ui/timestamp_popover.ui:44 src/kikoe/ui/transcript_row.ui:192
+#: src/kikoe/ui/transcript_times.ui:44
+msgid "Start"
+msgstr "Başlangıç"
+
+#: src/kikoe/ui/timestamp_popover.ui:54 src/kikoe/ui/transcript_row.ui:202
+#: src/kikoe/ui/transcript_times.ui:54
+msgid "_End"
+msgstr "_Bitiş"
+
+#: src/kikoe/ui/timestamp_popover.ui:72 src/kikoe/ui/transcript_row.ui:220
+#: src/kikoe/ui/transcript_times.ui:72
+msgid "End"
+msgstr "Bitiş"
+
+#: src/kikoe/ui/timestamp_popover.ui:84 src/kikoe/ui/transcript_row.ui:232
+#: src/kikoe/ui/transcript_times.ui:84
+msgid ""
+"Use MM:SS or H:MM:SS, with optional decimal seconds (e.g. 00:26.860). Leave "
+"empty to clear"
+msgstr ""
+"MM:SS veya H:MM:SS kullanın, isterseniz ondalık saniye ekleyin (ör. "
+"00:26.860). Temizlemek için boş bırakın"
+
+#: src/kikoe/ui/transcript_preview.ui:19 src/kikoe/ui/transcript_preview.ui:21
+#: src/kikoe/ui/transcript_row.ui:115 src/kikoe/ui/transcript_row.ui:117
+msgid "Rename or Match Speaker"
+msgstr "Konuşmacıyı Yeniden Adlandır veya Eşleştir"
+
+#: src/kikoe/ui/transcript_preview.ui:41 src/kikoe/ui/transcript_preview.ui:43
+#: src/kikoe/ui/transcript_row.ui:137 src/kikoe/ui/transcript_row.ui:139
+msgid "Edit Timestamps"
+msgstr "Zaman Damgalarını Düzenle"
+
+#: src/kikoe/ui/transcript_row.py:195
+msgid "Transcription incomplete. Your text and audio have been kept."
+msgstr "Yazıya dökme eksik. Metniniz ve sesiniz korundu."
+
+#: src/kikoe/ui/transcript_row.py:197
+msgid "Transcription failed. Your audio has been kept."
+msgstr "Yazıya dökme başarısız oldu. Sesiniz korundu."
+
+#: src/kikoe/ui/transcript_row.py:200
+msgid "Audio saved. Transcription is pending."
+msgstr "Ses kaydedildi. Yazıya dökme bekleniyor."
+
+#: src/kikoe/ui/transcript_row.py:245
+msgid "Add Time"
+msgstr "Zaman Ekle"
+
+#: src/kikoe/ui/transcript_row.py:247
+msgid "No timestamp"
+msgstr "Zaman damgası yok"
+
+#: src/kikoe/ui/transcript_row.py:273
+msgid "Stop Playback"
+msgstr "Oynatmayı Durdur"
+
+#: src/kikoe/ui/transcript_row.py:331
+msgid "Segment text cannot be empty"
+msgstr "Bölüm metni boş olamaz"
+
+#: src/kikoe/ui/transcript_row.py:400
+msgid "End time must not be earlier than start time"
+msgstr "Bitiş zamanı başlangıçtan önce olamaz"
+
+#: src/kikoe/ui/transcript_row.py:431
+msgid "Timestamps were not saved because the input is invalid"
+msgstr "Giriş geçersiz olduğundan zaman damgaları kaydedilmedi"
+
+#: src/kikoe/ui/transcript_row.py:468
+msgid "Use MM:SS or H:MM:SS, with optional decimal seconds"
+msgstr "MM:SS veya H:MM:SS kullanın, isterseniz ondalık saniye ekleyin"
+
+#: src/kikoe/ui/transcript_row.py:480
+msgid "Re-transcribe…"
+msgstr "Yeniden Yazıya Dök…"
+
+#: src/kikoe/ui/transcript_row.py:481
+msgid "Export Original Audio…"
+msgstr "Özgün Sesi Dışa Aktar…"
+
+#: src/kikoe/ui/transcript_row.py:483
+msgid "Delete Recording"
+msgstr "Kaydı Sil"
+
+#: src/kikoe/ui/transcription_controller.py:106
+msgid "Import cancelled"
+msgstr "İçe aktarma iptal edildi"
+
+#: src/kikoe/ui/transcription_controller.py:140
+#: src/kikoe/ui/transcription_controller.py:284
+msgid "Transcription Failed"
+msgstr "Yazıya Dökme Başarısız"
+
+#: src/kikoe/ui/transcription_controller.py:148
+msgid "Transcription finished"
+msgstr "Yazıya dökme tamamlandı"
+
+#: src/kikoe/ui/transcription_controller.py:168
+msgid "Choose an available file transcription model."
+msgstr "Kullanılabilir bir dosyadan yazıya dökme modeli seçin."
+
+#: src/kikoe/ui/transcription_controller.py:206
+msgid "Re-transcription cancelled"
+msgstr "Yeniden yazıya dökme iptal edildi"
+
+#: src/kikoe/ui/transcription_controller.py:211
+#, python-brace-format
+msgid ""
+"{error}\n"
+"\n"
+"Your text and audio have been kept."
+msgstr ""
+"{error}\n"
+"\n"
+"Metniniz ve sesiniz korundu."
+
+#: src/kikoe/ui/transcription_controller.py:212
+msgid "Re-transcription Failed"
+msgstr "Yeniden Yazıya Dökme Başarısız"
+
+#: src/kikoe/ui/transcription_controller.py:266
+msgid "Transcription cancelled"
+msgstr "Yazıya dökme iptal edildi"
+
+#: src/kikoe/ui/transcription_dialog.py:53
+msgid "Add a provider and a model to start transcribing."
+msgstr "Yazıya dökmeye başlamak için sağlayıcı ve model ekleyin."
+
+#: src/kikoe/ui/transcription_dialog.ui:42
+msgid "_Manage Providers and Models…"
+msgstr "Sağlayıcıları ve Modelleri _Yönet…"
+
+#: src/kikoe/ui/window.ui:197
+msgid "No Note Selected"
+msgstr "Not Seçilmedi"
+
+#: src/kikoe/ui/window.ui:198
+msgid "Create a note, then record or import audio into it."
+msgstr "Not oluşturun, ardından içine ses kaydedin veya içe aktarın."
+
+#: src/kikoe/ui/window.ui:201
+msgid "_New Note"
+msgstr "_Yeni Not"
+
+#: src/kikoe/ui/window.ui:221
+msgid "Welcome to Kikoe"
+msgstr "Kikoe’ye Hoş Geldiniz"
+
+#: src/kikoe/ui/window.ui:222
+msgid ""
+"Kikoe turns speech into text using cloud services. Add a provider and a "
+"model first, then record or import audio."
+msgstr ""
+"Kikoe bulut hizmetleriyle konuşmayı metne dönüştürür. Önce sağlayıcı ve "
+"model ekleyin, ardından ses kaydedin veya içe aktarın."

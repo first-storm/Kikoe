@@ -63,7 +63,12 @@ a = Analysis(
             "module-versions": {"Gtk": "4.0", "Gdk": "4.0", "Gsk": "4.0"},
             "icons": ["Adwaita", "hicolor"],
             "themes": [],
-            "languages": ["zh_CN"],
+            # GTK's own catalogs use regional Chinese names, unlike Kikoe's
+            # script-based catalogs. Include both so stock dialogs are translated.
+            "languages": [
+                "zh_CN", "zh_TW", "zh_HK", "es", "fr", "de", "ja", "ko",
+                "pt_BR", "ru", "it", "ar", "hi", "id", "tr",
+            ],
         },
     },
     runtime_hooks=[str(HERE / "rthook_portaudio.py")],
