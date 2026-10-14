@@ -25,6 +25,11 @@ def test_provider_url_must_be_http_with_host(url: str) -> None:
     assert error is ProviderError.INVALID_BASE_URL
 
 
+def test_provider_url_with_unclosed_ipv6_host_is_invalid() -> None:
+    error = validate_provider("Local", ApiKind.OPENAI_COMPATIBLE, "http://[::1")
+    assert error is ProviderError.INVALID_BASE_URL
+
+
 def test_openai_compatible_requires_a_base_url() -> None:
     error = validate_provider("Groq", ApiKind.OPENAI_COMPATIBLE, "")
     assert error is ProviderError.EMPTY_BASE_URL

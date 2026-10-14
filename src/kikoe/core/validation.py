@@ -50,8 +50,13 @@ def validate_provider(name: str, api: ApiKind, base_url: str) -> ProviderError |
         return ProviderError.EMPTY_NAME
     if not base_url.strip():
         return None if api in DEFAULT_BASE_URLS else ProviderError.EMPTY_BASE_URL
-    parts = urlsplit(base_url.strip())
-    if parts.scheme not in ("http", "https") or not parts.hostname:
+    try:
+        parts = urlsplit(base_url.strip())
+        hostname = parts.hostname
+    except ValueError:
+        # urlsplit rejects malformed bracketed IPv6 hosts; that is still just bad input.
+        return ProviderError.INVALID_BASE_URL
+    if parts.scheme not in ("http", "https") or not hostname:
         return ProviderError.INVALID_BASE_URL
     return None
 
