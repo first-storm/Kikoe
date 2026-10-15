@@ -120,3 +120,9 @@ def test_uploads_are_wav_split_at_the_model_limit() -> None:
     limits = LocalClient(FakeRuntime()).upload_limits(MODEL, TranscriptionOptions())
     assert limits.format == WAV
     assert limits.duration == timedelta(seconds=600)
+
+
+@run_async
+async def test_a_file_only_model_refuses_live_transcription() -> None:
+    with pytest.raises(TranscriptionError, match="files only"):
+        await LocalClient(FakeRuntime()).open_realtime(MODEL, TranscriptionOptions())

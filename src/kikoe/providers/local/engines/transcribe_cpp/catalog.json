@@ -331,6 +331,21 @@
       "timestamps": true
     },
     {
+      "id": "parakeet-unified-en-0.6b",
+      "name": "Parakeet Unified 0.6B (Live)",
+      "family": "Parakeet",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/parakeet-unified-en-0.6b-gguf/resolve/d5249700b2382bf5c5024c2421d101b8db54a629/parakeet-unified-en-0.6b-Q8_0.gguf",
+        "sha256": "4b50b6dd862bf6e346929aaf4f5eaacec003bfa3f56462d6c874b41ef2f38795",
+        "size": 731357568
+      },
+      "languages": [
+        "en"
+      ],
+      "timestamps": true,
+      "streaming": true
+    },
+    {
       "id": "voxtral-mini-3b-2507",
       "name": "Voxtral Mini 3B",
       "family": "Voxtral",
@@ -350,6 +365,32 @@
         "pt"
       ],
       "max_seconds": 600
+    },
+    {
+      "id": "voxtral-mini-4b-realtime-2602",
+      "name": "Voxtral Mini 4B Realtime",
+      "family": "Voxtral",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/Voxtral-Mini-4B-Realtime-2602-gguf/resolve/65d1c9408859a0ca0f1c11b025ee951486af21d6/Voxtral-Mini-4B-Realtime-2602-Q4_K_M.gguf",
+        "sha256": "39dc1f65539373a406edea7490505822d77c12edff521744678717eef4da4723",
+        "size": 2830493984
+      },
+      "languages": [
+        "ar",
+        "de",
+        "en",
+        "es",
+        "fr",
+        "hi",
+        "it",
+        "ja",
+        "ko",
+        "nl",
+        "pt",
+        "ru",
+        "zh"
+      ],
+      "streaming": true
     }
   ]
 }

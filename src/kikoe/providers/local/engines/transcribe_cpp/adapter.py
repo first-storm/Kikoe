@@ -10,6 +10,7 @@ to plain protocol data right here.
 """
 
 import array
+import base64
 import importlib
 import logging
 import os
@@ -59,6 +60,8 @@ class TranscribeCpp:
         self._session: Any = None
         self._lock = threading.Lock()
         """Guards ``_session`` between the compute thread and ``cancel``."""
+        self._stream: Any = None
+        self._stream_language: str | None = None
 
     def handle(self, op: Op, args: dict[str, object], emit: Emit) -> dict[str, object]:
         try:
@@ -67,6 +70,12 @@ class TranscribeCpp:
                     return self._probe()
                 case Op.TRANSCRIBE:
                     return self._transcribe(args)
+                case Op.STREAM_BEGIN:
+                    return self._stream_begin(args)
+                case Op.STREAM_FEED:
+                    return self._stream_feed(args)
+                case Op.STREAM_FINISH:
+                    return self._stream_finish(args)
                 case _:
                     raise EngineError(ErrorKind.PROTOCOL, f"unsupported op {op}")
         except self._t.TranscribeError as error:
@@ -101,6 +110,7 @@ class TranscribeCpp:
         return model
 
     def _unload(self) -> None:
+        self._end_stream()
         with self._lock:
             session, model = self._session, self._model
             self._session = self._model = None
@@ -123,6 +133,57 @@ class TranscribeCpp:
             result = error.partial_result
         return {"segments": _segments(result), "language": str(result.language or "")}
 
+    def _stream_begin(self, args: dict[str, object]) -> dict[str, object]:
+        """A new live stream; one that is still open is discarded first."""
+        self._end_stream()
+        model = self._load(_text(args, "model"), _optional(args, "device"))
+        if not model.capabilities.supports_streaming:
+            raise EngineError(ErrorKind.MODEL, "model cannot stream")
+        self._stream_language = _language(model, _optional(args, "language"))
+        self._stream = self._session.stream(language=self._stream_language)
+        return {}
+
+    def _stream_feed(self, args: dict[str, object]) -> dict[str, object]:
+        stream = self._require_stream()
+        pcm = args.get("pcm")
+        if not isinstance(pcm, str):
+            raise EngineError(ErrorKind.PROTOCOL, "pcm must be Base64 text")
+        stream.feed(pcm_floats(base64.b64decode(pcm)))
+        text = stream.text()
+        return {"committed": str(text.committed), "tentative": str(text.tentative)}
+
+    def _stream_finish(self, args: dict[str, object]) -> dict[str, object]:
+        """Finish the utterance; ``restart`` keeps listening in a fresh stream."""
+        stream = self._require_stream()
+        stream.finalize()
+        text = str(stream.text().display)
+        self._end_stream()
+        if args.get("restart"):
+            self._stream = self._session.stream(language=self._stream_language)
+        return {"text": text}
+
+    def _require_stream(self) -> Any:
+        if self._stream is None:
+            raise EngineError(ErrorKind.PROTOCOL, "no stream is open")
+        return self._stream
+
+    def _end_stream(self) -> None:
+        stream, self._stream = self._stream, None
+        if stream is not None:
+            try:
+                stream.reset()
+            except self._t.TranscribeError:
+                log.warning("Could not reset the stream")
+
+
+def pcm_floats(data: bytes) -> array.array[float]:
+    """Little-endian 16-bit PCM as the float32 samples the binding expects."""
+    samples = array.array("h")
+    samples.frombytes(data[: len(data) // 2 * 2])
+    if sys.byteorder == "big":
+        samples.byteswap()
+    return array.array("f", (s * _SCALE for s in samples))
+
 
 def read_wav(path: Path) -> array.array[float]:
     """16 kHz mono 16-bit WAV, as written by Kikoe's upload conversion, as float32."""
@@ -137,11 +198,7 @@ def read_wav(path: Path) -> array.array[float]:
             frames = audio.readframes(audio.getnframes())
     except (OSError, wave.Error, EOFError) as error:
         raise EngineError(ErrorKind.AUDIO, f"unreadable audio: {error}") from error
-    samples = array.array("h")
-    samples.frombytes(frames)
-    if sys.byteorder == "big":
-        samples.byteswap()
-    return array.array("f", (s * _SCALE for s in samples))
+    return pcm_floats(frames)
 
 
 def _segments(result: Any) -> list[dict[str, object]]:

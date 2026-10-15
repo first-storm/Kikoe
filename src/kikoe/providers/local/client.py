@@ -77,4 +77,10 @@ class LocalClient:
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions
     ) -> RealtimeSession:
-        raise TranscriptionError(_("This local model transcribes files only."))
+        spec, path = self._model(model)
+        if not spec.streaming:
+            raise TranscriptionError(_("This local model transcribes files only."))
+        connection = self._runtime.connection(spec.engine_id)
+        return await connection.open_stream(
+            path, device=self._runtime.device(spec.engine_id), language=options.language
+        )

@@ -239,3 +239,10 @@ def test_models_without_timestamps_still_transcribe_files() -> None:
     assert spec.capabilities.file is not None
     assert not spec.capabilities.file.timestamps
     assert spec.capabilities.realtime is None
+
+
+def test_streaming_models_transcribe_while_recording() -> None:
+    live = [m for m in load_catalog().models if m.streaming]
+    assert {m.family for m in live} >= {"Parakeet", "Voxtral"}
+    for model in live:
+        assert model_spec(model).capabilities.realtime is not None

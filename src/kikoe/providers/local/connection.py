@@ -2,7 +2,7 @@
 
 from datetime import timedelta
 from pathlib import Path
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from kikoe.core.local_models import EngineDevice, EngineProbe
 from kikoe.core.models import Segment
@@ -10,6 +10,9 @@ from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionError
 from kikoe.providers.local.protocol import ErrorKind, Op
 from kikoe.providers.local.worker_host import WorkerError, WorkerHost
+
+if TYPE_CHECKING:
+    from kikoe.providers.local.session import LocalSession
 
 
 class EngineConnection:
@@ -46,6 +49,15 @@ class EngineConnection:
         except WorkerError as error:
             raise transcription_error(error) from error
         return parse_segments(result.get("segments"))
+
+    async def open_stream(
+        self, model: Path, *, device: str | None, language: str | None
+    ) -> LocalSession:
+        """A live transcription; its failures are ``TranscriptionError`` as well."""
+        from kikoe.providers.local.session import LocalSession
+
+        args: dict[str, object] = {"model": str(model), "device": device, "language": language}
+        return await LocalSession.start(self._host, args)
 
     async def close(self) -> None:
         await self._host.close()
