@@ -202,13 +202,19 @@ class LocalCatalog:
         return tuple(m for m in self.models if m.engine_id == engine_id)
 
 
-def model_spec(model: LocalModelSpec) -> ModelSpec:
-    """How a local model appears in model choosers, with what it can do."""
+def model_spec(model: LocalModelSpec, *, speakers: bool = False) -> ModelSpec:
+    """How a local model appears in model choosers, with what it can do.
+
+    ``speakers`` means a speaker detection model of the same engine is installed; it
+    can only be matched to transcripts with times.
+    """
     return ModelSpec(
         model.model_id,
         model.display_name,
         Capabilities(
-            file=ModeCapabilities(timestamps=model.timestamps),
+            file=ModeCapabilities(
+                timestamps=model.timestamps, diarization=speakers and model.timestamps
+            ),
             realtime=ModeCapabilities() if model.streaming else None,
         ),
     )

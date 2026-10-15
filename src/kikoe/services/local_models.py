@@ -18,6 +18,7 @@ from kikoe.core.local_models import (
     LocalCatalog,
     LocalModelSpec,
     LocalSettings,
+    ModelRole,
     Platform,
     model_spec,
     recommend_build,
@@ -178,7 +179,9 @@ class LocalModelManager:
     def providers(self) -> tuple[Provider, ...]:
         """The local provider, while at least one model can run; empty otherwise."""
         models = tuple(
-            model_spec(m) for m in self.installed_models() if m.engine_id in self._engines
+            model_spec(m, speakers=self.diarizer(m.engine_id) is not None)
+            for m in self.installed_models()
+            if m.engine_id in self._engines and m.role is ModelRole.ASR
         )
         return (local_provider(_("On This Device"), models),) if models else ()
 
@@ -187,6 +190,13 @@ class LocalModelManager:
         if model is None or model_id not in self._models:
             return None
         return model, self._installs.model_path(model)
+
+    def diarizer(self, engine_id: str) -> Path | None:
+        """The first installed speaker detection model of the engine."""
+        model = next(
+            (m for m in self.installed_models(engine_id) if m.role is ModelRole.DIARIZE), None
+        )
+        return self._installs.model_path(model) if model else None
 
     def builds(self, engine: EngineSpec) -> tuple[EngineBuild, ...]:
         return engine.builds_for(self.platform) if self.platform else ()

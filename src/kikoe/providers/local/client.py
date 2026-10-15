@@ -8,6 +8,7 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Protocol
 
+from kikoe.core.diarization import assign_speakers
 from kikoe.core.local_models import LocalModelSpec
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.transcription import RealtimeProfile
@@ -32,6 +33,10 @@ class LocalRuntime(Protocol):
         ...
 
     def device(self, engine_id: str) -> str | None: ...
+
+    def diarizer(self, engine_id: str) -> Path | None:
+        """The installed speaker detection model of the engine, if any."""
+        ...
 
 
 class LocalClient:
@@ -65,14 +70,24 @@ class LocalClient:
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         spec, path = self._model(model)
-        connection = self._runtime.connection(spec.engine_id)
-        return await connection.transcribe(
+        engine = spec.engine_id
+        connection = self._runtime.connection(engine)
+        device = self._runtime.device(engine)
+        diarizer = self._runtime.diarizer(engine) if options.diarization else None
+        # Speakers are matched by time, so they need times even when not shown.
+        speakers = diarizer is not None and spec.timestamps
+        transcript = await connection.transcribe(
             path,
             audio,
-            device=self._runtime.device(spec.engine_id),
+            device=device,
             language=options.language,
-            timestamps=options.timestamps and spec.timestamps,
+            timestamps=(options.timestamps or speakers) and spec.timestamps,
+            words=speakers,
         )
+        if diarizer is None or not speakers:
+            return transcript.segments
+        turns = await connection.diarize(diarizer, audio, device=device)
+        return assign_speakers(transcript.segments, transcript.words, turns)
 
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions

@@ -391,6 +391,17 @@
         "zh"
       ],
       "streaming": true
+    },
+    {
+      "id": "sortformer-4spk-v2.1",
+      "name": "Sortformer Speaker Detection",
+      "family": "Speaker Detection",
+      "role": "diarize",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/diar_streaming_sortformer_4spk-v2.1-gguf/resolve/ae4afbb5c3d33b71cf2dbf600022b655ee706dd0/diar_streaming_sortformer_4spk-v2.1-Q8_0.gguf",
+        "sha256": "a5dacdc650790266c7a362e54e6bf51952015487edaa606c4e11632bc32442a9",
+        "size": 139310336
+      }
     }
   ]
 }

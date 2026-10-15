@@ -2,7 +2,7 @@
 
 from gi.repository import Adw, Gtk
 
-from kikoe.core.local_models import InstallStatus, LocalModelSpec
+from kikoe.core.local_models import InstallStatus, LocalModelSpec, ModelRole
 from kikoe.i18n import _, ngettext
 from kikoe.services.local_models import LocalModelManager
 from kikoe.ui.download_row import DownloadRow
@@ -66,6 +66,8 @@ class LocalModelList(Adw.PreferencesGroup):
 
 def model_detail(model: LocalModelSpec) -> str:
     """E.g. “Multilingual · Timestamps · Realtime”."""
+    if model.role is ModelRole.DIARIZE:
+        return _("Adds speakers to models with timestamps")
     if model.languages:
         count = len(model.languages)
         languages = (

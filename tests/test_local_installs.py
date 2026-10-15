@@ -6,6 +6,7 @@ import io
 import tarfile
 import zipfile
 from collections.abc import AsyncIterator, Callable
+from dataclasses import replace
 from pathlib import Path
 
 import httpx
@@ -411,3 +412,27 @@ async def test_only_models_of_an_installed_engine_are_offered(tmp_path: Path) ->
     found = manager.installed_model("tiny")
     assert found is not None and found[1] == tmp_path / "models" / "tiny" / "tiny.gguf"
     assert manager.installed_model("base") is None
+
+
+@run_async
+async def test_speaker_detection_is_offered_once_its_model_is_installed(tmp_path: Path) -> None:
+    server = Server()
+    timed = replace(_model(server, "tiny"), timestamps=True)
+    untimed = _model(server, "base")
+    speakers = replace(_model(server, "speakers"), role=ModelRole.DIARIZE)
+    manager = _manager(tmp_path, server, (timed, untimed, speakers))
+    await manager.install_engine("engine", "gpu")
+    for model_id in ("tiny", "base"):
+        await manager.install_model(model_id)
+
+    def diarization() -> dict[str, bool]:
+        (provider,) = manager.providers
+        return {
+            m.model_id: bool(m.capabilities.file and m.capabilities.file.diarization)
+            for m in provider.models
+        }
+
+    assert diarization() == {"tiny": False, "base": False}
+    await manager.install_model("speakers")
+    assert diarization() == {"tiny": True, "base": False}
+    assert manager.diarizer("engine") == tmp_path / "models" / "speakers" / "speakers.gguf"

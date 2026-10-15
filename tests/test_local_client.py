@@ -6,12 +6,17 @@ from pathlib import Path
 import pytest
 
 from helpers import file_caps, run_async
+from kikoe.core.diarization import SpeakerTurn, TimedWord
 from kikoe.core.local_models import Download, LocalModelSpec, ModelRole
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.upload import WAV
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
 from kikoe.providers.local.client import LocalClient
-from kikoe.providers.local.connection import EngineConnection, transcription_error
+from kikoe.providers.local.connection import (
+    EngineConnection,
+    EngineTranscript,
+    transcription_error,
+)
 from kikoe.providers.local.protocol import ErrorKind
 from kikoe.providers.local.worker_host import WorkerError
 
@@ -32,6 +37,7 @@ MODEL = ModelSpec("tiny", "Tiny", file_caps(timestamps=True))
 class FakeConnection(EngineConnection):
     def __init__(self, error: WorkerError | None = None) -> None:
         self.calls: list[dict[str, object]] = []
+        self.diarized: Path | None = None
         self.error = error
 
     async def transcribe(
@@ -42,24 +48,39 @@ class FakeConnection(EngineConnection):
         device: str | None,
         language: str | None,
         timestamps: bool,
-    ) -> tuple[Segment, ...]:
-        self.calls.append(
-            {
-                "model": model,
-                "audio": audio,
-                "device": device,
-                "language": language,
-                "ts": timestamps,
-            }
-        )
+        words: bool = False,
+    ) -> EngineTranscript:
+        call = {"model": model, "audio": audio, "device": device, "language": language}
+        self.calls.append({**call, "ts": timestamps})
         if self.error is not None:
             raise transcription_error(self.error)
-        return (Segment("hi", timedelta(0), timedelta(seconds=1)),)
+        segment = Segment("hi there", timedelta(0), timedelta(seconds=2))
+        if not words:
+            return EngineTranscript((segment,))
+        return EngineTranscript(
+            (segment,),
+            (
+                TimedWord("hi", timedelta(0), timedelta(seconds=1)),
+                TimedWord("there", timedelta(seconds=1), timedelta(seconds=2)),
+            ),
+        )
+
+    async def diarize(
+        self, model: Path, audio: Path, *, device: str | None
+    ) -> tuple[SpeakerTurn, ...]:
+        self.diarized = model
+        return (
+            SpeakerTurn(timedelta(0), timedelta(seconds=1), "1"),
+            SpeakerTurn(timedelta(seconds=1), timedelta(seconds=2), "2"),
+        )
 
 
 class FakeRuntime:
-    def __init__(self, installed: bool = True, error: WorkerError | None = None) -> None:
+    def __init__(
+        self, installed: bool = True, error: WorkerError | None = None, diarizer: bool = False
+    ) -> None:
         self.installed = installed
+        self.has_diarizer = diarizer
         self.engine = FakeConnection(error)
 
     def installed_model(self, model_id: str) -> tuple[LocalModelSpec, Path] | None:
@@ -71,6 +92,9 @@ class FakeRuntime:
     def device(self, engine_id: str) -> str | None:
         return "vulkan:1"
 
+    def diarizer(self, engine_id: str) -> Path | None:
+        return Path("/models/speakers.gguf") if self.has_diarizer else None
+
 
 @run_async
 async def test_files_are_sent_to_the_engine_with_the_chosen_device() -> None:
@@ -79,7 +103,7 @@ async def test_files_are_sent_to_the_engine_with_the_chosen_device() -> None:
     segments = await client.transcribe_file(
         Path("/tmp/a.wav"), MODEL, TranscriptionOptions(language="en-GB")
     )
-    assert segments == (Segment("hi", timedelta(0), timedelta(seconds=1)),)
+    assert segments == (Segment("hi there", timedelta(0), timedelta(seconds=2)),)
     assert runtime.engine.calls == [
         {
             "model": Path("/models/tiny.gguf"),
@@ -126,3 +150,26 @@ def test_uploads_are_wav_split_at_the_model_limit() -> None:
 async def test_a_file_only_model_refuses_live_transcription() -> None:
     with pytest.raises(TranscriptionError, match="files only"):
         await LocalClient(FakeRuntime()).open_realtime(MODEL, TranscriptionOptions())
+
+
+@run_async
+async def test_speakers_split_the_transcript_where_the_voice_changes() -> None:
+    runtime = FakeRuntime(diarizer=True)
+    segments = await LocalClient(runtime).transcribe_file(
+        Path("/tmp/a.wav"), MODEL, TranscriptionOptions(timestamps=False, diarization=True)
+    )
+    assert segments == (
+        Segment("hi", timedelta(0), timedelta(seconds=1), "1"),
+        Segment("there", timedelta(seconds=1), timedelta(seconds=2), "2"),
+    )
+    assert runtime.engine.diarized == Path("/models/speakers.gguf")
+    assert runtime.engine.calls[0]["ts"] is True
+
+
+@run_async
+async def test_no_speaker_pass_runs_unless_requested() -> None:
+    runtime = FakeRuntime(diarizer=True)
+    await LocalClient(runtime).transcribe_file(
+        Path("/tmp/a.wav"), MODEL, TranscriptionOptions(diarization=False)
+    )
+    assert runtime.engine.diarized is None

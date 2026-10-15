@@ -61,6 +61,8 @@ class TranscribeCpp:
         self._lock = threading.Lock()
         """Guards ``_session`` between the compute thread and ``cancel``."""
         self._stream: Any = None
+        self._diarizer: tuple[str, Any, Any] | None = None
+        """Path, model and session of the diarization model, kept beside the ASR model."""
         self._stream_language: str | None = None
 
     def handle(self, op: Op, args: dict[str, object], emit: Emit) -> dict[str, object]:
@@ -76,6 +78,8 @@ class TranscribeCpp:
                     return self._stream_feed(args)
                 case Op.STREAM_FINISH:
                     return self._stream_finish(args)
+                case Op.DIARIZE:
+                    return self._diarize(args)
                 case _:
                     raise EngineError(ErrorKind.PROTOCOL, f"unsupported op {op}")
         except self._t.TranscribeError as error:
@@ -85,6 +89,8 @@ class TranscribeCpp:
         with self._lock:
             if self._session is not None:
                 self._session.cancel()
+            if self._diarizer is not None:
+                self._diarizer[2].cancel()
 
     def _probe(self) -> dict[str, object]:
         devices: list[dict[str, object]] = [
@@ -98,9 +104,7 @@ class TranscribeCpp:
         if self._loaded == (path, device) and self._model is not None:
             return self._model
         self._unload()
-        chosen = next((d for d in self._t.backends() if device_key(d) == device), None)
-        if device is not None and chosen is None:
-            log.warning("Saved device is not available; choosing automatically")
+        chosen = self._device(device)
         model = self._t.Model(path, device=chosen) if chosen else self._t.Model(path)
         log.info("Loaded model on %s", model.backend)
         session = model.session()
@@ -131,7 +135,40 @@ class TranscribeCpp:
             # Kept like a cloud service's best effort: the text so far is still useful.
             log.warning("Output was truncated: %s", type(error).__name__)
             result = error.partial_result
-        return {"segments": _segments(result), "language": str(result.language or "")}
+        reply: dict[str, object] = {"segments": _segments(result)}
+        if args.get("words"):
+            reply["words"] = _words(result)
+        return reply
+
+    def _diarize(self, args: dict[str, object]) -> dict[str, object]:
+        path = _text(args, "model")
+        if self._diarizer is None or self._diarizer[0] != path:
+            chosen = self._device(_optional(args, "device"))
+            model = self._t.Model(path, device=chosen) if chosen else self._t.Model(path)
+            if self._t.Role.DIARIZE not in model.roles:
+                model.close()
+                raise EngineError(ErrorKind.MODEL, "not a diarization model")
+            session = model.diarize_session()
+            with self._lock:
+                old, self._diarizer = self._diarizer, (path, model, session)
+            if old is not None:
+                old[2].close()
+                old[1].close()
+        session = self._diarizer[2]
+        turns = session.run(read_wav(Path(_text(args, "audio"))))
+        return {
+            "turns": [
+                {"start_ms": int(t.t0_ms), "end_ms": int(t.t1_ms), "speaker": int(t.speaker_id)}
+                for t in turns
+                if t.t1_ms > t.t0_ms
+            ]
+        }
+
+    def _device(self, device: str | None) -> Any:
+        chosen = next((d for d in self._t.backends() if device_key(d) == device), None)
+        if device is not None and chosen is None:
+            log.warning("Saved device is not available; choosing automatically")
+        return chosen
 
     def _stream_begin(self, args: dict[str, object]) -> dict[str, object]:
         """A new live stream; one that is still open is discarded first."""
@@ -218,6 +255,16 @@ def _segments(result: Any) -> list[dict[str, object]]:
     if not segments and str(result.text).strip():
         segments.append({"text": str(result.text).strip()})
     return segments
+
+
+def _words(result: Any) -> list[dict[str, object]]:
+    if result.timestamp_kind in ("none", ""):
+        return []
+    return [
+        {"text": str(w.text).strip(), "start_ms": int(w.t0_ms), "end_ms": int(w.t1_ms)}
+        for w in result.words
+        if str(w.text).strip()
+    ]
 
 
 def _language(model: Any, tag: str | None) -> str | None:

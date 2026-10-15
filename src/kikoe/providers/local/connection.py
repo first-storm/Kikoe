@@ -1,9 +1,11 @@
 """Typed calls to one engine worker, and the user-facing meaning of its failures."""
 
+from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
+from kikoe.core.diarization import SpeakerTurn, TimedWord
 from kikoe.core.local_models import EngineDevice, EngineProbe
 from kikoe.core.models import Segment
 from kikoe.i18n import _
@@ -13,6 +15,13 @@ from kikoe.providers.local.worker_host import WorkerError, WorkerHost
 
 if TYPE_CHECKING:
     from kikoe.providers.local.session import LocalSession
+
+
+@dataclass(frozen=True, slots=True)
+class EngineTranscript:
+    segments: tuple[Segment, ...]
+    words: tuple[TimedWord, ...] = ()
+    """Word times, when requested and the model has them."""
 
 
 class EngineConnection:
@@ -36,19 +45,40 @@ class EngineConnection:
         device: str | None,
         language: str | None,
         timestamps: bool,
-    ) -> tuple[Segment, ...]:
+        words: bool = False,
+    ) -> EngineTranscript:
         args: dict[str, object] = {
             "model": str(model),
             "audio": str(audio),
             "device": device,
             "language": language,
             "timestamps": timestamps,
+            "words": words,
         }
         try:
             result = await self._host.request(Op.TRANSCRIBE, args)
         except WorkerError as error:
             raise transcription_error(error) from error
-        return parse_segments(result.get("segments"))
+        return EngineTranscript(
+            parse_segments(result.get("segments")), _timed_words(result.get("words"))
+        )
+
+    async def diarize(
+        self, model: Path, audio: Path, *, device: str | None
+    ) -> tuple[SpeakerTurn, ...]:
+        """Who speaks when in ``audio``; speakers are numbered from 1."""
+        args: dict[str, object] = {"model": str(model), "audio": str(audio), "device": device}
+        try:
+            result = await self._host.request(Op.DIARIZE, args)
+        except WorkerError as error:
+            raise transcription_error(error) from error
+        turns: list[SpeakerTurn] = []
+        for entry in _objects(result.get("turns")):
+            start, end = _milliseconds(entry.get("start_ms")), _milliseconds(entry.get("end_ms"))
+            speaker = entry.get("speaker")
+            if start is not None and end is not None and type(speaker) is int:
+                turns.append(SpeakerTurn(start, end, str(speaker)))
+        return tuple(turns)
 
     async def open_stream(
         self, model: Path, *, device: str | None, language: str | None
@@ -112,6 +142,16 @@ def transcription_error(error: WorkerError) -> TranscriptionError:
             return TranscriptionError(_("Transcription was cancelled."))
         case ErrorKind.PROTOCOL | ErrorKind.FAILED:
             return TranscriptionError(_("The local engine failed. See the log for details."))
+
+
+def _timed_words(value: object) -> tuple[TimedWord, ...]:
+    words: list[TimedWord] = []
+    for entry in _objects(value):
+        text = entry.get("text")
+        start, end = _milliseconds(entry.get("start_ms")), _milliseconds(entry.get("end_ms"))
+        if isinstance(text, str) and text and start is not None and end is not None:
+            words.append(TimedWord(text, start, end))
+    return tuple(words)
 
 
 def _devices(value: object) -> tuple[EngineDevice, ...]:
