@@ -436,3 +436,30 @@ async def test_speaker_detection_is_offered_once_its_model_is_installed(tmp_path
     await manager.install_model("speakers")
     assert diarization() == {"tiny": True, "base": False}
     assert manager.diarizer("engine") == tmp_path / "models" / "speakers" / "speakers.gguf"
+
+
+@run_async
+async def test_a_bundled_engine_is_used_and_cannot_be_removed_or_replaced(tmp_path: Path) -> None:
+    server = Server()
+    builder = _manager(tmp_path / "build", server)
+    await builder.install_engine("engine", "gpu")
+    shipped = tmp_path / "app" / "local-engines"
+    shipped.mkdir(parents=True)
+    (tmp_path / "build" / "engines" / "engine").rename(shipped / "engine")
+    catalog = LocalCatalog((_engine(server),), (_model(server),))
+    manager = LocalModelManager(
+        catalog,
+        LINUX,
+        LocalInstalls(tmp_path / "user", server.transport(), bundled=shipped),
+        _settings(tmp_path),
+    )
+    await manager.load()
+    assert manager.engine_state("engine").status is InstallStatus.BUNDLED
+    assert manager.installed_build("engine") == catalog.engines[0].build("gpu")
+    await manager.install_model("tiny")
+    assert manager.providers
+    with pytest.raises(ValueError, match="bundled"):
+        await manager.remove_engine("engine", with_models=False)
+    with pytest.raises(ValueError, match="bundled"):
+        await manager.install_engine("engine", "cpu")
+    assert (shipped / "engine" / "install.json").is_file()

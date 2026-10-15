@@ -12,7 +12,7 @@ from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 from kikoe.constants import APP_ID, APP_NAME, ISSUE_URL, VERSION, WEBSITE
 from kikoe.core.preferences import WindowState, default_provider
 from kikoe.i18n import _, is_right_to_left
-from kikoe.paths import config_dir, data_dir, log_dir
+from kikoe.paths import bundled_engines_dir, config_dir, data_dir, log_dir
 from kikoe.providers.factory import ClientContext, create_client
 from kikoe.providers.local.engines import load_catalog as load_local_catalog
 from kikoe.providers.local.hardware import current_platform, in_flatpak
@@ -51,7 +51,7 @@ class Application(Adw.Application):
         self.local_models = LocalModelManager(
             load_local_catalog(),
             current_platform(),
-            LocalInstalls(data_dir() / "local"),
+            LocalInstalls(data_dir() / "local", bundled=bundled_engines_dir()),
             LocalSettingsStore(config_dir() / "local.json"),
             sandboxed=in_flatpak(),
         )

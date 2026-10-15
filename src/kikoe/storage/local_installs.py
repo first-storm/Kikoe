@@ -21,7 +21,7 @@ import tarfile
 import uuid
 import zipfile
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, cast
 
@@ -53,14 +53,24 @@ class EngineReceipt:
     build_id: str
     version: str
     path: Path
+    bundled: bool = False
+    """Shipped inside the application, so it can be neither removed nor replaced."""
 
 
 class LocalInstalls:
     """Blocking file operations, except the async installs; call the rest in a thread."""
 
-    def __init__(self, root: Path, transport: httpx.AsyncBaseTransport | None = None) -> None:
+    def __init__(
+        self,
+        root: Path,
+        transport: httpx.AsyncBaseTransport | None = None,
+        *,
+        bundled: Path | None = None,
+    ) -> None:
         self.root = root
         self._transport = transport
+        self._bundled = bundled
+        """Engines shipped with the app (``<bundled>/<engine id>``), e.g. on macOS."""
 
     def engine_dir(self, engine_id: str) -> Path:
         return self.root / "engines" / engine_id
@@ -76,16 +86,12 @@ class LocalInstalls:
         shutil.rmtree(self.root / "staging", ignore_errors=True)
 
     def engine_receipt(self, engine_id: str) -> EngineReceipt | None:
-        folder = self.engine_dir(engine_id)
-        data = _read_json(folder / "install.json")
-        if data is None or data.get("version") != RECEIPT_VERSION:
-            return None
-        build, version = data.get("build"), data.get("engine_version")
-        if data.get("engine") != engine_id or not isinstance(build, str):
-            return None
-        if not isinstance(version, str):
-            return None
-        return EngineReceipt(engine_id, build, version, folder)
+        """A bundled engine takes precedence over a downloaded one."""
+        if self._bundled is not None:
+            receipt = _receipt(self._bundled / engine_id, engine_id)
+            if receipt is not None:
+                return replace(receipt, bundled=True)
+        return _receipt(self.engine_dir(engine_id), engine_id)
 
     def model_installed(self, model: LocalModelSpec) -> bool:
         data = _read_json(self.model_dir(model.model_id) / "model.json")
@@ -146,6 +152,18 @@ class LocalInstalls:
 
     async def _download(self, item: Download, file: Path, on_progress: ProgressCallback) -> None:
         await download(item, file, on_progress, transport=self._transport)
+
+
+def _receipt(folder: Path, engine_id: str) -> EngineReceipt | None:
+    data = _read_json(folder / "install.json")
+    if data is None or data.get("version") != RECEIPT_VERSION:
+        return None
+    build, version = data.get("build"), data.get("engine_version")
+    if data.get("engine") != engine_id or not isinstance(build, str):
+        return None
+    if not isinstance(version, str):
+        return None
+    return EngineReceipt(engine_id, build, version, folder)
 
 
 def _swap(source: Path, destination: Path) -> None:

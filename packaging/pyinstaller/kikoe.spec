@@ -32,6 +32,10 @@ if sys.platform == "win32":
     binaries += [(str(dll), ".") for dll in (Path(sys.base_prefix) / "bin").glob("libportaudio*.dll")]
 
 datas = collect_data_files("kikoe", excludes=["**/*.blp"])
+# Local engines prepared by scripts/bundle_engine.py (macOS ships transcribe.cpp built in).
+if engines := os.environ.get("KIKOE_BUNDLED_ENGINES"):
+    for engine in sorted(Path(engines).iterdir()):
+        datas.append((str(engine), f"local-engines/{engine.name}"))
 # Packages that read their own version (or entry points) from metadata at import time.
 for distribution in (
     "kikoe",

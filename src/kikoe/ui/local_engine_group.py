@@ -62,12 +62,15 @@ class LocalEngineGroup(Adw.PreferencesGroup):
             if installed is not None and installed in self._builds:
                 with self._updating:
                     self.build_row.set_selected(self._builds.index(installed))
-        switching = installed is not None and self.selected_build != installed
+        bundled = status is InstallStatus.BUNDLED
+        switching = not bundled and installed is not None and self.selected_build != installed
         self.download_button.set_visible(status is InstallStatus.MISSING or switching)
         self.download_button.set_label(_("_Switch") if switching else _("_Download"))
         self.cancel_button.set_visible(status is InstallStatus.DOWNLOADING)
         self.remove_button.set_visible(status is InstallStatus.INSTALLED and not switching)
-        self.build_row.set_sensitive(status is not InstallStatus.DOWNLOADING)
+        self.build_row.set_sensitive(
+            status not in (InstallStatus.DOWNLOADING, InstallStatus.BUNDLED)
+        )
         size = sum(d.size for d in self._engine.downloads(self.selected_build))
         match status:
             case InstallStatus.MISSING:
@@ -87,6 +90,8 @@ class LocalEngineGroup(Adw.PreferencesGroup):
 
     def _ready_text(self) -> str:
         version = _("Version {version}").format(version=self._engine.version)
+        if self._manager.engine_state(self._engine.engine_id).status is InstallStatus.BUNDLED:
+            version = _("Included with Kikoe · {version}").format(version=version)
         probe = self._manager.probe_result(self._engine.engine_id)
         if probe is None:
             return _("{version} · Starting…").format(version=version)

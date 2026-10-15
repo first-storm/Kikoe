@@ -212,7 +212,10 @@ class LocalModelManager:
         return engine.build(receipt.build_id)
 
     def engine_state(self, engine_id: str) -> InstallState:
-        return self._state(engine_id, engine_id in self._engines)
+        receipt = self._engines.get(engine_id)
+        if receipt is not None and receipt.bundled:
+            return InstallState(InstallStatus.BUNDLED)
+        return self._state(engine_id, receipt is not None)
 
     def model_state(self, model_id: str) -> InstallState:
         return self._state(model_id, model_id in self._models)
@@ -236,6 +239,8 @@ class LocalModelManager:
         build = engine.build(build_id) if engine else None
         if engine is None or build is None or build not in self.builds(engine):
             raise ValueError(f"no build {build_id} of {engine_id} for this computer")
+        if self.engine_state(engine_id).status is InstallStatus.BUNDLED:
+            raise ValueError(f"{engine_id} is bundled with the application")
         total = sum(d.size for d in engine.downloads(build))
         async with self._job(engine_id, total) as progress:
             await self._disconnect(engine_id)
@@ -259,6 +264,8 @@ class LocalModelManager:
 
     async def remove_engine(self, engine_id: str, *, with_models: bool) -> None:
         """Remove the engine; its models stay unless ``with_models`` is set."""
+        if self.engine_state(engine_id).status is InstallStatus.BUNDLED:
+            raise ValueError(f"{engine_id} is bundled with the application")
         self.cancel(engine_id)
         await self._disconnect(engine_id)
         await asyncio.to_thread(self._installs.remove_engine, engine_id)
