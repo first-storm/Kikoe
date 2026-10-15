@@ -364,7 +364,8 @@ rows bind immediately; remaining rows update over later frames.
 frame callbacks. Text saves after a pause, focus loss or recycling; text-only
 updates preserve the caret. `core.edit_history` owns history,
 `core.transcript_rows` decides row changes, `ui.transcript_rows` builds rows and
-overlays, and `ui.row_focus` moves the caret.
+overlays, `ui.stale_rows` binds off-screen rows over later frames, and
+`ui.row_focus` moves the caret.
 
 `ui.file_transcription.FileTranscriptionDisplay` owns preview snapshots and refresh
 scheduling, restoring the latest preview when the target note is revisited.

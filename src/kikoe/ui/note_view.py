@@ -8,7 +8,7 @@ window saves them and keeps the Undo history.
 import sys
 from datetime import UTC, datetime, timedelta
 
-from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
+from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
 from kikoe.core.models import Note, Recording, RecordingSource
 from kikoe.core.speakers import resolved_note
@@ -25,14 +25,13 @@ from kikoe.ui.labels import live_status_label
 from kikoe.ui.recording_view import RecordingView
 from kikoe.ui.row_focus import RowFocus
 from kikoe.ui.speaker_banner import update_speaker_banner
+from kikoe.ui.stale_rows import StaleRows
 from kikoe.ui.templates import ui_file
 from kikoe.ui.transcript_row import TranscriptRow
 from kikoe.ui.transcript_rows import StreamRenderer, build_rows
 
 _ONE_LINE_ROW_HEIGHT = 32
 """The height of the shortest segment row, used to count the rows that fit in the window."""
-_BOUND_PER_FRAME = 32
-"""Rows off screen bound per frame after a note is opened."""
 _SPARE_ROWS = 200
 """Rows a list this short gets widgets for, as ``Gtk.ListView`` keeps about that many.
 
@@ -80,11 +79,8 @@ class NoteView(Adw.BreakpointBin):
         """Rows on screen, updated in place when only the display options change."""
         self._row_cache: list[TranscriptRow] = []
         """Prepared or recycled widgets kept outside the list until they are needed."""
-        self._stale: dict[TranscriptRow, int] = {}
-        """Rows off screen still showing the previous note, by their list position."""
-        self._first_frame: int | None = None
-        """The frame that shows a newly opened note; the stale rows are bound after it."""
-        self._bind_tick = 0
+        self._stale = StaleRows(self.transcript_list, self._bound, self._bind_row)
+        """Rows off screen still showing the previous note."""
         self._focus = RowFocus(
             self._items, self.transcript_list, self._bound, self._stale, self._bind_row
         )
@@ -191,24 +187,8 @@ class NoteView(Adw.BreakpointBin):
             if position is None or position < on_screen:
                 self._bind_row(row, item)
             else:
-                self._stale[row] = position
-        self._first_frame = None
-        if self._stale and not self._bind_tick:
-            self._bind_tick = self.transcript_list.add_tick_callback(self._on_bind_tick)
-
-    def _on_bind_tick(self, _list: Gtk.Widget, clock: Gdk.FrameClock) -> bool:
-        frame = clock.get_frame_counter()
-        if self._first_frame is None:
-            self._first_frame = frame
-        if frame == self._first_frame:
-            return True
-        # The view is at the top, so the first rows are the nearest to it.
-        for row in sorted(self._stale, key=self._stale.__getitem__)[:_BOUND_PER_FRAME]:
-            self._bind_row(row, self._bound[row])
-        if self._stale:
-            return True
-        self._bind_tick = 0
-        return False
+                self._stale.add(row, position)
+        self._stale.bind_later()
 
     def _update_segments(self, note: Note) -> None:
         """Swap in edited segments without rebuilding rows, keeping the caret and scroll."""
@@ -435,7 +415,7 @@ class NoteView(Adw.BreakpointBin):
             # Recycling must not drop typing that has not been saved yet.
             row.flush()
             self._bound.pop(row, None)
-            self._stale.pop(row, None)
+            self._stale.discard(row)
             item.set_child(None)
             if len(self._row_cache) < _SPARE_ROWS:
                 self._row_cache.append(row)
@@ -469,7 +449,7 @@ class NoteView(Adw.BreakpointBin):
         return True
 
     def _bind_row(self, row: TranscriptRow, data: TranscriptItem) -> None:
-        self._stale.pop(row, None)
+        self._stale.discard(row)
         display = self._note.display if self._note else None
         row.bind(
             data,

@@ -5,6 +5,7 @@ from collections.abc import Callable
 from gi.repository import Gio, GLib, Gtk
 
 from kikoe.ui.items import TranscriptItem
+from kikoe.ui.stale_rows import StaleRows
 from kikoe.ui.transcript_row import TranscriptRow
 
 _FOCUS_ATTEMPTS = 3
@@ -19,7 +20,7 @@ class RowFocus:
         items: Gio.ListStore[TranscriptItem],
         list_view: Gtk.ListView,
         bound: dict[TranscriptRow, TranscriptItem],
-        stale: dict[TranscriptRow, int],
+        stale: StaleRows,
         bind_row: Callable[[TranscriptRow, TranscriptItem], None],
     ) -> None:
         self._items = items
