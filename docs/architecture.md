@@ -82,7 +82,15 @@ The database modules have separate responsibilities:
 | `storage.note_rows` | Converting database rows to domain objects |
 | `storage.audio_files` | Copying and removing retained audio |
 | `storage.errors` | `LibraryError` and `NoteNotFoundError` |
-| `storage.notes` | Async repository, cached sidebar summaries and change notifications |
+| `storage.notes` | Async repository, cached sidebar summaries and typed change notifications |
+
+`NoteRepository` reloads summaries only after changes that can alter them
+(creating, renaming or deleting notes, adding or deleting recordings) and then
+emits `SummariesChanged`; the sidebar refreshes. Display options, speaker names
+and matches, and transcription results emit `ContentChanged`, which reloads only
+the open note. Segment edits emit nothing: the editor already shows them, and no
+summary depends on segment text. An active search therefore keeps its results
+until the query changes.
 
 `PRAGMA user_version` records the schema version. Migrations run in order at
 startup; released migrations are immutable. A database from a newer application

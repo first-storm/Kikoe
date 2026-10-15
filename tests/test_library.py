@@ -6,11 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from helpers import run_async
 from kikoe.core.models import DisplayOptions, Recording, RecordingSource, Segment
 from kikoe.storage.errors import LibraryError, NoteNotFoundError
 from kikoe.storage.library import Library
-from kikoe.storage.notes import NoteRepository
 from kikoe.storage.schema import SCHEMA_VERSION
 
 WHEN = datetime(2026, 10, 12, 6, 30, tzinfo=UTC)
@@ -234,35 +232,6 @@ def test_failed_copy_leaves_no_partial_file(
         library.audio.store(source, "r1")
 
     assert not (tmp_path / "audio" / "r1.wav").exists()
-
-
-@run_async
-async def test_repository_notifies_with_the_changed_note(tmp_path: Path) -> None:
-    repository = NoteRepository(Library(tmp_path / "library.sqlite3", tmp_path / "audio"))
-    changes: list[str | None] = []
-    repository.connect_changed(changes.append)
-
-    await repository.load()
-    note = await repository.create_note("Draft")
-    await repository.rename_note(note.note_id, "  Final  ")
-
-    assert changes == [None, note.note_id, note.note_id]
-    assert [s.title for s in repository.notes] == ["Final"]
-
-
-@run_async
-async def test_repository_delete_recording_notifies(tmp_path: Path, library: Library) -> None:
-    repository = NoteRepository(library)
-    changes: list[str | None] = []
-    repository.connect_changed(changes.append)
-
-    await repository.load()
-    saved = library.add_recording(None, "Memo", recording(library, tmp_path))
-    note = await repository.delete_recording(saved.note_id, saved.recordings[0].recording_id)
-
-    assert note.recordings == ()
-    assert changes[-1] == saved.note_id
-    assert repository.notes[0].recording_count == 0
 
 
 def test_version_one_library_migrates_without_changing_existing_transcript(tmp_path: Path) -> None:

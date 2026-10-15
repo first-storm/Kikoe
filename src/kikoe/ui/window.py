@@ -15,7 +15,7 @@ from kikoe.media.player import PlaybackError
 from kikoe.services.activity import ActivityTracker
 from kikoe.services.errors import USER_FACING_ERRORS
 from kikoe.services.playback import Playback
-from kikoe.storage.notes import NoteRepository
+from kikoe.storage.notes import ContentChanged, NoteEvent, NoteRepository, SummariesChanged
 from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.storage.window_state import WindowStateStore
@@ -336,11 +336,20 @@ class Window(Adw.ApplicationWindow):
             return False
         return self._note is None or self._note.note_id == self._transcribe.display.note_id
 
-    def _on_notes_changed(self, note_id: str | None) -> None:
+    def _on_notes_changed(self, event: NoteEvent) -> None:
         if not self._recovery_checked:
             self._recovery_checked = True
             self._work.recovery_task = run_task(self._recorder.offer_recovery(), self)
-        self._sidebar.refresh()
+        match event:
+            case SummariesChanged(note_id):
+                self._sidebar.refresh()
+                self._follow_summaries(note_id)
+            case ContentChanged(note_id):
+                if self._note is not None and note_id == self._note.note_id:
+                    run_task(self._open_note(note_id), self)
+
+    def _follow_summaries(self, note_id: str | None) -> None:
+        """Keep the content pane on a note that still exists, reloading it if it changed."""
         current = self._note.note_id if self._note else None
         if current is None:
             self.refresh_content()

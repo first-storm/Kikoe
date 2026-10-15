@@ -2,6 +2,7 @@
 
 import asyncio
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -16,17 +17,37 @@ from kikoe.core.models import (
 )
 from kikoe.storage.library import Library
 
-type NoteListener = Callable[[str | None], None]
-"""Called with the ID of the note that changed, or None after the initial load."""
+
+@dataclass(frozen=True, slots=True)
+class SummariesChanged:
+    """The sidebar summaries were reloaded; ``note_id`` is None after the initial load."""
+
+    note_id: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class ContentChanged:
+    """A note's transcript, speakers or display changed, but not its summary."""
+
+    note_id: str
+
+
+type NoteEvent = SummariesChanged | ContentChanged
+type NoteListener = Callable[[NoteEvent], None]
 
 
 class NoteRepository:
-    """Keeps the sidebar summaries in memory and refreshes them after every change."""
+    """Keeps the sidebar summaries in memory and tells screens what changed.
+
+    Summaries are reloaded only after changes that can alter them (title, recordings,
+    deletion). Segment edits notify nobody: the editor already shows them, and the
+    summaries cannot change.
+    """
 
     def __init__(self, library: Library) -> None:
         self._library = library
         self._notes: tuple[NoteSummary, ...] = ()
-        self._listeners = Listeners[str | None]()
+        self._listeners = Listeners[NoteEvent]()
 
     @property
     def notes(self) -> tuple[NoteSummary, ...]:
@@ -38,7 +59,7 @@ class NoteRepository:
         return self._listeners.connect(listener)
 
     async def load(self) -> None:
-        await self._change(None, self._library.migrate)
+        await self._change_summaries(None, self._library.migrate)
 
     async def search(self, query: str) -> tuple[NoteSummary, ...]:
         """Run title and transcript queries away from the GTK thread."""
@@ -51,24 +72,26 @@ class NoteRepository:
         return await asyncio.to_thread(self._library.find_recording_note, recording_id)
 
     async def create_note(self, title: str) -> Note:
-        return await self._change(_id_of, self._library.create_note, title, datetime.now(UTC))
+        call = self._library.create_note
+        return await self._change_summaries(_id_of, call, title, datetime.now(UTC))
 
     async def rename_note(self, note_id: str, title: str) -> None:
-        await self._change(note_id, self._library.rename_note, note_id, title.strip())
+        await self._change_summaries(note_id, self._library.rename_note, note_id, title.strip())
 
     async def set_display_options(self, note_id: str, options: DisplayOptions) -> None:
-        await self._change(note_id, self._library.set_display_options, note_id, options)
+        await self._change_content(note_id, self._library.set_display_options, note_id, options)
 
     async def rename_speaker(self, note_id: str, speaker_id: str, name: str) -> None:
         """Persist a shared person name and refresh all consumers."""
-        await self._change(note_id, self._library.rename_speaker, note_id, speaker_id, name)
+        call = self._library.rename_speaker
+        await self._change_content(note_id, call, note_id, speaker_id, name)
 
     async def match_speakers(
         self, note_id: str, recording_id: str, choices: dict[str, str | None]
     ) -> Note:
         """Persist only confirmed dialog choices."""
         call = self._library.match_speakers
-        return await self._change(note_id, call, note_id, recording_id, choices)
+        return await self._change_content(note_id, call, note_id, recording_id, choices)
 
     async def update_segment(
         self,
@@ -80,9 +103,8 @@ class NoteRepository:
         start_ms: int | None,
         end_ms: int | None,
     ) -> Note:
-        """Persist an edited segment's text and timestamps."""
-        return await self._change(
-            note_id,
+        """Persist an edited segment's text and timestamps; the editor shows it itself."""
+        return await asyncio.to_thread(
             self._library.update_segment,
             note_id,
             recording_id,
@@ -93,10 +115,11 @@ class NoteRepository:
         )
 
     async def delete_note(self, note_id: str) -> None:
-        await self._change(note_id, self._library.delete_note, note_id)
+        await self._change_summaries(note_id, self._library.delete_note, note_id)
 
     async def delete_recording(self, note_id: str, recording_id: str) -> Note:
-        return await self._change(note_id, self._library.delete_recording, note_id, recording_id)
+        call = self._library.delete_recording
+        return await self._change_summaries(note_id, call, note_id, recording_id)
 
     async def store_audio(self, source: Path, recording_id: str) -> Path:
         return await asyncio.to_thread(self._library.audio.store, source, recording_id)
@@ -106,7 +129,8 @@ class NoteRepository:
 
     async def add_recording(self, note_id: str | None, title: str, recording: Recording) -> Note:
         """Append to ``note_id``, or create a note called ``title`` when it is None."""
-        return await self._change(_id_of, self._library.add_recording, note_id, title, recording)
+        call = self._library.add_recording
+        return await self._change_summaries(_id_of, call, note_id, title, recording)
 
     async def update_transcription(
         self,
@@ -119,7 +143,7 @@ class NoteRepository:
         model_id: str | None = None,
     ) -> Note:
         """Persist the result without adding another recording on retries."""
-        return await self._change(
+        return await self._change_content(
             note_id,
             self._library.update_transcription,
             note_id,
@@ -130,17 +154,25 @@ class NoteRepository:
             model_id=model_id,
         )
 
-    async def _change[**P, R](
+    async def _change_summaries[**P, R](
         self,
         changed: str | Callable[[R], str] | None,
         call: Callable[P, R],
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> R:
-        """Write away from the GTK thread; ``changed`` may find the note's ID in the result."""
+        """Write, then reload the summaries; ``changed`` may find the note's ID in the result."""
         result = await asyncio.to_thread(call, *args, **kwargs)
         self._notes = await asyncio.to_thread(self._library.list_notes)
-        self._listeners.emit(changed(result) if callable(changed) else changed)
+        self._listeners.emit(SummariesChanged(changed(result) if callable(changed) else changed))
+        return result
+
+    async def _change_content[**P, R](
+        self, note_id: str, call: Callable[P, R], *args: P.args, **kwargs: P.kwargs
+    ) -> R:
+        """Write a change that leaves every summary as it was."""
+        result = await asyncio.to_thread(call, *args, **kwargs)
+        self._listeners.emit(ContentChanged(note_id))
         return result
 
 
