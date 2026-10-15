@@ -1,0 +1,15 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeLocalModelList: Adw.PreferencesGroup {
+  title: _("Models");
+  description: _("Larger models are more accurate but slower. Sizes are download sizes.");
+
+  ListBox models_list {
+    selection-mode: none;
+
+    styles [
+      "boxed-list",
+    ]
+  }
+}

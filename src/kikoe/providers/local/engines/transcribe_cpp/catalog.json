@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "engine": {
+    "id": "transcribe-cpp",
+    "name": "transcribe.cpp",
+    "version": "0.4.0",
+    "homepage": "https://github.com/handy-computer/transcribe.cpp",
+    "components": [
+      {
+        "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe_cpp-0.4.0-py3-none-any.whl",
+        "sha256": "c6dd091848006c7881d46b4066aa687782f49302c4253c0cb45396976cb0abcd",
+        "size": 47190,
+        "archive": "zip",
+        "target": "python"
+      }
+    ],
+    "builds": [
+      {
+        "id": "linux-x86_64-cpu-vulkan",
+        "os": "linux",
+        "arch": "x86_64",
+        "accelerators": [
+          "vulkan",
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe-native-0.4.0-linux-x86_64-cpu-vulkan.tar.gz",
+            "sha256": "f229adb9018bb7e33042137f92942022a5d76bfc5e16efd7a11cc9b115e86ea2",
+            "size": 22546161,
+            "archive": "tar.gz",
+            "target": "native",
+            "strip": 1
+          }
+        ]
+      },
+      {
+        "id": "linux-x86_64-cuda",
+        "os": "linux",
+        "arch": "x86_64",
+        "accelerators": [
+          "cuda",
+          "vulkan",
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe-native-0.4.0-linux-x86_64-cuda.tar.gz",
+            "sha256": "d74be1db9b088d0bd6ebca8a2ad6522915ae65acfc4036d1c0f4f51c01014557",
+            "size": 203183584,
+            "archive": "tar.gz",
+            "target": "native",
+            "strip": 1
+          }
+        ]
+      },
+      {
+        "id": "linux-arm64-cpu-vulkan",
+        "os": "linux",
+        "arch": "arm64",
+        "accelerators": [
+          "vulkan",
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe-native-0.4.0-linux-aarch64-cpu-vulkan.tar.gz",
+            "sha256": "af7ee108923b74d3e727309ce4992714a25872ea77c6247da8be9a0ed54275dd",
+            "size": 18122209,
+            "archive": "tar.gz",
+            "target": "native",
+            "strip": 1
+          }
+        ]
+      },
+      {
+        "id": "windows-x86_64-cpu-vulkan",
+        "os": "windows",
+        "arch": "x86_64",
+        "accelerators": [
+          "vulkan",
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe-native-0.4.0-windows-x86_64-cpu-vulkan.tar.gz",
+            "sha256": "9d5bd89f720d7979323e73f5220fe50fad5e38a7b0c2525225d453bd09adf2b0",
+            "size": 18036555,
+            "archive": "tar.gz",
+            "target": "native",
+            "strip": 1
+          }
+        ]
+      },
+      {
+        "id": "windows-x86_64-cuda",
+        "os": "windows",
+        "arch": "x86_64",
+        "accelerators": [
+          "cuda",
+          "vulkan",
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe-native-0.4.0-windows-x86_64-cuda.tar.gz",
+            "sha256": "ba54e73f96bb571203ed71257a02379785c0bed8fa5af23b14f40d870d2c6574",
+            "size": 202565383,
+            "archive": "tar.gz",
+            "target": "native",
+            "strip": 1
+          }
+        ]
+      },
+      {
+        "id": "macos-arm64-metal",
+        "os": "macos",
+        "arch": "arm64",
+        "accelerators": [
+          "metal",
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe-native-0.4.0-macos-arm64-metal.tar.gz",
+            "sha256": "eeae15ef08cfbfdd059238765a1a0f790dd39e2f0fdb05bfbb601e183286f6d7",
+            "size": 2475842,
+            "archive": "tar.gz",
+            "target": "native",
+            "strip": 1
+          }
+        ]
+      },
+      {
+        "id": "macos-x86_64-cpu",
+        "os": "macos",
+        "arch": "x86_64",
+        "accelerators": [
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe-native-0.4.0-macos-x86_64-cpu.tar.gz",
+            "sha256": "e4da34c9cebd8b31ca2c1049296430ff7af1a851db436e23e08d3d66e09b7d0f",
+            "size": 1600612,
+            "archive": "tar.gz",
+            "target": "native",
+            "strip": 1
+          }
+        ]
+      }
+    ]
+  },
+  "models": [
+    {
+      "id": "whisper-tiny",
+      "name": "Whisper Tiny",
+      "family": "Whisper",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/whisper-tiny-gguf/resolve/2678cc66038359b97c8e6fd6454c56fc9006d571/whisper-tiny-Q8_0.gguf",
+        "sha256": "325b9c7997cd1eff81ef709d55766565e71be696130cc3a3d444713798706834",
+        "size": 45981088
+      },
+      "timestamps": true
+    }
+  ]
+}

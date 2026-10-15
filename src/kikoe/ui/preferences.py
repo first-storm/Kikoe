@@ -12,11 +12,13 @@ from kikoe.core.preferences import Preferences, valid_language
 from kikoe.i18n import _, ngettext
 from kikoe.media.devices import DeviceKind, list_devices
 from kikoe.paths import data_dir, log_dir
+from kikoe.services.local_models import LocalModelManager
 from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.guard import Guard
 from kikoe.ui.items import ProviderItem
 from kikoe.ui.labels import api_label, model_choice_label
+from kikoe.ui.local_models_page import LocalModelsPage
 from kikoe.ui.provider_page import ProviderPage
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
@@ -37,8 +39,15 @@ class PreferencesDialog(Adw.PreferencesDialog):
     data_row: Adw.ActionRow = Gtk.Template.Child()
     log_row: Adw.ActionRow = Gtk.Template.Child()
 
-    def __init__(self, repository: ProviderRepository, preferences: PreferencesRepository) -> None:
+    def __init__(
+        self,
+        repository: ProviderRepository,
+        preferences: PreferencesRepository,
+        local_models: LocalModelManager,
+    ) -> None:
         super().__init__()
+        self._local_page = LocalModelsPage(local_models)
+        self.add(self._local_page)
         self._repository = repository
         self._preferences = preferences
         self._updating = Guard()
@@ -223,6 +232,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
     def _on_dialog_closed(self, _dialog: Adw.Dialog) -> None:
         self._disconnect()
         self._disconnect_preferences()
+        self._local_page.close()
 
 
 def _provider_subtitle(provider: Provider) -> str:

@@ -13,6 +13,9 @@ from kikoe.constants import APP_ID, APP_NAME, ISSUE_URL, VERSION, WEBSITE
 from kikoe.core.preferences import WindowState, default_provider
 from kikoe.i18n import _, is_right_to_left
 from kikoe.paths import data_dir, log_dir
+from kikoe.providers.local.engines import load_catalog as load_local_catalog
+from kikoe.providers.local.hardware import current_platform
+from kikoe.services.local_models import LocalModelManager
 from kikoe.services.prewarm import prewarm_provider
 from kikoe.storage.library import Library, audio_dir, database_path
 from kikoe.storage.model_catalog import load_catalog
@@ -46,6 +49,7 @@ class Application(Adw.Application):
         self.preferences = PreferencesRepository(writer)
         self.window_state = WindowStateStore(writer)
         self.notes = NoteRepository(Library(database_path(), audio_dir()))
+        self.local_models = LocalModelManager(load_local_catalog(), current_platform())
         self._add_action("quit", self._on_quit, ["<primary>q"])
         self._add_action("preferences", self._present_preferences, ["<primary>comma"])
         self._add_action("add-provider", partial(self._present_preferences, add_provider=True))
@@ -135,7 +139,7 @@ class Application(Adw.Application):
             self.quit()
 
     def _present_preferences(self, page: str | None = None, add_provider: bool = False) -> None:
-        dialog = PreferencesDialog(self.providers, self.preferences)
+        dialog = PreferencesDialog(self.providers, self.preferences, self.local_models)
         if page is not None:
             dialog.set_visible_page_name(page)
         dialog.present(self.get_active_window())

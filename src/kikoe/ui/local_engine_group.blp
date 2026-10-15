@@ -1,0 +1,63 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeLocalEngineGroup: Adw.PreferencesGroup {
+  header-suffix: Box {
+    valign: center;
+    spacing: 6;
+
+    Button download_button {
+      label: _("_Download");
+      use-underline: true;
+      visible: false;
+      clicked => $_on_download_button_clicked();
+
+      styles [
+        "suggested-action",
+      ]
+    }
+
+    Button cancel_button {
+      label: _("_Cancel");
+      use-underline: true;
+      visible: false;
+      clicked => $_on_cancel_button_clicked();
+    }
+
+    Button remove_button {
+      icon-name: "user-trash-symbolic";
+      tooltip-text: _("Remove Engine…");
+      visible: false;
+      clicked => $_on_remove_button_clicked();
+
+      styles [
+        "flat",
+      ]
+    }
+  };
+
+  Adw.ComboRow build_row {
+    title: _("Acceleration");
+    use-markup: false;
+    notify::selected => $_on_build_row_notify_selected();
+  }
+
+  Adw.ComboRow device_row {
+    title: _("Device");
+    use-markup: false;
+    visible: false;
+    notify::selected => $_on_device_row_notify_selected();
+  }
+
+  Label hint_label {
+    wrap: true;
+    xalign: 0;
+    margin-top: 6;
+    visible: false;
+    selectable: true;
+
+    styles [
+      "dimmed",
+    ]
+  }
+}
