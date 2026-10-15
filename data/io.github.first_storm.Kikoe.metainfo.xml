@@ -44,6 +44,16 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.2.1" date="2026-10-15">
+      <description>
+        <p>Faster startup and smoother editing of long transcripts.</p>
+        <ul>
+          <li>Start faster by loading provider SDKs and the keyring on first use.</li>
+          <li>Redraw only the changed rows while a streaming transcript updates.</li>
+          <li>Save segment edits and reload note lists with less work.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.0" date="2026-10-15">
       <description>
         <p>Groq and Mistral transcription, 13 more languages, and a round of reliability fixes.</p>
