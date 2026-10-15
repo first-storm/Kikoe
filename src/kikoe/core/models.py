@@ -20,6 +20,8 @@ class ApiKind(StrEnum):
     MIMO = "mimo"
     GROQ = "groq"
     MISTRAL = "mistral"
+    LOCAL = "local"
+    """Engines on this device; there is one such provider and the user never adds it."""
 
 
 @dataclass(frozen=True, slots=True)

@@ -19,8 +19,11 @@ from kikoe.core.local_models import (
     LocalModelSpec,
     LocalSettings,
     Platform,
+    model_spec,
     recommend_build,
 )
+from kikoe.core.models import Provider
+from kikoe.core.provider_registry import local_provider
 from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionError
 from kikoe.providers.local.connection import EngineConnection
@@ -171,6 +174,20 @@ class LocalModelManager:
         engines = {e.engine_id for e in self.engines}
         return tuple(m for m in self.catalog.models if m.engine_id in engines)
 
+    @property
+    def providers(self) -> tuple[Provider, ...]:
+        """The local provider, while at least one model can run; empty otherwise."""
+        models = tuple(
+            model_spec(m) for m in self.installed_models() if m.engine_id in self._engines
+        )
+        return (local_provider(_("On This Device"), models),) if models else ()
+
+    def installed_model(self, model_id: str) -> tuple[LocalModelSpec, Path] | None:
+        model = self.catalog.model(model_id)
+        if model is None or model_id not in self._models:
+            return None
+        return model, self._installs.model_path(model)
+
     def builds(self, engine: EngineSpec) -> tuple[EngineBuild, ...]:
         return engine.builds_for(self.platform) if self.platform else ()
 
@@ -249,9 +266,6 @@ class LocalModelManager:
     async def _remove_model(self, model_id: str) -> None:
         await asyncio.to_thread(self._installs.remove_model, model_id)
         self._models.discard(model_id)
-
-    def model_path(self, model: LocalModelSpec) -> str:
-        return str(self._installs.model_path(model))
 
     @asynccontextmanager
     async def _job(self, key: str, total: int) -> AsyncGenerator[Callable[[int], None]]:

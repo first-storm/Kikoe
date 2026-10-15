@@ -12,6 +12,8 @@ from enum import StrEnum
 from typing import cast
 from urllib.parse import unquote, urlsplit
 
+from kikoe.core.models import Capabilities, ModeCapabilities, ModelSpec
+
 CATALOG_VERSION = 1
 
 _ID = re.compile(r"[a-z0-9][a-z0-9._-]*")
@@ -198,6 +200,18 @@ class LocalCatalog:
 
     def models_of(self, engine_id: str) -> tuple[LocalModelSpec, ...]:
         return tuple(m for m in self.models if m.engine_id == engine_id)
+
+
+def model_spec(model: LocalModelSpec) -> ModelSpec:
+    """How a local model appears in model choosers, with what it can do."""
+    return ModelSpec(
+        model.model_id,
+        model.display_name,
+        Capabilities(
+            file=ModeCapabilities(timestamps=model.timestamps),
+            realtime=ModeCapabilities() if model.streaming else None,
+        ),
+    )
 
 
 _RECOMMENDED = (Accelerator.METAL, Accelerator.VULKAN, Accelerator.CPU)

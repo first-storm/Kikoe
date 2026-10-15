@@ -13,6 +13,7 @@ from kikoe.media.recorder import SoundDeviceRecorder
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.services.activity import ActivityTracker
 from kikoe.services.errors import USER_FACING_ERRORS
+from kikoe.services.file_transcription import ClientFactory
 from kikoe.services.playback import Playback
 from kikoe.services.realtime import RealtimeRecording
 from kikoe.services.recording import RecordingSession
@@ -49,7 +50,9 @@ class RecordingController:
         sidebar: NoteSidebar,
         note_view: NoteView,
         transcribe: TranscriptionController,
+        clients: ClientFactory,
     ) -> None:
+        self._clients = clients
         self._window = window
         self._host = host
         self._providers = providers
@@ -137,6 +140,7 @@ class RecordingController:
         self._workflow = RecordingWorkflow(
             notes=self._notes,
             keys=self._providers,
+            create=self._clients,
             callbacks=RecordingCallbacks(
                 before_start=self._playback.finish,
                 started=lambda note: self._on_started(note, choice, options),

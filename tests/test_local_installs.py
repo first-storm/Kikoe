@@ -396,3 +396,18 @@ def test_an_engine_that_is_not_installed_has_no_connection(tmp_path: Path) -> No
     manager = _manager(tmp_path, Server())
     with pytest.raises(TranscriptionError):
         manager.connection("engine")
+
+
+@run_async
+async def test_only_models_of_an_installed_engine_are_offered(tmp_path: Path) -> None:
+    server = Server()
+    manager = _manager(tmp_path, server, (_model(server, "tiny"), _model(server, "base")))
+    await manager.install_model("tiny")
+    assert manager.providers == ()
+    await manager.install_engine("engine", "gpu")
+    (provider,) = manager.providers
+    assert [m.model_id for m in provider.models] == ["tiny"]
+    assert provider.upload.parallelism == 1
+    found = manager.installed_model("tiny")
+    assert found is not None and found[1] == tmp_path / "models" / "tiny" / "tiny.gguf"
+    assert manager.installed_model("base") is None

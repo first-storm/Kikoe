@@ -7,7 +7,14 @@ the model presets. Callers look a provider up by ``ApiKind`` instead of branchin
 from dataclasses import dataclass
 from enum import StrEnum
 
-from kikoe.core.models import ApiKind, AudioFormat, UploadPolicy
+from kikoe.core.models import (
+    ApiKind,
+    AudioFormat,
+    ModelSpec,
+    Provider,
+    UploadPolicy,
+    UploadSettings,
+)
 
 
 class UploadHint(StrEnum):
@@ -33,6 +40,8 @@ class ProviderDescriptor:
     upload_hints: frozenset[UploadHint] = frozenset()
     sdk_loggers: tuple[str, ...] = ()
     """Logger names of the SDK, kept quiet because their debug output includes secrets."""
+    configurable: bool = True
+    """Users add providers of this API themselves; False for the built-in local provider."""
 
 
 _DESCRIPTORS = (
@@ -95,10 +104,33 @@ _DESCRIPTORS = (
         language_excludes_timestamps=True,
         sdk_loggers=("mistralai",),
     ),
+    ProviderDescriptor(
+        ApiKind.LOCAL,
+        "On This Device",
+        # Uncompressed 16 kHz speech; models with a length limit split it further.
+        UploadPolicy(4_000_000_000, format=AudioFormat.WAV, formats=(AudioFormat.WAV,)),
+        configurable=False,
+    ),
 )
 
 PROVIDERS: dict[ApiKind, ProviderDescriptor] = {d.api: d for d in _DESCRIPTORS}
 """In the order the provider page lists them."""
+
+
+LOCAL_PROVIDER_ID = "local"
+"""Never a UUID, so it cannot collide with a configured provider."""
+
+
+def local_provider(name: str, models: tuple[ModelSpec, ...]) -> Provider:
+    """The built-in provider whose models run on this device, one at a time."""
+    return Provider(
+        LOCAL_PROVIDER_ID, name, ApiKind.LOCAL, "", models, UploadSettings(parallelism=1)
+    )
+
+
+def configurable_apis() -> tuple[ApiKind, ...]:
+    """APIs offered when adding a provider, in display order."""
+    return tuple(d.api for d in PROVIDERS.values() if d.configurable)
 
 
 def descriptor(api: ApiKind) -> ProviderDescriptor:

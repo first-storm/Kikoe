@@ -189,7 +189,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         self.push_subpage(ProviderPage(self._repository))
 
     def _refresh_providers(self) -> None:
-        items = [ProviderItem(p) for p in self._repository.providers]
+        items = [ProviderItem(p) for p in self._repository.configured]
         self._providers.splice(0, self._providers.get_n_items(), items)
         self._refresh_defaults()
 

@@ -10,7 +10,7 @@ import asyncio
 from gi.repository import Adw, Gio, GObject, Gtk
 
 from kikoe.core.models import ApiKind, ModelSpec, Provider, UploadSettings
-from kikoe.core.provider_registry import PROVIDERS, descriptor, is_default_base_url
+from kikoe.core.provider_registry import configurable_apis, descriptor, is_default_base_url
 from kikoe.core.upload import MAX_CHUNK_SECONDS, MAX_PARALLELISM
 from kikoe.core.validation import effective_base_url, validate_provider
 from kikoe.i18n import _
@@ -29,7 +29,7 @@ from kikoe.ui.model_dialog import ModelDialog
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
 
-_API_ORDER = tuple(PROVIDERS)
+_API_ORDER = configurable_apis()
 """The order of the API type rows, filled from the same registry."""
 
 
