@@ -1,7 +1,7 @@
 # Architecture
 
 Kikoe is a desktop application for recording or importing audio, transcribing it
-with cloud services, and organizing the results as notes. It runs in one process,
+with cloud services or local models, and organizing the results as notes. It runs in one process,
 with a GTK 4 and libadwaita interface and a Python core that can be tested without
 a display. Platform-specific details stay behind adapters so Linux, macOS and
 Windows can share the same workflows.
@@ -249,6 +249,65 @@ disabled to keep request headers and signed URLs out of diagnostics.
 See [Provider upload settings](upload-settings.md) for exact size and duration
 bounds, format defaults and the official sources behind them.
 
+## Local engines
+
+Local models run in an engine worker process, not in the app. Everything about an
+engine lives in `providers/local/engines/<engine>/`: `catalog.json` lists its
+downloadable builds and models, each file pinned by URL and SHA-256, and
+`adapter.py` is the only code that imports the engine's own binding.
+`providers/local/engines/__init__.py` registers each engine package in one line.
+Removing an engine means deleting its folder and that line; architecture tests
+ensure nothing else imports engine packages, and adapters import only
+`providers.local.adapter` and `providers.local.protocol`.
+
+| Module | Responsibility |
+| --- | --- |
+| `core.local_models` | Catalog validation, build recommendation, install state and `ModelSpec` mapping |
+| `core.diarization` | Assigning speaker turns to words or timed segments |
+| `storage.downloads` | HTTPS downloads into `.part` files, size and SHA-256 checks, cancellation |
+| `storage.local_installs` | Install folders and receipts under `data_dir()/local`; bundled engines |
+| `storage.local_settings` | Device choices in `config_dir()/local.json`, apart from `settings.json` |
+| `providers.local.protocol` | JSON-lines requests, replies and events with a version handshake |
+| `providers.local.worker_host` | Starting the worker, request routing, cancellation, crash handling |
+| `providers.local.worker_main` | The worker loop: a reader thread and one compute thread |
+| `providers.local.connection` | Typed engine calls and user-facing error messages |
+| `providers.local.client`, `.session` | `TranscriptionProvider` and `RealtimeSession` for local models |
+| `services.local_models` | `LocalModelManager`: state, downloads, probes, workers and the built-in provider |
+
+Engines and models are downloaded after installation, never at build time, except
+on macOS, where `scripts/bundle_engine.py` prepares transcribe.cpp (2.4 MB) and the
+PyInstaller spec ships it as `local-engines/<engine>`. A download is unpacked into
+`staging/`, a receipt is written, and only then is the folder swapped into place;
+leftovers are removed at startup. Archive members cannot leave their folder. A
+folder without a valid receipt does not count as installed, and a model whose
+pinned checksum changes needs downloading again.
+
+The worker is the app's own interpreter: `python -m
+kikoe.providers.local.worker_main <engine> <folder>` from source, or `Kikoe
+--engine-worker …` in frozen builds, recognised by `packaging/pyinstaller/launch.py`
+before GTK loads. It starts on the first request and exits when its stdin closes,
+so it never outlives the app. Native output is moved off the protocol stream to the
+log. A cancel aborts the running native call; a worker that does not answer within
+five seconds is killed. A crashed worker fails its requests as retryable errors and
+the next request starts a new one. Replacing or removing an engine stops its
+worker first.
+
+transcribe.cpp's binding loads the downloaded native library through
+`TRANSCRIBE_LIBRARY`. Files are converted to 16 kHz mono WAV by the existing upload
+pipeline and passed by path; models with a `max_seconds` limit are split at pauses
+like cloud uploads. Live audio is sent as Base64 PCM: previews come from each
+feed, and the realtime service's flushes finish an utterance and start a new
+stream. Speaker detection runs Sortformer over the same file and assigns its turns
+to word times, or to timed segments when words are unavailable.
+
+`LocalModelManager` implements `storage.providers.ProviderSource`, so
+`ProviderRepository.providers` includes a built-in “On This Device” provider
+(`ApiKind.LOCAL`, ID `local`) while at least one model and its engine are
+installed. `ProviderRepository.configured` excludes it, it is never written to
+settings, and it needs no keyring entry. Clients are built through
+`providers.factory.create_client(provider, key, ClientContext(local=…))`; the
+application binds that context once and passes the factory to workflows.
+
 ## Realtime recording and recovery
 
 `services.recording.RecordingSession` coordinates capture, local storage and
@@ -436,7 +495,9 @@ versions and extras are defined in [pyproject.toml](../pyproject.toml) and
 [uv.lock](../uv.lock). Add a dependency only with the feature that requires it,
 following [AGENTS.md](../AGENTS.md).
 
-A new API consists of a registry descriptor, client and model presets. Callers
+A new local engine needs a package in `providers/local/engines/` with a catalog and an
+adapter, and one registry line; no other module changes. A new cloud API consists of
+a registry descriptor, client and model presets. Callers
 must not branch on `ApiKind`; architecture tests enforce this outside the registry.
 
 1. Add a member to `core.models.ApiKind`. Its value is persisted; never rename it.
