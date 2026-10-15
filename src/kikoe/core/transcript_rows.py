@@ -1,6 +1,6 @@
 """Decisions about which rows of a note's transcript change, free of any widget."""
 
-from collections.abc import Hashable, Iterable, Sequence
+from collections.abc import Iterable
 from dataclasses import dataclass, replace
 
 from kikoe.core.models import Note, Segment
@@ -59,13 +59,3 @@ def without_recording(note: Note, recording_id: str | None) -> Note:
     return replace(
         note, recordings=tuple(r for r in note.recordings if r.recording_id != recording_id)
     )
-
-
-def shared_prefix(old: Sequence[Hashable], new: Sequence[Hashable]) -> int:
-    """How many leading entries are equal, i.e. how many rows keep their widgets."""
-    count = 0
-    for before, after in zip(old, new, strict=False):
-        if before != after:
-            break
-        count += 1
-    return count

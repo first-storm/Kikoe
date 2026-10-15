@@ -6,7 +6,6 @@ from kikoe.core.transcript_rows import (
     OverlayPlan,
     plan_overlay,
     same_structure,
-    shared_prefix,
     transcript_columns,
     without_recording,
 )
@@ -76,10 +75,3 @@ def test_without_recording_drops_only_the_target() -> None:
     saved = note(recording("a"), recording("b"), recording("c"))
     assert [r.recording_id for r in without_recording(saved, "b").recordings] == ["a", "c"]
     assert without_recording(saved, None) == saved
-
-
-def test_shared_prefix_counts_the_rows_that_can_stay() -> None:
-    assert shared_prefix(["a", "b", "c"], ["a", "b", "x", "c"]) == 2
-    assert shared_prefix([], ["a"]) == 0
-    assert shared_prefix(["a"], ["a"]) == 1
-    assert shared_prefix(["a", "b"], ["a"]) == 1

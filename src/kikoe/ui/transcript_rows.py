@@ -1,13 +1,13 @@
 """Turning a note, or a transcription in progress, into the rows of the note view."""
 
 from collections.abc import Callable, Sequence
+from itertools import islice
 
 from gi.repository import Gio, GLib, Gtk
 
 from kikoe.core.formatting import SPEAKER_COLOR_COUNT
 from kikoe.core.models import Note, Recording
 from kikoe.core.speakers import identity_for, live_speaker_numbers, speaker_numbers
-from kikoe.core.transcript_rows import shared_prefix
 from kikoe.core.transcription import FileTranscriptSnapshot
 from kikoe.i18n import _
 from kikoe.ui.items import TranscriptItem
@@ -100,11 +100,26 @@ class StreamRenderer:
         base: int,
         context: Note,
     ) -> list[TranscriptItem]:
-        """Replace the rows after ``base`` and return the new ones for the next update."""
+        """Replace the rows after ``base`` and return the new ones for the next update.
+
+        Rows up to the first one that differs keep their items, so an update costs what
+        changed rather than the length of the transcript.
+        """
         segments = (*snapshot.segments, *snapshot.preview)
         numbers = live_speaker_numbers(context, segments)
-        rows = [TranscriptItem(recording, number, live_summary=summary)]
-        for index, segment in enumerate(segments):
+        header = TranscriptItem(recording, number, live_summary=summary)
+        kept = 0
+        if previous_rows and previous_rows[0].content_key() == header.content_key():
+            kept = 1
+            for row, segment in zip(
+                islice(previous_rows, 1, None), snapshot.segments, strict=False
+            ):
+                if row.preview or row.segment != segment:
+                    break
+                kept += 1
+        rows = previous_rows[:kept] or [header]
+        for index in range(max(kept - 1, 0), len(segments)):
+            segment = segments[index]
             speaker = segment.speaker_id
             name = (
                 context.speaker_name(speaker)
@@ -114,18 +129,13 @@ class StreamRenderer:
             )
             color = (numbers[speaker] - 1) % SPEAKER_COLOR_COUNT if speaker else None
             preview = index >= len(snapshot.segments)
-            new = TranscriptItem(recording, number, segment, name, color, preview=preview)
-            old = previous_rows[index + 1] if index + 1 < len(previous_rows) else None
-            rows.append(old if old is not None and old.content_key() == new.content_key() else new)
+            rows.append(TranscriptItem(recording, number, segment, name, color, preview=preview))
         adjustment = self._scroll.get_vadjustment()
         follow = (
             adjustment.get_upper() - adjustment.get_value() - adjustment.get_page_size()
             < _FOLLOW_DISTANCE
         )
-        prefix = shared_prefix(
-            [row.content_key() for row in previous_rows], [row.content_key() for row in rows]
-        )
-        self._items.splice(base + prefix, len(previous_rows) - prefix, rows[prefix:])
+        self._items.splice(base + kept, len(previous_rows) - kept, rows[kept:])
         if follow:
             GLib.idle_add(self._follow)
         return rows

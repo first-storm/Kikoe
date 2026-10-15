@@ -2,7 +2,7 @@
 
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import gi
 import pytest
@@ -114,6 +114,50 @@ def test_append_stream_finalizes_preview_without_rebuilding_prefix(view: NoteVie
     assert not view._file_rows[-1].preview
     assert view._items.get_item(0) is first
     assert view._file_rows[0].number == 4
+
+
+@pytest.mark.parametrize("count", [50, 500])
+def test_stream_update_builds_rows_only_for_what_changed(
+    view: NoteView, monkeypatch: pytest.MonkeyPatch, count: int
+) -> None:
+    from kikoe.ui import transcript_rows
+    from kikoe.ui.items import TranscriptItem
+
+    built = 0
+
+    class Counting(TranscriptItem):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            nonlocal built
+            built += 1
+            super().__init__(*args, **kwargs)
+
+    monkeypatch.setattr(transcript_rows, "TranscriptItem", Counting)
+    view.begin_file_transcription(None, recording("import"))
+    done = [Segment(f"Sentence {i}", speaker_id="A") for i in range(count)]
+    view.update_file_transcription(FileTranscriptSnapshot(tuple(done)))
+    built = 0
+    # Equal but new objects, as the import service builds them for every event.
+    again = tuple(Segment(f"Sentence {i}", speaker_id="A") for i in range(count))
+    view.update_file_transcription(
+        FileTranscriptSnapshot((*again, Segment("More", speaker_id="A")), (Segment("Part"),))
+    )
+    assert built <= 3
+    assert len(texts(view)) == count + 2
+
+
+def test_stream_rebuilds_rows_from_the_first_changed_segment(view: NoteView) -> None:
+    view.begin_file_transcription(None, recording("import"))
+    view.update_file_transcription(
+        FileTranscriptSnapshot((Segment("a"), Segment("c")), (Segment("d"),))
+    )
+    kept, rebuilt = view._file_rows[1], view._file_rows[2]
+    view.update_file_transcription(
+        FileTranscriptSnapshot((Segment("a"), Segment("b"), Segment("c")))
+    )
+    assert texts(view) == ["a", "b", "c"]
+    assert view._file_rows[1] is kept
+    assert view._file_rows[3] is not rebuilt
+    assert not any(row.preview for row in view._file_rows)
 
 
 def test_stream_rows_hide_editing_playback_and_speaker_actions(view: NoteView) -> None:
