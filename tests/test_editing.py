@@ -1,7 +1,6 @@
 """Edits show at once and stay ordered even when undo and note reloads race with storage."""
 
 import asyncio
-import time
 from collections.abc import Coroutine
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -80,17 +79,41 @@ async def test_undo_cannot_overtake_pending_edit(tmp_path: Path) -> None:
 
 
 @run_async
-async def test_reloaded_note_keeps_edits_that_are_still_being_saved(tmp_path: Path) -> None:
+async def test_reloaded_note_keeps_edits_that_are_still_being_saved(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     notes, note = await repository(tmp_path)
+    write = notes.update_segment
+    saving, release_save = asyncio.Event(), asyncio.Event()
+
+    async def blocked_write(
+        note_id: str,
+        recording_id: str,
+        position: int,
+        *,
+        text: str,
+        start_ms: int | None,
+        end_ms: int | None,
+    ) -> None:
+        saving.set()
+        await release_save.wait()
+        await write(note_id, recording_id, position, text=text, start_ms=start_ms, end_ms=end_ms)
+
+    monkeypatch.setattr(notes, "update_segment", blocked_write)
     session = EditingSession(notes, start_task, lambda _n, _rid, _pos: None)
     session.set_note(note)
     session.edit("recording", 0, lambda fields: replace(fields, text="Edited"))
-    # Read before the edit reaches the library, as a speaker rename's reload might be.
-    stale = await notes.get_note(note.note_id)
-    reloaded = session.set_note(stale)
-    assert reloaded is not None and text(reloaded) == "Edited"
-    await session.wait_saved()
-    fresh = session.set_note(await notes.get_note(note.note_id))
+    try:
+        async with asyncio.timeout(5):
+            await saving.wait()
+            stale = await notes.get_note(note.note_id)
+            assert text(stale) == "Original"
+            reloaded = session.set_note(stale)
+            assert reloaded is not None and text(reloaded) == "Edited"
+    finally:
+        release_save.set()
+        await session.wait_saved()
+    fresh = session.set_note(await session.read_note(note.note_id))
     assert fresh is not None and text(fresh) == "Edited"
 
 
@@ -184,10 +207,11 @@ async def test_a_reload_cannot_return_text_from_before_a_finished_save(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     notes, note = await repository(tmp_path)
-    library = notes._library
-    write, read = library.update_segment, library.get_note
+    write, read = notes.update_segment, notes.get_note
+    saving, release_save = asyncio.Event(), asyncio.Event()
+    reload_requested, reading = asyncio.Event(), asyncio.Event()
 
-    def slow_write(
+    async def blocked_write(
         note_id: str,
         recording_id: str,
         position: int,
@@ -196,19 +220,37 @@ async def test_a_reload_cannot_return_text_from_before_a_finished_save(
         start_ms: int | None,
         end_ms: int | None,
     ) -> None:
-        time.sleep(0.05)
-        write(note_id, recording_id, position, text=text, start_ms=start_ms, end_ms=end_ms)
+        saving.set()
+        await release_save.wait()
+        await write(note_id, recording_id, position, text=text, start_ms=start_ms, end_ms=end_ms)
 
-    def slow_read(note_id: str) -> Note:
-        # Reads the old text, then returns only after the save above has finished.
-        result = read(note_id)
-        time.sleep(0.2)
-        return result
+    async def observed_read(note_id: str) -> Note:
+        reading.set()
+        return await read(note_id)
 
-    monkeypatch.setattr(library, "update_segment", slow_write)
-    monkeypatch.setattr(library, "get_note", slow_read)
+    monkeypatch.setattr(notes, "update_segment", blocked_write)
+    monkeypatch.setattr(notes, "get_note", observed_read)
     session = EditingSession(notes, start_task, lambda _n, _rid, _pos: None)
+
+    async def reload_note() -> Note:
+        reload_requested.set()
+        return await session.read_note(note.note_id)
+
     session.set_note(note)
     session.edit("recording", 0, lambda fields: replace(fields, text="Edited"))
-    reloaded = session.set_note(await session.read_note(note.note_id))
+    reload_task: asyncio.Task[Note] | None = None
+    try:
+        async with asyncio.timeout(5):
+            await saving.wait()
+            reload_task = asyncio.create_task(reload_note())
+            await reload_requested.wait()
+            assert not reading.is_set()
+            assert not reload_task.done()
+    finally:
+        release_save.set()
+        await session.wait_saved()
+        if reload_task is not None:
+            await reload_task
+    assert reload_task is not None
+    reloaded = session.set_note(reload_task.result())
     assert reloaded is not None and text(reloaded) == "Edited"
