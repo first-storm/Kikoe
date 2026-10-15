@@ -7,6 +7,7 @@ from kikoe.core.transcript_words import TranscriptWord, group_words
 from kikoe.core.transcription import (
     FileTranscriptSnapshot,
     LiveTranscript,
+    SnapshotScope,
     SpeechBoundary,
     TranscriptEvent,
     scope_speakers,
@@ -64,6 +65,21 @@ def test_file_snapshot_scopes_final_and_preview_without_mutating_source() -> Non
     snapshot = FileTranscriptSnapshot(
         (Segment("Final", speaker_id="0"),), (Segment("Preview", speaker_id="0"),)
     )
-    result = snapshot.scoped("recording")
+    result = SnapshotScope("recording").apply(snapshot)
     assert result.segments[0].speaker_id == result.preview[0].speaker_id == "recording:0"
     assert snapshot.segments[0].speaker_id == "0"
+
+
+def test_snapshot_scope_reuses_unchanged_segments_and_rescopes_the_rest() -> None:
+    scope = SnapshotScope("r")
+    first = scope.apply(FileTranscriptSnapshot((Segment("a", speaker_id="0"), Segment("c"))))
+    # Equal but distinct objects, as the import service builds them for every event.
+    second = scope.apply(
+        FileTranscriptSnapshot(
+            (Segment("a", speaker_id="0"), Segment("b", speaker_id="1"), Segment("c"))
+        )
+    )
+    assert second.segments[0] is first.segments[0]
+    assert [s.speaker_id for s in second.segments] == ["r:0", "r:1", None]
+    third = scope.apply(FileTranscriptSnapshot((Segment("x", speaker_id="0"),)))
+    assert third.segments == (Segment("x", speaker_id="r:0"),)

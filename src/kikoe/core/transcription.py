@@ -42,11 +42,30 @@ class FileTranscriptSnapshot:
     segments: tuple[Segment, ...] = ()
     preview: tuple[Segment, ...] = ()
 
-    def scoped(self, scope: str) -> FileTranscriptSnapshot:
+
+class SnapshotScope:
+    """Scope a growing stream of snapshots, redoing only the segments that changed.
+
+    Each event repeats every completed segment, so scoping them all would cost more
+    with every sentence; this keeps the scoped copies of the unchanged start.
+    """
+
+    def __init__(self, scope: str) -> None:
+        self._scope = scope
+        self._source: tuple[Segment, ...] = ()
+        self._scoped: tuple[Segment, ...] = ()
+
+    def apply(self, snapshot: FileTranscriptSnapshot) -> FileTranscriptSnapshot:
         """Keep preview speaker labels consistent with the committed recording."""
-        return FileTranscriptSnapshot(
-            scope_speakers(self.segments, scope), scope_speakers(self.preview, scope)
-        )
+        kept = 0
+        for old, new in zip(self._source, snapshot.segments, strict=False):
+            if old != new:
+                break
+            kept += 1
+        rest = scope_speakers(snapshot.segments[kept:], self._scope)
+        self._scoped = self._scoped[:kept] + rest
+        self._source = snapshot.segments
+        return FileTranscriptSnapshot(self._scoped, scope_speakers(snapshot.preview, self._scope))
 
 
 @dataclass(frozen=True, slots=True)

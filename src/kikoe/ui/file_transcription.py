@@ -3,7 +3,7 @@
 from gi.repository import GLib
 
 from kikoe.core.models import Note, Recording
-from kikoe.core.transcription import FileTranscriptSnapshot
+from kikoe.core.transcription import FileTranscriptSnapshot, SnapshotScope
 from kikoe.ui.note_view import NoteView
 
 
@@ -18,6 +18,7 @@ class FileTranscriptionDisplay:
         self._shown = False
         self._timeout = 0
         self._pending: FileTranscriptSnapshot | None = None
+        self._scope = SnapshotScope("")
         self._rendered = FileTranscriptSnapshot()
 
     @property
@@ -27,6 +28,7 @@ class FileTranscriptionDisplay:
     def begin(self, note: Note | None, recording: Recording, *, replacing: bool) -> None:
         self.end()
         self._recording = recording
+        self._scope = SnapshotScope(recording.recording_id)
         self.note_id = note.note_id if note else None
         self._replacing = replacing
         self._show(note)
@@ -56,7 +58,7 @@ class FileTranscriptionDisplay:
     def update(self, snapshot: FileTranscriptSnapshot) -> None:
         if self._recording is None:
             return
-        self._pending = snapshot.scoped(self._recording.recording_id)
+        self._pending = self._scope.apply(snapshot)
         if self._pending.segments != self._rendered.segments or not snapshot.preview:
             self._cancel_timeout()
             self._render()
