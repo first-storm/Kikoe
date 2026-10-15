@@ -75,10 +75,12 @@ class WorkerHost:
         request_id = self._next_id - 1
         try:
             await self._drain()
-            return await asyncio.shield(future)
+            # Unlike shield, waiting leaves the reply to be read by _cancel without noise.
+            await asyncio.wait((future,))
         except asyncio.CancelledError:
             await self._cancel(request_id, future)
             raise
+        return future.result()
 
     async def close(self) -> None:
         """Stop the worker; closing stdin lets it exit on its own first."""
@@ -218,7 +220,7 @@ class WorkerHost:
 
 def _error(reply: Reply) -> WorkerError:
     assert reply.error is not None
-    if reply.message:
+    if reply.message and reply.error is not ErrorKind.CANCELLED:
         log.warning("Engine request failed (%s): %s", reply.error, reply.message)
     return WorkerError(reply.error, reply.message)
 
