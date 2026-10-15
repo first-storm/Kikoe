@@ -28,7 +28,7 @@ from kikoe.ui.speaker_banner import update_speaker_banner
 from kikoe.ui.stale_rows import StaleRows
 from kikoe.ui.templates import ui_file
 from kikoe.ui.transcript_row import TranscriptRow
-from kikoe.ui.transcript_rows import StreamRenderer, build_rows
+from kikoe.ui.transcript_rows import SegmentIndex, StreamRenderer, build_rows
 
 _ONE_LINE_ROW_HEIGHT = 32
 """The height of the shortest segment row, used to count the rows that fit in the window."""
@@ -75,6 +75,7 @@ class NoteView(Adw.BreakpointBin):
         self._compact = False
         self._editable = True
         self._items: Gio.ListStore[TranscriptItem] = Gio.ListStore(item_type=TranscriptItem)
+        self._segments = SegmentIndex(self._items)
         self._bound: dict[TranscriptRow, TranscriptItem] = {}
         """Rows on screen, updated in place when only the display options change."""
         self._row_cache: list[TranscriptRow] = []
@@ -82,7 +83,12 @@ class NoteView(Adw.BreakpointBin):
         self._stale = StaleRows(self.transcript_list, self._bound, self._bind_row)
         """Rows off screen still showing the previous note."""
         self._focus = RowFocus(
-            self._items, self.transcript_list, self._bound, self._stale, self._bind_row
+            self._items,
+            self._segments,
+            self.transcript_list,
+            self._bound,
+            self._stale,
+            self._bind_row,
         )
         self._renderer = StreamRenderer(
             self._items,
@@ -165,6 +171,7 @@ class NoteView(Adw.BreakpointBin):
             height = root.get_height() if isinstance(root, Gtk.Widget) else 0
             on_screen = height // _ONE_LINE_ROW_HEIGHT + 1
         count = self._items.get_n_items()
+        self._segments.reset(rows)
         positions: dict[TranscriptItem, int] = {}
         for position in range(min(count, len(rows))):
             item = self._items.get_item(position)
@@ -189,6 +196,25 @@ class NoteView(Adw.BreakpointBin):
             else:
                 self._stale.add(row, position)
         self._stale.bind_later()
+
+    def update_segment(self, note: Note, recording_id: str, position: int) -> None:
+        """Show one edited segment of the open note, binding only its row again.
+
+        Falls back to ``show_note`` when no row shows that segment where expected.
+        """
+        index = self._segments.find(recording_id, position)
+        item = None if index is None else self._items.get_item(index)
+        recording = note.recording(recording_id)
+        shown = self._note is not None and self._note.note_id == note.note_id
+        if item is None or recording is None or not shown:
+            self.show_note(note)
+            return
+        self._note = note
+        item.segment = recording.segments[position]
+        # A stale row is bound to its item after the next frame, which picks this up.
+        row = next((r for r, data in self._bound.items() if data is item), None)
+        if row is not None and row not in self._stale:
+            self._bind_row(row, item)
 
     def _update_segments(self, note: Note) -> None:
         """Swap in edited segments without rebuilding rows, keeping the caret and scroll."""

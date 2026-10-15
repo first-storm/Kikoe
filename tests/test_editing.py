@@ -1,6 +1,7 @@
-"""Edits stay ordered even when undo and note changes race with storage."""
+"""Edits show at once and stay ordered even when undo and note reloads race with storage."""
 
 import asyncio
+import time
 from collections.abc import Coroutine
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -32,49 +33,103 @@ async def repository(tmp_path: Path) -> tuple[NoteRepository, Note]:
             RecordingSource.IMPORTED,
             "Cloud",
             "Model",
-            (Segment("Original"),),
+            (Segment("Original"), Segment("Second")),
         ),
     )
     return notes, note
 
 
+def text(note: Note, position: int = 0) -> str:
+    return note.recordings[0].segments[position].text
+
+
+async def saved_text(notes: NoteRepository, note: Note, position: int = 0) -> str:
+    return text(await notes.get_note(note.note_id), position)
+
+
+@run_async
+async def test_edit_is_shown_before_it_is_saved(tmp_path: Path) -> None:
+    notes, note = await repository(tmp_path)
+    applied: list[tuple[str, str, int]] = []
+    session = EditingSession(
+        notes, start_task, lambda shown, rid, pos: applied.append((text(shown, pos), rid, pos))
+    )
+    session.set_note(note)
+    session.edit("recording", 1, lambda fields: replace(fields, text="Edited"))
+    assert applied == [("Edited", "recording", 1)]
+    assert session.pending
+    await session.wait_saved()
+    assert await saved_text(notes, note, 1) == "Edited"
+
+
 @run_async
 async def test_undo_cannot_overtake_pending_edit(tmp_path: Path) -> None:
     notes, note = await repository(tmp_path)
-    saved: list[Note] = []
-    session = EditingSession(notes, start_task, saved.append)
+    shown: list[Note] = []
+    session = EditingSession(notes, start_task, lambda n, _rid, _pos: shown.append(n))
     session.set_note(note)
     session.edit("recording", 0, lambda fields: replace(fields, text="Edited"))
-    assert session.pending
     assert session.undo() is not None
     await session.wait_saved()
-    assert [n.recordings[0].segments[0].text for n in saved] == ["Edited", "Original"]
-    assert (await notes.get_note(note.note_id)).recordings[0].segments[0].text == "Original"
+    assert [text(n) for n in shown] == ["Edited", "Original"]
+    assert await saved_text(notes, note) == "Original"
     assert session.redo() is not None
     await session.wait_saved()
-    assert saved[-1].recordings[0].segments[0].text == "Edited"
+    assert text(shown[-1]) == "Edited"
+    assert await saved_text(notes, note) == "Edited"
+
+
+@run_async
+async def test_reloaded_note_keeps_edits_that_are_still_being_saved(tmp_path: Path) -> None:
+    notes, note = await repository(tmp_path)
+    session = EditingSession(notes, start_task, lambda _n, _rid, _pos: None)
+    session.set_note(note)
+    session.edit("recording", 0, lambda fields: replace(fields, text="Edited"))
+    # Read before the edit reaches the library, as a speaker rename's reload might be.
+    stale = await notes.get_note(note.note_id)
+    reloaded = session.set_note(stale)
+    assert reloaded is not None and text(reloaded) == "Edited"
+    await session.wait_saved()
+    fresh = session.set_note(await notes.get_note(note.note_id))
+    assert fresh is not None and text(fresh) == "Edited"
+
+
+@run_async
+async def test_saved_edits_no_longer_override_reloads(tmp_path: Path) -> None:
+    notes, note = await repository(tmp_path)
+    session = EditingSession(notes, start_task, lambda _n, _rid, _pos: None)
+    session.set_note(note)
+    session.edit("recording", 0, lambda fields: replace(fields, text="Edited"))
+    await session.wait_saved()
+    # Another writer, e.g. a re-transcription, may legitimately change the text later.
+    other = replace(
+        note, recordings=(replace(note.recordings[0], segments=(Segment("New"), Segment("B"))),)
+    )
+    reloaded = session.set_note(other)
+    assert reloaded is not None and text(reloaded) == "New"
 
 
 @run_async
 async def test_note_switch_resets_history_but_waits_for_old_writes(tmp_path: Path) -> None:
     notes, note = await repository(tmp_path)
     other = await notes.create_note("Other")
-    saved: list[Note] = []
-    session = EditingSession(notes, start_task, saved.append)
+    session = EditingSession(notes, start_task, lambda _n, _rid, _pos: None)
     session.set_note(note)
     session.edit("recording", 0, lambda fields: replace(fields, text="Edited"))
-    session.set_note(other)
+    assert session.set_note(other) == other
     assert not session.history.can_undo
     assert session.pending
     await session.wait_saved()
-    assert saved[-1].note_id == note.note_id
+    assert await saved_text(notes, note) == "Edited"
     assert await notes.get_note(other.note_id) == other
 
 
 @run_async
 async def test_invalid_or_unchanged_edit_does_not_save(tmp_path: Path) -> None:
     notes, note = await repository(tmp_path)
-    session = EditingSession(notes, start_task, lambda _note: None)
+    session = EditingSession(
+        notes, start_task, lambda _n, _rid, _pos: pytest.fail("Nothing was edited")
+    )
     session.set_note(note)
     session.edit("missing", 0, lambda fields: replace(fields, text="Edited"))
     session.edit("recording", 10, lambda fields: replace(fields, text="Edited"))
@@ -88,7 +143,7 @@ async def test_pending_fields_preserve_previous_edit_and_timestamp_precision(
     tmp_path: Path,
 ) -> None:
     notes, note = await repository(tmp_path)
-    session = EditingSession(notes, start_task, lambda _note: None)
+    session = EditingSession(notes, start_task, lambda _n, _rid, _pos: None)
     session.set_note(note)
     session.edit("recording", 0, lambda fields: replace(fields, text="Edited"))
     session.edit("recording", 0, lambda fields: replace(fields, start=timedelta(milliseconds=1250)))
@@ -99,12 +154,12 @@ async def test_pending_fields_preserve_previous_edit_and_timestamp_precision(
 
 
 @run_async
-async def test_failed_save_reaches_task_owner(
+async def test_failed_save_reaches_task_owner_and_keeps_the_shown_text(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     notes, note = await repository(tmp_path)
 
-    async def fail(*_args: object, **_kwargs: object) -> Note:
+    async def fail(*_args: object, **_kwargs: object) -> None:
         raise ValueError("storage failed")
 
     monkeypatch.setattr(notes, "update_segment", fail)
@@ -115,10 +170,45 @@ async def test_failed_save_reaches_task_owner(
         tasks.append(task)
         return task
 
-    session = EditingSession(
-        notes, start, lambda _note: pytest.fail("Failed writes cannot publish")
-    )
+    session = EditingSession(notes, start, lambda _n, _rid, _pos: None)
     session.set_note(note)
     session.edit("recording", 0, lambda fields: replace(fields, text="Edited"))
     with pytest.raises(ValueError, match="storage failed"):
         await tasks[0]
+    reloaded = session.set_note(note)
+    assert reloaded is not None and text(reloaded) == "Edited"
+
+
+@run_async
+async def test_a_reload_cannot_return_text_from_before_a_finished_save(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    notes, note = await repository(tmp_path)
+    library = notes._library
+    write, read = library.update_segment, library.get_note
+
+    def slow_write(
+        note_id: str,
+        recording_id: str,
+        position: int,
+        *,
+        text: str,
+        start_ms: int | None,
+        end_ms: int | None,
+    ) -> None:
+        time.sleep(0.05)
+        write(note_id, recording_id, position, text=text, start_ms=start_ms, end_ms=end_ms)
+
+    def slow_read(note_id: str) -> Note:
+        # Reads the old text, then returns only after the save above has finished.
+        result = read(note_id)
+        time.sleep(0.2)
+        return result
+
+    monkeypatch.setattr(library, "update_segment", slow_write)
+    monkeypatch.setattr(library, "get_note", slow_read)
+    session = EditingSession(notes, start_task, lambda _n, _rid, _pos: None)
+    session.set_note(note)
+    session.edit("recording", 0, lambda fields: replace(fields, text="Edited"))
+    reloaded = session.set_note(await session.read_note(note.note_id))
+    assert reloaded is not None and text(reloaded) == "Edited"

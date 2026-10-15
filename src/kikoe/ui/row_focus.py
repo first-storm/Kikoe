@@ -7,6 +7,7 @@ from gi.repository import Gio, GLib, Gtk
 from kikoe.ui.items import TranscriptItem
 from kikoe.ui.stale_rows import StaleRows
 from kikoe.ui.transcript_row import TranscriptRow
+from kikoe.ui.transcript_rows import SegmentIndex
 
 _FOCUS_ATTEMPTS = 3
 """Rows are bound during the next layout, so the target may need a few idle turns."""
@@ -18,12 +19,14 @@ class RowFocus:
     def __init__(
         self,
         items: Gio.ListStore[TranscriptItem],
+        segments: SegmentIndex,
         list_view: Gtk.ListView,
         bound: dict[TranscriptRow, TranscriptItem],
         stale: StaleRows,
         bind_row: Callable[[TranscriptRow, TranscriptItem], None],
     ) -> None:
         self._items = items
+        self._segments = segments
         self._list_view = list_view
         self._bound = bound
         self._stale = stale
@@ -31,16 +34,9 @@ class RowFocus:
 
     def focus_segment(self, recording_id: str, position: int) -> None:
         """Scroll to a segment and put the caret at the end of its text."""
-        for index in range(self._items.get_n_items()):
-            item = self._items.get_item(index)
-            if (
-                item is not None
-                and not item.hidden
-                and item.position == position
-                and item.recording.recording_id == recording_id
-            ):
-                self.focus_index(index, at_end=True)
-                return
+        index = self._segments.find(recording_id, position)
+        if index is not None:
+            self.focus_index(index, at_end=True)
 
     def focus_index(self, index: int, *, at_end: bool) -> None:
         self._list_view.scroll_to(index, Gtk.ListScrollFlags.NONE, None)

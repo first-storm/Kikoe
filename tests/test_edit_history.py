@@ -1,6 +1,15 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
-from kikoe.core.edit_history import EditHistory, SegmentChange, SegmentFields
+from kikoe.core.edit_history import (
+    EditHistory,
+    SegmentChange,
+    SegmentFields,
+    apply_segment_fields,
+    segment_fields,
+)
+from kikoe.core.models import Note, Recording, RecordingSource, Segment
+
+WHEN = datetime(2026, 10, 15, tzinfo=UTC)
 
 
 def _change(
@@ -120,3 +129,35 @@ def test_clear_forgets_everything() -> None:
     history.clear()
 
     assert not history.can_undo and not history.can_redo
+
+
+def _note() -> Note:
+    def recording(recording_id: str, *texts: str) -> Recording:
+        segments = tuple(Segment(t, speaker_id="A") for t in texts)
+        return Recording(
+            recording_id, WHEN, timedelta(seconds=9), RecordingSource.IMPORTED, "P", "M", segments
+        )
+
+    return Note("n", "Note", WHEN, (recording("r1", "a", "b"), recording("r2", "c")))
+
+
+def test_applying_fields_replaces_only_that_segment_and_keeps_its_speaker() -> None:
+    note = _note()
+    fields = SegmentFields("B", timedelta(seconds=1), timedelta(seconds=2))
+
+    edited = apply_segment_fields(note, "r1", 1, fields)
+
+    assert edited.recordings[0].segments == (
+        Segment("a", speaker_id="A"),
+        Segment("B", timedelta(seconds=1), timedelta(seconds=2), "A"),
+    )
+    assert edited.recordings[1] is note.recordings[1]
+    assert edited.recordings[0].segments[0] is note.recordings[0].segments[0]
+    assert segment_fields(edited, "r1", 1) == fields
+
+
+def test_segment_fields_of_a_missing_segment_are_none() -> None:
+    note = _note()
+    assert segment_fields(note, "r2", 1) is None
+    assert segment_fields(note, "r2", -1) is None
+    assert segment_fields(note, "missing", 0) is None

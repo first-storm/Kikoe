@@ -30,7 +30,7 @@ class SegmentEditor:
         """Edits are refused while work is writing to the shown note."""
         self._host = host
         self._note_view = note_view
-        self._session = EditingSession(notes, start_task, self._on_saved)
+        self._session = EditingSession(notes, start_task, self._on_applied)
         note_view.connect("text-edited", self._on_note_view_text_edited)
         note_view.connect("times-edited", self._on_note_view_times_edited)
         note_view.connect("segment-left", self._on_note_view_segment_left)
@@ -42,8 +42,13 @@ class SegmentEditor:
     async def wait_saved(self) -> None:
         await self._session.wait_saved()
 
-    def set_note(self, note: Note | None) -> None:
-        self._session.set_note(note)
+    async def read_note(self, note_id: str) -> Note:
+        """Read a note so that `set_note` can never bring back text an edit replaced."""
+        return await self._session.read_note(note_id)
+
+    def set_note(self, note: Note | None) -> Note | None:
+        """Take a newly read note; returns it with the edits that are still being saved."""
+        return self._session.set_note(note)
 
     def forget(self) -> None:
         """Start a fresh history, e.g. after another note was opened."""
@@ -96,10 +101,8 @@ class SegmentEditor:
         self._session.edit(recording_id, position, change)
         self.update_actions()
 
-    def _on_saved(self, note: Note) -> None:
-        shown = self._host.note
-        if shown is not None and shown.note_id == note.note_id:
-            self._host.show_note(note)
+    def _on_applied(self, note: Note, recording_id: str, position: int) -> None:
+        self._host.apply_segment_edit(note, recording_id, position)
 
 
 def _from_ms(value: int) -> timedelta | None:

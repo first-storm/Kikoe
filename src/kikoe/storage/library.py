@@ -278,22 +278,28 @@ class Library:
         text: str,
         start_ms: int | None,
         end_ms: int | None,
-    ) -> Note:
-        """Edit one segment's text and timestamps without touching anything else."""
+    ) -> None:
+        """Edit one segment's text and timestamps with a single UPDATE.
+
+        The note is not read back: the editor already holds the new values, and reading
+        a long transcript would cost far more than the write.
+        """
         if not text.strip():
             raise LibraryError(_("Enter transcript text."))
         if start_ms is not None and end_ms is not None and end_ms <= start_ms:
             raise LibraryError(_("The end time must be after the start time."))
         with self._connect() as connection, connection:
-            self._read_note(connection, note_id)
             cursor = connection.execute(
                 "UPDATE segments SET text = ?, start_ms = ?, end_ms = ? "
-                "WHERE recording_id = ? AND position = ?",
-                (text.strip(), start_ms, end_ms, recording_id, position),
+                "WHERE recording_id = ? AND position = ? "
+                "AND recording_id IN (SELECT id FROM recordings WHERE note_id = ?)",
+                (text.strip(), start_ms, end_ms, recording_id, position, note_id),
             )
-            if cursor.rowcount == 0:
-                raise LibraryError(_("This recording no longer exists."))
-            return self._read_note(connection, note_id)
+            if cursor.rowcount:
+                return
+            if not connection.execute("SELECT 1 FROM notes WHERE id = ?", (note_id,)).fetchone():
+                raise note_not_found()
+            raise LibraryError(_("This recording no longer exists."))
 
     def rename_speaker(self, note_id: str, speaker_id: str, name: str) -> None:
         """Rename a person everywhere without changing their recognition labels."""

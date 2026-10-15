@@ -7,6 +7,8 @@ are merged into one step; otherwise Undo would only remove a few characters at a
 from dataclasses import dataclass, replace
 from datetime import timedelta
 
+from kikoe.core.models import Note
+
 MERGE_WINDOW = 2.0
 """Seconds between saves of one segment that still count as the same typing step."""
 
@@ -18,6 +20,30 @@ class SegmentFields:
     text: str
     start: timedelta | None = None
     end: timedelta | None = None
+
+
+def segment_fields(note: Note, recording_id: str, position: int) -> SegmentFields | None:
+    """The editable part of a segment, or None when the note has no such segment."""
+    recording = note.recording(recording_id)
+    if recording is None or not 0 <= position < len(recording.segments):
+        return None
+    segment = recording.segments[position]
+    return SegmentFields(segment.text, segment.start, segment.end)
+
+
+def apply_segment_fields(
+    note: Note, recording_id: str, position: int, fields: SegmentFields
+) -> Note:
+    """``note`` with one segment's editable part replaced; everything else is shared."""
+    recordings = list(note.recordings)
+    index = next(i for i, r in enumerate(recordings) if r.recording_id == recording_id)
+    recording = recordings[index]
+    segments = list(recording.segments)
+    segments[position] = replace(
+        segments[position], text=fields.text, start=fields.start, end=fields.end
+    )
+    recordings[index] = replace(recording, segments=tuple(segments))
+    return replace(note, recordings=tuple(recordings))
 
 
 @dataclass(frozen=True, slots=True)

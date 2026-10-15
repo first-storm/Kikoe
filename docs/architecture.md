@@ -88,9 +88,10 @@ The database modules have separate responsibilities:
 (creating, renaming or deleting notes, adding or deleting recordings) and then
 emits `SummariesChanged`; the sidebar refreshes. Display options, speaker names
 and matches, and transcription results emit `ContentChanged`, which reloads only
-the open note. Segment edits emit nothing: the editor already shows them, and no
-summary depends on segment text. An active search therefore keeps its results
-until the query changes.
+the open note. Segment edits emit nothing and are a single `UPDATE` that checks
+the segment belongs to the note: the editor already shows them, and no summary
+depends on segment text. An active search therefore keeps its results until the
+query changes.
 
 `PRAGMA user_version` records the schema version. Migrations run in order at
 startup; released migrations are immutable. A database from a newer application
@@ -370,9 +371,14 @@ widget cache avoid rebuilding the list on note changes or sidebar folding. Visib
 rows bind immediately; remaining rows update over later frames.
 `ui.segment_text` measures text height for the available width without per-row
 frame callbacks. Text saves after a pause, focus loss or recycling; text-only
-updates preserve the caret. `core.edit_history` owns history,
-`core.transcript_rows` decides row changes, `ui.transcript_rows` builds rows and
-overlays, `ui.stale_rows` binds off-screen rows over later frames, and
+updates preserve the caret. `services.editing.EditingSession` applies an edit to
+its copy of the note at once (`core.edit_history.apply_segment_fields`), saves it
+in the background one write at a time, and lays values not saved yet over a note
+read again meanwhile. The window then updates only the edited row:
+`ui.transcript_rows.SegmentIndex` finds it from its recording header's position,
+so an edit's cost does not grow with the transcript. `core.edit_history` owns
+history, `core.transcript_rows` decides row changes, `ui.transcript_rows` builds
+rows and overlays, `ui.stale_rows` binds off-screen rows over later frames, and
 `ui.row_focus` moves the caret.
 
 `ui.file_transcription.FileTranscriptionDisplay` owns preview snapshots and refresh

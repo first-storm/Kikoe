@@ -438,7 +438,7 @@ def test_update_segment_edits_text_and_times(library: Library) -> None:
     )
     recording_id = note.recordings[0].recording_id
 
-    updated = library.update_segment(
+    library.update_segment(
         note.note_id,
         recording_id,
         1,
@@ -447,6 +447,7 @@ def test_update_segment_edits_text_and_times(library: Library) -> None:
         end_ms=9000,
     )
 
+    updated = library.get_note(note.note_id)
     assert updated.recordings[0].segments[1] == Segment(
         "Two edited", timedelta(seconds=6), timedelta(seconds=9)
     )
@@ -463,11 +464,22 @@ def test_update_segment_can_clear_timestamps(library: Library) -> None:
     )
     recording_id = note.recordings[0].recording_id
 
-    updated = library.update_segment(
-        note.note_id, recording_id, 0, text="One", start_ms=None, end_ms=None
-    )
+    library.update_segment(note.note_id, recording_id, 0, text="One", start_ms=None, end_ms=None)
 
-    assert updated.recordings[0].segments == (Segment("One"),)
+    assert library.get_note(note.note_id).recordings[0].segments == (Segment("One"),)
+
+
+def test_update_segment_only_edits_a_recording_of_the_given_note(library: Library) -> None:
+    note = library.add_recording(None, "Meeting", recording(segments=(Segment("One"),)))
+    other = library.add_recording(None, "Other", recording())
+    recording_id = note.recordings[0].recording_id
+
+    with pytest.raises(LibraryError, match="recording no longer exists"):
+        library.update_segment(
+            other.note_id, recording_id, 0, text="Hijacked", start_ms=None, end_ms=None
+        )
+
+    assert library.get_note(note.note_id).recordings[0].segments == (Segment("One"),)
 
 
 def test_update_segment_rejects_bad_input_and_missing_rows(library: Library) -> None:

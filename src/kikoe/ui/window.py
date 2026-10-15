@@ -375,7 +375,7 @@ class Window(Adw.ApplicationWindow):
     # Content
 
     async def _open_note(self, note_id: str) -> None:
-        note = await self._notes.get_note(note_id)
+        note = await self._editor.read_note(note_id)
         current = self._recorder.note_id or (self._note.note_id if self._note else None)
         if not self._switch_locked() or note_id == current:
             self.show_note(note)
@@ -387,8 +387,8 @@ class Window(Adw.ApplicationWindow):
             # Saved under the note being left, so this must run before it is replaced.
             self.note_view.flush_edits()
             self._editor.forget()
+        note = self._editor.set_note(note)
         self._note = note
-        self._editor.set_note(note)
         self.note_menu_button.set_visible(note is not None)
         self.display_options_button.set_visible(note is not None)
         for name in _NOTE_ACTIONS:
@@ -411,6 +411,13 @@ class Window(Adw.ApplicationWindow):
         self.content_page.set_title(page)
         self.window_title.set_title(title)
         self.window_title.set_subtitle(subtitle)
+
+    def apply_segment_edit(self, note: Note, recording_id: str, position: int) -> None:
+        """Show an edit of the open note's segment; nothing else about the note changed."""
+        if self._note is None or self._note.note_id != note.note_id:
+            return
+        self._note = note
+        self.note_view.update_segment(note, recording_id, position)
 
     def refresh_content(self) -> None:
         if self._note is not None or self._transcribe.display.active:

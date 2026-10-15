@@ -102,9 +102,9 @@ class NoteRepository:
         text: str,
         start_ms: int | None,
         end_ms: int | None,
-    ) -> Note:
+    ) -> None:
         """Persist an edited segment's text and timestamps; the editor shows it itself."""
-        return await asyncio.to_thread(
+        await asyncio.to_thread(
             self._library.update_segment,
             note_id,
             recording_id,
