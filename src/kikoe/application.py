@@ -65,6 +65,7 @@ class Application(Adw.Application):
         self._add_action("preferences", self._present_preferences, ["<primary>comma"])
         self._add_action("add-provider", partial(self._present_preferences, add_provider=True))
         self._add_action("manage-providers", partial(self._present_preferences, "providers"))
+        self._add_action("manage-local-models", partial(self._present_preferences, "local-models"))
         self._add_action("about", self._on_about)
         self._add_action("shortcuts", self._on_shortcuts, ["<primary>question"])
         self.set_accels_for_action("window.close", ["<primary>w"])
