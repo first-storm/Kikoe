@@ -222,19 +222,34 @@ template $KikoeWindow: Adw.ApplicationWindow {
                 icon-name: "io.github.first_storm.Kikoe";
                 title: _("Welcome to Kikoe");
                 description: _(
-                  "Kikoe turns speech into text using cloud services. Add a provider and a model first, then record or import audio."
+                  "Kikoe turns speech into text with a cloud service or a model on this device. Add a provider or download a local model first, then record or import audio."
                 );
 
-                child: Button {
-                  label: _("_Add Provider");
-                  use-underline: true;
+                child: Box {
+                  orientation: vertical;
+                  spacing: 12;
                   halign: center;
-                  action-name: "app.add-provider";
 
-                  styles [
-                    "pill",
-                    "suggested-action",
-                  ]
+                  Button {
+                    label: _("_Add Provider");
+                    use-underline: true;
+                    action-name: "app.add-provider";
+
+                    styles [
+                      "pill",
+                      "suggested-action",
+                    ]
+                  }
+
+                  Button {
+                    label: _("Use a _Local Model…");
+                    use-underline: true;
+                    action-name: "app.manage-local-models";
+
+                    styles [
+                      "pill",
+                    ]
+                  }
                 };
               };
             }

@@ -147,6 +147,13 @@ libadwaita and Adwaita icons, with Python 3.14 supplied by uv. PyInstaller colle
 the native libraries into `Kikoe.app`. Their build baseline requires macOS 15 or
 newer, reflected in `LSMinimumSystemVersion`.
 
+Unlike the other packages, the macOS app ships the transcribe.cpp local engine:
+`scripts/bundle_engine.py` downloads its pinned binding and native library for the
+build machine's architecture (Metal on arm64, CPU on x86_64), verifies them, and
+`KIKOE_BUNDLED_ENGINES` makes the spec copy them to `local-engines/`. They are then
+signed with the rest of the app, so no downloaded native code needs to be loaded.
+Models are still downloaded at runtime.
+
 `Info.plist` includes `NSMicrophoneUsageDescription`, explaining that Kikoe
 records microphone audio to turn speech into text notes.
 
@@ -262,6 +269,25 @@ Playback uses bundled ffmpeg and sounddevice/PortAudio. The chosen output device
 must accept mono int16 at its advertised native rate. Automated tests use fake
 devices and temporary WAV files to check seeking, cancellation, decoder failures
 and cleanup without real hardware.
+
+## Local engines
+
+Except on macOS, local transcription engines are not part of any package. Users
+download them in Preferences → Local Models from the engine's own GitHub release,
+pinned by SHA-256 in `providers/local/engines/<engine>/catalog.json`; models come
+from Hugging Face at pinned revisions. Files go to `data_dir()/local`, which Flatpak
+already allows. The worker runs on the packaged Python, so frozen builds need no
+extra files: `launch.py` starts it for `--engine-worker`.
+
+The Flatpak's `--device=dri` covers Vulkan. CUDA additionally needs the NVIDIA
+device nodes, which the manifest does not request; users who want it run:
+
+```sh
+flatpak override --user --device=all io.github.first_storm.Kikoe
+```
+
+Updating an engine means changing its catalog entries; the receipt of an older
+install still works until the user downloads the new version.
 
 ## Portability and local diagnostics
 

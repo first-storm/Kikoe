@@ -147,13 +147,16 @@ def main() -> None:
     result: dict[str, object] = {}
 
     def on_activate(application: Adw.Application) -> None:
+        from kikoe.providers.factory import create_client
         from kikoe.ui.window import Window
 
         writer = SettingsWriter(SettingsStore(directory / "settings.json"), load_catalog())
         providers = ProviderRepository(writer, MemorySecrets())
         preferences = PreferencesRepository(writer)
         notes = NoteRepository(Library(directory / "library.sqlite3", directory / "audio"))
-        window = Window(application, providers, preferences, WindowStateStore(writer), notes)
+        window = Window(
+            application, providers, preferences, WindowStateStore(writer), notes, create_client
+        )
         window.present()
 
         async def run() -> None:

@@ -12,9 +12,15 @@ from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 from kikoe.constants import APP_ID, APP_NAME, ISSUE_URL, VERSION, WEBSITE
 from kikoe.core.preferences import WindowState, default_provider
 from kikoe.i18n import _, is_right_to_left
-from kikoe.paths import data_dir, log_dir
+from kikoe.paths import bundled_engines_dir, config_dir, data_dir, log_dir
+from kikoe.providers.factory import ClientContext, create_client
+from kikoe.providers.local.engines import load_catalog as load_local_catalog
+from kikoe.providers.local.hardware import current_platform, in_flatpak
+from kikoe.services.local_models import LocalModelManager
 from kikoe.services.prewarm import prewarm_provider
 from kikoe.storage.library import Library, audio_dir, database_path
+from kikoe.storage.local_installs import LocalInstalls
+from kikoe.storage.local_settings import LocalSettingsStore
 from kikoe.storage.model_catalog import load_catalog
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.preferences import PreferencesRepository
@@ -42,7 +48,16 @@ class Application(Adw.Application):
         )
         self._settings = SettingsStore(default_settings_path())
         writer = SettingsWriter(self._settings, load_catalog())
-        self.providers = ProviderRepository(writer, KeyringSecretStore())
+        self.local_models = LocalModelManager(
+            load_local_catalog(),
+            current_platform(),
+            LocalInstalls(data_dir() / "local", bundled=bundled_engines_dir()),
+            LocalSettingsStore(config_dir() / "local.json"),
+            sandboxed=in_flatpak(),
+        )
+        self.clients = partial(create_client, context=ClientContext(local=self.local_models))
+        """Builds transcription clients, including those for local models."""
+        self.providers = ProviderRepository(writer, KeyringSecretStore(), self.local_models)
         self.preferences = PreferencesRepository(writer)
         self.window_state = WindowStateStore(writer)
         self.notes = NoteRepository(Library(database_path(), audio_dir()))
@@ -50,6 +65,7 @@ class Application(Adw.Application):
         self._add_action("preferences", self._present_preferences, ["<primary>comma"])
         self._add_action("add-provider", partial(self._present_preferences, add_provider=True))
         self._add_action("manage-providers", partial(self._present_preferences, "providers"))
+        self._add_action("manage-local-models", partial(self._present_preferences, "local-models"))
         self._add_action("about", self._on_about)
         self._add_action("shortcuts", self._on_shortcuts, ["<primary>question"])
         self.set_accels_for_action("window.close", ["<primary>w"])
@@ -72,6 +88,7 @@ class Application(Adw.Application):
                 self.preferences,
                 self.window_state,
                 self.notes,
+                self.clients,
                 self._saved_window_state(),
             )
             run_task(self._load_settings(), window)
@@ -79,7 +96,11 @@ class Application(Adw.Application):
         window.present()
 
     async def _load_settings(self) -> None:
-        """Providers are announced first, then the defaults that choose among them."""
+        """Providers are announced first, then the defaults that choose among them.
+
+        Local models are found first so that a default local model is still there.
+        """
+        await self.local_models.load()
         await self.providers.load()
         await self.preferences.load()
         await self._prewarm_default_provider()
@@ -88,7 +109,7 @@ class Application(Adw.Application):
         """Load the SDK the next transcription will need while the user is still looking around."""
         provider = default_provider(self.preferences.current, self.providers.providers)
         if provider is not None:
-            await prewarm_provider(provider)
+            await prewarm_provider(provider, self.clients)
         # The SDK objects just loaded live as long as the process; see ``main``.
         gc.freeze()
 
@@ -135,7 +156,7 @@ class Application(Adw.Application):
             self.quit()
 
     def _present_preferences(self, page: str | None = None, add_provider: bool = False) -> None:
-        dialog = PreferencesDialog(self.providers, self.preferences)
+        dialog = PreferencesDialog(self.providers, self.preferences, self.local_models)
         if page is not None:
             dialog.set_visible_page_name(page)
         dialog.present(self.get_active_window())

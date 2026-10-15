@@ -34,7 +34,12 @@ rsvg-convert --width 1024 --height 1024 \
     src/kikoe/ui/icons/hicolor/scalable/apps/io.github.first_storm.Kikoe.svg \
     --output "$build/icon.png"
 
+# transcribe.cpp is small on macOS, so it ships inside the app instead of being downloaded.
+rm -rf "$build/engines"
+uv run --no-sync scripts/bundle_engine.py "$build/engines" transcribe-cpp
+
 KIKOE_FFMPEG_BIN="$build/ffmpeg/bin/ffmpeg" KIKOE_ICON="$build/icon.png" \
+    KIKOE_BUNDLED_ENGINES="$build/engines" \
     "$build/venv/bin/pyinstaller" --noconfirm --clean \
     --distpath "$build/dist" --workpath "$build/pyinstaller" \
     packaging/pyinstaller/kikoe.spec

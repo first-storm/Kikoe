@@ -1,0 +1,46 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeDownloadRow: Adw.ActionRow {
+  use-markup: false;
+  subtitle-lines: 2;
+
+  [suffix]
+  Button download_button {
+    icon-name: "folder-download-symbolic";
+    tooltip-text: _("Download");
+    valign: center;
+    visible: false;
+    clicked => $_on_download_button_clicked();
+
+    styles [
+      "flat",
+    ]
+  }
+
+  [suffix]
+  Button cancel_button {
+    icon-name: "process-stop-symbolic";
+    tooltip-text: _("Cancel Download");
+    valign: center;
+    visible: false;
+    clicked => $_on_cancel_button_clicked();
+
+    styles [
+      "flat",
+    ]
+  }
+
+  [suffix]
+  Button remove_button {
+    icon-name: "user-trash-symbolic";
+    tooltip-text: _("Remove");
+    valign: center;
+    visible: false;
+    clicked => $_on_remove_button_clicked();
+
+    styles [
+      "flat",
+    ]
+  }
+}

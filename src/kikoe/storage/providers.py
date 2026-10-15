@@ -5,6 +5,7 @@ import logging
 import uuid
 from collections.abc import Callable
 from dataclasses import replace
+from typing import Protocol
 
 from kikoe.core.listeners import Listeners
 from kikoe.core.model_catalog import ModelCatalog
@@ -21,6 +22,15 @@ class ProviderNotFoundError(LookupError):
     """A provider or model was removed while something still referred to it."""
 
 
+class ProviderSource(Protocol):
+    """Providers that exist without being configured, such as the local engines."""
+
+    @property
+    def providers(self) -> tuple[Provider, ...]: ...
+
+    def connect_changed(self, listener: Callable[[], None]) -> Callable[[], None]: ...
+
+
 class ProviderRepository:
     """In-memory provider list that persists every change before notifying listeners.
 
@@ -28,14 +38,35 @@ class ProviderRepository:
     trust ``ModelSpec.capabilities`` without knowing about specific endpoints.
     """
 
-    def __init__(self, writer: SettingsWriter, secrets: SecretStore) -> None:
+    def __init__(
+        self,
+        writer: SettingsWriter,
+        secrets: SecretStore,
+        extra: ProviderSource | None = None,
+    ) -> None:
         self._writer = writer
         self._secrets = secrets
         self._listeners = Listeners[()]()
+        self._extra = extra
+        self._loaded = False
+        if extra is not None:
+            extra.connect_changed(self._on_extra_changed)
 
     @property
     def providers(self) -> tuple[Provider, ...]:
+        """Configured providers, then built-in ones; this is what models are chosen from."""
+        extra = self._extra.providers if self._extra is not None else ()
+        return (*self.configured, *extra)
+
+    @property
+    def configured(self) -> tuple[Provider, ...]:
+        """Providers the user added, which the Providers page lists and edits."""
         return self._writer.state.providers
+
+    def _on_extra_changed(self) -> None:
+        # Before loading, an empty list would look like a first run to the window.
+        if self._loaded:
+            self._listeners.emit()
 
     @property
     def catalog(self) -> ModelCatalog:
@@ -62,9 +93,13 @@ class ProviderRepository:
 
     async def load(self) -> None:
         await self._writer.load()
+        self._loaded = True
         self._listeners.emit()
 
     async def get_api_key(self, provider_id: str) -> str:
+        """Built-in providers need no key, and must not wait for an unavailable keyring."""
+        if all(p.provider_id != provider_id for p in self.configured):
+            return ""
         return await asyncio.to_thread(self._secrets.get, provider_id) or ""
 
     async def add_provider(
@@ -81,7 +116,7 @@ class ProviderRepository:
         provider = Provider(uuid.uuid4().hex, name.strip(), api, base_url, upload=upload)
         if api_key:
             await asyncio.to_thread(self._secrets.set, provider.provider_id, api_key)
-        await self._commit(lambda: (*self.providers, provider))
+        await self._commit(lambda: (*self.configured, provider))
         return provider
 
     async def update_provider(
@@ -97,14 +132,14 @@ class ProviderRepository:
         """Replace connection details; an empty ``api_key`` removes the stored key."""
         if upload is not None:
             validate_upload(upload, api)
-        self.get(provider_id)
+        self._configured(provider_id)
         if api_key:
             await asyncio.to_thread(self._secrets.set, provider_id, api_key)
         else:
             await asyncio.to_thread(self._secrets.delete, provider_id)
 
         def change() -> tuple[Provider, ...]:
-            current = self.get(provider_id)
+            current = self._configured(provider_id)
             return self._replace_provider(
                 replace(
                     current,
@@ -121,16 +156,18 @@ class ProviderRepository:
         """Merge upload edits under the writer lock without touching credentials or models."""
 
         def change() -> tuple[Provider, ...]:
-            provider = self.get(provider_id)
+            provider = self._configured(provider_id)
             validate_upload(upload, provider.api)
             return self._replace_provider(replace(provider, upload=upload))
 
         await self._commit(change)
 
     async def remove_provider(self, provider_id: str) -> None:
-        self.get(provider_id)
+        self._configured(provider_id)
         await asyncio.to_thread(self._secrets.delete, provider_id)
-        await self._commit(lambda: tuple(p for p in self.providers if p.provider_id != provider_id))
+        await self._commit(
+            lambda: tuple(p for p in self.configured if p.provider_id != provider_id)
+        )
 
     async def save_model(
         self, provider_id: str, model: ModelSpec, replacing_id: str | None = None
@@ -138,7 +175,7 @@ class ProviderRepository:
         """Add ``model``, or replace the model whose ID is ``replacing_id`` keeping its position."""
 
         def change() -> tuple[Provider, ...]:
-            provider = self.get(provider_id)
+            provider = self._configured(provider_id)
             if replacing_id is None:
                 models = (*provider.models, model)
             else:
@@ -155,14 +192,25 @@ class ProviderRepository:
 
     async def remove_model(self, provider_id: str, model_id: str) -> None:
         def change() -> tuple[Provider, ...]:
-            provider = self.get(provider_id)
+            provider = self._configured(provider_id)
             models = tuple(m for m in provider.models if m.model_id != model_id)
             return self._replace_provider(replace(provider, models=models))
 
         await self._commit(change)
 
+    def _configured(self, provider_id: str) -> Provider:
+        """Only configured providers can be edited; built-in ones count as missing."""
+        provider = next((p for p in self.configured if p.provider_id == provider_id), None)
+        if provider is None:
+            raise ProviderNotFoundError(
+                _("Provider {provider_id} no longer exists.").format(provider_id=provider_id)
+            )
+        return provider
+
     def _replace_provider(self, updated: Provider) -> tuple[Provider, ...]:
-        return tuple(updated if p.provider_id == updated.provider_id else p for p in self.providers)
+        return tuple(
+            updated if p.provider_id == updated.provider_id else p for p in self.configured
+        )
 
     async def _commit(self, change: Callable[[], tuple[Provider, ...]]) -> None:
         await self._writer.update(

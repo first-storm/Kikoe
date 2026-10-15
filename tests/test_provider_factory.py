@@ -1,5 +1,7 @@
 """The factory hands each API kind its own client."""
 
+from typing import cast
+
 import pytest
 
 from kikoe.core.models import ApiKind, Provider
@@ -8,6 +10,7 @@ from kikoe.providers.base import TranscriptionError
 from kikoe.providers.deepgram import DeepgramClient
 from kikoe.providers.gemini import GeminiClient
 from kikoe.providers.groq import GroqClient
+from kikoe.providers.local.client import LocalClient, LocalRuntime
 from kikoe.providers.mimo import MiMoClient
 from kikoe.providers.mistral import MistralClient
 from kikoe.providers.openai import OpenAIClient
@@ -22,6 +25,7 @@ EXPECTED_CLIENTS: dict[ApiKind, type[object]] = {
     ApiKind.MIMO: MiMoClient,
     ApiKind.GROQ: GroqClient,
     ApiKind.MISTRAL: MistralClient,
+    ApiKind.LOCAL: LocalClient,
 }
 """Written out by hand so the test does not just repeat ``factory.CLIENTS``."""
 
@@ -38,7 +42,13 @@ def test_every_api_kind_has_a_client() -> None:
 def test_create_client_builds_the_official_client_for_each_api(
     api: ApiKind, expected: type[object]
 ) -> None:
-    assert type(factory.create_client(provider(api), "key")) is expected
+    context = factory.ClientContext(local=cast(LocalRuntime, object()))
+    assert type(factory.create_client(provider(api), "key", context)) is expected
+
+
+def test_local_models_need_the_runtime() -> None:
+    with pytest.raises(TranscriptionError):
+        factory.create_client(provider(ApiKind.LOCAL), "")
 
 
 def test_unregistered_api_is_reported_as_a_transcription_error(

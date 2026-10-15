@@ -6,6 +6,7 @@ import pytest
 from helpers import file_caps
 from kikoe.core.models import ApiKind, Capabilities, ModeCapabilities, ModelSpec, Provider
 from kikoe.core.preferences import WindowState
+from kikoe.core.provider_registry import configurable_apis
 from kikoe.storage.settings import Settings, SettingsError, SettingsStore
 
 PROVIDER = Provider(
@@ -62,7 +63,7 @@ def test_unknown_api_kind_is_refused(tmp_path: Path) -> None:
         SettingsStore(path).load_state()
 
 
-@pytest.mark.parametrize("api", list(ApiKind))
+@pytest.mark.parametrize("api", configurable_apis())
 def test_all_official_and_compatible_api_types_round_trip(tmp_path: Path, api: ApiKind) -> None:
     from dataclasses import replace
 
@@ -70,6 +71,15 @@ def test_all_official_and_compatible_api_types_round_trip(tmp_path: Path, api: A
     store = SettingsStore(tmp_path / "settings.json")
     store.save_state(Settings((provider,)))
     assert store.load_state().providers == (provider,)
+
+
+def test_a_stored_built_in_provider_is_refused(tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    store = SettingsStore(tmp_path / "settings.json")
+    store.save_state(Settings((replace(PROVIDER, api=ApiKind.LOCAL),)))
+    with pytest.raises(SettingsError):
+        store.load_state()
 
 
 def test_version_one_upgrades_without_losing_providers(tmp_path: Path) -> None:

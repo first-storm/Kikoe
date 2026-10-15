@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kikoe 0.1.1\n"
 "Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
-"POT-Creation-Date: 2026-10-15 03:01+1100\n"
+"POT-Creation-Date: 2026-10-16 00:52+1100\n"
 "PO-Revision-Date: 2026-10-15 00:00+0000\n"
 "Last-Translator: Kikoe contributors\n"
 "Language-Team: Korean\n"
@@ -14,12 +14,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: src/kikoe/application.py:152
+#: src/kikoe/application.py:184
 msgid "Could not open the folder."
 msgstr "폴더를 열 수 없습니다."
 
 #. Translators: replace with your name(s), one per line.
-#: src/kikoe/application.py:177
+#: src/kikoe/application.py:209
 msgid "translator-credits"
 msgstr "Kikoe contributors"
 
@@ -126,17 +126,17 @@ msgid ""
 "The provider rejected realtime transcription. Check the model and API key."
 msgstr "제공자가 실시간 전사를 거부했습니다. 모델과 API 키를 확인하세요."
 
-#: src/kikoe/providers/errors.py:36
+#: src/kikoe/providers/errors.py:37
 #, python-brace-format
 msgid "{host} sent a response Kikoe does not understand."
 msgstr "{host}에서 Kikoe가 이해할 수 없는 응답을 보냈습니다."
 
-#: src/kikoe/providers/errors.py:59
+#: src/kikoe/providers/errors.py:60
 #, python-brace-format
 msgid "{subject} rejected the API key. Check it in Preferences."
 msgstr "{subject}에서 API 키를 거부했습니다. 환경설정에서 확인하세요."
 
-#: src/kikoe/providers/errors.py:62
+#: src/kikoe/providers/errors.py:63
 #, python-brace-format
 msgid ""
 "{subject} does not allow this API key to use this model, or is not available "
@@ -145,27 +145,27 @@ msgstr ""
 "{subject}에서 이 API 키의 모델 사용을 허용하지 않거나 해당 지역에서 이용할 "
 "수 없습니다. 계정과 환경설정의 키를 확인하세요."
 
-#: src/kikoe/providers/errors.py:66
+#: src/kikoe/providers/errors.py:67
 #, python-brace-format
 msgid "{subject} reports that your account has run out of credits."
 msgstr "{subject}에 따르면 계정 크레딧이 소진되었습니다."
 
-#: src/kikoe/providers/errors.py:68
+#: src/kikoe/providers/errors.py:69
 #, python-brace-format
 msgid "{subject} could not find this model. Check the model name."
 msgstr "{subject}에서 이 모델을 찾을 수 없습니다. 모델 이름을 확인하세요."
 
-#: src/kikoe/providers/errors.py:70
+#: src/kikoe/providers/errors.py:71
 #, python-brace-format
 msgid "{subject} took too long to respond. Try again later."
 msgstr "{subject}의 응답 시간이 초과되었습니다. 나중에 다시 시도하세요."
 
-#: src/kikoe/providers/errors.py:72
+#: src/kikoe/providers/errors.py:73
 #, python-brace-format
 msgid "The audio is too large for {subject}."
 msgstr "오디오가 너무 커서 {subject}에 보낼 수 없습니다."
 
-#: src/kikoe/providers/errors.py:75
+#: src/kikoe/providers/errors.py:76
 #, python-brace-format
 msgid ""
 "{subject} is limiting requests, or your quota is used up. Wait a while and "
@@ -174,61 +174,113 @@ msgstr ""
 "{subject}에서 요청을 제한하거나 할당량이 소진되었습니다. 잠시 후 다시 시도하"
 "거나 요금제를 확인하세요."
 
-#: src/kikoe/providers/errors.py:79
+#: src/kikoe/providers/errors.py:80
 #, python-brace-format
 msgid "{subject} is having problems (HTTP {status}). Try again later."
 msgstr ""
 "{subject}에 문제가 발생했습니다(HTTP {status}). 나중에 다시 시도하세요."
 
-#: src/kikoe/providers/errors.py:81
+#: src/kikoe/providers/errors.py:82
 #, python-brace-format
 msgid "{subject} could not process this audio (HTTP {status})."
 msgstr "{subject}에서 이 오디오를 처리할 수 없습니다(HTTP {status})."
 
-#: src/kikoe/providers/errors.py:84
+#: src/kikoe/providers/errors.py:85
 #, python-brace-format
 msgid ""
 "{subject} rejected this request (HTTP {status}). Check the model and options."
 msgstr ""
 "{subject}에서 요청을 거부했습니다(HTTP {status}). 모델과 옵션을 확인하세요."
 
-#: src/kikoe/providers/errors.py:87
+#: src/kikoe/providers/errors.py:88
 #, python-brace-format
 msgid "{subject} returned an unexpected error (HTTP {status})."
 msgstr "{subject}에서 예기치 않은 오류를 반환했습니다(HTTP {status})."
 
-#: src/kikoe/providers/errors.py:92
+#: src/kikoe/providers/errors.py:93
 #, python-brace-format
 msgid "{message} Details: {detail}"
 msgstr "{message} 세부 정보: {detail}"
 
-#: src/kikoe/providers/errors.py:100
+#: src/kikoe/providers/errors.py:101
 msgid "The provider sent a response Kikoe does not understand."
 msgstr "제공자가 Kikoe가 이해할 수 없는 응답을 보냈습니다."
 
-#: src/kikoe/providers/errors.py:104
+#: src/kikoe/providers/errors.py:105
 msgid "The provider"
 msgstr "제공자"
 
-#: src/kikoe/providers/errors.py:106
+#: src/kikoe/providers/errors.py:107
 msgid "Could not complete transcription. Check your connection and try again."
 msgstr "전사를 완료할 수 없습니다. 연결을 확인하고 다시 시도하세요."
 
-#: src/kikoe/providers/errors.py:120 src/kikoe/providers/mistral.py:100
+#: src/kikoe/providers/errors.py:125 src/kikoe/providers/mistral.py:100
 #, python-brace-format
 msgid "{host} took too long to respond. Try again later."
 msgstr "{host}의 응답 시간이 초과되었습니다. 나중에 다시 시도하세요."
 
-#: src/kikoe/providers/errors.py:122 src/kikoe/providers/mistral.py:103
+#: src/kikoe/providers/errors.py:127 src/kikoe/providers/mistral.py:103
 #: src/kikoe/providers/mistral.py:146
 #, python-brace-format
 msgid "Could not reach {host}. Try again later."
 msgstr "{host}에 연결할 수 없습니다. 나중에 다시 시도하세요."
 
-#: src/kikoe/providers/errors.py:125
+#: src/kikoe/providers/errors.py:130
 #, python-brace-format
 msgid "{host} could not finish transcription: {message}"
 msgstr "{host}에서 전사를 완료하지 못했습니다: {message}"
+
+#: src/kikoe/providers/factory.py:77
+msgid "Local models are not available."
+msgstr "로컬 모델을 사용할 수 없습니다."
+
+#: src/kikoe/providers/local/client.py:50
+#, python-brace-format
+msgid "“{model}” is no longer downloaded. Download it again in Preferences."
+msgstr ""
+"“{model}”이(가) 더 이상 다운로드되어 있지 않습니다. 환경설정에서 다시 다운로"
+"드하세요."
+
+#: src/kikoe/providers/local/client.py:97
+msgid "This local model transcribes files only."
+msgstr "이 로컬 모델은 파일만 전사합니다."
+
+#: src/kikoe/providers/local/connection.py:99
+msgid "The local engine returned an unreadable result."
+msgstr "로컬 엔진이 읽을 수 없는 결과를 반환했습니다."
+
+#: src/kikoe/providers/local/connection.py:123
+msgid ""
+"The local engine could not start. Try another acceleration option in "
+"Preferences, or download the engine again."
+msgstr ""
+"로컬 엔진을 시작할 수 없습니다. 환경설정에서 다른 가속 옵션을 시도하거나 엔진"
+"을 다시 다운로드하세요."
+
+#: src/kikoe/providers/local/connection.py:131
+msgid ""
+"The model could not be loaded. It may need more memory than is free, or the "
+"file is damaged; download it again or choose a smaller model."
+msgstr ""
+"모델을 불러올 수 없습니다. 사용 가능한 메모리보다 더 많은 메모리가 필요하거"
+"나 파일이 손상되었을 수 있습니다. 다시 다운로드하거나 더 작은 모델을 선택하세"
+"요."
+
+#: src/kikoe/providers/local/connection.py:137
+msgid "The selected device failed. Choose another device in Preferences."
+msgstr "선택한 장치가 실패했습니다. 환경설정에서 다른 장치를 선택하세요."
+
+#: src/kikoe/providers/local/connection.py:140
+msgid "The local model could not process this audio."
+msgstr "로컬 모델이 이 오디오를 처리할 수 없습니다."
+
+#: src/kikoe/providers/local/connection.py:142
+msgid "Transcription was cancelled."
+msgstr "전사가 취소되었습니다."
+
+#: src/kikoe/providers/local/connection.py:144
+msgid "The local engine failed. See the log for details."
+msgstr "로컬 엔진이 실패했습니다. 자세한 내용은 로그를 확인하세요."
 
 #: src/kikoe/providers/mistral_file_stream.py:61
 #: src/kikoe/providers/openai_file_stream.py:66
@@ -270,6 +322,14 @@ msgstr "오디오를 가져오려면 파일 전사 모델을 선택하세요."
 msgid "The chunk size is too small for this audio format."
 msgstr "이 오디오 형식에 비해 조각 크기가 너무 작습니다."
 
+#: src/kikoe/services/local_models.py:111
+msgid "Download the local engine in Preferences to use this model."
+msgstr "이 모델을 사용하려면 환경설정에서 로컬 엔진을 다운로드하세요."
+
+#: src/kikoe/services/local_models.py:186
+msgid "On This Device"
+msgstr "이 장치에서"
+
 #: src/kikoe/storage/audio_files.py:33
 #, python-brace-format
 msgid "Could not copy the audio file into the library: {error}"
@@ -289,6 +349,33 @@ msgstr "저장된 녹음을 읽을 수 없습니다. 오디오는 보관되었�
 msgid "Could not save the recording. ({detail})"
 msgstr "녹음을 저장할 수 없습니다. ({detail})"
 
+#: src/kikoe/storage/downloads.py:46 src/kikoe/storage/downloads.py:78
+msgid "Downloads must use a secure connection."
+msgstr "다운로드는 보안 연결을 사용해야 합니다."
+
+#: src/kikoe/storage/downloads.py:62
+#, python-brace-format
+msgid "“{name}” did not match its expected checksum."
+msgstr "“{name}”이(가) 예상 체크섬과 일치하지 않습니다."
+
+#: src/kikoe/storage/downloads.py:68
+#, python-brace-format
+msgid "Could not download “{name}”. Check your internet connection."
+msgstr "“{name}”을(를) 다운로드할 수 없습니다. 인터넷 연결을 확인하세요."
+
+#: src/kikoe/storage/downloads.py:82
+#, python-brace-format
+msgid "The download server answered with error {status}."
+msgstr "다운로드 서버가 오류 {status}을(를) 반환했습니다."
+
+#: src/kikoe/storage/downloads.py:100
+msgid "The downloaded file is larger than expected."
+msgstr "다운로드한 파일이 예상보다 큽니다."
+
+#: src/kikoe/storage/downloads.py:111
+msgid "The download ended early. Try again."
+msgstr "다운로드가 일찍 종료되었습니다. 다시 시도하세요."
+
 #: src/kikoe/storage/library.py:67
 msgid ""
 "The note library was created by a newer version of Kikoe. Update Kikoe to "
@@ -297,47 +384,69 @@ msgstr ""
 "더 최신 버전의 Kikoe에서 만든 노트 라이브러리입니다. 열려면 Kikoe를 업데이트"
 "하세요."
 
-#: src/kikoe/storage/library.py:182 src/kikoe/storage/library.py:295
-#: src/kikoe/storage/library.py:317
+#: src/kikoe/storage/library.py:182 src/kikoe/storage/library.py:302
+#: src/kikoe/storage/library.py:323
 msgid "This recording no longer exists."
 msgstr "이 녹음은 더 이상 존재하지 않습니다."
 
-#: src/kikoe/storage/library.py:284
+#: src/kikoe/storage/library.py:288
 msgid "Enter transcript text."
 msgstr "전사 텍스트를 입력하세요."
 
-#: src/kikoe/storage/library.py:286
+#: src/kikoe/storage/library.py:290
 msgid "The end time must be after the start time."
 msgstr "종료 시간은 시작 시간보다 뒤여야 합니다."
 
-#: src/kikoe/storage/library.py:301
+#: src/kikoe/storage/library.py:307
 msgid "Enter a speaker name."
 msgstr "화자 이름을 입력하세요."
 
-#: src/kikoe/storage/library.py:323
+#: src/kikoe/storage/library.py:329
 msgid "The speaker selection is no longer available."
 msgstr "선택한 화자를 더 이상 사용할 수 없습니다."
 
-#: src/kikoe/storage/library.py:409
+#: src/kikoe/storage/library.py:415
 #, python-brace-format
 msgid "The note library could not be read or saved: {error}"
 msgstr "노트 라이브러리를 읽거나 저장할 수 없습니다: {error}"
+
+#: src/kikoe/storage/local_installs.py:180
+msgid "Could not finish installing. Check the free disk space."
+msgstr "설치를 완료할 수 없습니다. 디스크 여유 공간을 확인하세요."
+
+#: src/kikoe/storage/local_installs.py:192
+msgid "Could not remove the files. They may be in use."
+msgstr "파일을 제거할 수 없습니다. 사용 중일 수 있습니다."
+
+#: src/kikoe/storage/local_installs.py:210
+#, python-brace-format
+msgid "“{name}” could not be unpacked."
+msgstr "“{name}”의 압축을 풀 수 없습니다."
+
+#: src/kikoe/storage/local_installs.py:221
+msgid "The download contains an unsafe file path."
+msgstr "다운로드에 안전하지 않은 파일 경로가 포함되어 있습니다."
+
+#: src/kikoe/storage/local_settings.py:61
+#, python-brace-format
+msgid "Could not save the local model settings: {error}"
+msgstr "로컬 모델 설정을 저장할 수 없습니다: {error}"
 
 #: src/kikoe/storage/note_rows.py:27
 msgid "This note no longer exists."
 msgstr "이 노트는 더 이상 존재하지 않습니다."
 
-#: src/kikoe/storage/providers.py:52
+#: src/kikoe/storage/providers.py:83 src/kikoe/storage/providers.py:206
 #, python-brace-format
 msgid "Provider {provider_id} no longer exists."
 msgstr "제공자 {provider_id}이 더 이상 존재하지 않습니다."
 
-#: src/kikoe/storage/providers.py:147
+#: src/kikoe/storage/providers.py:184
 #, python-brace-format
 msgid "Model {replacing_id} no longer exists."
 msgstr "모델 {replacing_id}이 더 이상 존재하지 않습니다."
 
-#: src/kikoe/storage/secrets.py:57
+#: src/kikoe/storage/secrets.py:67
 #, python-brace-format
 msgid ""
 "API keys could not be saved because no secure credential store is available. "
@@ -345,17 +454,17 @@ msgid ""
 msgstr ""
 "보안 자격 증명 저장소가 없어 API 키를 저장할 수 없습니다. 세부 정보: {error}"
 
-#: src/kikoe/storage/settings.py:63
+#: src/kikoe/storage/settings.py:64
 #, python-brace-format
 msgid "Could not read the settings file: {error}"
 msgstr "설정 파일을 읽을 수 없습니다: {error}"
 
-#: src/kikoe/storage/settings.py:75
+#: src/kikoe/storage/settings.py:76
 #, python-brace-format
 msgid "The settings file {detail} is damaged or not understood: {error}"
 msgstr "설정 파일 {detail}이 손상되었거나 인식할 수 없습니다: {error}"
 
-#: src/kikoe/storage/settings.py:100
+#: src/kikoe/storage/settings.py:101
 #, python-brace-format
 msgid "Could not save the settings file: {error}"
 msgstr "설정 파일을 저장할 수 없습니다: {error}"
@@ -412,14 +521,16 @@ msgid "Import Audio"
 msgstr "오디오 가져오기"
 
 #: src/kikoe/ui/bottom_bar.ui:104 src/kikoe/ui/sidebar_header.ui:49
-#: src/kikoe/ui/window.ui:266
+#: src/kikoe/ui/window.ui:282
 msgid "_Import Audio…"
 msgstr "오디오 가져오기…(_I)"
 
 #: src/kikoe/ui/bottom_bar.ui:158 src/kikoe/ui/dialogs.py:66
-#: src/kikoe/ui/export_dialog.ui:21 src/kikoe/ui/model_dialog.ui:21
-#: src/kikoe/ui/note_actions.py:56 src/kikoe/ui/retranscribe_dialog.ui:21
-#: src/kikoe/ui/speaker_dialog.ui:21 src/kikoe/ui/speaker_editor.ui:20
+#: src/kikoe/ui/export_dialog.ui:21 src/kikoe/ui/local_engine_group.py:153
+#: src/kikoe/ui/local_engine_group.ui:27 src/kikoe/ui/local_model_list.py:53
+#: src/kikoe/ui/model_dialog.ui:21 src/kikoe/ui/note_actions.py:56
+#: src/kikoe/ui/retranscribe_dialog.ui:21 src/kikoe/ui/speaker_dialog.ui:21
+#: src/kikoe/ui/speaker_editor.ui:20
 msgid "_Cancel"
 msgstr "취소(_C)"
 
@@ -428,7 +539,7 @@ msgid "_Stop"
 msgstr "중지(_S)"
 
 #: src/kikoe/ui/content_header.ui:14
-#: src/kikoe/ui/transcription_controller.py:323 src/kikoe/ui/window.py:388
+#: src/kikoe/ui/transcription_controller.py:324 src/kikoe/ui/window.py:402
 #: src/kikoe/ui/window.ui:10 src/kikoe/ui/window.ui:37
 #: src/kikoe/ui/window.ui:119 src/kikoe/ui/window.ui:130
 msgid "Kikoe"
@@ -457,31 +568,31 @@ msgid "Display Options"
 msgstr "표시 옵션"
 
 #: src/kikoe/ui/content_header.ui:68 src/kikoe/ui/export_dialog.ui:106
-#: src/kikoe/ui/window.ui:288
+#: src/kikoe/ui/window.ui:304
 msgid "Show _Timestamps"
 msgstr "타임스탬프 표시(_T)"
 
 #: src/kikoe/ui/content_header.ui:72 src/kikoe/ui/export_dialog.ui:113
-#: src/kikoe/ui/window.ui:292
+#: src/kikoe/ui/window.ui:308
 msgid "Show _Speakers"
 msgstr "화자 표시(_S)"
 
 #: src/kikoe/ui/content_header.ui:80 src/kikoe/ui/note_sidebar.py:172
-#: src/kikoe/ui/window.ui:300
+#: src/kikoe/ui/window.ui:316
 msgid "_Rename…"
 msgstr "이름 바꾸기…(_R)"
 
-#: src/kikoe/ui/content_header.ui:84 src/kikoe/ui/window.ui:304
+#: src/kikoe/ui/content_header.ui:84 src/kikoe/ui/window.ui:320
 msgid "_Copy All Text"
 msgstr "모든 텍스트 복사(_C)"
 
 #: src/kikoe/ui/content_header.ui:88 src/kikoe/ui/export_dialog.ui:28
-#: src/kikoe/ui/window.ui:308
+#: src/kikoe/ui/window.ui:324
 msgid "_Export…"
 msgstr "내보내기…(_E)"
 
 #: src/kikoe/ui/content_header.ui:94 src/kikoe/ui/note_sidebar.py:174
-#: src/kikoe/ui/window.ui:314
+#: src/kikoe/ui/window.ui:330
 msgid "_Delete Note"
 msgstr "노트 삭제(_D)"
 
@@ -500,6 +611,36 @@ msgstr "계속 편집(_K)"
 #: src/kikoe/ui/dialogs.py:54
 msgid "_Discard"
 msgstr "버리기(_D)"
+
+#: src/kikoe/ui/download_row.py:56 src/kikoe/ui/local_engine_group.py:79
+#, python-brace-format
+msgid "Downloading… {received} of {total}"
+msgstr "다운로드 중… {total} 중 {received}"
+
+#: src/kikoe/ui/download_row.py:60
+msgid "Downloading…"
+msgstr "다운로드 중…"
+
+#: src/kikoe/ui/download_row.py:62
+#, python-brace-format
+msgid "Downloaded · {size}"
+msgstr "다운로드됨 · {size}"
+
+#: src/kikoe/ui/download_row.py:64
+msgid "Included with Kikoe"
+msgstr "Kikoe에 포함됨"
+
+#: src/kikoe/ui/download_row.ui:15
+msgid "Download"
+msgstr "다운로드"
+
+#: src/kikoe/ui/download_row.ui:27
+msgid "Cancel Download"
+msgstr "다운로드 취소"
+
+#: src/kikoe/ui/download_row.ui:39
+msgid "Remove"
+msgstr "제거"
 
 #: src/kikoe/ui/export_controller.py:62
 msgid "Copied to clipboard"
@@ -522,7 +663,7 @@ msgid "Audio Files"
 msgstr "오디오 파일"
 
 #: src/kikoe/ui/export_controller.py:99 src/kikoe/ui/speaker_controller.py:56
-#: src/kikoe/ui/transcription_controller.py:160
+#: src/kikoe/ui/transcription_controller.py:161
 msgid "The original audio is not available."
 msgstr "원본 오디오를 사용할 수 없습니다."
 
@@ -644,12 +785,13 @@ msgstr "일시 중지됨"
 msgid "Recording"
 msgstr "녹음"
 
-#: src/kikoe/ui/labels.py:62
+#: src/kikoe/ui/labels.py:62 src/kikoe/ui/local_model_list.py:84
 msgid "Realtime"
 msgstr "실시간"
 
-#: src/kikoe/ui/labels.py:64 src/kikoe/ui/model_dialog.ui:79
-#: src/kikoe/ui/model_dialog.ui:140 src/kikoe/ui/recording_controller.py:164
+#: src/kikoe/ui/labels.py:64 src/kikoe/ui/local_model_list.py:82
+#: src/kikoe/ui/model_dialog.ui:79 src/kikoe/ui/model_dialog.ui:140
+#: src/kikoe/ui/recording_controller.py:168
 msgid "Timestamps"
 msgstr "타임스탬프"
 
@@ -657,7 +799,7 @@ msgstr "타임스탬프"
 msgid "Word Timestamps"
 msgstr "단어 타임스탬프"
 
-#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:166
+#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:170
 msgid "Speakers"
 msgstr "화자"
 
@@ -665,7 +807,7 @@ msgstr "화자"
 msgid "Streaming"
 msgstr "스트리밍"
 
-#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:170
+#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:174
 msgid "Text only"
 msgstr "텍스트만"
 
@@ -772,9 +914,9 @@ msgstr "오디오 변환 중…"
 msgid "Transcribing… {part} of {parts} chunks complete"
 msgstr "전사 중… 조각 {parts}개 중 {part}개 완료"
 
-#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:175
-#: src/kikoe/ui/transcription_controller.py:261
-#: src/kikoe/ui/transcription_controller.py:308
+#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:176
+#: src/kikoe/ui/transcription_controller.py:262
+#: src/kikoe/ui/transcription_controller.py:309
 msgid "Transcribing…"
 msgstr "전사 중…"
 
@@ -827,6 +969,186 @@ msgstr "{provider} · {model}"
 #: src/kikoe/ui/level_meter.ui:16
 msgid "Microphone Level"
 msgstr "마이크 레벨"
+
+#: src/kikoe/ui/local_engine_group.py:68 src/kikoe/ui/local_engine_group.ui:16
+msgid "_Download"
+msgstr "다운로드(_D)"
+
+#: src/kikoe/ui/local_engine_group.py:68
+msgid "_Switch"
+msgstr "전환(_S)"
+
+#: src/kikoe/ui/local_engine_group.py:77
+#, python-brace-format
+msgid "Not downloaded · {size}"
+msgstr "다운로드되지 않음 · {size}"
+
+#: src/kikoe/ui/local_engine_group.py:84
+#, python-brace-format
+msgid "Switching downloads {size}"
+msgstr "전환 시 {size}을(를) 다운로드합니다"
+
+#: src/kikoe/ui/local_engine_group.py:92
+#, python-brace-format
+msgid "Version {version}"
+msgstr "버전 {version}"
+
+#: src/kikoe/ui/local_engine_group.py:94
+#, python-brace-format
+msgid "Included with Kikoe · {version}"
+msgstr "Kikoe에 포함됨 · {version}"
+
+#: src/kikoe/ui/local_engine_group.py:97
+#, python-brace-format
+msgid "{version} · Starting…"
+msgstr "{version} · 시작 중…"
+
+#: src/kikoe/ui/local_engine_group.py:99
+#, python-brace-format
+msgid "{version} · Could not start"
+msgstr "{version} · 시작할 수 없음"
+
+#: src/kikoe/ui/local_engine_group.py:100
+#, python-brace-format
+msgid "{version} · Ready"
+msgstr "{version} · 준비됨"
+
+#: src/kikoe/ui/local_engine_group.py:112
+msgid "Automatic"
+msgstr "자동"
+
+#: src/kikoe/ui/local_engine_group.py:129
+#, python-brace-format
+msgid ""
+"CUDA needs access to the NVIDIA devices, which Flatpak hides by default. To "
+"allow it, run this command and restart Kikoe:\n"
+"{command}"
+msgstr ""
+"CUDA는 NVIDIA 장치에 대한 접근이 필요하지만 Flatpak은 기본적으로 이를 숨깁니"
+"다. 허용하려면 이 명령을 실행하고 Kikoe를 다시 시작하세요:\n"
+"{command}"
+
+#: src/kikoe/ui/local_engine_group.py:133
+msgid "Needs an NVIDIA graphics card with a current driver."
+msgstr "최신 드라이버가 설치된 NVIDIA 그래픽 카드가 필요합니다."
+
+#: src/kikoe/ui/local_engine_group.py:150
+#, python-brace-format
+msgid "Remove {engine}?"
+msgstr "{engine}을(를) 제거하시겠습니까?"
+
+#: src/kikoe/ui/local_engine_group.py:151
+msgid "Local models cannot be used until the engine is downloaded again."
+msgstr "엔진을 다시 다운로드할 때까지 로컬 모델을 사용할 수 없습니다."
+
+#: src/kikoe/ui/local_engine_group.py:154
+msgid "_Remove Engine"
+msgstr "엔진 제거(_R)"
+
+#: src/kikoe/ui/local_engine_group.py:159
+#, python-brace-format
+msgid "Remove Engine and {count} _Model ({size})"
+msgid_plural "Remove Engine and {count} _Models ({size})"
+msgstr[0] "엔진과 모델 {count}개 제거(_M) ({size})"
+
+#: src/kikoe/ui/local_engine_group.py:165
+msgid "Kept models work again once the engine is downloaded again."
+msgstr "엔진을 다시 다운로드하면 보관된 모델이 다시 작동합니다."
+
+#: src/kikoe/ui/local_engine_group.py:194
+#, python-brace-format
+msgid "Processor ({name})"
+msgstr "프로세서 ({name})"
+
+#: src/kikoe/ui/local_engine_group.py:201
+msgid "CUDA (NVIDIA)"
+msgstr "CUDA (NVIDIA)"
+
+#: src/kikoe/ui/local_engine_group.py:203
+msgid "Metal (Apple GPU)"
+msgstr "Metal (Apple GPU)"
+
+#: src/kikoe/ui/local_engine_group.py:205
+msgid "Vulkan (Most GPUs)"
+msgstr "Vulkan (대부분의 GPU)"
+
+#: src/kikoe/ui/local_engine_group.py:206
+msgid "CPU Only"
+msgstr "CPU만"
+
+#: src/kikoe/ui/local_engine_group.ui:36
+msgid "Remove Engine…"
+msgstr "엔진 제거…"
+
+#: src/kikoe/ui/local_engine_group.ui:48
+msgid "Acceleration"
+msgstr "가속"
+
+#: src/kikoe/ui/local_engine_group.ui:55
+msgid "Device"
+msgstr "장치"
+
+#: src/kikoe/ui/local_model_list.py:42
+#, python-brace-format
+msgid "Needs {engine}"
+msgstr "{engine} 필요"
+
+#: src/kikoe/ui/local_model_list.py:50
+#, python-brace-format
+msgid "Remove {model}?"
+msgstr "{model}을(를) 제거하시겠습니까?"
+
+#: src/kikoe/ui/local_model_list.py:51
+msgid "You can download it again later."
+msgstr "나중에 다시 다운로드할 수 있습니다."
+
+#: src/kikoe/ui/local_model_list.py:54 src/kikoe/ui/provider_page.py:276
+msgid "_Remove"
+msgstr "제거(_R)"
+
+#: src/kikoe/ui/local_model_list.py:70
+msgid "Adds speakers to models with timestamps"
+msgstr "타임스탬프가 있는 모델에 화자를 추가합니다"
+
+#: src/kikoe/ui/local_model_list.py:76
+#, python-brace-format
+msgid "{count} language"
+msgid_plural "{count} languages"
+msgstr[0] "{count}개 언어"
+
+#: src/kikoe/ui/local_model_list.py:79
+msgid "Multilingual"
+msgstr "다국어"
+
+#: src/kikoe/ui/local_model_list.ui:10 src/kikoe/ui/provider_page.ui:137
+msgid "Models"
+msgstr "모델"
+
+#: src/kikoe/ui/local_model_list.ui:11
+msgid "Larger models are more accurate but slower. Sizes are download sizes."
+msgstr "더 큰 모델은 더 정확하지만 더 느립니다. 크기는 다운로드 크기입니다."
+
+#: src/kikoe/ui/local_models_page.ui:11
+msgid "Local Models"
+msgstr "로컬 모델"
+
+#: src/kikoe/ui/local_models_page.ui:15
+msgid ""
+"Local models transcribe on this device, so your audio never leaves it. "
+"Download an engine and at least one model; after that, transcription also "
+"works offline."
+msgstr ""
+"로컬 모델은 이 장치에서 전사하므로 오디오가 장치를 벗어나지 않습니다. 엔진과 "
+"최소한 하나의 모델을 다운로드하세요. 그 후에는 오프라인에서도 전사가 작동합니"
+"다."
+
+#: src/kikoe/ui/local_models_page.ui:23
+msgid "Not Available on This System"
+msgstr "이 시스템에서 사용할 수 없음"
+
+#: src/kikoe/ui/local_models_page.ui:24
+msgid "No engine build exists for this processor or operating system."
+msgstr "이 프로세서 또는 운영 체제용 엔진 빌드가 없습니다."
 
 #: src/kikoe/ui/model_dialog.py:64 src/kikoe/ui/provider_page.py:115
 #: src/kikoe/ui/provider_page.py:119
@@ -961,12 +1283,12 @@ msgstr "일치하는 노트 없음"
 msgid "No Notes Yet"
 msgstr "아직 노트가 없습니다"
 
-#: src/kikoe/ui/note_view.py:312
+#: src/kikoe/ui/note_view.py:318
 #, python-brace-format
 msgid "{status} · {summary}"
 msgstr "{status} · {summary}"
 
-#: src/kikoe/ui/note_view.py:344
+#: src/kikoe/ui/note_view.py:350
 #, python-brace-format
 msgid "Transcribing… · {model}"
 msgstr "전사 중… · {model}"
@@ -1016,24 +1338,24 @@ msgstr ""
 "타임스탬프 또는 화자가 켜져 있으면 전사 언어 설정을 사용하지 않습니다. 언어"
 "는 자동으로 감지됩니다."
 
-#: src/kikoe/ui/preferences.py:92
+#: src/kikoe/ui/preferences.py:101
 #, python-brace-format
 msgid "{device} (Unavailable)"
 msgstr "{device} (사용 불가)"
 
-#: src/kikoe/ui/preferences.py:96
+#: src/kikoe/ui/preferences.py:105
 msgid "System Default"
 msgstr "시스템 기본값"
 
-#: src/kikoe/ui/preferences.py:132
+#: src/kikoe/ui/preferences.py:141
 msgid "No Default Model"
 msgstr "기본 모델 없음"
 
-#: src/kikoe/ui/preferences.py:215 src/kikoe/ui/preferences.ui:39
+#: src/kikoe/ui/preferences.py:224 src/kikoe/ui/preferences.ui:39
 msgid "Enter a language code such as zh, en, or ja."
 msgstr "zh, en, ja 등의 언어 코드를 입력하세요."
 
-#: src/kikoe/ui/preferences.py:230
+#: src/kikoe/ui/preferences.py:240
 #, python-brace-format
 msgid "{api} API · {count} model"
 msgid_plural "{api} API · {count} models"
@@ -1121,7 +1443,7 @@ msgid ""
 msgstr ""
 "전사는 클라우드에서 처리됩니다. 제공자는 여러 모델을 제공할 수 있습니다."
 
-#: src/kikoe/ui/preferences.ui:129 src/kikoe/ui/window.ui:225
+#: src/kikoe/ui/preferences.ui:129 src/kikoe/ui/window.ui:230
 msgid "_Add Provider"
 msgstr "제공자 추가(_A)"
 
@@ -1137,10 +1459,6 @@ msgstr "“{name}”을 제거할까요?"
 #: src/kikoe/ui/provider_page.py:275
 msgid "Its models and API key will be deleted."
 msgstr "모델과 API 키가 삭제됩니다."
-
-#: src/kikoe/ui/provider_page.py:276
-msgid "_Remove"
-msgstr "제거(_R)"
 
 #: src/kikoe/ui/provider_page.ui:10
 msgid "Add Provider"
@@ -1210,10 +1528,6 @@ msgstr "오디오 형식"
 msgid "Reset Transcription Defaults"
 msgstr "전사 기본값 초기화"
 
-#: src/kikoe/ui/provider_page.ui:137
-msgid "Models"
-msgstr "모델"
-
 #: src/kikoe/ui/provider_page.ui:138
 msgid "What each model can do is set when you add it."
 msgstr "각 모델의 기능은 추가할 때 설정합니다."
@@ -1230,24 +1544,24 @@ msgstr "아직 모델이 없습니다"
 msgid "_Remove Provider"
 msgstr "제공자 제거(_R)"
 
-#: src/kikoe/ui/recording_controller.py:147
+#: src/kikoe/ui/recording_controller.py:151
 msgid "No audio was recorded"
 msgstr "녹음된 오디오가 없습니다"
 
-#: src/kikoe/ui/recording_controller.py:167
+#: src/kikoe/ui/recording_controller.py:171
 #, python-brace-format
 msgid "{provider} {model} · {options}"
 msgstr "{provider} {model} · {options}"
 
-#: src/kikoe/ui/recording_controller.py:179
+#: src/kikoe/ui/recording_controller.py:183
 msgid "Saving recording…"
 msgstr "녹음 저장 중…"
 
-#: src/kikoe/ui/recording_controller.py:187 src/kikoe/ui/tasks.py:59
+#: src/kikoe/ui/recording_controller.py:191 src/kikoe/ui/tasks.py:59
 msgid "An unexpected error occurred. See the local log for details."
 msgstr "예기치 않은 오류가 발생했습니다. 자세한 내용은 로컬 로그를 확인하세요."
 
-#: src/kikoe/ui/recording_controller.py:221
+#: src/kikoe/ui/recording_controller.py:225
 msgid "Recovering recordings…"
 msgstr "녹음 복구 중…"
 
@@ -1409,15 +1723,15 @@ msgstr "창 닫기"
 msgid "Quit"
 msgstr "종료"
 
-#: src/kikoe/ui/sidebar_header.ui:55 src/kikoe/ui/window.ui:272
+#: src/kikoe/ui/sidebar_header.ui:55 src/kikoe/ui/window.ui:288
 msgid "_Preferences"
 msgstr "환경설정(_P)"
 
-#: src/kikoe/ui/sidebar_header.ui:59 src/kikoe/ui/window.ui:276
+#: src/kikoe/ui/sidebar_header.ui:59 src/kikoe/ui/window.ui:292
 msgid "_Keyboard Shortcuts"
 msgstr "키보드 단축키(_K)"
 
-#: src/kikoe/ui/sidebar_header.ui:63 src/kikoe/ui/window.ui:280
+#: src/kikoe/ui/sidebar_header.ui:63 src/kikoe/ui/window.ui:296
 msgid "_About Kikoe"
 msgstr "Kikoe 정보(_A)"
 
@@ -1460,7 +1774,7 @@ msgid "Rename Speaker"
 msgstr "화자 이름 바꾸기"
 
 #: src/kikoe/ui/speaker_row.py:18 src/kikoe/ui/transcript_rows.py:32
-#: src/kikoe/ui/transcript_rows.py:71
+#: src/kikoe/ui/transcript_rows.py:126
 #, python-brace-format
 msgid "Speaker {number}"
 msgstr "화자 {number}"
@@ -1599,28 +1913,28 @@ msgstr "원본 오디오 내보내기…"
 msgid "Delete Recording"
 msgstr "녹음 삭제"
 
-#: src/kikoe/ui/transcription_controller.py:106
+#: src/kikoe/ui/transcription_controller.py:107
 msgid "Import cancelled"
 msgstr "가져오기 취소됨"
 
-#: src/kikoe/ui/transcription_controller.py:140
-#: src/kikoe/ui/transcription_controller.py:284
+#: src/kikoe/ui/transcription_controller.py:141
+#: src/kikoe/ui/transcription_controller.py:285
 msgid "Transcription Failed"
 msgstr "전사 실패"
 
-#: src/kikoe/ui/transcription_controller.py:148
+#: src/kikoe/ui/transcription_controller.py:149
 msgid "Transcription finished"
 msgstr "전사 완료"
 
-#: src/kikoe/ui/transcription_controller.py:168
+#: src/kikoe/ui/transcription_controller.py:169
 msgid "Choose an available file transcription model."
 msgstr "사용 가능한 파일 전사 모델을 선택하세요."
 
-#: src/kikoe/ui/transcription_controller.py:206
+#: src/kikoe/ui/transcription_controller.py:207
 msgid "Re-transcription cancelled"
 msgstr "재전사 취소됨"
 
-#: src/kikoe/ui/transcription_controller.py:211
+#: src/kikoe/ui/transcription_controller.py:212
 #, python-brace-format
 msgid ""
 "{error}\n"
@@ -1631,11 +1945,11 @@ msgstr ""
 "\n"
 "텍스트와 오디오는 보관되었습니다."
 
-#: src/kikoe/ui/transcription_controller.py:212
+#: src/kikoe/ui/transcription_controller.py:213
 msgid "Re-transcription Failed"
 msgstr "재전사 실패"
 
-#: src/kikoe/ui/transcription_controller.py:266
+#: src/kikoe/ui/transcription_controller.py:267
 msgid "Transcription cancelled"
 msgstr "전사 취소됨"
 
@@ -1665,8 +1979,13 @@ msgstr "Kikoe에 오신 것을 환영합니다"
 
 #: src/kikoe/ui/window.ui:222
 msgid ""
-"Kikoe turns speech into text using cloud services. Add a provider and a "
-"model first, then record or import audio."
+"Kikoe turns speech into text with a cloud service or a model on this device. "
+"Add a provider or download a local model first, then record or import audio."
 msgstr ""
-"Kikoe는 클라우드 서비스를 사용해 음성을 텍스트로 바꿉니다. 먼저 제공자와 모델"
-"을 추가한 후 오디오를 녹음하거나 가져오세요."
+"Kikoe는 클라우드 서비스나 이 장치의 모델을 사용하여 음성을 텍스트로 변환합니"
+"다. 먼저 공급자를 추가하거나 로컬 모델을 다운로드한 다음 오디오를 녹음하거나 "
+"가져오세요."
+
+#: src/kikoe/ui/window.ui:241
+msgid "Use a _Local Model…"
+msgstr "로컬 모델 사용(_L)…"

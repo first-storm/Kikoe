@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kikoe 0.1.1\n"
 "Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
-"POT-Creation-Date: 2026-10-15 03:01+1100\n"
+"POT-Creation-Date: 2026-10-16 00:52+1100\n"
 "PO-Revision-Date: 2026-10-15 00:00+0000\n"
 "Last-Translator: Kikoe contributors\n"
 "Language-Team: Traditional Chinese\n"
@@ -14,12 +14,12 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: src/kikoe/application.py:152
+#: src/kikoe/application.py:184
 msgid "Could not open the folder."
 msgstr "無法開啟資料夾。"
 
 #. Translators: replace with your name(s), one per line.
-#: src/kikoe/application.py:177
+#: src/kikoe/application.py:209
 msgid "translator-credits"
 msgstr "Kikoe contributors"
 
@@ -123,17 +123,17 @@ msgid ""
 "The provider rejected realtime transcription. Check the model and API key."
 msgstr "服務商拒絕即時轉錄，請檢查模型和 API 金鑰。"
 
-#: src/kikoe/providers/errors.py:36
+#: src/kikoe/providers/errors.py:37
 #, python-brace-format
 msgid "{host} sent a response Kikoe does not understand."
 msgstr "{host} 傳回了 Kikoe 無法辨識的回應。"
 
-#: src/kikoe/providers/errors.py:59
+#: src/kikoe/providers/errors.py:60
 #, python-brace-format
 msgid "{subject} rejected the API key. Check it in Preferences."
 msgstr "{subject} 拒絕了 API 金鑰，請在偏好設定中檢查。"
 
-#: src/kikoe/providers/errors.py:62
+#: src/kikoe/providers/errors.py:63
 #, python-brace-format
 msgid ""
 "{subject} does not allow this API key to use this model, or is not available "
@@ -142,86 +142,132 @@ msgstr ""
 "{subject} 不允許此 API 金鑰使用該模型，或在你所在的地區無法使用。請檢查帳號和"
 "偏好設定中的金鑰。"
 
-#: src/kikoe/providers/errors.py:66
+#: src/kikoe/providers/errors.py:67
 #, python-brace-format
 msgid "{subject} reports that your account has run out of credits."
 msgstr "{subject} 提示帳號額度已用盡。"
 
-#: src/kikoe/providers/errors.py:68
+#: src/kikoe/providers/errors.py:69
 #, python-brace-format
 msgid "{subject} could not find this model. Check the model name."
 msgstr "{subject} 找不到此模型，請檢查模型名稱。"
 
-#: src/kikoe/providers/errors.py:70
+#: src/kikoe/providers/errors.py:71
 #, python-brace-format
 msgid "{subject} took too long to respond. Try again later."
 msgstr "{subject} 回應逾時，請稍後再試。"
 
-#: src/kikoe/providers/errors.py:72
+#: src/kikoe/providers/errors.py:73
 #, python-brace-format
 msgid "The audio is too large for {subject}."
 msgstr "音訊過大，無法上傳至 {subject}。"
 
-#: src/kikoe/providers/errors.py:75
+#: src/kikoe/providers/errors.py:76
 #, python-brace-format
 msgid ""
 "{subject} is limiting requests, or your quota is used up. Wait a while and "
 "try again, or check your plan."
 msgstr "{subject} 正在限制請求，或你的配額已用盡。請稍後再試，或檢查方案。"
 
-#: src/kikoe/providers/errors.py:79
+#: src/kikoe/providers/errors.py:80
 #, python-brace-format
 msgid "{subject} is having problems (HTTP {status}). Try again later."
 msgstr "{subject} 發生問題（HTTP {status}），請稍後再試。"
 
-#: src/kikoe/providers/errors.py:81
+#: src/kikoe/providers/errors.py:82
 #, python-brace-format
 msgid "{subject} could not process this audio (HTTP {status})."
 msgstr "{subject} 無法處理此音訊（HTTP {status}）。"
 
-#: src/kikoe/providers/errors.py:84
+#: src/kikoe/providers/errors.py:85
 #, python-brace-format
 msgid ""
 "{subject} rejected this request (HTTP {status}). Check the model and options."
 msgstr "{subject} 拒絕了此請求（HTTP {status}），請檢查模型和選項。"
 
-#: src/kikoe/providers/errors.py:87
+#: src/kikoe/providers/errors.py:88
 #, python-brace-format
 msgid "{subject} returned an unexpected error (HTTP {status})."
 msgstr "{subject} 傳回了非預期的錯誤（HTTP {status}）。"
 
-#: src/kikoe/providers/errors.py:92
+#: src/kikoe/providers/errors.py:93
 #, python-brace-format
 msgid "{message} Details: {detail}"
 msgstr "{message} 詳細資訊：{detail}"
 
-#: src/kikoe/providers/errors.py:100
+#: src/kikoe/providers/errors.py:101
 msgid "The provider sent a response Kikoe does not understand."
 msgstr "服務商傳回了 Kikoe 無法辨識的回應。"
 
-#: src/kikoe/providers/errors.py:104
+#: src/kikoe/providers/errors.py:105
 msgid "The provider"
 msgstr "服務商"
 
-#: src/kikoe/providers/errors.py:106
+#: src/kikoe/providers/errors.py:107
 msgid "Could not complete transcription. Check your connection and try again."
 msgstr "無法完成轉錄，請檢查連線後再試。"
 
-#: src/kikoe/providers/errors.py:120 src/kikoe/providers/mistral.py:100
+#: src/kikoe/providers/errors.py:125 src/kikoe/providers/mistral.py:100
 #, python-brace-format
 msgid "{host} took too long to respond. Try again later."
 msgstr "{host} 回應逾時，請稍後再試。"
 
-#: src/kikoe/providers/errors.py:122 src/kikoe/providers/mistral.py:103
+#: src/kikoe/providers/errors.py:127 src/kikoe/providers/mistral.py:103
 #: src/kikoe/providers/mistral.py:146
 #, python-brace-format
 msgid "Could not reach {host}. Try again later."
 msgstr "無法連線至 {host}，請稍後再試。"
 
-#: src/kikoe/providers/errors.py:125
+#: src/kikoe/providers/errors.py:130
 #, python-brace-format
 msgid "{host} could not finish transcription: {message}"
 msgstr "{host} 無法完成轉錄：{message}"
+
+#: src/kikoe/providers/factory.py:77
+msgid "Local models are not available."
+msgstr "本地模型不可用。"
+
+#: src/kikoe/providers/local/client.py:50
+#, python-brace-format
+msgid "“{model}” is no longer downloaded. Download it again in Preferences."
+msgstr "“{model}”已被刪除，請在偏好設定中重新下載。"
+
+#: src/kikoe/providers/local/client.py:97
+msgid "This local model transcribes files only."
+msgstr "此本地模型僅支援檔案轉錄。"
+
+#: src/kikoe/providers/local/connection.py:99
+msgid "The local engine returned an unreadable result."
+msgstr "本地引擎返回了無法讀取的結果。"
+
+#: src/kikoe/providers/local/connection.py:123
+msgid ""
+"The local engine could not start. Try another acceleration option in "
+"Preferences, or download the engine again."
+msgstr "本地引擎無法啟動。請在偏好設定中換一種加速方式，或重新下載引擎。"
+
+#: src/kikoe/providers/local/connection.py:131
+msgid ""
+"The model could not be loaded. It may need more memory than is free, or the "
+"file is damaged; download it again or choose a smaller model."
+msgstr ""
+"無法載入模型。可能可用記憶體不足，或檔案已損壞；請重新下載或選擇更小的模型。"
+
+#: src/kikoe/providers/local/connection.py:137
+msgid "The selected device failed. Choose another device in Preferences."
+msgstr "所選裝置出錯，請在偏好設定中選擇其他裝置。"
+
+#: src/kikoe/providers/local/connection.py:140
+msgid "The local model could not process this audio."
+msgstr "本地模型無法處理此音訊。"
+
+#: src/kikoe/providers/local/connection.py:142
+msgid "Transcription was cancelled."
+msgstr "轉錄已取消。"
+
+#: src/kikoe/providers/local/connection.py:144
+msgid "The local engine failed. See the log for details."
+msgstr "本地引擎出錯，請檢視日誌瞭解詳情。"
 
 #: src/kikoe/providers/mistral_file_stream.py:61
 #: src/kikoe/providers/openai_file_stream.py:66
@@ -261,6 +307,14 @@ msgstr "請選擇檔案轉錄模型以匯入音訊。"
 msgid "The chunk size is too small for this audio format."
 msgstr "此音訊格式的分塊大小設定過小。"
 
+#: src/kikoe/services/local_models.py:111
+msgid "Download the local engine in Preferences to use this model."
+msgstr "請先在偏好設定中下載本地引擎，再使用此模型。"
+
+#: src/kikoe/services/local_models.py:186
+msgid "On This Device"
+msgstr "本機"
+
 #: src/kikoe/storage/audio_files.py:33
 #, python-brace-format
 msgid "Could not copy the audio file into the library: {error}"
@@ -280,70 +334,119 @@ msgstr "無法讀取已儲存的錄音，已保留音訊。（{detail}）"
 msgid "Could not save the recording. ({detail})"
 msgstr "無法儲存錄音。（{detail}）"
 
+#: src/kikoe/storage/downloads.py:46 src/kikoe/storage/downloads.py:78
+msgid "Downloads must use a secure connection."
+msgstr "下載必須使用安全連線。"
+
+#: src/kikoe/storage/downloads.py:62
+#, python-brace-format
+msgid "“{name}” did not match its expected checksum."
+msgstr "“{name}”的校驗值不符。"
+
+#: src/kikoe/storage/downloads.py:68
+#, python-brace-format
+msgid "Could not download “{name}”. Check your internet connection."
+msgstr "無法下載“{name}”，請檢查網路連線。"
+
+#: src/kikoe/storage/downloads.py:82
+#, python-brace-format
+msgid "The download server answered with error {status}."
+msgstr "下載伺服器返回錯誤 {status}。"
+
+#: src/kikoe/storage/downloads.py:100
+msgid "The downloaded file is larger than expected."
+msgstr "下載的檔案比預期大。"
+
+#: src/kikoe/storage/downloads.py:111
+msgid "The download ended early. Try again."
+msgstr "下載意外中斷，請重試。"
+
 #: src/kikoe/storage/library.py:67
 msgid ""
 "The note library was created by a newer version of Kikoe. Update Kikoe to "
 "open it."
 msgstr "筆記資料庫由較新版本的 Kikoe 建立。請更新 Kikoe 後再開啟。"
 
-#: src/kikoe/storage/library.py:182 src/kikoe/storage/library.py:295
-#: src/kikoe/storage/library.py:317
+#: src/kikoe/storage/library.py:182 src/kikoe/storage/library.py:302
+#: src/kikoe/storage/library.py:323
 msgid "This recording no longer exists."
 msgstr "這段錄音已不存在。"
 
-#: src/kikoe/storage/library.py:284
+#: src/kikoe/storage/library.py:288
 msgid "Enter transcript text."
 msgstr "請輸入轉錄文字。"
 
-#: src/kikoe/storage/library.py:286
+#: src/kikoe/storage/library.py:290
 msgid "The end time must be after the start time."
 msgstr "結束時間必須晚於開始時間。"
 
-#: src/kikoe/storage/library.py:301
+#: src/kikoe/storage/library.py:307
 msgid "Enter a speaker name."
 msgstr "請輸入說話者姓名。"
 
-#: src/kikoe/storage/library.py:323
+#: src/kikoe/storage/library.py:329
 msgid "The speaker selection is no longer available."
 msgstr "所選的說話者已無法使用。"
 
-#: src/kikoe/storage/library.py:409
+#: src/kikoe/storage/library.py:415
 #, python-brace-format
 msgid "The note library could not be read or saved: {error}"
 msgstr "無法讀取或儲存筆記資料庫：{error}"
+
+#: src/kikoe/storage/local_installs.py:180
+msgid "Could not finish installing. Check the free disk space."
+msgstr "無法完成安裝，請檢查磁碟剩餘空間。"
+
+#: src/kikoe/storage/local_installs.py:192
+msgid "Could not remove the files. They may be in use."
+msgstr "無法刪除檔案，它們可能正在使用中。"
+
+#: src/kikoe/storage/local_installs.py:210
+#, python-brace-format
+msgid "“{name}” could not be unpacked."
+msgstr "無法解壓“{name}”。"
+
+#: src/kikoe/storage/local_installs.py:221
+msgid "The download contains an unsafe file path."
+msgstr "下載內容包含不安全的檔案路徑。"
+
+#: src/kikoe/storage/local_settings.py:61
+#, python-brace-format
+msgid "Could not save the local model settings: {error}"
+msgstr "無法儲存本地模型設定：{error}"
 
 #: src/kikoe/storage/note_rows.py:27
 msgid "This note no longer exists."
 msgstr "這則筆記已不存在。"
 
-#: src/kikoe/storage/providers.py:52
+#: src/kikoe/storage/providers.py:83 src/kikoe/storage/providers.py:206
 #, python-brace-format
 msgid "Provider {provider_id} no longer exists."
 msgstr "服務商 {provider_id} 已不存在。"
 
-#: src/kikoe/storage/providers.py:147
+#: src/kikoe/storage/providers.py:184
 #, python-brace-format
 msgid "Model {replacing_id} no longer exists."
 msgstr "模型 {replacing_id} 已不存在。"
 
-#: src/kikoe/storage/secrets.py:57
+#: src/kikoe/storage/secrets.py:67
 #, python-brace-format
 msgid ""
 "API keys could not be saved because no secure credential store is available. "
 "Details: {error}"
 msgstr "沒有可用的安全憑證儲存庫，無法儲存 API 金鑰。詳細資訊：{error}"
 
-#: src/kikoe/storage/settings.py:63
+#: src/kikoe/storage/settings.py:64
 #, python-brace-format
 msgid "Could not read the settings file: {error}"
 msgstr "無法讀取設定檔：{error}"
 
-#: src/kikoe/storage/settings.py:75
+#: src/kikoe/storage/settings.py:76
 #, python-brace-format
 msgid "The settings file {detail} is damaged or not understood: {error}"
 msgstr "設定檔 {detail} 已損毀或無法辨識：{error}"
 
-#: src/kikoe/storage/settings.py:100
+#: src/kikoe/storage/settings.py:101
 #, python-brace-format
 msgid "Could not save the settings file: {error}"
 msgstr "無法儲存設定檔：{error}"
@@ -400,14 +503,16 @@ msgid "Import Audio"
 msgstr "匯入音訊"
 
 #: src/kikoe/ui/bottom_bar.ui:104 src/kikoe/ui/sidebar_header.ui:49
-#: src/kikoe/ui/window.ui:266
+#: src/kikoe/ui/window.ui:282
 msgid "_Import Audio…"
 msgstr "匯入音訊…(_I)"
 
 #: src/kikoe/ui/bottom_bar.ui:158 src/kikoe/ui/dialogs.py:66
-#: src/kikoe/ui/export_dialog.ui:21 src/kikoe/ui/model_dialog.ui:21
-#: src/kikoe/ui/note_actions.py:56 src/kikoe/ui/retranscribe_dialog.ui:21
-#: src/kikoe/ui/speaker_dialog.ui:21 src/kikoe/ui/speaker_editor.ui:20
+#: src/kikoe/ui/export_dialog.ui:21 src/kikoe/ui/local_engine_group.py:153
+#: src/kikoe/ui/local_engine_group.ui:27 src/kikoe/ui/local_model_list.py:53
+#: src/kikoe/ui/model_dialog.ui:21 src/kikoe/ui/note_actions.py:56
+#: src/kikoe/ui/retranscribe_dialog.ui:21 src/kikoe/ui/speaker_dialog.ui:21
+#: src/kikoe/ui/speaker_editor.ui:20
 msgid "_Cancel"
 msgstr "取消(_C)"
 
@@ -416,7 +521,7 @@ msgid "_Stop"
 msgstr "停止(_S)"
 
 #: src/kikoe/ui/content_header.ui:14
-#: src/kikoe/ui/transcription_controller.py:323 src/kikoe/ui/window.py:388
+#: src/kikoe/ui/transcription_controller.py:324 src/kikoe/ui/window.py:402
 #: src/kikoe/ui/window.ui:10 src/kikoe/ui/window.ui:37
 #: src/kikoe/ui/window.ui:119 src/kikoe/ui/window.ui:130
 msgid "Kikoe"
@@ -445,31 +550,31 @@ msgid "Display Options"
 msgstr "顯示選項"
 
 #: src/kikoe/ui/content_header.ui:68 src/kikoe/ui/export_dialog.ui:106
-#: src/kikoe/ui/window.ui:288
+#: src/kikoe/ui/window.ui:304
 msgid "Show _Timestamps"
 msgstr "顯示時間戳記(_T)"
 
 #: src/kikoe/ui/content_header.ui:72 src/kikoe/ui/export_dialog.ui:113
-#: src/kikoe/ui/window.ui:292
+#: src/kikoe/ui/window.ui:308
 msgid "Show _Speakers"
 msgstr "顯示說話者(_S)"
 
 #: src/kikoe/ui/content_header.ui:80 src/kikoe/ui/note_sidebar.py:172
-#: src/kikoe/ui/window.ui:300
+#: src/kikoe/ui/window.ui:316
 msgid "_Rename…"
 msgstr "重新命名…(_R)"
 
-#: src/kikoe/ui/content_header.ui:84 src/kikoe/ui/window.ui:304
+#: src/kikoe/ui/content_header.ui:84 src/kikoe/ui/window.ui:320
 msgid "_Copy All Text"
 msgstr "複製所有文字(_C)"
 
 #: src/kikoe/ui/content_header.ui:88 src/kikoe/ui/export_dialog.ui:28
-#: src/kikoe/ui/window.ui:308
+#: src/kikoe/ui/window.ui:324
 msgid "_Export…"
 msgstr "匯出…(_E)"
 
 #: src/kikoe/ui/content_header.ui:94 src/kikoe/ui/note_sidebar.py:174
-#: src/kikoe/ui/window.ui:314
+#: src/kikoe/ui/window.ui:330
 msgid "_Delete Note"
 msgstr "刪除筆記(_D)"
 
@@ -488,6 +593,36 @@ msgstr "繼續編輯(_K)"
 #: src/kikoe/ui/dialogs.py:54
 msgid "_Discard"
 msgstr "捨棄(_D)"
+
+#: src/kikoe/ui/download_row.py:56 src/kikoe/ui/local_engine_group.py:79
+#, python-brace-format
+msgid "Downloading… {received} of {total}"
+msgstr "正在下載… {received} / {total}"
+
+#: src/kikoe/ui/download_row.py:60
+msgid "Downloading…"
+msgstr "正在下載…"
+
+#: src/kikoe/ui/download_row.py:62
+#, python-brace-format
+msgid "Downloaded · {size}"
+msgstr "已下載 · {size}"
+
+#: src/kikoe/ui/download_row.py:64
+msgid "Included with Kikoe"
+msgstr "隨 Kikoe 附帶"
+
+#: src/kikoe/ui/download_row.ui:15
+msgid "Download"
+msgstr "下載"
+
+#: src/kikoe/ui/download_row.ui:27
+msgid "Cancel Download"
+msgstr "取消下載"
+
+#: src/kikoe/ui/download_row.ui:39
+msgid "Remove"
+msgstr "刪除"
 
 #: src/kikoe/ui/export_controller.py:62
 msgid "Copied to clipboard"
@@ -510,7 +645,7 @@ msgid "Audio Files"
 msgstr "音訊檔案"
 
 #: src/kikoe/ui/export_controller.py:99 src/kikoe/ui/speaker_controller.py:56
-#: src/kikoe/ui/transcription_controller.py:160
+#: src/kikoe/ui/transcription_controller.py:161
 msgid "The original audio is not available."
 msgstr "原始音訊無法使用。"
 
@@ -632,12 +767,13 @@ msgstr "已暫停"
 msgid "Recording"
 msgstr "錄音"
 
-#: src/kikoe/ui/labels.py:62
+#: src/kikoe/ui/labels.py:62 src/kikoe/ui/local_model_list.py:84
 msgid "Realtime"
 msgstr "即時"
 
-#: src/kikoe/ui/labels.py:64 src/kikoe/ui/model_dialog.ui:79
-#: src/kikoe/ui/model_dialog.ui:140 src/kikoe/ui/recording_controller.py:164
+#: src/kikoe/ui/labels.py:64 src/kikoe/ui/local_model_list.py:82
+#: src/kikoe/ui/model_dialog.ui:79 src/kikoe/ui/model_dialog.ui:140
+#: src/kikoe/ui/recording_controller.py:168
 msgid "Timestamps"
 msgstr "時間戳記"
 
@@ -645,7 +781,7 @@ msgstr "時間戳記"
 msgid "Word Timestamps"
 msgstr "逐字時間戳記"
 
-#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:166
+#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:170
 msgid "Speakers"
 msgstr "說話者"
 
@@ -653,7 +789,7 @@ msgstr "說話者"
 msgid "Streaming"
 msgstr "串流輸出"
 
-#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:170
+#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:174
 msgid "Text only"
 msgstr "僅文字"
 
@@ -759,9 +895,9 @@ msgstr "正在轉換音訊…"
 msgid "Transcribing… {part} of {parts} chunks complete"
 msgstr "正在轉錄… 已完成 {parts} 個分塊中的 {part} 個"
 
-#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:175
-#: src/kikoe/ui/transcription_controller.py:261
-#: src/kikoe/ui/transcription_controller.py:308
+#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:176
+#: src/kikoe/ui/transcription_controller.py:262
+#: src/kikoe/ui/transcription_controller.py:309
 msgid "Transcribing…"
 msgstr "正在轉錄…"
 
@@ -814,6 +950,185 @@ msgstr "{provider} · {model}"
 #: src/kikoe/ui/level_meter.ui:16
 msgid "Microphone Level"
 msgstr "麥克風音量"
+
+#: src/kikoe/ui/local_engine_group.py:68 src/kikoe/ui/local_engine_group.ui:16
+msgid "_Download"
+msgstr "下載(_D)"
+
+#: src/kikoe/ui/local_engine_group.py:68
+msgid "_Switch"
+msgstr "切換(_S)"
+
+#: src/kikoe/ui/local_engine_group.py:77
+#, python-brace-format
+msgid "Not downloaded · {size}"
+msgstr "未下載 · {size}"
+
+#: src/kikoe/ui/local_engine_group.py:84
+#, python-brace-format
+msgid "Switching downloads {size}"
+msgstr "切換需下載 {size}"
+
+#: src/kikoe/ui/local_engine_group.py:92
+#, python-brace-format
+msgid "Version {version}"
+msgstr "版本 {version}"
+
+#: src/kikoe/ui/local_engine_group.py:94
+#, python-brace-format
+msgid "Included with Kikoe · {version}"
+msgstr "隨 Kikoe 附帶 · {version}"
+
+#: src/kikoe/ui/local_engine_group.py:97
+#, python-brace-format
+msgid "{version} · Starting…"
+msgstr "{version} · 正在啟動…"
+
+#: src/kikoe/ui/local_engine_group.py:99
+#, python-brace-format
+msgid "{version} · Could not start"
+msgstr "{version} · 無法啟動"
+
+#: src/kikoe/ui/local_engine_group.py:100
+#, python-brace-format
+msgid "{version} · Ready"
+msgstr "{version} · 就緒"
+
+#: src/kikoe/ui/local_engine_group.py:112
+msgid "Automatic"
+msgstr "自動"
+
+#: src/kikoe/ui/local_engine_group.py:129
+#, python-brace-format
+msgid ""
+"CUDA needs access to the NVIDIA devices, which Flatpak hides by default. To "
+"allow it, run this command and restart Kikoe:\n"
+"{command}"
+msgstr ""
+"CUDA 需要訪問 NVIDIA 裝置，而 Flatpak 預設會隱藏它們。如需允許，請執行以下命"
+"令並重啟 Kikoe：\n"
+"{command}"
+
+#: src/kikoe/ui/local_engine_group.py:133
+msgid "Needs an NVIDIA graphics card with a current driver."
+msgstr "需要 NVIDIA 顯示卡和較新的驅動。"
+
+#: src/kikoe/ui/local_engine_group.py:150
+#, python-brace-format
+msgid "Remove {engine}?"
+msgstr "刪除 {engine}？"
+
+#: src/kikoe/ui/local_engine_group.py:151
+msgid "Local models cannot be used until the engine is downloaded again."
+msgstr "重新下載引擎前，本地模型將無法使用。"
+
+#: src/kikoe/ui/local_engine_group.py:154
+msgid "_Remove Engine"
+msgstr "刪除引擎(_R)"
+
+#: src/kikoe/ui/local_engine_group.py:159
+#, python-brace-format
+msgid "Remove Engine and {count} _Model ({size})"
+msgid_plural "Remove Engine and {count} _Models ({size})"
+msgstr[0] "刪除引擎和 {count} 個模型(_M)（{size}）"
+
+#: src/kikoe/ui/local_engine_group.py:165
+msgid "Kept models work again once the engine is downloaded again."
+msgstr "保留的模型會在重新下載引擎後恢復可用。"
+
+#: src/kikoe/ui/local_engine_group.py:194
+#, python-brace-format
+msgid "Processor ({name})"
+msgstr "處理器（{name}）"
+
+#: src/kikoe/ui/local_engine_group.py:201
+msgid "CUDA (NVIDIA)"
+msgstr "CUDA（NVIDIA）"
+
+#: src/kikoe/ui/local_engine_group.py:203
+msgid "Metal (Apple GPU)"
+msgstr "Metal（Apple GPU）"
+
+#: src/kikoe/ui/local_engine_group.py:205
+msgid "Vulkan (Most GPUs)"
+msgstr "Vulkan（大多數 GPU）"
+
+#: src/kikoe/ui/local_engine_group.py:206
+msgid "CPU Only"
+msgstr "僅 CPU"
+
+#: src/kikoe/ui/local_engine_group.ui:36
+msgid "Remove Engine…"
+msgstr "刪除引擎…"
+
+#: src/kikoe/ui/local_engine_group.ui:48
+msgid "Acceleration"
+msgstr "推理加速"
+
+#: src/kikoe/ui/local_engine_group.ui:55
+msgid "Device"
+msgstr "裝置"
+
+#: src/kikoe/ui/local_model_list.py:42
+#, python-brace-format
+msgid "Needs {engine}"
+msgstr "需要 {engine}"
+
+#: src/kikoe/ui/local_model_list.py:50
+#, python-brace-format
+msgid "Remove {model}?"
+msgstr "刪除 {model}？"
+
+#: src/kikoe/ui/local_model_list.py:51
+msgid "You can download it again later."
+msgstr "之後可以重新下載。"
+
+#: src/kikoe/ui/local_model_list.py:54 src/kikoe/ui/provider_page.py:276
+msgid "_Remove"
+msgstr "移除(_R)"
+
+#: src/kikoe/ui/local_model_list.py:70
+msgid "Adds speakers to models with timestamps"
+msgstr "為帶時間戳的模型區分說話人"
+
+#: src/kikoe/ui/local_model_list.py:76
+#, python-brace-format
+msgid "{count} language"
+msgid_plural "{count} languages"
+msgstr[0] "{count} 種語言"
+
+#: src/kikoe/ui/local_model_list.py:79
+msgid "Multilingual"
+msgstr "多語言"
+
+#: src/kikoe/ui/local_model_list.ui:10 src/kikoe/ui/provider_page.ui:137
+msgid "Models"
+msgstr "模型"
+
+#: src/kikoe/ui/local_model_list.ui:11
+msgid "Larger models are more accurate but slower. Sizes are download sizes."
+msgstr "模型越大越準確，但速度越慢。大小為下載大小。"
+
+#: src/kikoe/ui/local_models_page.ui:11
+msgid "Local Models"
+msgstr "本地模型"
+
+#: src/kikoe/ui/local_models_page.ui:15
+msgid ""
+"Local models transcribe on this device, so your audio never leaves it. "
+"Download an engine and at least one model; after that, transcription also "
+"works offline."
+msgstr ""
+"本地模型在本機上轉錄，音訊不會離開這臺裝置。下載一個引擎和至少一個模型後，離"
+"線也能轉錄。"
+
+#: src/kikoe/ui/local_models_page.ui:23
+msgid "Not Available on This System"
+msgstr "此係統不可用"
+
+#: src/kikoe/ui/local_models_page.ui:24
+msgid "No engine build exists for this processor or operating system."
+msgstr "沒有適用於此處理器或作業系統的引擎版本。"
 
 #: src/kikoe/ui/model_dialog.py:64 src/kikoe/ui/provider_page.py:115
 #: src/kikoe/ui/provider_page.py:119
@@ -945,12 +1260,12 @@ msgstr "沒有符合的筆記"
 msgid "No Notes Yet"
 msgstr "尚無筆記"
 
-#: src/kikoe/ui/note_view.py:312
+#: src/kikoe/ui/note_view.py:318
 #, python-brace-format
 msgid "{status} · {summary}"
 msgstr "{status} · {summary}"
 
-#: src/kikoe/ui/note_view.py:344
+#: src/kikoe/ui/note_view.py:350
 #, python-brace-format
 msgid "Transcribing… · {model}"
 msgstr "正在轉錄… · {model}"
@@ -998,24 +1313,24 @@ msgid ""
 "The language is detected automatically."
 msgstr "啟用時間戳記或說話者辨識時，轉錄語言設定不生效，語言將自動偵測。"
 
-#: src/kikoe/ui/preferences.py:92
+#: src/kikoe/ui/preferences.py:101
 #, python-brace-format
 msgid "{device} (Unavailable)"
 msgstr "{device}（無法使用）"
 
-#: src/kikoe/ui/preferences.py:96
+#: src/kikoe/ui/preferences.py:105
 msgid "System Default"
 msgstr "系統預設"
 
-#: src/kikoe/ui/preferences.py:132
+#: src/kikoe/ui/preferences.py:141
 msgid "No Default Model"
 msgstr "無預設模型"
 
-#: src/kikoe/ui/preferences.py:215 src/kikoe/ui/preferences.ui:39
+#: src/kikoe/ui/preferences.py:224 src/kikoe/ui/preferences.ui:39
 msgid "Enter a language code such as zh, en, or ja."
 msgstr "請輸入語言代碼，例如 zh、en 或 ja。"
 
-#: src/kikoe/ui/preferences.py:230
+#: src/kikoe/ui/preferences.py:240
 #, python-brace-format
 msgid "{api} API · {count} model"
 msgid_plural "{api} API · {count} models"
@@ -1100,7 +1415,7 @@ msgid ""
 "Transcription happens in the cloud. A provider can offer several models."
 msgstr "轉錄在雲端進行，一個服務商可提供多個模型。"
 
-#: src/kikoe/ui/preferences.ui:129 src/kikoe/ui/window.ui:225
+#: src/kikoe/ui/preferences.ui:129 src/kikoe/ui/window.ui:230
 msgid "_Add Provider"
 msgstr "新增服務商(_A)"
 
@@ -1116,10 +1431,6 @@ msgstr "移除“{name}”？"
 #: src/kikoe/ui/provider_page.py:275
 msgid "Its models and API key will be deleted."
 msgstr "其模型和 API 金鑰將被刪除。"
-
-#: src/kikoe/ui/provider_page.py:276
-msgid "_Remove"
-msgstr "移除(_R)"
 
 #: src/kikoe/ui/provider_page.ui:10
 msgid "Add Provider"
@@ -1186,10 +1497,6 @@ msgstr "音訊格式"
 msgid "Reset Transcription Defaults"
 msgstr "重設轉錄預設值"
 
-#: src/kikoe/ui/provider_page.ui:137
-msgid "Models"
-msgstr "模型"
-
 #: src/kikoe/ui/provider_page.ui:138
 msgid "What each model can do is set when you add it."
 msgstr "每個模型的功能在新增時設定。"
@@ -1206,24 +1513,24 @@ msgstr "尚無模型"
 msgid "_Remove Provider"
 msgstr "移除服務商(_R)"
 
-#: src/kikoe/ui/recording_controller.py:147
+#: src/kikoe/ui/recording_controller.py:151
 msgid "No audio was recorded"
 msgstr "未錄到音訊"
 
-#: src/kikoe/ui/recording_controller.py:167
+#: src/kikoe/ui/recording_controller.py:171
 #, python-brace-format
 msgid "{provider} {model} · {options}"
 msgstr "{provider} {model} · {options}"
 
-#: src/kikoe/ui/recording_controller.py:179
+#: src/kikoe/ui/recording_controller.py:183
 msgid "Saving recording…"
 msgstr "正在儲存錄音…"
 
-#: src/kikoe/ui/recording_controller.py:187 src/kikoe/ui/tasks.py:59
+#: src/kikoe/ui/recording_controller.py:191 src/kikoe/ui/tasks.py:59
 msgid "An unexpected error occurred. See the local log for details."
 msgstr "發生非預期的錯誤，請查看本機記錄檔以瞭解詳情。"
 
-#: src/kikoe/ui/recording_controller.py:221
+#: src/kikoe/ui/recording_controller.py:225
 msgid "Recovering recordings…"
 msgstr "正在復原錄音…"
 
@@ -1382,15 +1689,15 @@ msgstr "關閉視窗"
 msgid "Quit"
 msgstr "結束"
 
-#: src/kikoe/ui/sidebar_header.ui:55 src/kikoe/ui/window.ui:272
+#: src/kikoe/ui/sidebar_header.ui:55 src/kikoe/ui/window.ui:288
 msgid "_Preferences"
 msgstr "偏好設定(_P)"
 
-#: src/kikoe/ui/sidebar_header.ui:59 src/kikoe/ui/window.ui:276
+#: src/kikoe/ui/sidebar_header.ui:59 src/kikoe/ui/window.ui:292
 msgid "_Keyboard Shortcuts"
 msgstr "鍵盤快捷鍵(_K)"
 
-#: src/kikoe/ui/sidebar_header.ui:63 src/kikoe/ui/window.ui:280
+#: src/kikoe/ui/sidebar_header.ui:63 src/kikoe/ui/window.ui:296
 msgid "_About Kikoe"
 msgstr "關於 Kikoe(_A)"
 
@@ -1430,7 +1737,7 @@ msgid "Rename Speaker"
 msgstr "重新命名說話者"
 
 #: src/kikoe/ui/speaker_row.py:18 src/kikoe/ui/transcript_rows.py:32
-#: src/kikoe/ui/transcript_rows.py:71
+#: src/kikoe/ui/transcript_rows.py:126
 #, python-brace-format
 msgid "Speaker {number}"
 msgstr "說話者 {number}"
@@ -1567,28 +1874,28 @@ msgstr "匯出原始音訊…"
 msgid "Delete Recording"
 msgstr "刪除錄音"
 
-#: src/kikoe/ui/transcription_controller.py:106
+#: src/kikoe/ui/transcription_controller.py:107
 msgid "Import cancelled"
 msgstr "已取消匯入"
 
-#: src/kikoe/ui/transcription_controller.py:140
-#: src/kikoe/ui/transcription_controller.py:284
+#: src/kikoe/ui/transcription_controller.py:141
+#: src/kikoe/ui/transcription_controller.py:285
 msgid "Transcription Failed"
 msgstr "轉錄失敗"
 
-#: src/kikoe/ui/transcription_controller.py:148
+#: src/kikoe/ui/transcription_controller.py:149
 msgid "Transcription finished"
 msgstr "轉錄完成"
 
-#: src/kikoe/ui/transcription_controller.py:168
+#: src/kikoe/ui/transcription_controller.py:169
 msgid "Choose an available file transcription model."
 msgstr "請選擇可用的檔案轉錄模型。"
 
-#: src/kikoe/ui/transcription_controller.py:206
+#: src/kikoe/ui/transcription_controller.py:207
 msgid "Re-transcription cancelled"
 msgstr "已取消重新轉錄"
 
-#: src/kikoe/ui/transcription_controller.py:211
+#: src/kikoe/ui/transcription_controller.py:212
 #, python-brace-format
 msgid ""
 "{error}\n"
@@ -1599,11 +1906,11 @@ msgstr ""
 "\n"
 "已保留文字和音訊。"
 
-#: src/kikoe/ui/transcription_controller.py:212
+#: src/kikoe/ui/transcription_controller.py:213
 msgid "Re-transcription Failed"
 msgstr "重新轉錄失敗"
 
-#: src/kikoe/ui/transcription_controller.py:266
+#: src/kikoe/ui/transcription_controller.py:267
 msgid "Transcription cancelled"
 msgstr "已取消轉錄"
 
@@ -1633,7 +1940,12 @@ msgstr "歡迎使用 Kikoe"
 
 #: src/kikoe/ui/window.ui:222
 msgid ""
-"Kikoe turns speech into text using cloud services. Add a provider and a "
-"model first, then record or import audio."
+"Kikoe turns speech into text with a cloud service or a model on this device. "
+"Add a provider or download a local model first, then record or import audio."
 msgstr ""
-"Kikoe 使用雲端服務將語音轉為文字。請先新增服務商和模型，再錄製或匯入音訊。"
+"Kikoe 可使用雲端服務或本機模型將語音轉為文字。請先新增服務商或下載本地模型，"
+"再錄製或匯入音訊。"
+
+#: src/kikoe/ui/window.ui:241
+msgid "Use a _Local Model…"
+msgstr "使用本地模型(_L)…"

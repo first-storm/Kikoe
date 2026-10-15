@@ -1,0 +1,24 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeLocalModelsPage: Adw.PreferencesPage {
+  name: "local-models";
+  title: _("Local Models");
+  icon-name: "computer-symbolic";
+
+  Adw.PreferencesGroup {
+    description: _(
+      "Local models transcribe on this device, so your audio never leaves it. Download an engine and at least one model; after that, transcription also works offline."
+    );
+  }
+
+  Adw.PreferencesGroup unsupported_group {
+    visible: false;
+
+    Adw.ActionRow {
+      title: _("Not Available on This System");
+      subtitle: _("No engine build exists for this processor or operating system.");
+      subtitle-lines: 2;
+    }
+  }
+}

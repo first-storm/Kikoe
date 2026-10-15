@@ -17,7 +17,7 @@ smaller windows adapt rather than removing essential actions.
 | Note | A sidebar item containing one or more recordings in order |
 | Recording | Recorded or imported audio, its retained original and its transcript |
 | Segment | A transcript passage with optional timestamps and a speaker |
-| Provider | A configured cloud service with a name, API type, URL, key and models |
+| Provider | A configured cloud service with a name, API type, URL, key and models, or the built-in On This Device provider of installed local models |
 | Model | A provider's transcription model, with separate file and realtime capabilities |
 
 File capabilities include timestamps, word timestamps, speaker detection and
@@ -144,11 +144,11 @@ selected; invoking it opens the content pane to show progress and Cancel.
 | State | Content and next action |
 | --- | --- |
 | No notes | Sidebar status No Notes Yet with `document-edit-symbolic` |
-| No providers and no notes | Welcome to Kikoe, app icon, explanation of cloud transcription, primary Add Provider |
+| No providers and no notes | Welcome to Kikoe, app icon, explanation of cloud and local transcription, primary Add Provider and secondary Use a Local Model… (opens Preferences → Local Models) |
 | Providers exist, no note selected | No Note Selected, `document-edit-symbolic`, instruction to create a note and primary New Note |
 | Search finds no notes | No Matching Notes with `edit-find-symbolic` |
 
-The welcome message explains that a provider and model are needed before recording
+The welcome message explains that a provider or local model is needed before recording
 or importing. The app icon is reserved for the welcome page. Empty-state primary
 actions may use the standard suggested pill style. The bottom bar stays hidden
 until a note opens.
@@ -307,8 +307,8 @@ use theme colors, and dialog content scrolls at 360 px.
 
 ## Preferences
 
-Preferences uses an approximately 640×600 `Adw.PreferencesDialog` with General
-and Providers pages and standard grouped rows.
+Preferences uses an approximately 640×600 `Adw.PreferencesDialog` with General,
+Providers and Local Models pages and standard grouped rows.
 
 ### General
 
@@ -356,6 +356,36 @@ providers use Add in the header to commit their configuration.
 
 Use stock `Adw.NavigationPage`, `Adw.EntryRow`, `Adw.PasswordEntryRow`,
 `Adw.ComboRow`, `Adw.SpinRow` and `Adw.ButtonRow` controls.
+
+### Local Models
+
+Local models transcribe on this device; nothing is uploaded. An introduction says
+so and that an engine plus at least one model are needed. The page lists:
+
+- **One group per engine** (currently transcribe.cpp), titled with its name. The
+  description shows “Not downloaded · <size>”, download progress, or “Version
+  <version> · Ready”/“Starting…”/“Could not start”. The header holds Download,
+  Cancel, or a Remove Engine… icon button. **Acceleration** chooses the build:
+  Vulkan (Most GPUs), CUDA (NVIDIA), Metal (Apple GPU) or CPU Only, as available
+  for the platform. Vulkan, or Metal on Apple Silicon, is preselected; CUDA never
+  is, because it is about ten times larger. Choosing another build after install
+  turns Download into Switch. **Device** appears once the engine has started and
+  lists Automatic plus the devices it reported. A dimmed note explains CUDA's
+  driver requirement and, in Flatpak, the `flatpak override --user --device=all`
+  command, because the sandbox hides NVIDIA devices by default.
+- **Models**, one row per model with size, languages and Timestamps/Realtime
+  tags, and Download, Cancel or Remove buttons. A downloaded model whose engine
+  is missing says “Needs <engine>”. The speaker detection model is listed here
+  too and adds Speakers to models with timestamps.
+
+Removing an engine asks whether to keep its models; keeping them is the default
+destructive choice, and a second response removes the models as well, with their
+total size. A removed model needs no confirmation beyond its own dialog. On
+macOS the engine is included with Kikoe: it has no Remove button and its
+acceleration cannot change.
+
+Installed models appear in model pickers as “<model> · On This Device”. The
+Providers page does not list this built-in provider and it needs no API key.
 
 ### Add or edit a model
 

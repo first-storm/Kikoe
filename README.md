@@ -7,7 +7,8 @@
 **Your conversations, turned into useful notes.**
 
 Record a meeting, import an interview, or capture a voice memo. Kikoe turns audio
-into searchable, editable notes with cloud speech-to-text services.
+into searchable, editable notes with cloud speech-to-text services or models that
+run on your own computer.
 
 [Get started](#-get-started) · [Transcription tips](#transcription-tips) · [Contribute](#-development)
 
@@ -17,6 +18,7 @@ into searchable, editable notes with cloud speech-to-text services.
 
 - 🎙️ **Record or import** — microphone capture with pause/resume, plus existing audio files.
 - ☁️ **Choose your service** — Deepgram, OpenAI, OpenRouter, Gemini AI Studio, MiMo, Groq, Mistral, or an OpenAI-compatible API.
+- 💻 **Or stay offline** — download Whisper, Fun-ASR, Parakeet or Voxtral models in Preferences → Local Models; they run with [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) on Vulkan, CUDA, Metal or the CPU.
 - 👥 **Follow each voice** — optional timestamps, speaker labels, and matching across recordings.
 - ✏️ **Polish your notes** — edit text and timestamps in place, with Undo/Redo; search titles and transcripts.
 - 📤 **Take them anywhere** — export text, Markdown, SRT, WebVTT, or original audio. Subtitles need timestamps.
@@ -25,7 +27,7 @@ Built with Python 3.14, GTK 4, and libadwaita ≥ 1.8, with adaptive layouts,
 light/dark themes, and Simplified Chinese.
 
 > **Linux first; still in development.** macOS and Windows packaging is planned.
-> Cloud transcription requires a provider API key. Real provider accounts and
+> Cloud transcription requires a provider API key; local models need no account. Real provider accounts and
 > macOS/Windows realtime capture are not yet verified.
 
 ## 📸 A closer look
@@ -84,7 +86,7 @@ uv run scripts/build_ui.py
 uv run kikoe
 ```
 
-1. **Connect a provider.** Add your API key and a model in Preferences.
+1. **Connect a provider.** Add your API key and a model in Preferences, or download a local engine and model under Local Models.
 2. **Start a note.** Record your microphone or import audio with a file model.
 3. **Make it useful.** Review the text, name speakers, and export from the note menu.
 

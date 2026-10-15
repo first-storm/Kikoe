@@ -1,0 +1,536 @@
+{
+  "version": 1,
+  "engine": {
+    "id": "transcribe-cpp",
+    "name": "transcribe.cpp",
+    "version": "0.4.0",
+    "homepage": "https://github.com/handy-computer/transcribe.cpp",
+    "components": [
+      {
+        "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe_cpp-0.4.0-py3-none-any.whl",
+        "sha256": "c6dd091848006c7881d46b4066aa687782f49302c4253c0cb45396976cb0abcd",
+        "size": 47190,
+        "archive": "zip",
+        "target": "python"
+      }
+    ],
+    "builds": [
+      {
+        "id": "linux-x86_64-cpu-vulkan",
+        "os": "linux",
+        "arch": "x86_64",
+        "accelerators": [
+          "vulkan",
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe-native-0.4.0-linux-x86_64-cpu-vulkan.tar.gz",
+            "sha256": "f229adb9018bb7e33042137f92942022a5d76bfc5e16efd7a11cc9b115e86ea2",
+            "size": 22546161,
+            "archive": "tar.gz",
+            "target": "native",
+            "strip": 1
+          }
+        ]
+      },
+      {
+        "id": "linux-x86_64-cuda",
+        "os": "linux",
+        "arch": "x86_64",
+        "accelerators": [
+          "cuda",
+          "vulkan",
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe-native-0.4.0-linux-x86_64-cuda.tar.gz",
+            "sha256": "d74be1db9b088d0bd6ebca8a2ad6522915ae65acfc4036d1c0f4f51c01014557",
+            "size": 203183584,
+            "archive": "tar.gz",
+            "target": "native",
+            "strip": 1
+          }
+        ]
+      },
+      {
+        "id": "linux-arm64-cpu-vulkan",
+        "os": "linux",
+        "arch": "arm64",
+        "accelerators": [
+          "vulkan",
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe-native-0.4.0-linux-aarch64-cpu-vulkan.tar.gz",
+            "sha256": "af7ee108923b74d3e727309ce4992714a25872ea77c6247da8be9a0ed54275dd",
+            "size": 18122209,
+            "archive": "tar.gz",
+            "target": "native",
+            "strip": 1
+          }
+        ]
+      },
+      {
+        "id": "windows-x86_64-cpu-vulkan",
+        "os": "windows",
+        "arch": "x86_64",
+        "accelerators": [
+          "vulkan",
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe-native-0.4.0-windows-x86_64-cpu-vulkan.tar.gz",
+            "sha256": "9d5bd89f720d7979323e73f5220fe50fad5e38a7b0c2525225d453bd09adf2b0",
+            "size": 18036555,
+            "archive": "tar.gz",
+            "target": "native",
+            "strip": 1
+          }
+        ]
+      },
+      {
+        "id": "windows-x86_64-cuda",
+        "os": "windows",
+        "arch": "x86_64",
+        "accelerators": [
+          "cuda",
+          "vulkan",
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe-native-0.4.0-windows-x86_64-cuda.tar.gz",
+            "sha256": "ba54e73f96bb571203ed71257a02379785c0bed8fa5af23b14f40d870d2c6574",
+            "size": 202565383,
+            "archive": "tar.gz",
+            "target": "native",
+            "strip": 1
+          }
+        ]
+      },
+      {
+        "id": "macos-arm64-metal",
+        "os": "macos",
+        "arch": "arm64",
+        "accelerators": [
+          "metal",
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe-native-0.4.0-macos-arm64-metal.tar.gz",
+            "sha256": "eeae15ef08cfbfdd059238765a1a0f790dd39e2f0fdb05bfbb601e183286f6d7",
+            "size": 2475842,
+            "archive": "tar.gz",
+            "target": "native",
+            "strip": 1
+          }
+        ]
+      },
+      {
+        "id": "macos-x86_64-cpu",
+        "os": "macos",
+        "arch": "x86_64",
+        "accelerators": [
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/handy-computer/transcribe.cpp/releases/download/v0.4.0/transcribe-native-0.4.0-macos-x86_64-cpu.tar.gz",
+            "sha256": "e4da34c9cebd8b31ca2c1049296430ff7af1a851db436e23e08d3d66e09b7d0f",
+            "size": 1600612,
+            "archive": "tar.gz",
+            "target": "native",
+            "strip": 1
+          }
+        ]
+      }
+    ]
+  },
+  "models": [
+    {
+      "id": "whisper-tiny",
+      "name": "Whisper Tiny",
+      "family": "Whisper",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/whisper-tiny-gguf/resolve/2678cc66038359b97c8e6fd6454c56fc9006d571/whisper-tiny-Q8_0.gguf",
+        "sha256": "325b9c7997cd1eff81ef709d55766565e71be696130cc3a3d444713798706834",
+        "size": 45981088
+      },
+      "timestamps": true
+    },
+    {
+      "id": "whisper-base",
+      "name": "Whisper Base",
+      "family": "Whisper",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/whisper-base-gguf/resolve/30c1704968f7540e112bab3ea3cc4b274902c360/whisper-base-Q8_0.gguf",
+        "sha256": "81c069428bc8a24551a8169cf31cf09bcfd9d4cf50389ae281323c9aa9648c81",
+        "size": 84962880
+      },
+      "timestamps": true
+    },
+    {
+      "id": "whisper-small",
+      "name": "Whisper Small",
+      "family": "Whisper",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/whisper-small-gguf/resolve/a2073177cb69bd74b9ca9460b852d17fbfd5d68c/whisper-small-Q8_0.gguf",
+        "sha256": "9b9c8811bbcc82a7766f0fb0925614bdacb0923b2cc630daeac17108b655b860",
+        "size": 269751136
+      },
+      "timestamps": true
+    },
+    {
+      "id": "whisper-medium",
+      "name": "Whisper Medium",
+      "family": "Whisper",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/whisper-medium-gguf/resolve/835ad19fff976143d650e35113a6544980cbd983/whisper-medium-Q8_0.gguf",
+        "sha256": "09e6a65e7de377aa5b10bae24608bc6f8ca2ed04b3993ef10d4a02bcd9a82adf",
+        "size": 831538144
+      },
+      "timestamps": true
+    },
+    {
+      "id": "whisper-large-v3-turbo",
+      "name": "Whisper Large v3 Turbo",
+      "family": "Whisper",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/whisper-large-v3-turbo-gguf/resolve/ceea6c8a94a21ab85be244d311e874a39344dbf5/whisper-large-v3-turbo-Q8_0.gguf",
+        "sha256": "b2e30cc286bc9f3aba4db9099fc7403543497c05ce7100d0d83091ddfd25a183",
+        "size": 886381760
+      },
+      "timestamps": true
+    },
+    {
+      "id": "whisper-large-v3",
+      "name": "Whisper Large v3",
+      "family": "Whisper",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/whisper-large-v3-gguf/resolve/b33a05f1459f33b0c876f014a57d51618b77d754/whisper-large-v3-Q5_K_M.gguf",
+        "sha256": "6053d0fd69a0fd48b8fea5ea7a52b9e0cde389343566fa30e453a1b2b258dc38",
+        "size": 1161143008
+      },
+      "timestamps": true
+    },
+    {
+      "id": "fun-asr-nano-2512",
+      "name": "Fun-ASR Nano",
+      "family": "Fun-ASR",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/Fun-ASR-Nano-2512-gguf/resolve/1b60240dda8f895d14b5d5d59a90d1509e27f662/Fun-ASR-Nano-2512-Q8_0.gguf",
+        "sha256": "681caef6df15a2c0e153b40ca7fe4087fdf65751fa5e6fe605d8a75dff969e61",
+        "size": 891270912
+      },
+      "languages": [
+        "en",
+        "ja",
+        "zh"
+      ],
+      "max_seconds": 600
+    },
+    {
+      "id": "fun-asr-mlt-nano-2512",
+      "name": "Fun-ASR Nano Multilingual",
+      "family": "Fun-ASR",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/Fun-ASR-MLT-Nano-2512-gguf/resolve/364640227abd3f786d139ac43b8ac1a98673989d/Fun-ASR-MLT-Nano-2512-Q8_0.gguf",
+        "sha256": "d12476d8d9f2baa0ebf738fa955fa05ed33a654f1567289033a810c45d9d9002",
+        "size": 891271232
+      },
+      "languages": [
+        "ar",
+        "bg",
+        "cs",
+        "da",
+        "el",
+        "en",
+        "et",
+        "fi",
+        "ga",
+        "hi",
+        "hr",
+        "hu",
+        "id",
+        "ja",
+        "ko",
+        "lt",
+        "lv",
+        "ms",
+        "mt",
+        "nl",
+        "pl",
+        "pt",
+        "ro",
+        "sk",
+        "sl",
+        "sv",
+        "th",
+        "tl",
+        "vi",
+        "yue",
+        "zh"
+      ],
+      "max_seconds": 600
+    },
+    {
+      "id": "parakeet-tdt-0.6b-v2",
+      "name": "Parakeet TDT 0.6B v2",
+      "family": "Parakeet",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v2-gguf/resolve/382796e405a9fe37145938dccbabfb25e93e4286/parakeet-tdt-0.6b-v2-Q8_0.gguf",
+        "sha256": "f0d0e99cebb6d3b83f1f7069b82b5d3c2e39a54545b0da039cb4bafd9c4e5caa",
+        "size": 729574912
+      },
+      "languages": [
+        "en"
+      ],
+      "timestamps": true
+    },
+    {
+      "id": "parakeet-tdt-0.6b-v3",
+      "name": "Parakeet TDT 0.6B v3",
+      "family": "Parakeet",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/resolve/90f082450fcbacdb54e5900c44ef697c9ea59622/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+        "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+        "size": 739508576
+      },
+      "languages": [
+        "bg",
+        "cs",
+        "da",
+        "de",
+        "el",
+        "en",
+        "es",
+        "et",
+        "fi",
+        "fr",
+        "hr",
+        "hu",
+        "it",
+        "lt",
+        "lv",
+        "mt",
+        "nl",
+        "pl",
+        "pt",
+        "ro",
+        "ru",
+        "sk",
+        "sl",
+        "sv",
+        "uk"
+      ],
+      "timestamps": true
+    },
+    {
+      "id": "parakeet-unified-en-0.6b",
+      "name": "Parakeet Unified 0.6B (Live)",
+      "family": "Parakeet",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/parakeet-unified-en-0.6b-gguf/resolve/d5249700b2382bf5c5024c2421d101b8db54a629/parakeet-unified-en-0.6b-Q8_0.gguf",
+        "sha256": "4b50b6dd862bf6e346929aaf4f5eaacec003bfa3f56462d6c874b41ef2f38795",
+        "size": 731357568
+      },
+      "languages": [
+        "en"
+      ],
+      "timestamps": true,
+      "streaming": true
+    },
+    {
+      "id": "voxtral-mini-3b-2507",
+      "name": "Voxtral Mini 3B",
+      "family": "Voxtral",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/Voxtral-Mini-3B-2507-gguf/resolve/b9e655d7a09a24394edf457e08651163ad22732d/Voxtral-Mini-3B-2507-Q5_K_M.gguf",
+        "sha256": "9ea2eb85359f7771270715849dc2b0e80381a59dab09d9c5d85352ab9c53f675",
+        "size": 3464182432
+      },
+      "languages": [
+        "de",
+        "en",
+        "es",
+        "fr",
+        "hi",
+        "it",
+        "nl",
+        "pt"
+      ],
+      "max_seconds": 600
+    },
+    {
+      "id": "voxtral-mini-4b-realtime-2602",
+      "name": "Voxtral Mini 4B Realtime",
+      "family": "Voxtral",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/Voxtral-Mini-4B-Realtime-2602-gguf/resolve/65d1c9408859a0ca0f1c11b025ee951486af21d6/Voxtral-Mini-4B-Realtime-2602-Q4_K_M.gguf",
+        "sha256": "39dc1f65539373a406edea7490505822d77c12edff521744678717eef4da4723",
+        "size": 2830493984
+      },
+      "languages": [
+        "ar",
+        "de",
+        "en",
+        "es",
+        "fr",
+        "hi",
+        "it",
+        "ja",
+        "ko",
+        "nl",
+        "pt",
+        "ru",
+        "zh"
+      ],
+      "streaming": true
+    },
+    {
+      "id": "nemotron-speech-streaming-en-0.6b",
+      "name": "Nemotron Speech Streaming EN 0.6B",
+      "family": "Nemotron",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/nemotron-speech-streaming-en-0.6b-gguf/resolve/9789e0ebf77277911272f0d9a35e1646b5aa6004/nemotron-speech-streaming-en-0.6b-Q8_0.gguf",
+        "sha256": "90d8c89714cd31efc88be62a40c6b2bea57e0cc2063af1ffe2c28f1a228ca110",
+        "size": 729650176
+      },
+      "languages": [
+        "en"
+      ],
+      "timestamps": true,
+      "streaming": true
+    },
+    {
+      "id": "qwen3-asr-0.6b",
+      "name": "Qwen3-ASR 0.6B",
+      "family": "Qwen3-ASR",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/Qwen3-ASR-0.6B-gguf/resolve/28c66fba077f1359a42b52c55b618a24cdb6e0e7/Qwen3-ASR-0.6B-Q8_0.gguf",
+        "sha256": "f081b2d5e23bd669d92cc331d722a8a0681943b8e6f34b48996fd5c319b5acd8",
+        "size": 850423456
+      },
+      "languages": [
+        "zh",
+        "en",
+        "yue",
+        "ar",
+        "de",
+        "fr",
+        "es",
+        "pt",
+        "id",
+        "it",
+        "ko",
+        "ru",
+        "th",
+        "vi",
+        "ja",
+        "tr",
+        "hi",
+        "ms",
+        "nl",
+        "sv",
+        "da",
+        "fi",
+        "pl",
+        "cs",
+        "fil",
+        "fa",
+        "el",
+        "ro",
+        "hu",
+        "mk"
+      ],
+      "max_seconds": 600
+    },
+    {
+      "id": "qwen3-asr-1.7b",
+      "name": "Qwen3-ASR 1.7B",
+      "family": "Qwen3-ASR",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/Qwen3-ASR-1.7B-gguf/resolve/3555bd238a8572bbace3ebf60d23b036dc0a5dbe/Qwen3-ASR-1.7B-Q8_0.gguf",
+        "sha256": "9a0d81792dfea2d5f278b8a63deb3ea6e02139ce42c2301f32ea19c4f77526b7",
+        "size": 2185030624
+      },
+      "languages": [
+        "zh",
+        "en",
+        "yue",
+        "ar",
+        "de",
+        "fr",
+        "es",
+        "pt",
+        "id",
+        "it",
+        "ko",
+        "ru",
+        "th",
+        "vi",
+        "ja",
+        "tr",
+        "hi",
+        "ms",
+        "nl",
+        "sv",
+        "da",
+        "fi",
+        "pl",
+        "cs",
+        "fil",
+        "fa",
+        "el",
+        "ro",
+        "hu",
+        "mk"
+      ],
+      "max_seconds": 600
+    },
+    {
+      "id": "cohere-transcribe-03-2026",
+      "name": "Cohere Transcribe 03-2026",
+      "family": "Cohere",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/cohere-transcribe-03-2026-gguf/resolve/ab667acedcb5d8d56837ef3ed3568c3ad50dde47/cohere-transcribe-03-2026-Q8_0.gguf",
+        "sha256": "931916663432fd895423a4291a8400221802b288967ca2d435fc5e3141c9e71e",
+        "size": 2410655232
+      },
+      "languages": [
+        "en",
+        "fr",
+        "de",
+        "es",
+        "it",
+        "pt",
+        "nl",
+        "pl",
+        "el",
+        "ar",
+        "ja",
+        "zh",
+        "vi",
+        "ko"
+      ],
+      "max_seconds": 400,
+      "requires_language": true
+    },
+    {
+      "id": "sortformer-4spk-v2.1",
+      "name": "Sortformer Speaker Detection",
+      "family": "Speaker Detection",
+      "role": "diarize",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/diar_streaming_sortformer_4spk-v2.1-gguf/resolve/ae4afbb5c3d33b71cf2dbf600022b655ee706dd0/diar_streaming_sortformer_4spk-v2.1-Q8_0.gguf",
+        "sha256": "a5dacdc650790266c7a362e54e6bf51952015487edaa606c4e11632bc32442a9",
+        "size": 139310336
+      }
+    }
+  ]
+}

@@ -14,7 +14,7 @@ from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.services.activity import ActivityTracker
 from kikoe.services.errors import USER_FACING_ERRORS
-from kikoe.services.file_transcription import FileTranscriptionWorkflow
+from kikoe.services.file_transcription import ClientFactory, FileTranscriptionWorkflow
 from kikoe.services.importer import ImportStage
 from kikoe.services.playback import Playback
 from kikoe.storage.notes import NoteRepository
@@ -49,6 +49,7 @@ class TranscriptionController:
         playback: Playback,
         speakers: SpeakerController,
         note_view: NoteView,
+        clients: ClientFactory,
     ) -> None:
         self._window = window
         self._host = host
@@ -58,7 +59,7 @@ class TranscriptionController:
         self._bottom_bar = bottom_bar
         self._playback = playback
         self._speakers = speakers
-        self._workflow = FileTranscriptionWorkflow(providers, notes)
+        self._workflow = FileTranscriptionWorkflow(providers, notes, clients)
         self.display = FileTranscriptionDisplay(note_view)
         """The preview of the transcription in progress, if any."""
 

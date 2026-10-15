@@ -20,6 +20,7 @@ from kikoe.core.models import (
     UploadSettings,
 )
 from kikoe.core.preferences import Preferences, WindowState, valid_language, valid_window_state
+from kikoe.core.provider_registry import descriptor
 from kikoe.core.upload import validate_upload
 from kikoe.i18n import _
 from kikoe.paths import config_dir
@@ -163,6 +164,8 @@ def _decode_provider(entry: object) -> Provider:
     fields = _as_dict(entry, "a provider")
     models = _as_list(fields.get("models", []), "models")
     api = ApiKind(fields["api"])
+    if not descriptor(api).configurable:
+        raise ValueError(f"{api.value} providers are built in, not stored")
     return Provider(
         provider_id=str(fields["id"]),
         name=str(fields["name"]),

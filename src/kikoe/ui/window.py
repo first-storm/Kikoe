@@ -14,6 +14,7 @@ from kikoe.i18n import _
 from kikoe.media.player import PlaybackError
 from kikoe.services.activity import ActivityTracker
 from kikoe.services.errors import USER_FACING_ERRORS
+from kikoe.services.file_transcription import ClientFactory
 from kikoe.services.playback import Playback
 from kikoe.storage.notes import ContentChanged, NoteEvent, NoteRepository, SummariesChanged
 from kikoe.storage.preferences import PreferencesRepository
@@ -77,9 +78,11 @@ class Window(Adw.ApplicationWindow):
         preferences: PreferencesRepository,
         window_store: WindowStateStore,
         notes: NoteRepository,
+        clients: ClientFactory,
         window_state: WindowState | None = None,
     ) -> None:
         super().__init__(application=application)
+        self._clients = clients
         self._providers = providers
         self._preferences = preferences
         self._notes = notes
@@ -146,6 +149,7 @@ class Window(Adw.ApplicationWindow):
             playback=self._playback,
             speakers=self._speakers,
             note_view=self.note_view,
+            clients=self._clients,
         )
         self._recorder = RecordingController(
             self,
@@ -159,6 +163,7 @@ class Window(Adw.ApplicationWindow):
             sidebar=self._sidebar,
             note_view=self.note_view,
             transcribe=self._transcribe,
+            clients=self._clients,
         )
         self._note_actions = NoteActions(self, self, notes, self._playback)
 

@@ -3,6 +3,7 @@
 Never build user paths by hand; always go through these helpers.
 """
 
+import sys
 from pathlib import Path
 
 from platformdirs import PlatformDirs
@@ -12,6 +13,14 @@ from kikoe.constants import APP_NAME
 PACKAGE_DIR = Path(__file__).resolve().parent
 
 _dirs = PlatformDirs(appname=APP_NAME, appauthor=False, ensure_exists=False)
+
+
+def bundled_engines_dir() -> Path | None:
+    """Local engines shipped inside a frozen build; None when running from source."""
+    meipass = getattr(sys, "_MEIPASS", None)
+    if not getattr(sys, "frozen", False) or meipass is None:
+        return None
+    return Path(meipass) / "local-engines"
 
 
 def config_dir() -> Path:

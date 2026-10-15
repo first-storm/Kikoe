@@ -1,9 +1,11 @@
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 from helpers import file_caps, open_settings, run_async
 from kikoe.core.models import ApiKind, Capabilities, ModeCapabilities, ModelSpec, Provider
+from kikoe.core.provider_registry import local_provider
 from kikoe.storage.providers import ProviderNotFoundError, ProviderRepository
 from kikoe.storage.settings import Settings, SettingsStore
 
@@ -214,3 +216,46 @@ async def test_provider_edit_keeps_upload_and_models_changed_while_saving_the_ke
     assert updated.upload == upload
     assert updated.models == (model,)
     assert secrets.items[provider.provider_id] == "new-key"
+
+
+class BuiltIn:
+    """A provider source like the local models, changing on demand."""
+
+    def __init__(self) -> None:
+        self.providers: tuple[Provider, ...] = ()
+        self._listeners: list[Callable[[], None]] = []
+
+    def connect_changed(self, listener: Callable[[], None]) -> Callable[[], None]:
+        self._listeners.append(listener)
+        return lambda: self._listeners.remove(listener)
+
+    def change(self, providers: tuple[Provider, ...]) -> None:
+        self.providers = providers
+        for listener in self._listeners:
+            listener()
+
+
+@run_async
+async def test_built_in_providers_are_offered_but_never_stored_or_edited(
+    tmp_path: Path, secrets: FakeSecrets
+) -> None:
+    built_in = BuiltIn()
+    repo = ProviderRepository(open_settings(tmp_path / "settings.json"), secrets, built_in)
+    changes: list[int] = []
+    repo.connect_changed(lambda: changes.append(len(repo.providers)))
+    built_in.change(())
+    assert changes == []  # Nothing is announced before the settings are read.
+    await repo.load()
+    local = local_provider("On This Device", (ModelSpec("tiny", "Tiny", file_caps()),))
+    built_in.change((local,))
+    cloud = await repo.add_provider("Groq", ApiKind.GROQ, URL, "k1")
+    assert repo.providers == (cloud, local)
+    assert repo.configured == (cloud,)
+    assert repo.find(local.provider_id) == local
+    assert await repo.get_api_key(local.provider_id) == ""
+    with pytest.raises(ProviderNotFoundError):
+        await repo.remove_provider(local.provider_id)
+    restarted = ProviderRepository(open_settings(tmp_path / "settings.json"), secrets)
+    await restarted.load()
+    assert restarted.providers == (cloud,)
+    assert changes[:2] == [0, 1]

@@ -1,6 +1,10 @@
 {
   "version": 1,
   "apis": {
+    "local": {
+      "file": { "available": "on", "timestamps": "on", "diarization": "off" },
+      "realtime": { "available": "off", "timestamps": "unsupported", "diarization": "unsupported" }
+    },
     "groq": {
       "file": {
         "available": "on",
