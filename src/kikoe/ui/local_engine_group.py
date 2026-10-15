@@ -3,9 +3,10 @@
 from gi.repository import Adw, GLib, GObject, Gtk
 
 from kikoe.core.local_models import Accelerator, EngineBuild, EngineSpec, InstallStatus
-from kikoe.i18n import _
+from kikoe.i18n import _, ngettext
 from kikoe.services.local_models import LocalModelManager
 from kikoe.ui.guard import Guard
+from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
 
 
@@ -25,8 +26,7 @@ class LocalEngineGroup(Adw.PreferencesGroup):
         self._manager = manager
         self._engine = engine
         self._updating = Guard()
-        assert manager.platform is not None
-        self._builds = engine.builds_for(manager.platform)
+        self._builds = manager.builds(engine)
         self.build_row.set_model(Gtk.StringList.new([build_label(b) for b in self._builds]))
         self.refresh()
 
@@ -35,11 +35,17 @@ class LocalEngineGroup(Adw.PreferencesGroup):
         return self._builds[min(self.build_row.get_selected(), len(self._builds) - 1)]
 
     def refresh(self) -> None:
-        state = self._manager.engine_state(self._engine.engine_id)
+        engine_id = self._engine.engine_id
+        state = self._manager.engine_state(engine_id)
         status = state.status
+        installed = self._manager.installed_build(engine_id)
+        if installed is not None and installed in self._builds:
+            with self._updating:
+                self.build_row.set_selected(self._builds.index(installed))
         self.download_button.set_visible(status is InstallStatus.MISSING)
         self.cancel_button.set_visible(status is InstallStatus.DOWNLOADING)
         self.remove_button.set_visible(status is InstallStatus.INSTALLED)
+        self.build_row.set_sensitive(status is InstallStatus.MISSING)
         size = sum(d.size for d in self._engine.downloads(self.selected_build))
         match status:
             case InstallStatus.MISSING:
@@ -55,15 +61,44 @@ class LocalEngineGroup(Adw.PreferencesGroup):
 
     @Gtk.Template.Callback()
     def _on_download_button_clicked(self, _button: Gtk.Button) -> None:
-        pass
+        build = self.selected_build
+        run_task(self._manager.install_engine(self._engine.engine_id, build.build_id), self)
 
     @Gtk.Template.Callback()
     def _on_cancel_button_clicked(self, _button: Gtk.Button) -> None:
-        pass
+        self._manager.cancel(self._engine.engine_id)
 
     @Gtk.Template.Callback()
     def _on_remove_button_clicked(self, _button: Gtk.Button) -> None:
-        pass
+        models = self._manager.installed_models(self._engine.engine_id)
+        dialog = Adw.AlertDialog(
+            heading=_("Remove {engine}?").format(engine=self._engine.display_name),
+            body=_("Local models cannot be used until the engine is downloaded again."),
+        )
+        dialog.add_response("cancel", _("_Cancel"))
+        dialog.add_response("engine", _("_Remove Engine"))
+        dialog.set_response_appearance("engine", Adw.ResponseAppearance.DESTRUCTIVE)
+        if models:
+            size = GLib.format_size(sum(m.size for m in models))
+            label = ngettext(
+                "Remove Engine and {count} _Model ({size})",
+                "Remove Engine and {count} _Models ({size})",
+                len(models),
+            ).format(count=len(models), size=size)
+            dialog.add_response("all", label)
+            dialog.set_response_appearance("all", Adw.ResponseAppearance.DESTRUCTIVE)
+            dialog.set_body(_("Kept models work again once the engine is downloaded again."))
+        dialog.set_default_response("cancel")
+        dialog.set_close_response("cancel")
+        dialog.connect("response", self._on_remove_response)
+        dialog.present(self)
+
+    def _on_remove_response(self, _dialog: Adw.AlertDialog, response: str) -> None:
+        if response in ("engine", "all"):
+            removal = self._manager.remove_engine(
+                self._engine.engine_id, with_models=response == "all"
+            )
+            run_task(removal, self)
 
     @Gtk.Template.Callback()
     def _on_build_row_notify_selected(self, _row: Adw.ComboRow, _spec: GObject.ParamSpec) -> None:

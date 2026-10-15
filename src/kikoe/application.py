@@ -18,6 +18,7 @@ from kikoe.providers.local.hardware import current_platform
 from kikoe.services.local_models import LocalModelManager
 from kikoe.services.prewarm import prewarm_provider
 from kikoe.storage.library import Library, audio_dir, database_path
+from kikoe.storage.local_installs import LocalInstalls
 from kikoe.storage.model_catalog import load_catalog
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.preferences import PreferencesRepository
@@ -49,7 +50,9 @@ class Application(Adw.Application):
         self.preferences = PreferencesRepository(writer)
         self.window_state = WindowStateStore(writer)
         self.notes = NoteRepository(Library(database_path(), audio_dir()))
-        self.local_models = LocalModelManager(load_local_catalog(), current_platform())
+        self.local_models = LocalModelManager(
+            load_local_catalog(), current_platform(), LocalInstalls(data_dir() / "local")
+        )
         self._add_action("quit", self._on_quit, ["<primary>q"])
         self._add_action("preferences", self._present_preferences, ["<primary>comma"])
         self._add_action("add-provider", partial(self._present_preferences, add_provider=True))
@@ -80,6 +83,7 @@ class Application(Adw.Application):
             )
             run_task(self._load_settings(), window)
             run_task(self.notes.load(), window)
+            run_task(self.local_models.load(), window)
         window.present()
 
     async def _load_settings(self) -> None:
