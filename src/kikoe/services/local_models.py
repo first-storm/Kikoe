@@ -16,6 +16,7 @@ from kikoe.core.local_models import (
     LocalCatalog,
     LocalModelSpec,
     Platform,
+    recommend_build,
 )
 from kikoe.storage.local_installs import EngineReceipt, LocalInstalls
 
@@ -40,10 +41,17 @@ class LocalModelManager:
     """
 
     def __init__(
-        self, catalog: LocalCatalog, platform: Platform | None, installs: LocalInstalls
+        self,
+        catalog: LocalCatalog,
+        platform: Platform | None,
+        installs: LocalInstalls,
+        *,
+        sandboxed: bool = False,
     ) -> None:
         self.catalog = catalog
         self.platform = platform
+        self.sandboxed = sandboxed
+        """Running in Flatpak, where CUDA needs extra device access."""
         self._installs = installs
         self._listeners = Listeners[()]()
         self._engines: dict[str, EngineReceipt] = {}
@@ -86,6 +94,9 @@ class LocalModelManager:
 
     def builds(self, engine: EngineSpec) -> tuple[EngineBuild, ...]:
         return engine.builds_for(self.platform) if self.platform else ()
+
+    def recommended_build(self, engine: EngineSpec) -> EngineBuild | None:
+        return recommend_build(self.builds(engine))
 
     def installed_build(self, engine_id: str) -> EngineBuild | None:
         receipt = self._engines.get(engine_id)

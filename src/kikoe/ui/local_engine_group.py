@@ -2,7 +2,14 @@
 
 from gi.repository import Adw, GLib, GObject, Gtk
 
-from kikoe.core.local_models import Accelerator, EngineBuild, EngineSpec, InstallStatus
+from kikoe.constants import APP_ID
+from kikoe.core.local_models import (
+    Accelerator,
+    EngineBuild,
+    EngineSpec,
+    InstallStatus,
+    needs_device_access,
+)
 from kikoe.i18n import _, ngettext
 from kikoe.services.local_models import LocalModelManager
 from kikoe.ui.guard import Guard
@@ -26,8 +33,13 @@ class LocalEngineGroup(Adw.PreferencesGroup):
         self._manager = manager
         self._engine = engine
         self._updating = Guard()
+        self._shown_installed: EngineBuild | None = None
         self._builds = manager.builds(engine)
         self.build_row.set_model(Gtk.StringList.new([build_label(b) for b in self._builds]))
+        recommended = manager.recommended_build(engine)
+        if recommended is not None:
+            with self._updating:
+                self.build_row.set_selected(self._builds.index(recommended))
         self.refresh()
 
     @property
@@ -39,13 +51,18 @@ class LocalEngineGroup(Adw.PreferencesGroup):
         state = self._manager.engine_state(engine_id)
         status = state.status
         installed = self._manager.installed_build(engine_id)
-        if installed is not None and installed in self._builds:
-            with self._updating:
-                self.build_row.set_selected(self._builds.index(installed))
-        self.download_button.set_visible(status is InstallStatus.MISSING)
+        if installed != self._shown_installed:
+            # Follow a new install, but keep a choice the user is still making.
+            self._shown_installed = installed
+            if installed is not None and installed in self._builds:
+                with self._updating:
+                    self.build_row.set_selected(self._builds.index(installed))
+        switching = installed is not None and self.selected_build != installed
+        self.download_button.set_visible(status is InstallStatus.MISSING or switching)
+        self.download_button.set_label(_("_Switch") if switching else _("_Download"))
         self.cancel_button.set_visible(status is InstallStatus.DOWNLOADING)
-        self.remove_button.set_visible(status is InstallStatus.INSTALLED)
-        self.build_row.set_sensitive(status is InstallStatus.MISSING)
+        self.remove_button.set_visible(status is InstallStatus.INSTALLED and not switching)
+        self.build_row.set_sensitive(status is not InstallStatus.DOWNLOADING)
         size = sum(d.size for d in self._engine.downloads(self.selected_build))
         match status:
             case InstallStatus.MISSING:
@@ -55,9 +72,25 @@ class LocalEngineGroup(Adw.PreferencesGroup):
                     received=GLib.format_size(state.received),
                     total=GLib.format_size(state.total or size),
                 )
+            case InstallStatus.INSTALLED | InstallStatus.BUNDLED if switching:
+                text = _("Switching downloads {size}").format(size=GLib.format_size(size))
             case InstallStatus.INSTALLED | InstallStatus.BUNDLED:
                 text = _("Version {version}").format(version=self._engine.version)
         self.set_description(text)
+        self._show_hint()
+
+    def _show_hint(self) -> None:
+        build = self.selected_build
+        hint = ""
+        if needs_device_access(build, self._manager.sandboxed):
+            hint = _(
+                "CUDA needs access to the NVIDIA devices, which Flatpak hides by default. "
+                "To allow it, run this command and restart Kikoe:\n{command}"
+            ).format(command=f"flatpak override --user --device=all {APP_ID}")
+        elif Accelerator.CUDA in build.accelerators:
+            hint = _("Needs an NVIDIA graphics card with a current driver.")
+        self.hint_label.set_label(hint)
+        self.hint_label.set_visible(bool(hint))
 
     @Gtk.Template.Callback()
     def _on_download_button_clicked(self, _button: Gtk.Button) -> None:

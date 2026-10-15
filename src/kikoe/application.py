@@ -14,7 +14,7 @@ from kikoe.core.preferences import WindowState, default_provider
 from kikoe.i18n import _, is_right_to_left
 from kikoe.paths import data_dir, log_dir
 from kikoe.providers.local.engines import load_catalog as load_local_catalog
-from kikoe.providers.local.hardware import current_platform
+from kikoe.providers.local.hardware import current_platform, in_flatpak
 from kikoe.services.local_models import LocalModelManager
 from kikoe.services.prewarm import prewarm_provider
 from kikoe.storage.library import Library, audio_dir, database_path
@@ -51,7 +51,10 @@ class Application(Adw.Application):
         self.window_state = WindowStateStore(writer)
         self.notes = NoteRepository(Library(database_path(), audio_dir()))
         self.local_models = LocalModelManager(
-            load_local_catalog(), current_platform(), LocalInstalls(data_dir() / "local")
+            load_local_catalog(),
+            current_platform(),
+            LocalInstalls(data_dir() / "local"),
+            sandboxed=in_flatpak(),
         )
         self._add_action("quit", self._on_quit, ["<primary>q"])
         self._add_action("preferences", self._present_preferences, ["<primary>comma"])

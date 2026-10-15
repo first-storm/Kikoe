@@ -10,12 +10,15 @@ from kikoe.core.local_models import (
     Accelerator,
     Architecture,
     ArchiveKind,
+    EngineBuild,
     LocalCatalogError,
     ModelRole,
     OperatingSystem,
     Platform,
     merge_catalogs,
+    needs_device_access,
     parse_engine_catalog,
+    recommend_build,
 )
 from kikoe.providers.local.engines import ENGINES, load_catalog
 
@@ -168,3 +171,52 @@ def test_transcribe_cpp_offers_a_build_for_every_desktop_platform() -> None:
         (OperatingSystem.MACOS, Architecture.X86_64),
     ]:
         assert engine.builds_for(Platform(system, arch)), (system, arch)
+
+
+def _builds(*lanes: tuple[str, tuple[Accelerator, ...]]) -> tuple[EngineBuild, ...]:
+    return tuple(EngineBuild(name, LINUX, accelerators, ()) for name, accelerators in lanes)
+
+
+@pytest.mark.parametrize(
+    ("lanes", "expected"),
+    [
+        (
+            (
+                ("cuda", (Accelerator.CUDA, Accelerator.VULKAN, Accelerator.CPU)),
+                ("vulkan", (Accelerator.VULKAN, Accelerator.CPU)),
+            ),
+            "vulkan",
+        ),
+        ((("metal", (Accelerator.METAL, Accelerator.CPU)),), "metal"),
+        ((("cpu", (Accelerator.CPU,)),), "cpu"),
+        ((("cuda", (Accelerator.CUDA, Accelerator.CPU)),), "cuda"),
+    ],
+)
+def test_the_recommended_build_avoids_cuda_unless_it_is_the_only_one(
+    lanes: tuple[tuple[str, tuple[Accelerator, ...]], ...], expected: str
+) -> None:
+    build = recommend_build(_builds(*lanes))
+    assert build is not None
+    assert build.build_id == expected
+
+
+def test_no_builds_means_no_recommendation() -> None:
+    assert recommend_build(()) is None
+
+
+def test_only_cuda_inside_a_sandbox_needs_device_access() -> None:
+    (cuda, vulkan) = _builds(
+        ("cuda", (Accelerator.CUDA, Accelerator.CPU)),
+        ("vulkan", (Accelerator.VULKAN, Accelerator.CPU)),
+    )
+    assert needs_device_access(cuda, sandboxed=True)
+    assert not needs_device_access(cuda, sandboxed=False)
+    assert not needs_device_access(vulkan, sandboxed=True)
+
+
+def test_the_shipped_catalog_recommends_vulkan_on_linux() -> None:
+    engine = load_catalog().engine("transcribe-cpp")
+    assert engine is not None
+    build = recommend_build(engine.builds_for(LINUX))
+    assert build is not None
+    assert build.build_id == "linux-x86_64-cpu-vulkan"

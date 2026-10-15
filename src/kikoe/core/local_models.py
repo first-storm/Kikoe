@@ -167,6 +167,27 @@ class LocalCatalog:
         return tuple(m for m in self.models if m.engine_id == engine_id)
 
 
+_RECOMMENDED = (Accelerator.METAL, Accelerator.VULKAN, Accelerator.CPU)
+"""Preferred builds before anything is known about the GPU. CUDA is never the default:
+its download is ten times larger and it only helps on NVIDIA cards, while Vulkan also
+runs on them."""
+
+
+def recommend_build(builds: Iterable[EngineBuild]) -> EngineBuild | None:
+    """The build to offer first; the user may still pick another one."""
+    candidates = tuple(builds)
+    for accelerator in _RECOMMENDED:
+        for build in candidates:
+            if accelerator in build.accelerators and Accelerator.CUDA not in build.accelerators:
+                return build
+    return candidates[0] if candidates else None
+
+
+def needs_device_access(build: EngineBuild, sandboxed: bool) -> bool:
+    """Flatpak only exposes NVIDIA's devices after ``flatpak override --device=all``."""
+    return sandboxed and Accelerator.CUDA in build.accelerators
+
+
 def merge_catalogs(parts: Iterable[tuple[EngineSpec, tuple[LocalModelSpec, ...]]]) -> LocalCatalog:
     """Combine per-engine catalogs; model IDs must be unique across engines."""
     engines: list[EngineSpec] = []
