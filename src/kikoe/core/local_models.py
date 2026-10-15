@@ -59,6 +59,39 @@ class ModelRole(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class EngineDevice:
+    """Hardware a running engine reported it can use."""
+
+    device_id: str
+    """Stable across restarts; what preferences store."""
+    kind: str
+    """The engine's backend name, e.g. ``vulkan`` or ``cpu``."""
+    name: str
+
+
+@dataclass(frozen=True, slots=True)
+class EngineProbe:
+    version: str
+    devices: tuple[EngineDevice, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class LocalSettings:
+    """Per-engine choices; an engine without an entry picks its device automatically."""
+
+    devices: tuple[tuple[str, str], ...] = ()
+
+    def device(self, engine_id: str) -> str | None:
+        return dict(self.devices).get(engine_id)
+
+    def with_device(self, engine_id: str, device_id: str | None) -> LocalSettings:
+        devices = {k: v for k, v in self.devices if k != engine_id}
+        if device_id is not None:
+            devices[engine_id] = device_id
+        return LocalSettings(tuple(sorted(devices.items())))
+
+
+@dataclass(frozen=True, slots=True)
 class Platform:
     os: OperatingSystem
     arch: Architecture

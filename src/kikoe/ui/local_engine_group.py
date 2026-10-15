@@ -6,11 +6,14 @@ from kikoe.constants import APP_ID
 from kikoe.core.local_models import (
     Accelerator,
     EngineBuild,
+    EngineDevice,
+    EngineProbe,
     EngineSpec,
     InstallStatus,
     needs_device_access,
 )
 from kikoe.i18n import _, ngettext
+from kikoe.providers.base import TranscriptionError
 from kikoe.services.local_models import LocalModelManager
 from kikoe.ui.guard import Guard
 from kikoe.ui.tasks import run_task
@@ -34,6 +37,8 @@ class LocalEngineGroup(Adw.PreferencesGroup):
         self._engine = engine
         self._updating = Guard()
         self._shown_installed: EngineBuild | None = None
+        self._devices: tuple[str | None, ...] = ()
+        """Device IDs behind the device row, after "Automatic"."""
         self._builds = manager.builds(engine)
         self.build_row.set_model(Gtk.StringList.new([build_label(b) for b in self._builds]))
         recommended = manager.recommended_build(engine)
@@ -75,14 +80,46 @@ class LocalEngineGroup(Adw.PreferencesGroup):
             case InstallStatus.INSTALLED | InstallStatus.BUNDLED if switching:
                 text = _("Switching downloads {size}").format(size=GLib.format_size(size))
             case InstallStatus.INSTALLED | InstallStatus.BUNDLED:
-                text = _("Version {version}").format(version=self._engine.version)
+                text = self._ready_text()
         self.set_description(text)
+        self._show_devices(status in (InstallStatus.INSTALLED, InstallStatus.BUNDLED))
         self._show_hint()
+
+    def _ready_text(self) -> str:
+        version = _("Version {version}").format(version=self._engine.version)
+        probe = self._manager.probe_result(self._engine.engine_id)
+        if probe is None:
+            return _("{version} · Starting…").format(version=version)
+        if isinstance(probe, TranscriptionError):
+            return _("{version} · Could not start").format(version=version)
+        return _("{version} · Ready").format(version=version)
+
+    def _show_devices(self, installed: bool) -> None:
+        engine_id = self._engine.engine_id
+        probe = self._manager.probe_result(engine_id)
+        if installed and probe is None:
+            run_task(self._manager.probe(engine_id), self)
+        if not installed or not isinstance(probe, EngineProbe):
+            self.device_row.set_visible(False)
+            return
+        with self._updating:
+            self._devices = (None, *(d.device_id for d in probe.devices))
+            names = [_("Automatic"), *(device_label(d) for d in probe.devices)]
+            self.device_row.set_model(Gtk.StringList.new(names))
+            saved = self._manager.device(engine_id)
+            self.device_row.set_selected(
+                self._devices.index(saved) if saved in self._devices else 0
+            )
+        self.device_row.set_visible(True)
 
     def _show_hint(self) -> None:
         build = self.selected_build
         hint = ""
-        if needs_device_access(build, self._manager.sandboxed):
+        probe = self._manager.probe_result(self._engine.engine_id)
+        installed = self._manager.installed_build(self._engine.engine_id)
+        if isinstance(probe, TranscriptionError) and build == installed:
+            hint = str(probe)
+        elif needs_device_access(build, self._manager.sandboxed):
             hint = _(
                 "CUDA needs access to the NVIDIA devices, which Flatpak hides by default. "
                 "To allow it, run this command and restart Kikoe:\n{command}"
@@ -141,6 +178,16 @@ class LocalEngineGroup(Adw.PreferencesGroup):
     @Gtk.Template.Callback()
     def _on_device_row_notify_selected(self, _row: Adw.ComboRow, _spec: GObject.ParamSpec) -> None:
         pass
+
+
+_DEVICE_KINDS = {"vulkan": "Vulkan", "cuda": "CUDA", "metal": "Metal", "rocm": "ROCm"}
+
+
+def device_label(device: EngineDevice) -> str:
+    """E.g. “AMD Radeon 880M Graphics (Vulkan)” or “Processor (AMD Ryzen …)”."""
+    if device.kind == "cpu":
+        return _("Processor ({name})").format(name=device.name)
+    return f"{device.name} ({_DEVICE_KINDS.get(device.kind, device.kind)})"
 
 
 def build_label(build: EngineBuild) -> str:

@@ -6,24 +6,40 @@ import time
 from collections.abc import AsyncGenerator, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from pathlib import Path
 
 from kikoe.core.listeners import Listeners
 from kikoe.core.local_models import (
     EngineBuild,
+    EngineProbe,
     EngineSpec,
     InstallState,
     InstallStatus,
     LocalCatalog,
     LocalModelSpec,
+    LocalSettings,
     Platform,
     recommend_build,
 )
+from kikoe.i18n import _
+from kikoe.providers.base import TranscriptionError
+from kikoe.providers.local.connection import EngineConnection
+from kikoe.providers.local.worker_host import WorkerHost, worker_command
 from kikoe.storage.local_installs import EngineReceipt, LocalInstalls
+from kikoe.storage.local_settings import LocalSettingsStore
 
 log = logging.getLogger(__name__)
 
 _PROGRESS_INTERVAL = 0.1
 """Seconds between progress notifications, so a fast download does not flood the UI."""
+
+
+type ConnectionFactory = Callable[[str, Path], EngineConnection]
+
+
+def start_worker(engine_id: str, engine_dir: Path) -> EngineConnection:
+    """A connection whose worker process starts on its first request."""
+    return EngineConnection(WorkerHost(worker_command(engine_id, engine_dir)))
 
 
 @dataclass(slots=True)
@@ -45,8 +61,10 @@ class LocalModelManager:
         catalog: LocalCatalog,
         platform: Platform | None,
         installs: LocalInstalls,
+        settings: LocalSettingsStore,
         *,
         sandboxed: bool = False,
+        connect: ConnectionFactory = start_worker,
     ) -> None:
         self.catalog = catalog
         self.platform = platform
@@ -59,6 +77,12 @@ class LocalModelManager:
         self._jobs: dict[str, _Job] = {}
         """Keyed by engine or model ID; the catalog keeps the two sets of IDs apart."""
         self._last_emit = 0.0
+        self._settings_store = settings
+        self._settings = LocalSettings()
+        self._connect = connect
+        self._connections: dict[str, EngineConnection] = {}
+        self._probes: dict[str, EngineProbe | TranscriptionError] = {}
+        self._probing: set[str] = set()
 
     def connect_changed(self, listener: Callable[[], None]) -> Callable[[], None]:
         return self._listeners.connect(listener)
@@ -67,7 +91,62 @@ class LocalModelManager:
         """Read what is installed and discard leftovers of interrupted downloads."""
         await asyncio.to_thread(self._installs.clean_staging)
         self._engines, self._models = await asyncio.to_thread(self._scan)
+        self._settings = await asyncio.to_thread(self._settings_store.load)
         self._listeners.emit()
+
+    async def close(self) -> None:
+        """Stop every worker, e.g. when the application quits."""
+        for engine_id in tuple(self._connections):
+            await self._disconnect(engine_id)
+
+    def connection(self, engine_id: str) -> EngineConnection:
+        """The worker of an installed engine, started on its first request."""
+        receipt = self._engines.get(engine_id)
+        if receipt is None:
+            raise TranscriptionError(
+                _("Download the local engine in Preferences to use this model.")
+            )
+        connection = self._connections.get(engine_id)
+        if connection is None:
+            connection = self._connect(engine_id, receipt.path)
+            self._connections[engine_id] = connection
+        return connection
+
+    def probe_result(self, engine_id: str) -> EngineProbe | TranscriptionError | None:
+        """What the running engine reported; None until it has been asked."""
+        return self._probes.get(engine_id)
+
+    async def probe(self, engine_id: str) -> None:
+        """Start the engine and ask what it can run on; failures are kept for display."""
+        if engine_id in self._probing or engine_id not in self._engines:
+            return
+        self._probing.add(engine_id)
+        try:
+            result: EngineProbe | TranscriptionError = await self.connection(engine_id).probe()
+        except TranscriptionError as error:
+            result = error
+        finally:
+            self._probing.discard(engine_id)
+        if engine_id in self._engines:
+            self._probes[engine_id] = result
+            self._listeners.emit()
+
+    def device(self, engine_id: str) -> str | None:
+        """The chosen device ID; None picks the fastest one automatically."""
+        return self._settings.device(engine_id)
+
+    async def set_device(self, engine_id: str, device_id: str | None) -> None:
+        settings = self._settings.with_device(engine_id, device_id)
+        await asyncio.to_thread(self._settings_store.save, settings)
+        self._settings = settings
+        self._listeners.emit()
+
+    async def _disconnect(self, engine_id: str) -> None:
+        """A replaced or removed engine must not keep its old library loaded."""
+        self._probes.pop(engine_id, None)
+        connection = self._connections.pop(engine_id, None)
+        if connection is not None:
+            await connection.close()
 
     def _scan(self) -> tuple[dict[str, EngineReceipt], set[str]]:
         engines = {
@@ -132,6 +211,7 @@ class LocalModelManager:
             raise ValueError(f"no build {build_id} of {engine_id} for this computer")
         total = sum(d.size for d in engine.downloads(build))
         async with self._job(engine_id, total) as progress:
+            await self._disconnect(engine_id)
             await self._installs.install_engine(engine, build, progress)
             receipt = await asyncio.to_thread(self._installs.engine_receipt, engine_id)
             if receipt is not None:
@@ -153,6 +233,7 @@ class LocalModelManager:
     async def remove_engine(self, engine_id: str, *, with_models: bool) -> None:
         """Remove the engine; its models stay unless ``with_models`` is set."""
         self.cancel(engine_id)
+        await self._disconnect(engine_id)
         await asyncio.to_thread(self._installs.remove_engine, engine_id)
         self._engines.pop(engine_id, None)
         if with_models:

@@ -121,3 +121,40 @@ def test_api_kind_members_are_named_only_where_allowed() -> None:
     users = {_relative(p) for p in _modules() if _names_api_kind_member(p)}
     assert users - API_KIND_MEMBER_USERS == set(), "new ApiKind user: use the provider registry"
     assert API_KIND_MEMBER_USERS - users == set(), "no longer names a member: remove its entry"
+
+
+ENGINE_PACKAGES = tuple(
+    f"kikoe.providers.local.engines.{p.name}"
+    for p in (SRC / "providers" / "local" / "engines").iterdir()
+    if (p / "__init__.py").exists()
+)
+ENGINE_FREE = {"providers/local/engines/__init__.py", "providers/local/worker_main.py"}
+"""The registry names each engine package and the worker imports adapters by name."""
+
+
+def test_engine_packages_are_used_only_through_the_registry() -> None:
+    found: list[str] = []
+    for path in _modules():
+        relative = _relative(path)
+        if relative.startswith("providers/local/engines/") or relative in ENGINE_FREE:
+            continue
+        found += [
+            f"{relative} imports {name}"
+            for name in _imports(path)
+            if name.startswith(ENGINE_PACKAGES)
+        ]
+    assert found == [], "engines must stay removable: go through the registry and protocol"
+
+
+def test_engine_adapters_only_use_the_worker_side_of_kikoe() -> None:
+    allowed = ("kikoe.providers.local.adapter", "kikoe.providers.local.protocol")
+    found: list[str] = []
+    for path in (SRC / "providers" / "local" / "engines").rglob("*.py"):
+        if path.name == "__init__.py" and path.parent.name == "engines":
+            continue
+        found += [
+            f"{_relative(path)} imports {name}"
+            for name in _imports(path)
+            if name.startswith("kikoe") and not name.startswith(allowed)
+        ]
+    assert found == []

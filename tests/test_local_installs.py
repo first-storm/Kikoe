@@ -18,6 +18,8 @@ from kikoe.core.local_models import (
     ArchiveKind,
     Download,
     EngineBuild,
+    EngineDevice,
+    EngineProbe,
     EngineSpec,
     InstallStatus,
     LocalCatalog,
@@ -26,9 +28,12 @@ from kikoe.core.local_models import (
     OperatingSystem,
     Platform,
 )
+from kikoe.providers.base import TranscriptionError
+from kikoe.providers.local.connection import EngineConnection
 from kikoe.services.local_models import LocalModelManager
 from kikoe.storage.downloads import DownloadError, download
 from kikoe.storage.local_installs import LocalInstalls, safe_member
+from kikoe.storage.local_settings import LocalSettingsStore
 
 LINUX = Platform(OperatingSystem.LINUX, Architecture.X86_64)
 
@@ -79,6 +84,10 @@ class Server:
             return httpx.Response(self.status, content=body)
 
         return httpx.MockTransport(handle)
+
+
+def _settings(tmp_path: Path) -> LocalSettingsStore:
+    return LocalSettingsStore(tmp_path / "local.json")
 
 
 def _ignore(_received: int) -> None:
@@ -167,7 +176,9 @@ def _manager(
     tmp_path: Path, server: Server, models: tuple[LocalModelSpec, ...] = ()
 ) -> LocalModelManager:
     catalog = LocalCatalog((_engine(server),), models)
-    return LocalModelManager(catalog, LINUX, LocalInstalls(tmp_path, server.transport()))
+    return LocalModelManager(
+        catalog, LINUX, LocalInstalls(tmp_path, server.transport()), _settings(tmp_path)
+    )
 
 
 @run_async
@@ -225,7 +236,7 @@ async def test_an_archive_escaping_its_folder_is_not_installed(tmp_path: Path) -
     server = Server()
     catalog = LocalCatalog((_engine(server, _tar({"top/../../evil": b"x"})),))
     manager = LocalModelManager(
-        catalog, LINUX, LocalInstalls(tmp_path / "root", server.transport())
+        catalog, LINUX, LocalInstalls(tmp_path / "root", server.transport()), _settings(tmp_path)
     )
     with pytest.raises(DownloadError):
         await manager.install_engine("engine", "gpu")
@@ -246,6 +257,7 @@ async def test_cancelling_a_download_cleans_up(tmp_path: Path) -> None:
         LocalCatalog((_engine(server),), (model,)),
         LINUX,
         LocalInstalls(tmp_path, httpx.MockTransport(slow)),
+        _settings(tmp_path),
     )
     task = asyncio.create_task(manager.install_model("tiny"))
     await gate.wait()
@@ -316,7 +328,71 @@ def test_engines_without_a_build_for_this_computer_are_hidden(tmp_path: Path) ->
     server = Server()
     other = Platform(OperatingSystem.WINDOWS, Architecture.ARM64)
     manager = LocalModelManager(
-        LocalCatalog((_engine(server),), (_model(server),)), other, LocalInstalls(tmp_path)
+        LocalCatalog((_engine(server),), (_model(server),)),
+        other,
+        LocalInstalls(tmp_path),
+        _settings(tmp_path),
     )
     assert manager.engines == ()
     assert manager.models == ()
+
+
+class FakeConnection(EngineConnection):
+    def __init__(self, result: EngineProbe | TranscriptionError) -> None:
+        self.result = result
+        self.closed = False
+
+    async def probe(self) -> EngineProbe:
+        if isinstance(self.result, TranscriptionError):
+            raise self.result
+        return self.result
+
+    async def close(self) -> None:
+        self.closed = True
+
+
+@run_async
+async def test_probing_keeps_the_devices_or_the_failure(tmp_path: Path) -> None:
+    server = Server()
+    probe = EngineProbe("1.0", (EngineDevice("vulkan:1", "vulkan", "GPU"),))
+    connections: list[FakeConnection] = []
+
+    def connect(_engine_id: str, _folder: Path) -> EngineConnection:
+        connections.append(FakeConnection(probe if not connections else TranscriptionError("x")))
+        return connections[-1]
+
+    manager = LocalModelManager(
+        LocalCatalog((_engine(server),)),
+        LINUX,
+        LocalInstalls(tmp_path, server.transport()),
+        _settings(tmp_path),
+        connect=connect,
+    )
+    await manager.probe("engine")
+    assert manager.probe_result("engine") is None
+    await manager.install_engine("engine", "gpu")
+    await manager.probe("engine")
+    assert manager.probe_result("engine") == probe
+    await manager.install_engine("engine", "cpu")
+    assert connections[0].closed
+    assert manager.probe_result("engine") is None
+    await manager.probe("engine")
+    assert isinstance(manager.probe_result("engine"), TranscriptionError)
+
+
+@run_async
+async def test_the_chosen_device_is_remembered(tmp_path: Path) -> None:
+    server = Server()
+    manager = _manager(tmp_path, server)
+    await manager.load()
+    assert manager.device("engine") is None
+    await manager.set_device("engine", "vulkan:1")
+    restarted = _manager(tmp_path, server)
+    await restarted.load()
+    assert restarted.device("engine") == "vulkan:1"
+
+
+def test_an_engine_that_is_not_installed_has_no_connection(tmp_path: Path) -> None:
+    manager = _manager(tmp_path, Server())
+    with pytest.raises(TranscriptionError):
+        manager.connection("engine")

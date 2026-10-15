@@ -12,13 +12,14 @@ from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 from kikoe.constants import APP_ID, APP_NAME, ISSUE_URL, VERSION, WEBSITE
 from kikoe.core.preferences import WindowState, default_provider
 from kikoe.i18n import _, is_right_to_left
-from kikoe.paths import data_dir, log_dir
+from kikoe.paths import config_dir, data_dir, log_dir
 from kikoe.providers.local.engines import load_catalog as load_local_catalog
 from kikoe.providers.local.hardware import current_platform, in_flatpak
 from kikoe.services.local_models import LocalModelManager
 from kikoe.services.prewarm import prewarm_provider
 from kikoe.storage.library import Library, audio_dir, database_path
 from kikoe.storage.local_installs import LocalInstalls
+from kikoe.storage.local_settings import LocalSettingsStore
 from kikoe.storage.model_catalog import load_catalog
 from kikoe.storage.notes import NoteRepository
 from kikoe.storage.preferences import PreferencesRepository
@@ -54,6 +55,7 @@ class Application(Adw.Application):
             load_local_catalog(),
             current_platform(),
             LocalInstalls(data_dir() / "local"),
+            LocalSettingsStore(config_dir() / "local.json"),
             sandboxed=in_flatpak(),
         )
         self._add_action("quit", self._on_quit, ["<primary>q"])

@@ -1,0 +1,201 @@
+"""transcribe.cpp inside the worker: its Python binding loading the downloaded library.
+
+Install folder layout (from ``catalog.json``)::
+
+    python/transcribe_cpp/...      the pure-Python binding
+    native/libtranscribe.so ...    the native library and its ggml backends
+
+The binding has no type information, so values from it are ``Any`` and are converted
+to plain protocol data right here.
+"""
+
+import array
+import importlib
+import logging
+import os
+import sys
+import threading
+import wave
+from pathlib import Path
+from typing import Any
+
+from kikoe.providers.local.adapter import Emit, EngineAdapter, EngineError
+from kikoe.providers.local.protocol import ErrorKind, Op
+
+log = logging.getLogger(__name__)
+
+SAMPLE_RATE = 16000
+_SCALE = 1 / 32768
+
+
+def create(engine_dir: Path) -> EngineAdapter:
+    """Point the binding at the downloaded library, then import it."""
+    library = engine_dir / "native" / _library_name()
+    if not library.is_file():
+        raise EngineError(ErrorKind.ENGINE, f"missing {library.name}")
+    os.environ["TRANSCRIBE_LIBRARY"] = str(library)
+    sys.path.insert(0, str(engine_dir / "python"))
+    return TranscribeCpp(importlib.import_module("transcribe_cpp"))
+
+
+def _library_name() -> str:
+    if sys.platform == "darwin":
+        return "libtranscribe.dylib"
+    if sys.platform == "win32":
+        return "transcribe.dll"
+    return "libtranscribe.so"
+
+
+def device_key(device: Any) -> str:
+    """Stable across restarts, unlike the binding's process-local index."""
+    return f"{device.kind}:{device.device_id or device.name}"
+
+
+class TranscribeCpp:
+    def __init__(self, binding: Any) -> None:
+        self._t = binding
+        self._loaded: tuple[str, str | None] | None = None
+        self._model: Any = None
+        self._session: Any = None
+        self._lock = threading.Lock()
+        """Guards ``_session`` between the compute thread and ``cancel``."""
+
+    def handle(self, op: Op, args: dict[str, object], emit: Emit) -> dict[str, object]:
+        try:
+            match op:
+                case Op.PROBE:
+                    return self._probe()
+                case Op.TRANSCRIBE:
+                    return self._transcribe(args)
+                case _:
+                    raise EngineError(ErrorKind.PROTOCOL, f"unsupported op {op}")
+        except self._t.TranscribeError as error:
+            raise _failure(self._t, error) from error
+
+    def cancel(self) -> None:
+        with self._lock:
+            if self._session is not None:
+                self._session.cancel()
+
+    def _probe(self) -> dict[str, object]:
+        devices: list[dict[str, object]] = [
+            {"id": device_key(d), "kind": str(d.kind), "name": str(d.description or d.name)}
+            for d in self._t.backends()
+        ]
+        return {"version": str(self._t.native_version()), "devices": devices}
+
+    def _load(self, path: str, device: str | None) -> Any:
+        """Keep the last model loaded; loading a large one takes seconds."""
+        if self._loaded == (path, device) and self._model is not None:
+            return self._model
+        self._unload()
+        chosen = next((d for d in self._t.backends() if device_key(d) == device), None)
+        if device is not None and chosen is None:
+            log.warning("Saved device is not available; choosing automatically")
+        model = self._t.Model(path, device=chosen) if chosen else self._t.Model(path)
+        log.info("Loaded model on %s", model.backend)
+        session = model.session()
+        with self._lock:
+            self._model, self._session = model, session
+        self._loaded = (path, device)
+        return model
+
+    def _unload(self) -> None:
+        with self._lock:
+            session, model = self._session, self._model
+            self._session = self._model = None
+        self._loaded = None
+        if session is not None:
+            session.close()
+        if model is not None:
+            model.close()
+
+    def _transcribe(self, args: dict[str, object]) -> dict[str, object]:
+        model = self._load(_text(args, "model"), _optional(args, "device"))
+        pcm = read_wav(Path(_text(args, "audio")))
+        language = _language(model, _optional(args, "language"))
+        timestamps = "auto" if args.get("timestamps") else "none"
+        try:
+            result = self._session.run(pcm, language=language, timestamps=timestamps)
+        except self._t.OutputTruncated as error:
+            # Kept like a cloud service's best effort: the text so far is still useful.
+            log.warning("Output was truncated: %s", type(error).__name__)
+            result = error.partial_result
+        return {"segments": _segments(result), "language": str(result.language or "")}
+
+
+def read_wav(path: Path) -> array.array[float]:
+    """16 kHz mono 16-bit WAV, as written by Kikoe's upload conversion, as float32."""
+    try:
+        with wave.open(str(path), "rb") as audio:
+            if (audio.getframerate(), audio.getnchannels(), audio.getsampwidth()) != (
+                SAMPLE_RATE,
+                1,
+                2,
+            ):
+                raise EngineError(ErrorKind.AUDIO, "expected 16 kHz mono 16-bit WAV")
+            frames = audio.readframes(audio.getnframes())
+    except (OSError, wave.Error, EOFError) as error:
+        raise EngineError(ErrorKind.AUDIO, f"unreadable audio: {error}") from error
+    samples = array.array("h")
+    samples.frombytes(frames)
+    if sys.byteorder == "big":
+        samples.byteswap()
+    return array.array("f", (s * _SCALE for s in samples))
+
+
+def _segments(result: Any) -> list[dict[str, object]]:
+    timed = result.timestamp_kind not in ("none", "")
+    segments: list[dict[str, object]] = []
+    for segment in result.segments:
+        text = str(segment.text).strip()
+        if not text:
+            continue
+        entry: dict[str, object] = {"text": text}
+        if timed:
+            entry["start_ms"] = int(segment.t0_ms)
+            entry["end_ms"] = int(segment.t1_ms)
+        if segment.speaker_id > 0:
+            entry["speaker"] = int(segment.speaker_id)
+        segments.append(entry)
+    if not segments and str(result.text).strip():
+        segments.append({"text": str(result.text).strip()})
+    return segments
+
+
+def _language(model: Any, tag: str | None) -> str | None:
+    """The primary subtag, if the model knows it; otherwise let the model detect it."""
+    if not tag:
+        return None
+    code = tag.split("-")[0].lower()
+    languages = tuple(model.capabilities.languages)
+    if languages and code not in languages:
+        log.info("Model does not list the language; detecting it instead")
+        return None
+    return code
+
+
+def _failure(binding: Any, error: Exception) -> EngineError:
+    kinds = (
+        (binding.Aborted, ErrorKind.CANCELLED),
+        (binding.InputTooLong, ErrorKind.AUDIO),
+        (binding.InputTooShort, ErrorKind.AUDIO),
+        (binding.ModelFileNotFound, ErrorKind.MODEL),
+        (binding.ModelLoadError, ErrorKind.MODEL),
+        (binding.OutOfMemory, ErrorKind.MODEL),
+        (binding.BackendError, ErrorKind.DEVICE),
+    )
+    kind = next((k for cls, k in kinds if isinstance(error, cls)), ErrorKind.FAILED)
+    return EngineError(kind, f"{type(error).__name__}: {error}")
+
+
+def _text(args: dict[str, object], key: str) -> str:
+    value = args.get(key)
+    if not isinstance(value, str) or not value:
+        raise EngineError(ErrorKind.PROTOCOL, f"{key} must be a string")
+    return value
+
+
+def _optional(args: dict[str, object], key: str) -> str | None:
+    value = args.get(key)
+    return value if isinstance(value, str) and value else None
