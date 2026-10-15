@@ -1,6 +1,7 @@
 """Engine catalogs: validation, merging and per-platform build lookup."""
 
 import copy
+import re
 from collections.abc import Callable
 from typing import Any
 
@@ -16,6 +17,7 @@ from kikoe.core.local_models import (
     OperatingSystem,
     Platform,
     merge_catalogs,
+    model_spec,
     needs_device_access,
     parse_engine_catalog,
     recommend_build,
@@ -220,3 +222,20 @@ def test_the_shipped_catalog_recommends_vulkan_on_linux() -> None:
     build = recommend_build(engine.builds_for(LINUX))
     assert build is not None
     assert build.build_id == "linux-x86_64-cpu-vulkan"
+
+
+def test_shipped_models_are_pinned_to_an_exact_upstream_revision() -> None:
+    for model in load_catalog().models:
+        assert re.search(r"/resolve/[0-9a-f]{40}/", model.file.url), model.model_id
+
+
+def test_the_requested_model_families_are_offered() -> None:
+    families = {m.family for m in load_catalog().models}
+    assert {"Whisper", "Fun-ASR", "Parakeet", "Voxtral"} <= families
+
+
+def test_models_without_timestamps_still_transcribe_files() -> None:
+    spec = model_spec(next(m for m in load_catalog().models if not m.timestamps))
+    assert spec.capabilities.file is not None
+    assert not spec.capabilities.file.timestamps
+    assert spec.capabilities.realtime is None

@@ -162,6 +162,194 @@
         "size": 45981088
       },
       "timestamps": true
+    },
+    {
+      "id": "whisper-base",
+      "name": "Whisper Base",
+      "family": "Whisper",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/whisper-base-gguf/resolve/30c1704968f7540e112bab3ea3cc4b274902c360/whisper-base-Q8_0.gguf",
+        "sha256": "81c069428bc8a24551a8169cf31cf09bcfd9d4cf50389ae281323c9aa9648c81",
+        "size": 84962880
+      },
+      "timestamps": true
+    },
+    {
+      "id": "whisper-small",
+      "name": "Whisper Small",
+      "family": "Whisper",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/whisper-small-gguf/resolve/a2073177cb69bd74b9ca9460b852d17fbfd5d68c/whisper-small-Q8_0.gguf",
+        "sha256": "9b9c8811bbcc82a7766f0fb0925614bdacb0923b2cc630daeac17108b655b860",
+        "size": 269751136
+      },
+      "timestamps": true
+    },
+    {
+      "id": "whisper-medium",
+      "name": "Whisper Medium",
+      "family": "Whisper",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/whisper-medium-gguf/resolve/835ad19fff976143d650e35113a6544980cbd983/whisper-medium-Q8_0.gguf",
+        "sha256": "09e6a65e7de377aa5b10bae24608bc6f8ca2ed04b3993ef10d4a02bcd9a82adf",
+        "size": 831538144
+      },
+      "timestamps": true
+    },
+    {
+      "id": "whisper-large-v3-turbo",
+      "name": "Whisper Large v3 Turbo",
+      "family": "Whisper",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/whisper-large-v3-turbo-gguf/resolve/ceea6c8a94a21ab85be244d311e874a39344dbf5/whisper-large-v3-turbo-Q8_0.gguf",
+        "sha256": "b2e30cc286bc9f3aba4db9099fc7403543497c05ce7100d0d83091ddfd25a183",
+        "size": 886381760
+      },
+      "timestamps": true
+    },
+    {
+      "id": "whisper-large-v3",
+      "name": "Whisper Large v3",
+      "family": "Whisper",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/whisper-large-v3-gguf/resolve/b33a05f1459f33b0c876f014a57d51618b77d754/whisper-large-v3-Q5_K_M.gguf",
+        "sha256": "6053d0fd69a0fd48b8fea5ea7a52b9e0cde389343566fa30e453a1b2b258dc38",
+        "size": 1161143008
+      },
+      "timestamps": true
+    },
+    {
+      "id": "fun-asr-nano-2512",
+      "name": "Fun-ASR Nano",
+      "family": "Fun-ASR",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/Fun-ASR-Nano-2512-gguf/resolve/1b60240dda8f895d14b5d5d59a90d1509e27f662/Fun-ASR-Nano-2512-Q8_0.gguf",
+        "sha256": "681caef6df15a2c0e153b40ca7fe4087fdf65751fa5e6fe605d8a75dff969e61",
+        "size": 891270912
+      },
+      "languages": [
+        "en",
+        "ja",
+        "zh"
+      ],
+      "max_seconds": 600
+    },
+    {
+      "id": "fun-asr-mlt-nano-2512",
+      "name": "Fun-ASR Nano Multilingual",
+      "family": "Fun-ASR",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/Fun-ASR-MLT-Nano-2512-gguf/resolve/364640227abd3f786d139ac43b8ac1a98673989d/Fun-ASR-MLT-Nano-2512-Q8_0.gguf",
+        "sha256": "d12476d8d9f2baa0ebf738fa955fa05ed33a654f1567289033a810c45d9d9002",
+        "size": 891271232
+      },
+      "languages": [
+        "ar",
+        "bg",
+        "cs",
+        "da",
+        "el",
+        "en",
+        "et",
+        "fi",
+        "ga",
+        "hi",
+        "hr",
+        "hu",
+        "id",
+        "ja",
+        "ko",
+        "lt",
+        "lv",
+        "ms",
+        "mt",
+        "nl",
+        "pl",
+        "pt",
+        "ro",
+        "sk",
+        "sl",
+        "sv",
+        "th",
+        "tl",
+        "vi",
+        "yue",
+        "zh"
+      ],
+      "max_seconds": 600
+    },
+    {
+      "id": "parakeet-tdt-0.6b-v2",
+      "name": "Parakeet TDT 0.6B v2",
+      "family": "Parakeet",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v2-gguf/resolve/382796e405a9fe37145938dccbabfb25e93e4286/parakeet-tdt-0.6b-v2-Q8_0.gguf",
+        "sha256": "f0d0e99cebb6d3b83f1f7069b82b5d3c2e39a54545b0da039cb4bafd9c4e5caa",
+        "size": 729574912
+      },
+      "languages": [
+        "en"
+      ],
+      "timestamps": true
+    },
+    {
+      "id": "parakeet-tdt-0.6b-v3",
+      "name": "Parakeet TDT 0.6B v3",
+      "family": "Parakeet",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/parakeet-tdt-0.6b-v3-gguf/resolve/90f082450fcbacdb54e5900c44ef697c9ea59622/parakeet-tdt-0.6b-v3-Q8_0.gguf",
+        "sha256": "5859f77944efcd8eafa23a6350731960b2b55b2203df51f319665c807d802cc7",
+        "size": 739508576
+      },
+      "languages": [
+        "bg",
+        "cs",
+        "da",
+        "de",
+        "el",
+        "en",
+        "es",
+        "et",
+        "fi",
+        "fr",
+        "hr",
+        "hu",
+        "it",
+        "lt",
+        "lv",
+        "mt",
+        "nl",
+        "pl",
+        "pt",
+        "ro",
+        "ru",
+        "sk",
+        "sl",
+        "sv",
+        "uk"
+      ],
+      "timestamps": true
+    },
+    {
+      "id": "voxtral-mini-3b-2507",
+      "name": "Voxtral Mini 3B",
+      "family": "Voxtral",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/Voxtral-Mini-3B-2507-gguf/resolve/b9e655d7a09a24394edf457e08651163ad22732d/Voxtral-Mini-3B-2507-Q5_K_M.gguf",
+        "sha256": "9ea2eb85359f7771270715849dc2b0e80381a59dab09d9c5d85352ab9c53f675",
+        "size": 3464182432
+      },
+      "languages": [
+        "de",
+        "en",
+        "es",
+        "fr",
+        "hi",
+        "it",
+        "nl",
+        "pt"
+      ],
+      "max_seconds": 600
     }
   ]
 }
