@@ -300,6 +300,15 @@ feed, and the realtime service's flushes finish an utterance and start a new
 stream. Speaker detection runs Sortformer over the same file and assigns its turns
 to word times, or to timed segments when words are unavailable.
 
+The transcribe.cpp catalog includes Whisper, Fun-ASR, Parakeet, Voxtral,
+Nemotron Speech Streaming EN 0.6B, Qwen3-ASR 0.6B/1.7B and Cohere Transcribe
+03-2026. Nemotron supports file and realtime transcription with file timestamps;
+Qwen3-ASR and Cohere transcribe files without timestamps. Qwen3-ASR uses a
+conservative 600-second chunk limit; Cohere uses its 400-second input limit.
+Cohere requires an explicit supported language: Automatic and unsupported
+languages fail with a prompt to choose a language before the engine is called.
+Regional language tags use their primary subtag (for example, `en-GB` becomes `en`).
+
 `LocalModelManager` implements `storage.providers.ProviderSource`, so
 `ProviderRepository.providers` includes a built-in “On This Device” provider
 (`ApiKind.LOCAL`, ID `local`) while at least one model and its engine are

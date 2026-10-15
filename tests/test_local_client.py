@@ -7,7 +7,7 @@ import pytest
 
 from helpers import file_caps, run_async
 from kikoe.core.diarization import SpeakerTurn, TimedWord
-from kikoe.core.local_models import Download, LocalModelSpec, ModelRole
+from kikoe.core.local_models import Download, LocalModelSpec, ModelRole, model_spec
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.upload import WAV
 from kikoe.providers.base import TranscriptionError, TranscriptionOptions
@@ -17,8 +17,10 @@ from kikoe.providers.local.connection import (
     EngineTranscript,
     transcription_error,
 )
+from kikoe.providers.local.engines import load_catalog
 from kikoe.providers.local.protocol import ErrorKind
-from kikoe.providers.local.worker_host import WorkerError
+from kikoe.providers.local.session import LocalSession
+from kikoe.providers.local.worker_host import WorkerError, WorkerHost
 
 SPEC = LocalModelSpec(
     "tiny",
@@ -173,3 +175,98 @@ async def test_no_speaker_pass_runs_unless_requested() -> None:
         Path("/tmp/a.wav"), MODEL, TranscriptionOptions(diarization=False)
     )
     assert runtime.engine.diarized is None
+
+
+class CatalogRuntime(FakeRuntime):
+    """Resolve shipped models without downloading files or starting a worker."""
+
+    def installed_model(self, model_id: str) -> tuple[LocalModelSpec, Path] | None:
+        model = load_catalog().model(model_id)
+        return (model, Path("models") / model.file.filename) if model else None
+
+
+@pytest.mark.parametrize("language", [None, "ru", "ru-RU"])
+@run_async
+async def test_cohere_rejects_invalid_language_before_connecting(
+    language: str | None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    runtime = CatalogRuntime()
+
+    def unexpected_connection(engine_id: str) -> EngineConnection:
+        pytest.fail("Language must be validated before connecting to the worker")
+
+    monkeypatch.setattr(runtime, "connection", unexpected_connection)
+    spec = load_catalog().model("cohere-transcribe-03-2026")
+    assert spec is not None
+    with pytest.raises(TranscriptionError, match=r"[Ll]anguage"):
+        await LocalClient(runtime).transcribe_file(
+            Path("audio.wav"), model_spec(spec), TranscriptionOptions(language=language)
+        )
+    assert runtime.engine.calls == []
+
+
+@pytest.mark.parametrize(
+    ("model_id", "language", "sent_language", "timestamps"),
+    [
+        ("cohere-transcribe-03-2026", "en-GB", "en", False),
+        ("cohere-transcribe-03-2026", "zh-Hans", "zh", False),
+        ("qwen3-asr-0.6b", None, None, False),
+        ("qwen3-asr-1.7b", "zh", "zh", False),
+        ("nemotron-speech-streaming-en-0.6b", "en", "en", True),
+    ],
+)
+@run_async
+async def test_shipped_models_route_file_requests_with_their_capabilities(
+    model_id: str, language: str | None, sent_language: str | None, timestamps: bool
+) -> None:
+    runtime = CatalogRuntime()
+    spec = load_catalog().model(model_id)
+    assert spec is not None
+    await LocalClient(runtime).transcribe_file(
+        Path("audio.wav"), model_spec(spec), TranscriptionOptions(language=language)
+    )
+    assert runtime.engine.calls == [
+        {
+            "model": Path("models") / spec.file.filename,
+            "audio": Path("audio.wav"),
+            "device": "vulkan:1",
+            "language": sent_language,
+            "ts": timestamps,
+        }
+    ]
+
+
+@pytest.mark.parametrize(
+    ("model_id", "seconds"),
+    [("cohere-transcribe-03-2026", 400), ("qwen3-asr-0.6b", 600), ("qwen3-asr-1.7b", 600)],
+)
+def test_shipped_models_split_long_files_at_their_configured_limit(
+    model_id: str, seconds: int
+) -> None:
+    spec = load_catalog().model(model_id)
+    assert spec is not None
+    limits = LocalClient(CatalogRuntime()).upload_limits(model_spec(spec), TranscriptionOptions())
+    assert limits.format == WAV
+    assert limits.duration == timedelta(seconds=seconds)
+
+
+@run_async
+async def test_nemotron_routes_live_requests_to_the_same_model_and_device(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime = CatalogRuntime()
+    calls: list[tuple[Path, str | None, str | None]] = []
+    session = LocalSession(WorkerHost([]))
+
+    async def open_stream(model: Path, *, device: str | None, language: str | None) -> LocalSession:
+        calls.append((model, device, language))
+        return session
+
+    monkeypatch.setattr(runtime.engine, "open_stream", open_stream)
+    spec = load_catalog().model("nemotron-speech-streaming-en-0.6b")
+    assert spec is not None
+    result = await LocalClient(runtime).open_realtime(
+        model_spec(spec), TranscriptionOptions(language="en")
+    )
+    assert result is session
+    assert calls == [(Path("models") / spec.file.filename, "vulkan:1", "en")]

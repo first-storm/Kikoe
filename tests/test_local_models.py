@@ -13,10 +13,13 @@ from kikoe.core.local_models import (
     ArchiveKind,
     EngineBuild,
     LocalCatalogError,
+    MissingModelLanguageError,
     ModelRole,
     OperatingSystem,
     Platform,
+    UnsupportedModelLanguageError,
     merge_catalogs,
+    model_language,
     model_spec,
     needs_device_access,
     parse_engine_catalog,
@@ -134,6 +137,7 @@ BREAKAGES: dict[str, Callable[[dict[str, Any]], None]] = {
     "archive-model": lambda d: _model(d)["file"].update(archive="zip"),
     "no-name": lambda d: _model(d)["file"].update(url="https://example.test/models/"),
     "id": lambda d: _model(d).update(id="Bad ID"),
+    "required-language-flag": lambda d: _model(d).update(requires_language="yes"),
     "flag": lambda d: _model(d).update(timestamps="yes"),
 }
 
@@ -246,3 +250,68 @@ def test_streaming_models_transcribe_while_recording() -> None:
     assert {m.family for m in live} >= {"Parakeet", "Voxtral"}
     for model in live:
         assert model_spec(model).capabilities.realtime is not None
+
+
+@pytest.mark.parametrize(
+    ("model_id", "family", "timestamps", "streaming", "seconds", "requires_language"),
+    [
+        ("parakeet-tdt-0.6b-v2", "Parakeet", True, False, None, False),
+        ("parakeet-tdt-0.6b-v3", "Parakeet", True, False, None, False),
+        ("parakeet-unified-en-0.6b", "Parakeet", True, True, None, False),
+        ("nemotron-speech-streaming-en-0.6b", "Nemotron", True, True, None, False),
+        ("qwen3-asr-0.6b", "Qwen3-ASR", False, False, 600, False),
+        ("qwen3-asr-1.7b", "Qwen3-ASR", False, False, 600, False),
+        ("cohere-transcribe-03-2026", "Cohere", False, False, 400, True),
+    ],
+)
+def test_representative_models_expose_only_supported_capabilities(
+    model_id: str,
+    family: str,
+    timestamps: bool,
+    streaming: bool,
+    seconds: int | None,
+    requires_language: bool,
+) -> None:
+    model = load_catalog().model(model_id)
+    assert model is not None
+    assert model.engine_id == "transcribe-cpp"
+    assert model.family == family
+    assert model.timestamps is timestamps
+    assert model.streaming is streaming
+    assert model.max_seconds == seconds
+    assert model.requires_language is requires_language
+    assert model.file.filename.endswith("-Q8_0.gguf")
+    spec = model_spec(model, speakers=True)
+    assert spec.capabilities.file is not None
+    assert spec.capabilities.file.timestamps is timestamps
+    assert spec.capabilities.file.diarization is timestamps
+    assert (spec.capabilities.realtime is not None) is streaming
+
+
+@pytest.mark.parametrize("language", [None, "", "ru", "ru-RU"])
+def test_models_requiring_language_refuse_missing_or_unsupported_hints(
+    language: str | None,
+) -> None:
+    model = load_catalog().model("cohere-transcribe-03-2026")
+    assert model is not None
+    error = MissingModelLanguageError if not language else UnsupportedModelLanguageError
+    with pytest.raises(error):
+        model_language(model, language)
+
+
+@pytest.mark.parametrize(
+    ("language", "expected"), [("en-GB", "en"), ("ZH-Hans", "zh"), ("ja", "ja")]
+)
+def test_required_language_hints_use_supported_primary_subtags(
+    language: str, expected: str
+) -> None:
+    model = load_catalog().model("cohere-transcribe-03-2026")
+    assert model is not None
+    assert model_language(model, language) == expected
+
+
+@pytest.mark.parametrize("language", [None, "en-GB", "xx"])
+def test_optional_language_hints_keep_the_existing_engine_fallback(language: str | None) -> None:
+    model = load_catalog().model("qwen3-asr-0.6b")
+    assert model is not None
+    assert model_language(model, language) == language

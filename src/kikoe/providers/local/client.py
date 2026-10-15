@@ -9,7 +9,12 @@ from pathlib import Path
 from typing import Protocol
 
 from kikoe.core.diarization import assign_speakers
-from kikoe.core.local_models import LocalModelSpec
+from kikoe.core.local_models import (
+    LocalModelSpec,
+    MissingModelLanguageError,
+    UnsupportedModelLanguageError,
+    model_language,
+)
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.transcription import RealtimeProfile
 from kikoe.core.upload import WAV, UploadLimits
@@ -70,6 +75,7 @@ class LocalClient:
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         spec, path = self._model(model)
+        language = _language(spec, options.language)
         engine = spec.engine_id
         connection = self._runtime.connection(engine)
         device = self._runtime.device(engine)
@@ -80,7 +86,7 @@ class LocalClient:
             path,
             audio,
             device=device,
-            language=options.language,
+            language=language,
             timestamps=(options.timestamps or speakers) and spec.timestamps,
             words=speakers,
         )
@@ -99,3 +105,20 @@ class LocalClient:
         return await connection.open_stream(
             path, device=self._runtime.device(spec.engine_id), language=options.language
         )
+
+
+def _language(spec: LocalModelSpec, language: str | None) -> str | None:
+    try:
+        return model_language(spec, language)
+    except MissingModelLanguageError as error:
+        raise TranscriptionError(
+            _("Select a language before transcribing with “{model}”.").format(
+                model=spec.display_name
+            )
+        ) from error
+    except UnsupportedModelLanguageError as error:
+        raise TranscriptionError(
+            _("“{model}” does not support the selected language. Choose another language.").format(
+                model=spec.display_name
+            )
+        ) from error

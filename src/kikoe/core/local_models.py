@@ -25,6 +25,14 @@ class LocalCatalogError(ValueError):
     """A bundled engine catalog is malformed; a packaging bug, not a user error."""
 
 
+class MissingModelLanguageError(ValueError):
+    """A model needs an explicit language to decode speech correctly."""
+
+
+class UnsupportedModelLanguageError(ValueError):
+    """A model cannot decode the requested language."""
+
+
 class OperatingSystem(StrEnum):
     LINUX = "linux"
     MACOS = "macos"
@@ -181,6 +189,8 @@ class LocalModelSpec:
     """Text can appear while recording."""
     max_seconds: int | None = None
     """Longest audio one request may hold; longer files are split at pauses."""
+    requires_language: bool = False
+    """Automatic language detection is unavailable; an explicit language is required."""
 
     @property
     def size(self) -> int:
@@ -218,6 +228,18 @@ def model_spec(model: LocalModelSpec, *, speakers: bool = False) -> ModelSpec:
             realtime=ModeCapabilities() if model.streaming else None,
         ),
     )
+
+
+def model_language(model: LocalModelSpec, language: str | None) -> str | None:
+    """Validate mandatory language hints without changing auto-detecting models."""
+    if not model.requires_language:
+        return language
+    if not language:
+        raise MissingModelLanguageError("Select a language before using this model.")
+    code = language.split("-")[0].lower()
+    if code not in model.languages:
+        raise UnsupportedModelLanguageError("This model does not support the selected language.")
+    return code
 
 
 _RECOMMENDED = (Accelerator.METAL, Accelerator.VULKAN, Accelerator.CPU)
@@ -324,6 +346,7 @@ def _model(entry: Mapping[str, object], engine_id: str) -> LocalModelSpec:
         timestamps=_flag(entry, "timestamps"),
         streaming=_flag(entry, "streaming"),
         max_seconds=max_seconds,
+        requires_language=_flag(entry, "requires_language"),
     )
 
 
