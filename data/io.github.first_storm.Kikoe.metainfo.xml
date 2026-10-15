@@ -44,6 +44,19 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.3.0" date="2026-10-16">
+      <description>
+        <p>Transcribe on your own device with local models.</p>
+        <ul>
+          <li>Download, verify and manage local transcription engines and models in Preferences.</li>
+          <li>Transcribe files with Whisper, Fun-ASR, Parakeet, Voxtral, Nemotron, Qwen3-ASR and Cohere models.</li>
+          <li>Transcribe while recording with supported streaming models and identify speakers with Sortformer.</li>
+          <li>Choose a processing device and get a recommended hardware acceleration build.</li>
+          <li>Set up a local model from the welcome page, with translated interface strings.</li>
+          <li>Use the bundled transcribe.cpp engine on macOS.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.1" date="2026-10-15">
       <description>
         <p>Faster startup and smoother editing of long transcripts.</p>

@@ -1,6 +1,6 @@
 [project]
 name = "kikoe"
-version = "0.2.1"
+version = "0.3.0"
 description = "Turn speech into text notes with cloud transcription services."
 readme = "README.md"
 license = "GPL-3.0-or-later"
