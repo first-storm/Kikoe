@@ -3,6 +3,8 @@
 import asyncio
 from collections.abc import Awaitable, Callable
 
+from kikoe.core.activity import Stage
+
 
 class ActivityTracker:
     """The running tasks of one window; reading them decides what the window may start.
@@ -16,12 +18,8 @@ class ActivityTracker:
         """A file transcription: import, retry or re-transcription."""
         self.recording_task: asyncio.Task[None] | None = None
         self.recovery_task: asyncio.Task[None] | None = None
-        self.recovery_busy = False
-        """Recovered audio is being written, which must finish rather than be cancelled."""
-        self.committing = False
-        """The transcription result is being saved, which can no longer be cancelled."""
-        self.cancelling = False
-        self.stopping = False
+        self.stage = Stage.IDLE
+        """The foreground step; recovery that is writing audio must finish, not be cancelled."""
         self.closing = False
 
     @property
@@ -57,7 +55,7 @@ class ActivityTracker:
             importing.cancel()
         recovery = self.recovery_task
         if recovery is not None and not recovery.done():
-            if not self.recovery_busy:
+            if self.stage is not Stage.RECOVERING:
                 recovery.cancel()
             await _await_cancelled_by_us(recovery)
         if recording is not None:

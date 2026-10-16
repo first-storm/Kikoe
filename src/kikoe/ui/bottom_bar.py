@@ -5,6 +5,7 @@ from dataclasses import replace
 
 from gi.repository import Adw, Gdk, GObject, Gtk
 
+from kikoe.core.activity import Stage
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models, resolve_choice
 from kikoe.core.formatting import format_timestamp
 from kikoe.core.models import ModeCapabilities
@@ -13,11 +14,14 @@ from kikoe.core.transcription import LiveState
 from kikoe.i18n import _
 from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
-from kikoe.ui.labels import live_status_label, transcription_hint
+from kikoe.ui.labels import live_status_label, stage_label, transcription_hint
 from kikoe.ui.level_meter import LevelMeter
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
 from kikoe.ui.transcription_dialog import TranscriptionDialog
+
+_PAGES = {Stage.IDLE: "idle", Stage.RECORDING: "recording"}
+"""Every other stage is shown as progress."""
 
 
 @Gtk.Template(filename=ui_file("bottom_bar"))
@@ -41,6 +45,7 @@ class BottomBar(Adw.Bin):
 
     def __init__(self) -> None:
         super().__init__()
+        self._stage = Stage.IDLE
         self._recording_state = CaptureState.STOPPED
         self._recording_summary = ""
         self.recording_dot.add_tick_callback(self._pulse_dot)
@@ -84,29 +89,30 @@ class BottomBar(Adw.Bin):
         self._refresh()
 
     def _on_preferences_changed(self) -> None:
-        if self.state_stack.get_visible_child_name() != "idle":
+        if self._stage is not Stage.IDLE:
             self._defaults_pending = True
             return
         self._choice = None
         self._refresh()
 
-    def set_progress(self, message: str | None, *, cancellable: bool = True) -> None:
-        """Show ``message`` with a spinner and a Cancel button, or the controls when None."""
-        self.cancel_button.set_visible(cancellable)
-        self.progress_label.set_label(message or "")
-        self.state_stack.set_visible_child_name("progress" if message is not None else "idle")
-        if message is None and self._defaults_pending:
+    def set_stage(self, stage: Stage, message: str = "") -> None:
+        """Show the page for ``stage``; the window calls this and nothing else drives the bar."""
+        self._stage = stage
+        text = message or stage_label(stage)
+        if stage is Stage.RECORDING:
+            self._recording_summary = text
+            self.connection_spinner.set_visible(False)
+            self.recording_summary.set_label(text)
+        else:
+            self.progress_label.set_label(text)
+        self.cancel_button.set_visible(stage.shows_cancel)
+        self.state_stack.set_visible_child_name(_PAGES.get(stage, "progress"))
+        if stage is Stage.IDLE and self._defaults_pending:
             self._defaults_pending = False
             self._on_preferences_changed()
 
     def set_note(self, has_recordings: bool) -> None:
         self.record_content.set_label(_("_Append Recording") if has_recordings else _("_Record"))
-
-    def show_recording(self, summary: str) -> None:
-        self._recording_summary = summary
-        self.connection_spinner.set_visible(False)
-        self.recording_summary.set_label(summary)
-        self.state_stack.set_visible_child_name("recording")
 
     def set_live_state(self, state: LiveState) -> None:
         """Keep capture controls available while the recognizer prepares or reconnects."""
@@ -142,9 +148,7 @@ class BottomBar(Adw.Bin):
         self.pause_button.update_property([Gtk.AccessibleProperty.LABEL], [label])
 
     def _pulse_dot(self, _widget: Gtk.Widget, clock: Gdk.FrameClock) -> bool:
-        if self.state_stack.get_visible_child_name() != "recording":
-            return True
-        if self._recording_state is CaptureState.RECORDING:
+        if self._stage is Stage.RECORDING and self._recording_state is CaptureState.RECORDING:
             settings = self.get_settings()
             animations = bool(settings.get_property("gtk-enable-animations"))
             opacity = 0.65 + 0.35 * math.cos(clock.get_frame_time() / 1_400_000 * math.tau)

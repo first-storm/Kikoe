@@ -2,6 +2,7 @@
 
 from typing import Protocol
 
+from kikoe.core.activity import Stage
 from kikoe.core.models import Note
 
 
@@ -28,4 +29,12 @@ class WindowHost(Protocol):
     def set_subtitle(self, subtitle: str) -> None: ...
     def refresh_content(self) -> None: ...
     def refresh_actions(self) -> None: ...
+    def set_stage(self, stage: Stage, message: str = "") -> None:
+        """Enter ``stage``: the bottom bar and the enabled actions follow it.
+
+        ``message`` replaces the bar's default text for the stage, e.g. a recording's
+        model summary or a chunk count.
+        """
+        ...
+
     def set_action_enabled(self, name: str, enabled: bool) -> None: ...

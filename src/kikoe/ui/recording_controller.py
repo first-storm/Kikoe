@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 
 from gi.repository import Adw, Gio, GLib
 
+from kikoe.core.activity import Stage
 from kikoe.core.choice import ModelChoice
 from kikoe.core.models import Note, Recording
 from kikoe.core.recording import CaptureProgress, CaptureState
@@ -102,10 +103,8 @@ class RecordingController:
             run_task(self._change_capture_state(pause=False), self._window)
 
     def on_stop(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        if self.session is not None and not self._work.stopping:
-            self._work.stopping = True
-            self._bottom_bar.set_progress(_("Stopping recording…"), cancellable=False)
-            self._host.refresh_actions()
+        if self.session is not None and self._work.stage is Stage.RECORDING:
+            self._host.set_stage(Stage.STOPPING)
             run_task(self.session.stop(), self._window)
 
     def show_in_progress(self) -> None:
@@ -181,24 +180,20 @@ class RecordingController:
         self._host.show_note(note)
         self._refresh_sidebar()
         self._host.show_content_pane()
-        self._bottom_bar.show_recording(self.summary)
+        self._host.set_stage(Stage.RECORDING, self.summary)
         if self.live is not None:
             self._bottom_bar.set_live_state(LiveState.CONNECTING)
 
     def _on_live_update(self, snapshot: LiveSnapshot) -> None:
         self._note_view.update_live(snapshot)
-        if not self._work.stopping:
+        if self._work.stage is Stage.RECORDING:
             self._bottom_bar.set_live_state(snapshot.state)
 
     def _on_finalizing(self) -> None:
-        self._work.stopping = True
-        self._bottom_bar.set_progress(_("Finishing transcription…"), cancellable=False)
-        self._host.refresh_actions()
+        self._host.set_stage(Stage.FINALIZING)
 
     def _on_capture_ended(self) -> None:
-        self._work.stopping = True
-        self._bottom_bar.set_progress(_("Saving recording…"), cancellable=False)
-        self._host.refresh_actions()
+        self._host.set_stage(Stage.SAVING_AUDIO)
 
     def _on_live_failed(self, error: Exception) -> None:
         if isinstance(error, USER_FACING_ERRORS):
@@ -212,9 +207,8 @@ class RecordingController:
         self._workflow = None
         self.note_id = None
         self._work.recording_task = None
-        self._work.stopping = False
         self._note_view.hide_recording()
-        self._bottom_bar.set_progress(None)
+        self._host.set_stage(Stage.IDLE)
         self._refresh_sidebar()
         self._host.show_note(self._host.note)
 
@@ -239,15 +233,13 @@ class RecordingController:
             return
         if not await confirm_recovery(self._window):
             return
-        self._work.recovery_busy = True
-        self._bottom_bar.set_progress(_("Recovering recordings…"))
-        self._host.refresh_actions()
+        if self._work.recording_task is not None or self._work.import_task is not None:
+            return  # Work started while the prompt was open; offer recovery again next start.
+        self._host.set_stage(Stage.RECOVERING)
         try:
             await recover_all(journals, store, self._notes, self._show_recovered_note)
         finally:
-            self._work.recovery_busy = False
-            self._bottom_bar.set_progress(None)
-            self._host.refresh_actions()
+            self._host.set_stage(Stage.IDLE)
 
     def _show_recovered_note(self, note: Note) -> None:
         self._host.show_note(note)

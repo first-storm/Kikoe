@@ -4,6 +4,7 @@ from datetime import datetime
 
 from gi.repository import GLib
 
+from kikoe.core.activity import Stage
 from kikoe.core.choice import ModelChoice, unsupported_features
 from kikoe.core.export import ExportFormat
 from kikoe.core.formatting import RelativeDay, format_duration, relative_day
@@ -21,7 +22,6 @@ from kikoe.core.transcript_rows import transcript_columns
 from kikoe.core.transcription import LiveState
 from kikoe.core.validation import Capability, ModelError, ProviderError, capability_list
 from kikoe.i18n import _, ngettext
-from kikoe.services.importer import ImportStage
 
 
 def api_label(api: ApiKind) -> str:
@@ -182,21 +182,33 @@ def recording_meta(recording: Recording, now: datetime) -> str:
     return " · ".join(parts)
 
 
-def import_stage_label(stage: ImportStage, part: int, parts: int) -> str:
-    """Progress counts completed uploads, including requests that finish out of order."""
+def stage_label(stage: Stage, part: int = 1, parts: int = 1) -> str:
+    """What the bottom bar says about a stage; chunk counts include out-of-order uploads."""
     match stage:
-        case ImportStage.CONVERTING if parts > 1:
+        case Stage.IDLE | Stage.RECORDING:
+            return ""
+        case Stage.STOPPING:
+            return _("Stopping recording…")
+        case Stage.FINALIZING:
+            return _("Finishing transcription…")
+        case Stage.SAVING_AUDIO:
+            return _("Saving recording…")
+        case Stage.CONVERTING if parts > 1:
             return _("Converting part {part} of {parts}…").format(part=part, parts=parts)
-        case ImportStage.CONVERTING:
+        case Stage.CONVERTING:
             return _("Converting audio…")
-        case ImportStage.TRANSCRIBING if parts > 1:
+        case Stage.TRANSCRIBING if parts > 1:
             return _("Transcribing… {part} of {parts} chunks complete").format(
                 part=part, parts=parts
             )
-        case ImportStage.TRANSCRIBING:
+        case Stage.TRANSCRIBING:
             return _("Transcribing…")
-        case ImportStage.SAVING:
+        case Stage.SAVING:
             return _("Saving…")
+        case Stage.CANCELLING:
+            return _("Cancelling…")
+        case Stage.RECOVERING:
+            return _("Recovering recordings…")
 
 
 def unsupported_option_subtitle() -> str:

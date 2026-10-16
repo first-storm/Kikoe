@@ -6,7 +6,7 @@ from functools import partial
 
 from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
-from kikoe.core.activity import Activity, action_availability
+from kikoe.core.activity import Activity, Stage, action_availability
 from kikoe.core.models import DisplayOptions, Note
 from kikoe.core.preferences import WindowState
 from kikoe.core.recording import CaptureState
@@ -317,12 +317,9 @@ class Window(Adw.ApplicationWindow):
         choice = self.bottom_bar.choice
         session = self._recorder.session
         return Activity(
+            stage=self._work.stage,
             importing=self._work.import_task is not None,
             recording=self._work.recording_task is not None,
-            recovering=self._work.recovery_busy,
-            committing=self._work.committing,
-            cancelling=self._work.cancelling,
-            stopping=self._work.stopping,
             closing=self._work.closing,
             capture_state=session.state if session is not None else CaptureState.STOPPED,
             has_note=self._note is not None,
@@ -447,6 +444,11 @@ class Window(Adw.ApplicationWindow):
     # Import
 
     def _on_bottom_bar_choice_changed(self, _bar: BottomBar) -> None:
+        self.refresh_actions()
+
+    def set_stage(self, stage: Stage, message: str = "") -> None:
+        self._work.stage = stage
+        self.bottom_bar.set_stage(stage, message)
         self.refresh_actions()
 
     def refresh_actions(self) -> None:

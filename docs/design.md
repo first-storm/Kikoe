@@ -124,20 +124,31 @@ are added, removed or re-transcribed. Undo and Redo scroll to the affected segme
 and place the caret there. Recording, import and recovery make transcript text
 read-only and disable history actions. Live preview rows are never editable.
 
-### Idle bottom bar
+### Bottom bar
 
 The bottom bar belongs to the content pane and appears only when a note is open.
-It uses the libadwaita `toolbar` style and remains one line at a stable height.
+It uses the libadwaita `toolbar` style, remains one line at a stable height and
+shows exactly one of three layouts, chosen by the window's current stage
+(`core.activity.Stage`). Every layout reads the same way: what is happening at
+the start, a flexible gap, then actions at the end. Secondary actions are flat;
+the one primary action uses `suggested-action`. There are no custom chips.
 
-At the start, Transcription Model shows a service icon, bold model name and dimmed
-provider name. At the end are flat Import Audio… and the primary microphone
-button: Record for an empty note, Append Recording otherwise. Toolbar buttons
-use standard styling without custom chips.
+| Stage | Layout |
+| --- | --- |
+| Idle | Transcription Model (service icon, bold model name, dimmed provider name); flat Import Audio…; primary Record for an empty note, Append Recording otherwise |
+| Recording | Pulsing record dot, elapsed time, level meter, dimmed model and options summary; flat Pause or Resume; primary Stop |
+| Stopping, finishing transcription, saving the recording, converting, transcribing, saving, cancelling, recovering | Spinner and dimmed progress text; flat Cancel where cancelling makes sense |
 
-Below 600 sp, the provider name hides and Import Audio becomes icon-only, retaining
-its tooltip and accessibility name. The primary recording button keeps its label
-at 360 px. Import Audio is also available through the main menu when no note is
-selected; invoking it opens the content pane to show progress and Cancel.
+Cancel appears for converting, transcribing, saving and cancelling. It is
+enabled only while converting or transcribing: Saving is atomic and Cancelling…
+disables repeated requests. Stopping, saving a recording and recovering show
+progress only, because they must finish to keep the audio.
+
+Below 600 sp, the provider name, the Import Audio label and the recording
+summary hide; icon-only buttons keep their tooltip and accessibility name. Below
+480 sp the level meter hides too. The primary button keeps its label at 360 px.
+Import Audio is also available through the main menu when no note is selected;
+invoking it opens the content pane to show progress and Cancel.
 
 ## Empty states
 

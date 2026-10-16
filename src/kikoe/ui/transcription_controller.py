@@ -8,6 +8,7 @@ from pathlib import Path
 
 from gi.repository import Adw, Gio, GLib
 
+from kikoe.core.activity import Stage
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models
 from kikoe.core.models import Recording, RecordingSource, TranscriptionState
 from kikoe.i18n import _
@@ -23,7 +24,7 @@ from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.file_dialogs import pick_audio_file
 from kikoe.ui.file_transcription import FileTranscriptionDisplay
-from kikoe.ui.labels import import_stage_label
+from kikoe.ui.labels import stage_label
 from kikoe.ui.note_view import NoteView
 from kikoe.ui.retranscribe_dialog import RetranscribeDialog
 from kikoe.ui.speaker_controller import SpeakerController
@@ -31,6 +32,12 @@ from kikoe.ui.tasks import run_task, show_error
 from kikoe.ui.window_host import WindowHost
 
 log = logging.getLogger(__name__)
+
+_STAGES = {
+    ImportStage.CONVERTING: Stage.CONVERTING,
+    ImportStage.TRANSCRIBING: Stage.TRANSCRIBING,
+    ImportStage.SAVING: Stage.SAVING,
+}
 
 
 class TranscriptionController:
@@ -79,11 +86,9 @@ class TranscriptionController:
 
     def on_cancel_import(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         task = self._work.import_task
-        if task is None or task.done() or self._work.committing or self._work.cancelling:
+        if task is None or task.done() or not self._work.stage.can_cancel:
             return
-        self._work.cancelling = True
-        self._bottom_bar.set_progress(_("Cancelling…"))
-        self._host.refresh_actions()
+        self._host.set_stage(Stage.CANCELLING)
         task.cancel()
 
     async def _pick_and_import(self) -> None:
@@ -101,8 +106,7 @@ class TranscriptionController:
         options = self.transcription_options(self._bottom_bar.file_features)
         task = asyncio.ensure_future(self._import(path, note_id, choice, options))
         self._work.import_task = task
-        self._host.refresh_actions()
-        self._bottom_bar.set_progress(import_stage_label(ImportStage.CONVERTING, 1, 1))
+        self._host.set_stage(Stage.CONVERTING)
         self._host.show_content_pane()
         try:
             await task
@@ -112,9 +116,7 @@ class TranscriptionController:
             self._host.toast(_("Import cancelled"))
         finally:
             self._work.import_task = None
-            self._work.cancelling = False
-            self._bottom_bar.set_progress(None)
-            self._host.refresh_actions()
+            self._host.set_stage(Stage.IDLE)
 
     async def _import(
         self,
@@ -179,8 +181,7 @@ class TranscriptionController:
             self._work.import_task = run_task(
                 self._retranscribe(note_id, recording, refreshed, options), self._window
             )
-            self._bottom_bar.set_progress(_("Transcribing…"))
-            self._host.refresh_actions()
+            self._host.set_stage(Stage.TRANSCRIBING)
 
         dialog = RetranscribeDialog(
             self._providers,
@@ -220,11 +221,8 @@ class TranscriptionController:
             )
         finally:
             self._end()
-            self._work.committing = False
             self._work.import_task = None
-            self._work.cancelling = False
-            self._bottom_bar.set_progress(None)
-            self._host.refresh_actions()
+            self._host.set_stage(Stage.IDLE)
 
     # Retrying a recording that has no text yet
 
@@ -254,8 +252,7 @@ class TranscriptionController:
             await self.upload_recording(note_id, recording, choice, options)
         finally:
             self._work.recording_task = None
-            self._bottom_bar.set_progress(None)
-            self._host.refresh_actions()
+            self._host.set_stage(Stage.IDLE)
 
     async def upload_recording(
         self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
@@ -266,15 +263,13 @@ class TranscriptionController:
         self._work.import_task = run_task(
             self._upload(note_id, recording, choice, options), self._window
         )
-        self._bottom_bar.set_progress(_("Transcribing…"))
-        self._host.refresh_actions()
+        self._host.set_stage(Stage.TRANSCRIBING)
         try:
             await self._work.import_task
         except asyncio.CancelledError:
             self._host.toast(_("Transcription cancelled"))
         finally:
             self._work.import_task = None
-            self._work.cancelling = False
 
     async def _upload(
         self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
@@ -319,17 +314,15 @@ class TranscriptionController:
         self._host.show_content_pane()
 
     def _on_progress(self, stage: ImportStage, part: int, parts: int) -> None:
-        if self._work.cancelling:
+        if self._work.stage is Stage.CANCELLING:
             return
-        self._work.committing = stage is ImportStage.SAVING
-        self._host.refresh_actions()
-        self._bottom_bar.set_progress(import_stage_label(stage, part, parts))
+        step = _STAGES[stage]
+        self._host.set_stage(step, stage_label(step, part, parts))
 
     def _end(self) -> None:
         if not self.display.active:
             return
         self.display.end()
-        self._work.committing = False
         if self._host.note is None:
             self._host.set_titles(_("Kikoe"), "", "")
         self._host.refresh_content()

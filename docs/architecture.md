@@ -445,13 +445,18 @@ uses a smaller set of callbacks.
 | `ui.recording_controller` | Capture controls and startup recovery |
 | `ui.window_chrome` | Header layout and debounced geometry saving |
 
-`core.activity.Activity` describes current work;
-`core.activity.action_availability` derives enabled actions.
+`core.activity.Stage` is the one foreground step (idle, recording, stopping,
+finalizing, saving audio, converting, transcribing, saving, cancelling,
+recovering). Controllers call `WindowHost.set_stage`; the window stores the stage
+in the tracker, refreshes actions and tells the bottom bar, which only renders it.
+`core.activity.Activity` describes current work including the stage;
+`core.activity.action_availability` derives enabled actions, so a stage such as
+stopping or cancelling keeps actions disabled during cleanup. Only one foreground
+task runs at a time, so re-transcription also waits for running work.
 `services.activity.ActivityTracker` coordinates shutdown: save edits, stop
 playback, stop capture, cancel imports, and let recovery already writing audio
 finish. An import already cancelling is awaited without cancelling it again, so
-its asynchronous cleanup can finish. Cancelling and stopping flags also keep
-actions disabled during cleanup and recording finalization. Saved-note callbacks
+its asynchronous cleanup can finish. Saved-note callbacks
 carry note identity so an old write cannot replace a newly selected note. Export and shutdown wait for pending edits.
 
 `ui.note_view` renders a flat `Gtk.ListView` of recording headers and segments.

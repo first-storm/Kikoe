@@ -1,6 +1,7 @@
 """Which actions the main window offers while work is running."""
 
 from dataclasses import dataclass
+from enum import StrEnum
 
 from kikoe.core.recording import CaptureState
 
@@ -22,22 +23,45 @@ SIDEBAR_ACTIONS = ("search-notes", "rename-note-row", "delete-note-row")
 """Actions on the notes list, which stay out of the way of running work."""
 
 
+class Stage(StrEnum):
+    """The one foreground step the window is in; the bottom bar shows exactly this."""
+
+    IDLE = "idle"
+    RECORDING = "recording"
+    """The microphone is open, recording or paused."""
+    STOPPING = "stopping"
+    FINALIZING = "finalizing"
+    """Live recognition is finishing its last words."""
+    SAVING_AUDIO = "saving-audio"
+    CONVERTING = "converting"
+    TRANSCRIBING = "transcribing"
+    SAVING = "saving"
+    """The transcription result is being saved, which can no longer be cancelled."""
+    CANCELLING = "cancelling"
+    """A file task is releasing resources after cancellation."""
+    RECOVERING = "recovering"
+    """Unfinished recordings are being recovered; this must finish rather than be cancelled."""
+
+    @property
+    def can_cancel(self) -> bool:
+        """The user may still abandon the file task in this stage."""
+        return self in {Stage.CONVERTING, Stage.TRANSCRIBING}
+
+    @property
+    def shows_cancel(self) -> bool:
+        """The bar shows Cancel, enabled only while ``can_cancel``."""
+        return self.can_cancel or self in {Stage.SAVING, Stage.CANCELLING}
+
+
 @dataclass(frozen=True, slots=True)
 class Activity:
     """A snapshot of what the window is doing, from which every action state follows."""
 
+    stage: Stage = Stage.IDLE
     importing: bool = False
     """A file transcription (import, retry or re-transcription) is running."""
     recording: bool = False
     """A recording session owns the microphone."""
-    recovering: bool = False
-    """Unfinished recordings are being recovered."""
-    committing: bool = False
-    """The transcription result is being saved, which can no longer be cancelled."""
-    cancelling: bool = False
-    """A file task is releasing resources after cancellation."""
-    stopping: bool = False
-    """Capture is stopping or live transcription is finalizing."""
     closing: bool = False
     capture_state: CaptureState = CaptureState.STOPPED
     has_note: bool = False
@@ -51,12 +75,12 @@ class Activity:
     @property
     def busy(self) -> bool:
         """Work is running that new work must not overlap."""
-        return self.importing or self.recording or self.recovering
+        return self.importing or self.recording or self.stage is Stage.RECOVERING
 
     @property
     def switch_locked(self) -> bool:
         """The open note must stay put; transcription alone never pins it."""
-        return self.recovering or (self.recording and not self.importing)
+        return self.stage is Stage.RECOVERING or (self.recording and not self.importing)
 
     @property
     def locked(self) -> bool:
@@ -69,18 +93,18 @@ def action_availability(activity: Activity) -> dict[str, bool]:
     can_use_note = not activity.locked and activity.has_note
     available = activity.has_model and not activity.busy
     can_transcribe_files = available and activity.model_transcribes_files
-    can_control = not activity.closing and not activity.stopping
+    can_control = not activity.closing and activity.stage is Stage.RECORDING
     state = activity.capture_state
     enabled: dict[str, bool] = dict.fromkeys(NOTE_CONTENT_ACTIONS, can_use_note)
     enabled.update(dict.fromkeys(SIDEBAR_ACTIONS, not activity.busy))
     enabled.update(
         {
+            # One foreground task at a time, so a second transcription cannot start.
+            "retranscribe-recording": can_use_note and not activity.busy,
             "import-audio": can_transcribe_files,
             "start-recording": available,
             "retry-recording": can_transcribe_files and activity.has_note,
-            "cancel-import": activity.importing
-            and not activity.committing
-            and not activity.cancelling,
+            "cancel-import": activity.importing and activity.stage.can_cancel,
             "pause-recording": state is CaptureState.RECORDING and can_control,
             "resume-recording": state is CaptureState.PAUSED and can_control,
             "stop-recording": state is not CaptureState.STOPPED and can_control,

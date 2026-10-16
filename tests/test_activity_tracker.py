@@ -5,6 +5,7 @@ import asyncio
 import pytest
 
 from helpers import run_async
+from kikoe.core.activity import Stage
 from kikoe.services.activity import ActivityTracker
 
 
@@ -126,7 +127,7 @@ async def test_a_recovery_that_has_not_started_writing_is_cancelled() -> None:
 @run_async
 async def test_a_recovery_that_is_writing_audio_is_allowed_to_finish() -> None:
     tracker = ActivityTracker()
-    tracker.recovery_busy = True
+    tracker.stage = Stage.RECOVERING
     release = asyncio.Event()
     result: list[str] = []
 
