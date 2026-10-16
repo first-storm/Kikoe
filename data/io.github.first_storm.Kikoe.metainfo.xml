@@ -44,6 +44,19 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.3.1" date="2026-10-16">
+      <description>
+        <p>More local models and clearer recording and transcription controls.</p>
+        <ul>
+          <li>Transcribe with local MOSS models.</li>
+          <li>Find models on a searchable selection page.</li>
+          <li>Use recording controls that adapt to the current activity and window width.</li>
+          <li>Name new notes in a dialog and access a simpler main menu.</li>
+          <li>See loading and cancellation progress during transcription.</li>
+          <li>Prepare credentials before the first recording to reduce startup delays.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.0" date="2026-10-16">
       <description>
         <p>Transcribe on your own device with local models.</p>
