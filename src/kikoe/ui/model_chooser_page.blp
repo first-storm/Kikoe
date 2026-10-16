@@ -8,26 +8,42 @@ template $KikoeModelChooserPage: Adw.NavigationPage {
 
   child: Adw.ToolbarView {
     [top]
-    Adw.HeaderBar header_bar {}
-
-    [top]
-    Adw.Clamp {
-      maximum-size: 600;
-      tightening-threshold: 400;
-
-      child: SearchEntry search_entry {
-        placeholder-text: _("Search Models");
-        search-delay: 100;
-        margin-start: 12;
-        margin-end: 12;
-        margin-bottom: 6;
-        search-changed => $_on_search_entry_search_changed();
-        stop-search => $_on_search_entry_stop_search();
-        activate => $_on_search_entry_activate();
+    Adw.HeaderBar header_bar {
+      [end]
+      ToggleButton search_button {
+        icon-name: "system-search-symbolic";
+        tooltip-text: _("Search Models");
+        active: bind search_bar.search-mode-enabled bidirectional;
 
         accessibility {
           label: _("Search Models");
         }
+      }
+    }
+
+    [top]
+    SearchBar search_bar {
+      notify::search-mode-enabled => $_on_search_bar_notify_search_mode_enabled();
+
+      child: Adw.Clamp {
+        maximum-size: 600;
+        tightening-threshold: 400;
+        hexpand: true;
+        margin-start: 6;
+        margin-end: 6;
+
+        child: SearchEntry search_entry {
+          placeholder-text: _("Search models");
+          hexpand: true;
+          search-delay: 100;
+          search-changed => $_on_search_entry_search_changed();
+          stop-search => $_on_search_entry_stop_search();
+          activate => $_on_search_entry_activate();
+
+          accessibility {
+            label: _("Search Models");
+          }
+        };
       };
     }
 
@@ -35,7 +51,24 @@ template $KikoeModelChooserPage: Adw.NavigationPage {
       StackPage {
         name: "results";
 
-        child: Adw.PreferencesPage results_page {};
+        child: ScrolledWindow {
+          hscrollbar-policy: never;
+
+          child: Adw.Clamp {
+            maximum-size: 600;
+            tightening-threshold: 400;
+            margin-start: 12;
+            margin-end: 12;
+
+            child: Box results_box {
+              orientation: vertical;
+              spacing: 24;
+              margin-top: 12;
+              margin-bottom: 12;
+              valign: start;
+            };
+          };
+        };
       }
 
       StackPage {

@@ -177,16 +177,21 @@ current model name above “<provider> · <capabilities>”, then Options and Ma
 Providers and Models…. Initial focus is on the model row. Without models, the
 group explains that a provider and model are needed and has no row.
 
-The model row pushes Choose Model, a page with a permanently visible Search Models
-entry above one group per provider of model radio rows, each showing a model name
-and capability summary such as “Realtime · Timestamps · Speakers” or “Text only”.
-The page opens with the current model focused and scrolled into view; typing
-anywhere searches. Every word of the query must appear, ignoring case, in the
-model name, model ID or provider name. Providers without matches hide, and no
-matches at all show No Matching Models with `edit-find-symbolic`. Choosing a
+The model row pushes Choose Model, a page with a Search Models toggle button in the
+header bar. Search starts collapsed; the button, Ctrl+F, or typing anywhere opens
+and focuses the search entry above one group per provider of model radio rows,
+each showing a model name and capability summary such as
+“Realtime · Timestamps · Speakers” or “Text only”.
+The page opens with search cleared and collapsed and the current model focused and
+scrolled into view, falling back to the first model or the search button if empty.
+The list has a maximum width of 600 logical pixels, 12-pixel outer margins, and
+24-pixel spacing between provider groups. Every word of the query must appear,
+ignoring case, in the model name, model ID or provider name. Providers without
+matches hide, and no matches at all show No Matching Models with
+`edit-find-symbolic`. Choosing a
 model, or Enter in a nonempty search for the first match, applies it and returns
-to the first page with focus on the model row. Escape clears a search, then goes
-back.
+to the first page with focus on the model row. Closing search clears the filter
+and restores list focus. Escape closes search first, then goes back.
 
 The Options group explains whether transcription happens during or after
 recording. Timestamps and Speakers switches request those features for the next

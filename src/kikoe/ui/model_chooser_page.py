@@ -2,7 +2,7 @@
 
 from collections.abc import Callable, Sequence
 
-from gi.repository import Adw, Gio, GObject, Gtk
+from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
 from kikoe.core.choice import ModelChoice, model_matches
 from kikoe.core.models import ModelKey
@@ -19,9 +19,11 @@ class ModelChooserPage(Adw.NavigationPage):
     __gtype_name__ = "KikoeModelChooserPage"
 
     header_bar: Adw.HeaderBar = Gtk.Template.Child()
+    search_button: Gtk.ToggleButton = Gtk.Template.Child()
+    search_bar: Gtk.SearchBar = Gtk.Template.Child()
     search_entry: Gtk.SearchEntry = Gtk.Template.Child()
     stack: Gtk.Stack = Gtk.Template.Child()
-    results_page: Adw.PreferencesPage = Gtk.Template.Child()
+    results_box: Gtk.Box = Gtk.Template.Child()
 
     def __init__(
         self,
@@ -44,11 +46,27 @@ class ModelChooserPage(Adw.NavigationPage):
         self._lists: list[tuple[Adw.PreferencesGroup, Gtk.FilterListModel]] = []
         self._add_provider_groups(choices)
         # Typing anywhere on the page searches, as in other GNOME lists.
-        self.search_entry.set_key_capture_widget(self)
+        self.search_bar.connect_entry(self.search_entry)
+        self.search_bar.set_key_capture_widget(self)
+        actions = Gio.SimpleActionGroup()
+        search = Gio.SimpleAction.new("search", None)
+        search.connect("activate", self._on_search_action_activate)
+        actions.add_action(search)
+        self.insert_action_group("chooser", actions)
+        shortcuts = Gtk.ShortcutController()
+        shortcuts.add_shortcut(
+            Gtk.Shortcut(
+                trigger=Gtk.ShortcutTrigger.parse_string("<Control>f"),
+                action=Gtk.NamedAction.new("chooser.search"),
+            )
+        )
+        self.add_controller(shortcuts)
+        self.stack.set_visible_child_name("results" if choices else "empty")
 
     def set_current(self, current: ModelKey | None) -> None:
         """Mark ``current`` and clear the previous search before the page is shown again."""
         self._current = current
+        self.search_bar.set_search_mode(False)
         self._query = ""
         self.search_entry.set_text("")
         self._filter.changed(Gtk.FilterChange.DIFFERENT)
@@ -81,7 +99,7 @@ class ModelChooserPage(Adw.NavigationPage):
         matches = Gtk.FilterListModel(model=store, filter=self._filter)
         matches.connect("notify::n-items", self._on_matches_notify_n_items)
         group.bind_model(matches, self._create_row)
-        self.results_page.add(group)
+        self.results_box.append(group)
         self._lists.append((group, matches))
 
     def _matches(self, item: GObject.Object) -> bool:
@@ -98,6 +116,7 @@ class ModelChooserPage(Adw.NavigationPage):
             subtitle=capability_summary(choice.model.capabilities),
             use_markup=False,
             activatable_widget=radio,
+            subtitle_lines=0,
         )
         row.add_prefix(radio)
         # Activating the row of the model already in use returns without a toggle.
@@ -123,9 +142,27 @@ class ModelChooserPage(Adw.NavigationPage):
     def _focus_current(self) -> None:
         """Start at the model in use, scrolled into view, so the list never opens lost."""
         radio = self._radio_of(self._current)
-        row = radio.get_ancestor(Adw.ActionRow) if radio is not None else None
-        if row is None or not row.grab_focus():
+        if radio is None and (first := self._first_match()) is not None:
+            radio = self._radio_of(first.key)
+        if radio is None or not radio.grab_focus():
+            self.search_button.grab_focus()
+
+    def _on_search_action_activate(
+        self, _action: Gio.SimpleAction, _parameter: GLib.Variant | None
+    ) -> None:
+        self.search_bar.set_search_mode(True)
+        self.search_entry.grab_focus()
+
+    @Gtk.Template.Callback()
+    def _on_search_bar_notify_search_mode_enabled(
+        self, bar: Gtk.SearchBar, _spec: GObject.ParamSpec
+    ) -> None:
+        if bar.get_search_mode():
             self.search_entry.grab_focus()
+            return
+        self.search_entry.set_text("")
+        self._on_search_entry_search_changed(self.search_entry)
+        self._focus_current()
 
     def _on_model_radio_toggled(self, radio: Gtk.CheckButton, choice: ModelChoice) -> None:
         if radio.get_active() and not self._updating.active:
@@ -155,9 +192,6 @@ class ModelChooserPage(Adw.NavigationPage):
             self._on_chosen(choice)
 
     @Gtk.Template.Callback()
-    def _on_search_entry_stop_search(self, entry: Gtk.SearchEntry) -> None:
-        """Escape clears the search first and goes back once it is empty."""
-        if entry.get_text():
-            entry.set_text("")
-            return
-        self.activate_action("navigation.pop", None)
+    def _on_search_entry_stop_search(self, _entry: Gtk.SearchEntry) -> None:
+        """Leave search before allowing Escape to navigate back."""
+        self.search_bar.set_search_mode(False)
