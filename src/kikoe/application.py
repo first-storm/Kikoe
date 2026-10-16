@@ -17,7 +17,7 @@ from kikoe.providers.factory import ClientContext, create_client
 from kikoe.providers.local.engines import load_catalog as load_local_catalog
 from kikoe.providers.local.hardware import current_platform, in_flatpak
 from kikoe.services.local_models import LocalModelManager
-from kikoe.services.prewarm import prewarm_provider
+from kikoe.services.prewarm import prewarm_api_key, prewarm_provider
 from kikoe.storage.library import Library, audio_dir, database_path
 from kikoe.storage.local_installs import LocalInstalls
 from kikoe.storage.local_settings import LocalSettingsStore
@@ -106,10 +106,13 @@ class Application(Adw.Application):
         await self._prewarm_default_provider()
 
     async def _prewarm_default_provider(self) -> None:
-        """Load the SDK the next transcription will need while the user is still looking around."""
+        """Prepare the next transcription's SDK and credentials while the user looks around."""
         provider = default_provider(self.preferences.current, self.providers.providers)
         if provider is not None:
-            await prewarm_provider(provider, self.clients)
+            await asyncio.gather(
+                prewarm_provider(provider, self.clients),
+                prewarm_api_key(provider, self.providers),
+            )
         # The SDK objects just loaded live as long as the process; see ``main``.
         gc.freeze()
 

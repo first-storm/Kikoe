@@ -59,8 +59,12 @@ Provider SDKs and `keyring` load lazily to keep startup responsive.
 credential storage import their libraries inside the functions that need them.
 After settings load, `services.prewarm` constructs the default provider's client
 (or the recently used provider's when no default is available) in a worker thread,
-preparing its SDK before the first transcription. Other
-providers load on first use. `tests/test_lazy_imports.py` guards this boundary.
+preparing its SDK before the first transcription. In parallel, it asynchronously
+reads that provider's API key to initialize the credential store before the first
+recording. The key is discarded; transcription still reads the current key.
+Built-in providers skip the credential store. Prewarm failures are logged without
+interrupting startup, and credential prewarm logs omit keys and error details.
+Other providers load on first use. `tests/test_lazy_imports.py` guards this boundary.
 
 ## Domain data and persistence
 
