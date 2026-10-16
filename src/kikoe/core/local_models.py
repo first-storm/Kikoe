@@ -191,6 +191,8 @@ class LocalModelSpec:
     """Longest audio one request may hold; longer files are split at pauses."""
     requires_language: bool = False
     """Automatic language detection is unavailable; an explicit language is required."""
+    native_diarization: bool = False
+    """Speaker attribution is built in and needs no separate detection model."""
 
     @property
     def size(self) -> int:
@@ -215,15 +217,16 @@ class LocalCatalog:
 def model_spec(model: LocalModelSpec, *, speakers: bool = False) -> ModelSpec:
     """How a local model appears in model choosers, with what it can do.
 
-    ``speakers`` means a speaker detection model of the same engine is installed; it
-    can only be matched to transcripts with times.
+    Native speaker attribution needs no extra model. ``speakers`` means a separate
+    detection model is installed; it can only be matched to transcripts with times.
     """
     return ModelSpec(
         model.model_id,
         model.display_name,
         Capabilities(
             file=ModeCapabilities(
-                timestamps=model.timestamps, diarization=speakers and model.timestamps
+                timestamps=model.timestamps,
+                diarization=model.native_diarization or (speakers and model.timestamps),
             ),
             realtime=ModeCapabilities() if model.streaming else None,
         ),
@@ -347,6 +350,7 @@ def _model(entry: Mapping[str, object], engine_id: str) -> LocalModelSpec:
         streaming=_flag(entry, "streaming"),
         max_seconds=max_seconds,
         requires_language=_flag(entry, "requires_language"),
+        native_diarization=_flag(entry, "native_diarization"),
     )
 
 

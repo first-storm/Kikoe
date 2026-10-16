@@ -309,6 +309,20 @@ Cohere requires an explicit supported language: Automatic and unsupported
 languages fail with a prompt to choose a language before the engine is called.
 Regional language tags use their primary subtag (for example, `en-GB` becomes `en`).
 
+MOSS-Transcribe-Diarize is available in Q8_0 (987 MB) and Q5_K_M (700 MB),
+with English/Chinese file transcription, automatic language selection, segment
+timestamps and native speaker attribution; it does not support realtime.
+The [transcribe.cpp 0.4.0 model documentation](https://github.com/handy-computer/transcribe.cpp/blob/v0.4.0/docs/models/moss-transcribe-diarize.md)
+describes the supported checkpoint and its memory use. Kikoe conservatively splits
+MOSS inputs at 600 seconds through the existing upload pipeline. Speaker labels are
+local to each chunk; identities are not matched across chunks.
+
+Catalog entries declare `native_diarization` when speaker attribution is built in.
+These models offer speaker detection without Sortformer installed. The local client
+passes the user's speaker switch through the worker to the engine's transcription
+call, independently of timestamps, and skips the separate diarization pass. Other
+timed models continue to use Sortformer when installed and requested.
+
 `LocalModelManager` implements `storage.providers.ProviderSource`, so
 `ProviderRepository.providers` includes a built-in “On This Device” provider
 (`ApiKind.LOCAL`, ID `local`) while at least one model and its engine are

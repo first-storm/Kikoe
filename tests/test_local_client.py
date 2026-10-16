@@ -51,12 +51,18 @@ class FakeConnection(EngineConnection):
         language: str | None,
         timestamps: bool,
         words: bool = False,
+        diarization: bool = False,
     ) -> EngineTranscript:
         call = {"model": model, "audio": audio, "device": device, "language": language}
-        self.calls.append({**call, "ts": timestamps})
+        self.calls.append({**call, "ts": timestamps, "diarization": diarization})
         if self.error is not None:
             raise transcription_error(self.error)
-        segment = Segment("hi there", timedelta(0), timedelta(seconds=2))
+        segment = Segment(
+            "hi there",
+            timedelta(0) if timestamps else None,
+            timedelta(seconds=2) if timestamps else None,
+            "1" if diarization else None,
+        )
         if not words:
             return EngineTranscript((segment,))
         return EngineTranscript(
@@ -113,6 +119,7 @@ async def test_files_are_sent_to_the_engine_with_the_chosen_device() -> None:
             "device": "vulkan:1",
             "language": "en-GB",
             "ts": True,
+            "diarization": False,
         }
     ]
 
@@ -232,13 +239,20 @@ async def test_shipped_models_route_file_requests_with_their_capabilities(
             "device": "vulkan:1",
             "language": sent_language,
             "ts": timestamps,
+            "diarization": False,
         }
     ]
 
 
 @pytest.mark.parametrize(
     ("model_id", "seconds"),
-    [("cohere-transcribe-03-2026", 400), ("qwen3-asr-0.6b", 600), ("qwen3-asr-1.7b", 600)],
+    [
+        ("cohere-transcribe-03-2026", 400),
+        ("qwen3-asr-0.6b", 600),
+        ("qwen3-asr-1.7b", 600),
+        ("moss-transcribe-diarize-q8-0", 600),
+        ("moss-transcribe-diarize-q5-k-m", 600),
+    ],
 )
 def test_shipped_models_split_long_files_at_their_configured_limit(
     model_id: str, seconds: int
@@ -248,6 +262,38 @@ def test_shipped_models_split_long_files_at_their_configured_limit(
     limits = LocalClient(CatalogRuntime()).upload_limits(model_spec(spec), TranscriptionOptions())
     assert limits.format == WAV
     assert limits.duration == timedelta(seconds=seconds)
+
+
+@pytest.mark.parametrize("quant", ["q8-0", "q5-k-m"])
+@pytest.mark.parametrize("diarizer", [False, True])
+@pytest.mark.parametrize("diarization", [False, True])
+@pytest.mark.parametrize("timestamps", [False, True])
+@run_async
+async def test_moss_native_speakers_and_times_are_independent(
+    quant: str, diarizer: bool, diarization: bool, timestamps: bool
+) -> None:
+    runtime = CatalogRuntime(diarizer=diarizer)
+    spec = load_catalog().model(f"moss-transcribe-diarize-{quant}")
+    assert spec is not None
+    segments = await LocalClient(runtime).transcribe_file(
+        Path("audio.wav"),
+        model_spec(spec),
+        TranscriptionOptions(timestamps=timestamps, diarization=diarization),
+    )
+    assert runtime.engine.calls[0]["diarization"] is diarization
+    assert runtime.engine.calls[0]["ts"] is timestamps
+    assert segments[0].speaker_id == ("1" if diarization else None)
+    assert segments[0].start == (timedelta(0) if timestamps else None)
+    assert runtime.engine.diarized is None
+
+
+@pytest.mark.parametrize("quant", ["q8-0", "q5-k-m"])
+@run_async
+async def test_moss_refuses_realtime_transcription(quant: str) -> None:
+    spec = load_catalog().model(f"moss-transcribe-diarize-{quant}")
+    assert spec is not None
+    with pytest.raises(TranscriptionError, match="files only"):
+        await LocalClient(CatalogRuntime()).open_realtime(model_spec(spec), TranscriptionOptions())
 
 
 @run_async

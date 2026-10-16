@@ -129,8 +129,11 @@ class TranscribeCpp:
         pcm = read_wav(Path(_text(args, "audio")))
         language = _language(model, _optional(args, "language"))
         timestamps = "auto" if args.get("timestamps") else "none"
+        diarize = "on" if args.get("diarization") else "off"
         try:
-            result = self._session.run(pcm, language=language, timestamps=timestamps)
+            result = self._session.run(
+                pcm, language=language, timestamps=timestamps, diarize=diarize
+            )
         except self._t.OutputTruncated as error:
             # Kept like a cloud service's best effort: the text so far is still useful.
             log.warning("Output was truncated: %s", type(error).__name__)

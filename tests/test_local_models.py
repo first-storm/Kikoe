@@ -138,6 +138,7 @@ BREAKAGES: dict[str, Callable[[dict[str, Any]], None]] = {
     "no-name": lambda d: _model(d)["file"].update(url="https://example.test/models/"),
     "id": lambda d: _model(d).update(id="Bad ID"),
     "required-language-flag": lambda d: _model(d).update(requires_language="yes"),
+    "native-diarization-flag": lambda d: _model(d).update(native_diarization="yes"),
     "flag": lambda d: _model(d).update(timestamps="yes"),
 }
 
@@ -243,6 +244,31 @@ def test_models_without_timestamps_still_transcribe_files() -> None:
     assert spec.capabilities.file is not None
     assert not spec.capabilities.file.timestamps
     assert spec.capabilities.realtime is None
+
+
+@pytest.mark.parametrize("quant", ["q8-0", "q5-k-m"])
+@pytest.mark.parametrize("speakers", [False, True])
+def test_moss_offers_native_speakers_without_a_separate_model(quant: str, speakers: bool) -> None:
+    model = load_catalog().model(f"moss-transcribe-diarize-{quant}")
+    assert model is not None
+    assert model.family == "MOSS"
+    assert model.native_diarization
+    assert model.languages == ("en", "zh")
+    assert model.max_seconds == 600
+    assert not model.requires_language
+    spec = model_spec(model, speakers=speakers)
+    assert spec.capabilities.file is not None
+    assert spec.capabilities.file.timestamps
+    assert spec.capabilities.file.diarization
+    assert spec.capabilities.realtime is None
+
+
+def test_older_catalog_entries_default_to_external_speaker_detection() -> None:
+    _, models = parse_engine_catalog(document())
+    assert not models[0].native_diarization
+    capabilities = model_spec(models[0]).capabilities.file
+    assert capabilities is not None
+    assert not capabilities.diarization
 
 
 def test_streaming_models_transcribe_while_recording() -> None:

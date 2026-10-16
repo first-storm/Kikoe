@@ -522,6 +522,34 @@
       "requires_language": true
     },
     {
+      "id": "moss-transcribe-diarize-q8-0",
+      "name": "MOSS-Transcribe-Diarize Q8_0",
+      "family": "MOSS",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/MOSS-Transcribe-Diarize-gguf/resolve/535085b2707309ceaa9802ae3078da03b8d2f244/MOSS-Transcribe-Diarize-Q8_0.gguf",
+        "sha256": "2f9039f1f06c7795de78f45ec1abea2712e881eb0f5c7ff8a080e66e1a3ce015",
+        "size": 986900160
+      },
+      "languages": ["en", "zh"],
+      "timestamps": true,
+      "native_diarization": true,
+      "max_seconds": 600
+    },
+    {
+      "id": "moss-transcribe-diarize-q5-k-m",
+      "name": "MOSS-Transcribe-Diarize Q5_K_M",
+      "family": "MOSS",
+      "file": {
+        "url": "https://huggingface.co/handy-computer/MOSS-Transcribe-Diarize-gguf/resolve/535085b2707309ceaa9802ae3078da03b8d2f244/MOSS-Transcribe-Diarize-Q5_K_M.gguf",
+        "sha256": "cc36d8ad46c66a55125cd9339dc063e62c657d63de60d571442d19aea87e7349",
+        "size": 700314304
+      },
+      "languages": ["en", "zh"],
+      "timestamps": true,
+      "native_diarization": true,
+      "max_seconds": 600
+    },
+    {
       "id": "sortformer-4spk-v2.1",
       "name": "Sortformer Speaker Detection",
       "family": "Speaker Detection",

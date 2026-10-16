@@ -79,7 +79,10 @@ class LocalClient:
         engine = spec.engine_id
         connection = self._runtime.connection(engine)
         device = self._runtime.device(engine)
-        diarizer = self._runtime.diarizer(engine) if options.diarization else None
+        native_speakers = options.diarization and spec.native_diarization
+        diarizer = (
+            self._runtime.diarizer(engine) if options.diarization and not native_speakers else None
+        )
         # Speakers are matched by time, so they need times even when not shown.
         speakers = diarizer is not None and spec.timestamps
         transcript = await connection.transcribe(
@@ -89,6 +92,7 @@ class LocalClient:
             language=language,
             timestamps=(options.timestamps or speakers) and spec.timestamps,
             words=speakers,
+            diarization=native_speakers,
         )
         if diarizer is None or not speakers:
             return transcript.segments

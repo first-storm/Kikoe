@@ -46,6 +46,7 @@ class EngineConnection:
         language: str | None,
         timestamps: bool,
         words: bool = False,
+        diarization: bool = False,
     ) -> EngineTranscript:
         args: dict[str, object] = {
             "model": str(model),
@@ -54,6 +55,7 @@ class EngineConnection:
             "language": language,
             "timestamps": timestamps,
             "words": words,
+            "diarization": diarization,
         }
         try:
             result = await self._host.request(Op.TRANSCRIBE, args)

@@ -439,6 +439,27 @@ async def test_speaker_detection_is_offered_once_its_model_is_installed(tmp_path
 
 
 @run_async
+async def test_native_speaker_detection_survives_external_diarizer_removal(tmp_path: Path) -> None:
+    server = Server()
+    native = replace(_model(server, "moss"), timestamps=True, native_diarization=True)
+    speakers = replace(_model(server, "speakers"), role=ModelRole.DIARIZE)
+    manager = _manager(tmp_path, server, (native, speakers))
+    await manager.install_engine("engine", "gpu")
+    await manager.install_model("moss")
+    for install_speakers in (True, False):
+        (provider,) = manager.providers
+        assert provider.models[0].capabilities.file is not None
+        assert provider.models[0].capabilities.file.diarization
+        if install_speakers:
+            await manager.install_model("speakers")
+        else:
+            await manager.remove_model("speakers")
+    (provider,) = manager.providers
+    assert provider.models[0].capabilities.file is not None
+    assert provider.models[0].capabilities.file.diarization
+
+
+@run_async
 async def test_a_bundled_engine_is_used_and_cannot_be_removed_or_replaced(tmp_path: Path) -> None:
     server = Server()
     builder = _manager(tmp_path / "build", server)
