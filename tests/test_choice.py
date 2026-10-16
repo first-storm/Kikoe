@@ -4,9 +4,11 @@ import pytest
 
 from helpers import file_caps
 from kikoe.core.choice import (
+    ModelChoice,
     RequestedFeatures,
     available_models,
     language_dropped,
+    model_matches,
     normalize_granularities,
     resolve_choice,
     unsupported_features,
@@ -78,6 +80,37 @@ def test_wanted_models_are_tried_in_order_before_the_first(
     choice = resolve_choice([OPENAI], current, recent, default)
 
     assert choice is not None and choice.model.model_id == expected
+
+
+def _gpt() -> ModelChoice:
+    return ModelChoice(OPENAI, GPT)
+
+
+@pytest.mark.parametrize("query", ["", "   "])
+def test_empty_model_search_keeps_every_model(query: str) -> None:
+    assert model_matches(_gpt(), query)
+
+
+def test_model_search_ignores_case_and_surrounding_space() -> None:
+    assert model_matches(_gpt(), "  gpt-4O ")
+
+
+def test_model_search_matches_the_model_id_and_provider_name() -> None:
+    assert model_matches(_gpt(), "4o-transcribe")
+    assert model_matches(_gpt(), "openai")
+
+
+def test_model_search_words_may_come_from_different_fields_in_any_order() -> None:
+    assert model_matches(_gpt(), "transcribe OpenAI")
+
+
+def test_model_search_rejects_models_missing_any_word() -> None:
+    assert not model_matches(_gpt(), "whisper")
+    assert not model_matches(_gpt(), "openai whisper")
+
+
+def test_model_search_words_do_not_span_two_fields() -> None:
+    assert not model_matches(_gpt(), "transcribeopenai")
 
 
 def test_requested_features_are_limited_to_the_model() -> None:

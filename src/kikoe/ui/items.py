@@ -2,6 +2,7 @@
 
 from gi.repository import GObject
 
+from kikoe.core.choice import ModelChoice
 from kikoe.core.models import ModelSpec, NoteSummary, Provider, Recording, Segment
 
 
@@ -15,6 +16,12 @@ class ModelItem(GObject.Object):
     def __init__(self, model: ModelSpec) -> None:
         super().__init__()
         self.model = model
+
+
+class ModelChoiceItem(GObject.Object):
+    def __init__(self, choice: ModelChoice) -> None:
+        super().__init__()
+        self.choice = choice
 
 
 class NoteItem(GObject.Object):

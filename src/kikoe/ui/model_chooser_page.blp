@@ -1,0 +1,56 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeModelChooserPage: Adw.NavigationPage {
+  title: _("Choose Model");
+  tag: "models";
+  shown => $_on_page_shown();
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar header_bar {}
+
+    [top]
+    Adw.Clamp {
+      maximum-size: 600;
+      tightening-threshold: 400;
+
+      child: SearchEntry search_entry {
+        placeholder-text: _("Search Models");
+        search-delay: 100;
+        margin-start: 12;
+        margin-end: 12;
+        margin-bottom: 6;
+        search-changed => $_on_search_entry_search_changed();
+        stop-search => $_on_search_entry_stop_search();
+        activate => $_on_search_entry_activate();
+
+        accessibility {
+          label: _("Search Models");
+        }
+      };
+    }
+
+    content: Stack stack {
+      StackPage {
+        name: "results";
+
+        child: Adw.PreferencesPage results_page {};
+      }
+
+      StackPage {
+        name: "empty";
+
+        child: Adw.StatusPage {
+          icon-name: "edit-find-symbolic";
+          title: _("No Matching Models");
+          description: _("Try a different search");
+
+          styles [
+            "compact",
+          ]
+        };
+      }
+    };
+  };
+}

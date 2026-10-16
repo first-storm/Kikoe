@@ -4,32 +4,51 @@ using Adw 1;
 template $KikoeTranscriptionDialog: Adw.Dialog {
   title: _("Transcription Model");
   content-width: 440;
+  content-height: 560;
 
-  child: Adw.ToolbarView {
-    [top]
-    Adw.HeaderBar {}
+  child: Adw.NavigationView navigation_view {
+    popped => $_on_navigation_view_popped();
 
-    content: Adw.PreferencesPage {
-      Adw.PreferencesGroup {
-        Box models_box {
-          orientation: vertical;
-          spacing: 24;
-        }
-      }
+    Adw.NavigationPage {
+      title: _("Transcription Model");
+      tag: "main";
 
-      Adw.PreferencesGroup {
-        Box options_slot {
-          orientation: vertical;
-        }
-      }
+      child: Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {}
 
-      Adw.PreferencesGroup {
-        Adw.ButtonRow {
-          title: _("_Manage Providers and Models…");
-          use-underline: true;
-          activated => $_on_manage_row_activated();
-        }
-      }
-    };
+        content: Adw.PreferencesPage {
+          Adw.PreferencesGroup model_group {
+            title: _("Model");
+
+            Adw.ActionRow model_row {
+              use-markup: false;
+              activatable: true;
+              activated => $_on_model_row_activated();
+
+              [suffix]
+              Image {
+                icon-name: "go-next-symbolic";
+                accessible-role: presentation;
+              }
+            }
+          }
+
+          Adw.PreferencesGroup {
+            Box options_slot {
+              orientation: vertical;
+            }
+          }
+
+          Adw.PreferencesGroup {
+            Adw.ButtonRow {
+              title: _("_Manage Providers and Models…");
+              use-underline: true;
+              activated => $_on_manage_row_activated();
+            }
+          }
+        };
+      };
+    }
   };
 }

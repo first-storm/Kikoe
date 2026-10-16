@@ -170,10 +170,23 @@ until a note opens.
 
 ## Model selection and transcription options
 
-Transcription Model opens an approximately 440 px dialog. Changes apply
-immediately. Each provider has a group of model radio rows, showing a model name
+Transcription Model opens an approximately 440×560 dialog. Changes apply
+immediately. Its first page keeps the choice short so the options stay visible
+however many models exist: a Model group with one navigation row showing the
+current model name above “<provider> · <capabilities>”, then Options and Manage
+Providers and Models…. Initial focus is on the model row. Without models, the
+group explains that a provider and model are needed and has no row.
+
+The model row pushes Choose Model, a page with a permanently visible Search Models
+entry above one group per provider of model radio rows, each showing a model name
 and capability summary such as “Realtime · Timestamps · Speakers” or “Text only”.
-Initial focus is on the current model.
+The page opens with the current model focused and scrolled into view; typing
+anywhere searches. Every word of the query must appear, ignoring case, in the
+model name, model ID or provider name. Providers without matches hide, and no
+matches at all show No Matching Models with `edit-find-symbolic`. Choosing a
+model, or Enter in a nonempty search for the first match, applies it and returns
+to the first page with focus on the model row. Escape clears a search, then goes
+back.
 
 The Options group explains whether transcription happens during or after
 recording. Timestamps and Speakers switches request those features for the next
@@ -309,14 +322,17 @@ the dialog stops audio. Content scrolls at narrow widths.
 
 ### Re-transcribe
 
-The approximately 480×520 dialog has Cancel, Re-transcribe and suggested Transcribe
+The approximately 480×560 dialog has Cancel, Re-transcribe and suggested Transcribe
 in its header. It identifies the recording and duration, explains use of retained
 original audio, and warns that replacement includes manual edits. Other recordings
 remain intact, and speaker names are preserved where possible.
 
-A Model row opens the picker. Timestamps, Timestamp Detail and Speakers use the
-selected model's file capabilities. The picker starts with the bottom bar's model
-only if it supports files; live-only selections require an explicit file model.
+A Model row pushes the same Choose Model page, listing only models with file
+transcription and without a Close button, since Cancel discards the dialog.
+Timestamps, Timestamp Detail and Speakers use the selected model's file
+capabilities. The picker starts with the bottom bar's model only if it supports
+files; otherwise the row reads Choose a File Model and Transcribe stays
+unavailable until one is chosen.
 Initial option switches reflect the current transcript.
 
 Only complete success replaces text, model information and speaker bindings.

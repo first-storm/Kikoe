@@ -253,3 +253,10 @@ def model_choice_label(choice: ModelChoice) -> str:
     return _("{provider} · {model}").format(
         provider=choice.provider.name, model=choice.model.display_name
     )
+
+
+def model_choice_subtitle(choice: ModelChoice) -> str:
+    """Under a model name in pickers, e.g. “Groq · Timestamps · Word Timestamps”."""
+    return _("{provider} · {capabilities}").format(
+        provider=choice.provider.name, capabilities=capability_summary(choice.model.capabilities)
+    )

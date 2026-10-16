@@ -31,6 +31,19 @@ def available_models(providers: Iterable[Provider]) -> tuple[ModelChoice, ...]:
     return tuple(ModelChoice(p, m) for p in providers for m in p.models)
 
 
+def model_matches(choice: ModelChoice, query: str) -> bool:
+    """Whether the model picker's search keeps ``choice``.
+
+    Each word of ``query`` must appear, ignoring case, in the model name, model ID or
+    provider name. Words may come from different fields, so “groq turbo” narrows a long
+    list to one service's model without typing the full name in order.
+    """
+    words = query.casefold().split()
+    fields = (choice.model.display_name, choice.model.model_id, choice.provider.name)
+    text = "\n".join(fields).casefold()
+    return all(word in text for word in words)
+
+
 def resolve_choice(providers: Iterable[Provider], *wanted: ModelKey | None) -> ModelChoice | None:
     """The first ``wanted`` model that still exists, refreshed from ``providers``.
 

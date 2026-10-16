@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 
-from gi.repository import Adw, GObject, Gtk
+from gi.repository import Adw, Gtk
 
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models
 from kikoe.core.formatting import format_duration
@@ -11,7 +11,8 @@ from kikoe.core.transcript_rows import transcript_columns
 from kikoe.i18n import _
 from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
-from kikoe.ui.labels import model_choice_label
+from kikoe.ui.labels import model_choice_subtitle
+from kikoe.ui.model_chooser_page import ModelChooserPage
 from kikoe.ui.options_group import OptionsGroup
 from kikoe.ui.templates import ui_file
 
@@ -21,8 +22,9 @@ class RetranscribeDialog(Adw.Dialog):
     """Keep this request independent from the bottom bar's next-recording options."""
 
     __gtype_name__ = "KikoeRetranscribeDialog"
+    navigation_view: Adw.NavigationView = Gtk.Template.Child()
     intro_group: Adw.PreferencesGroup = Gtk.Template.Child()
-    model_row: Adw.ComboRow = Gtk.Template.Child()
+    model_row: Adw.ActionRow = Gtk.Template.Child()
     options_slot: Gtk.Box = Gtk.Template.Child()
     transcribe_button: Gtk.Button = Gtk.Template.Child()
 
@@ -36,12 +38,11 @@ class RetranscribeDialog(Adw.Dialog):
         submit: Callable[[ModelChoice, RequestedFeatures], None],
     ) -> None:
         super().__init__()
-        self._updating = True
-        self._providers, self._preferences, self._submit = providers, preferences, submit
+        self._preferences, self._submit = preferences, submit
         self._options = OptionsGroup()
         self.options_slot.append(self._options)
+        # A live-only current model is not offered, so nothing is chosen silently.
         self._choice = current if current and current.model.capabilities.file is not None else None
-        wanted = RequestedFeatures(*transcript_columns(recording.segments))
         self.intro_group.set_description(
             _(
                 "Re-transcribe “Recording {number}” ({duration}) from the kept original audio. "
@@ -49,43 +50,52 @@ class RetranscribeDialog(Adw.Dialog):
                 "can be added this way."
             ).format(number=number, duration=format_duration(recording.duration))
         )
-        self._choices = [
+        choices = [
             c
             for c in available_models(providers.providers)
             if c.model.capabilities.file is not None
         ]
-        # Without a usable current model the first row is a prompt, so nothing is chosen silently.
-        self._offset = 0 if self._choice is not None else 1
-        names = [model_choice_label(c) for c in self._choices]
-        if self._offset:
-            names.insert(0, _("Choose a File Model…"))
-        self.model_row.set_model(Gtk.StringList.new(names))
-        if self._choice is not None:
-            keys = [c.key for c in self._choices]
-            self.model_row.set_selected(keys.index(self._choice.key))
-        self._updating = False
-        self._show_options(wanted)
+        self._chooser = ModelChooserPage(choices, None, self._on_model_chosen, closable=False)
+        self._show_choice(RequestedFeatures(*transcript_columns(recording.segments)))
+        self.set_focus(self.model_row)
 
-    @Gtk.Template.Callback()
-    def _on_model_row_notify_selected(self, _row: Adw.ComboRow, _spec: GObject.ParamSpec) -> None:
-        if self._updating:
-            return
-        index = self.model_row.get_selected() - self._offset
-        if not 0 <= index < len(self._choices):
-            return
-        self._choice = self._choices[index]
-        self._show_options(self._options.wanted)
-
-    def _show_options(self, wanted: RequestedFeatures) -> None:
-        file = self._choice.model.capabilities.file if self._choice else None
+    def _show_choice(self, wanted: RequestedFeatures) -> None:
+        choice = self._choice
+        file = choice.model.capabilities.file if choice else None
+        if choice is None:
+            self.model_row.set_title(_("Choose a File Model"))
+            self.model_row.set_subtitle(_("Required to re-transcribe"))
+        else:
+            self.model_row.set_title(choice.model.display_name)
+            self.model_row.set_subtitle(model_choice_subtitle(choice))
         self.transcribe_button.set_sensitive(file is not None)
         self._options.set_sensitive(file is not None)
         self._options.set_options(
             file or ModeCapabilities(),
             wanted,
-            self._choice.provider.api if self._choice else None,
+            choice.provider.api if choice else None,
             self._preferences.current.language,
         )
+
+    def _on_model_chosen(self, choice: ModelChoice) -> None:
+        # Both the radio and its row report one click; only the first changes anything.
+        if self._choice is None or choice.key != self._choice.key:
+            self._choice = choice
+            self._show_choice(self._options.wanted)
+        if self.navigation_view.get_visible_page() is self._chooser:
+            self.navigation_view.pop()
+
+    @Gtk.Template.Callback()
+    def _on_model_row_activated(self, _row: Adw.ActionRow) -> None:
+        self._chooser.set_current(self._choice.key if self._choice else None)
+        self.navigation_view.push(self._chooser)
+
+    @Gtk.Template.Callback()
+    def _on_navigation_view_popped(
+        self, _view: Adw.NavigationView, _page: Adw.NavigationPage
+    ) -> None:
+        """Return keyboard focus to where the chooser was opened from."""
+        self.model_row.grab_focus()
 
     @Gtk.Template.Callback()
     def _on_cancel_button_clicked(self, _button: Gtk.Button) -> None:

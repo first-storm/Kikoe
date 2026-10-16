@@ -479,7 +479,9 @@ rows and overlays, `ui.stale_rows` binds off-screen rows over later frames, and
 scheduling, restoring the latest preview when the target note is revisited.
 `ui.recording_view` provides the batch placeholder; live transcription shares the
 note list. The bottom bar owns model selection and receives changes from
-`ui.transcription_dialog`. `ui.level_meter` draws 28 theme-colored bars from PCM
+`ui.transcription_dialog`, which pushes `ui.model_chooser_page` to list and search
+models with `core.choice.model_matches`; `ui.retranscribe_dialog` pushes the same
+page with file models only. `ui.level_meter` draws 28 theme-colored bars from PCM
 RMS measurements in `core.recording`.
 
 Widgets pair Python behavior with Blueprint layout. Custom children are inserted
