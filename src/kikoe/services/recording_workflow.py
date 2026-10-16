@@ -40,6 +40,8 @@ class RecordingCallbacks:
     """The note exists, the microphone is open and the session is capturing."""
     progress: Callable[[CaptureProgress], None]
     live_update: Callable[[LiveSnapshot], None]
+    finalizing: Callable[[], None]
+    """The microphone has stopped; live recognition is about to drain pending text."""
     capture_ended: Callable[[], None]
     """Capture and live recognition have stopped; the audio is about to be saved."""
     saved: Callable[[Note], None]
@@ -98,6 +100,7 @@ class RecordingWorkflow:
                 live_task = asyncio.create_task(self._run_live(self.live))
             error = await session.capture(self._callbacks.progress)
             if live_task is not None:
+                self._callbacks.finalizing()
                 await self._finish_live(live_task)
             self._callbacks.capture_ended()
             await self._save(session, error)

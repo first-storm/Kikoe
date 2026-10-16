@@ -108,3 +108,12 @@ def test_recovery_pins_the_note_and_blocks_new_work() -> None:
 def test_stop_is_offered_whenever_capture_is_not_stopped(state: CaptureState) -> None:
     activity = Activity(recording=True, capture_state=state)
     assert ("stop-recording" in enabled(activity)) is (state is not CaptureState.STOPPED)
+
+
+def test_cancelling_a_transcription_disables_repeated_cancel() -> None:
+    assert enabled(Activity(importing=True, cancelling=True)) == set()
+
+
+def test_stopping_capture_disables_pause_resume_and_stop() -> None:
+    activity = Activity(recording=True, capture_state=CaptureState.RECORDING, stopping=True)
+    assert enabled(activity) == set()

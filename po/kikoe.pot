@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kikoe\n"
 "Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
-"POT-Creation-Date: 2026-10-16 00:52+1100\n"
+"POT-Creation-Date: 2026-10-16 15:43+1100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -229,44 +229,55 @@ msgstr ""
 msgid "Local models are not available."
 msgstr ""
 
-#: src/kikoe/providers/local/client.py:50
+#: src/kikoe/providers/local/client.py:55
 #, python-brace-format
 msgid "“{model}” is no longer downloaded. Download it again in Preferences."
 msgstr ""
 
-#: src/kikoe/providers/local/client.py:97
+#: src/kikoe/providers/local/client.py:107
 msgid "This local model transcribes files only."
 msgstr ""
 
-#: src/kikoe/providers/local/connection.py:99
+#: src/kikoe/providers/local/client.py:119
+#, python-brace-format
+msgid "Select a language before transcribing with “{model}”."
+msgstr ""
+
+#: src/kikoe/providers/local/client.py:125
+#, python-brace-format
+msgid ""
+"“{model}” does not support the selected language. Choose another language."
+msgstr ""
+
+#: src/kikoe/providers/local/connection.py:101
 msgid "The local engine returned an unreadable result."
 msgstr ""
 
-#: src/kikoe/providers/local/connection.py:123
+#: src/kikoe/providers/local/connection.py:125
 msgid ""
 "The local engine could not start. Try another acceleration option in "
 "Preferences, or download the engine again."
 msgstr ""
 
-#: src/kikoe/providers/local/connection.py:131
+#: src/kikoe/providers/local/connection.py:133
 msgid ""
 "The model could not be loaded. It may need more memory than is free, or the "
 "file is damaged; download it again or choose a smaller model."
 msgstr ""
 
-#: src/kikoe/providers/local/connection.py:137
+#: src/kikoe/providers/local/connection.py:139
 msgid "The selected device failed. Choose another device in Preferences."
 msgstr ""
 
-#: src/kikoe/providers/local/connection.py:140
+#: src/kikoe/providers/local/connection.py:142
 msgid "The local model could not process this audio."
 msgstr ""
 
-#: src/kikoe/providers/local/connection.py:142
+#: src/kikoe/providers/local/connection.py:144
 msgid "Transcription was cancelled."
 msgstr ""
 
-#: src/kikoe/providers/local/connection.py:144
+#: src/kikoe/providers/local/connection.py:146
 msgid "The local engine failed. See the log for details."
 msgstr ""
 
@@ -300,7 +311,7 @@ msgstr ""
 msgid "Choose a file transcription model to retry this recording."
 msgstr ""
 
-#: src/kikoe/services/importer.py:74 src/kikoe/ui/bottom_bar.py:166
+#: src/kikoe/services/importer.py:74 src/kikoe/ui/bottom_bar.py:187
 msgid "Choose a file transcription model to import audio."
 msgstr ""
 
@@ -452,43 +463,47 @@ msgstr ""
 msgid "Could not save the settings file: {error}"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:98
+#: src/kikoe/ui/bottom_bar.py:103
 msgid "_Append Recording"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:98 src/kikoe/ui/bottom_bar.ui:125
+#: src/kikoe/ui/bottom_bar.py:103 src/kikoe/ui/bottom_bar.ui:125
 msgid "_Record"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:119 src/kikoe/ui/bottom_bar.ui:224
-#: src/kikoe/ui/bottom_bar.ui:227
+#: src/kikoe/ui/bottom_bar.py:118 src/kikoe/ui/bottom_bar.ui:206
+msgid "Preparing transcription…"
+msgstr ""
+
+#: src/kikoe/ui/bottom_bar.py:140 src/kikoe/ui/bottom_bar.ui:233
+#: src/kikoe/ui/bottom_bar.ui:236
 msgid "Pause Recording"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:119
+#: src/kikoe/ui/bottom_bar.py:140
 msgid "Resume Recording"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:149
+#: src/kikoe/ui/bottom_bar.py:170
 msgid "No Model"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:151
+#: src/kikoe/ui/bottom_bar.py:172
 msgid "Add a model in Preferences first"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:152 src/kikoe/ui/bottom_bar.ui:44
+#: src/kikoe/ui/bottom_bar.py:173 src/kikoe/ui/bottom_bar.ui:44
 msgid "Transcription Model…"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:157
+#: src/kikoe/ui/bottom_bar.py:178
 #, python-brace-format
 msgid ""
 "{model} · {provider}\n"
 "{hint}"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.py:164 src/kikoe/ui/bottom_bar.ui:90
+#: src/kikoe/ui/bottom_bar.py:185 src/kikoe/ui/bottom_bar.ui:90
 #: src/kikoe/ui/shortcuts.ui:27
 msgid "Import Audio…"
 msgstr ""
@@ -515,12 +530,16 @@ msgstr ""
 msgid "_Cancel"
 msgstr ""
 
-#: src/kikoe/ui/bottom_bar.ui:243
+#: src/kikoe/ui/bottom_bar.ui:208
+msgid "Transcription in progress"
+msgstr ""
+
+#: src/kikoe/ui/bottom_bar.ui:252
 msgid "_Stop"
 msgstr ""
 
 #: src/kikoe/ui/content_header.ui:14
-#: src/kikoe/ui/transcription_controller.py:324 src/kikoe/ui/window.py:402
+#: src/kikoe/ui/transcription_controller.py:334 src/kikoe/ui/window.py:404
 #: src/kikoe/ui/window.ui:10 src/kikoe/ui/window.ui:37
 #: src/kikoe/ui/window.ui:119 src/kikoe/ui/window.ui:130
 msgid "Kikoe"
@@ -644,7 +663,7 @@ msgid "Audio Files"
 msgstr ""
 
 #: src/kikoe/ui/export_controller.py:99 src/kikoe/ui/speaker_controller.py:56
-#: src/kikoe/ui/transcription_controller.py:161
+#: src/kikoe/ui/transcription_controller.py:167
 msgid "The original audio is not available."
 msgstr ""
 
@@ -772,7 +791,7 @@ msgstr ""
 
 #: src/kikoe/ui/labels.py:64 src/kikoe/ui/local_model_list.py:82
 #: src/kikoe/ui/model_dialog.ui:79 src/kikoe/ui/model_dialog.ui:140
-#: src/kikoe/ui/recording_controller.py:168
+#: src/kikoe/ui/recording_controller.py:173
 msgid "Timestamps"
 msgstr ""
 
@@ -780,7 +799,7 @@ msgstr ""
 msgid "Word Timestamps"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:170
+#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:175
 msgid "Speakers"
 msgstr ""
 
@@ -788,7 +807,7 @@ msgstr ""
 msgid "Streaming"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:174
+#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:179
 msgid "Text only"
 msgstr ""
 
@@ -895,9 +914,9 @@ msgstr ""
 msgid "Transcribing… {part} of {parts} chunks complete"
 msgstr ""
 
-#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:176
-#: src/kikoe/ui/transcription_controller.py:262
-#: src/kikoe/ui/transcription_controller.py:309
+#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:182
+#: src/kikoe/ui/transcription_controller.py:269
+#: src/kikoe/ui/transcription_controller.py:317
 msgid "Transcribing…"
 msgstr ""
 
@@ -1508,24 +1527,32 @@ msgstr ""
 msgid "_Remove Provider"
 msgstr ""
 
-#: src/kikoe/ui/recording_controller.py:151
+#: src/kikoe/ui/recording_controller.py:107
+msgid "Stopping recording…"
+msgstr ""
+
+#: src/kikoe/ui/recording_controller.py:156
 msgid "No audio was recorded"
 msgstr ""
 
-#: src/kikoe/ui/recording_controller.py:171
+#: src/kikoe/ui/recording_controller.py:176
 #, python-brace-format
 msgid "{provider} {model} · {options}"
 msgstr ""
 
-#: src/kikoe/ui/recording_controller.py:183
+#: src/kikoe/ui/recording_controller.py:195
+msgid "Finishing transcription…"
+msgstr ""
+
+#: src/kikoe/ui/recording_controller.py:200
 msgid "Saving recording…"
 msgstr ""
 
-#: src/kikoe/ui/recording_controller.py:191 src/kikoe/ui/tasks.py:59
+#: src/kikoe/ui/recording_controller.py:208 src/kikoe/ui/tasks.py:59
 msgid "An unexpected error occurred. See the local log for details."
 msgstr ""
 
-#: src/kikoe/ui/recording_controller.py:225
+#: src/kikoe/ui/recording_controller.py:243
 msgid "Recovering recordings…"
 msgstr ""
 
@@ -1863,28 +1890,32 @@ msgstr ""
 msgid "Delete Recording"
 msgstr ""
 
-#: src/kikoe/ui/transcription_controller.py:107
+#: src/kikoe/ui/transcription_controller.py:85
+msgid "Cancelling…"
+msgstr ""
+
+#: src/kikoe/ui/transcription_controller.py:112
 msgid "Import cancelled"
 msgstr ""
 
-#: src/kikoe/ui/transcription_controller.py:141
-#: src/kikoe/ui/transcription_controller.py:285
+#: src/kikoe/ui/transcription_controller.py:147
+#: src/kikoe/ui/transcription_controller.py:293
 msgid "Transcription Failed"
 msgstr ""
 
-#: src/kikoe/ui/transcription_controller.py:149
+#: src/kikoe/ui/transcription_controller.py:155
 msgid "Transcription finished"
 msgstr ""
 
-#: src/kikoe/ui/transcription_controller.py:169
+#: src/kikoe/ui/transcription_controller.py:175
 msgid "Choose an available file transcription model."
 msgstr ""
 
-#: src/kikoe/ui/transcription_controller.py:207
+#: src/kikoe/ui/transcription_controller.py:213
 msgid "Re-transcription cancelled"
 msgstr ""
 
-#: src/kikoe/ui/transcription_controller.py:212
+#: src/kikoe/ui/transcription_controller.py:218
 #, python-brace-format
 msgid ""
 "{error}\n"
@@ -1892,11 +1923,11 @@ msgid ""
 "Your text and audio have been kept."
 msgstr ""
 
-#: src/kikoe/ui/transcription_controller.py:213
+#: src/kikoe/ui/transcription_controller.py:219
 msgid "Re-transcription Failed"
 msgstr ""
 
-#: src/kikoe/ui/transcription_controller.py:267
+#: src/kikoe/ui/transcription_controller.py:274
 msgid "Transcription cancelled"
 msgstr ""
 

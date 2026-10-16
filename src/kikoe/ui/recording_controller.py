@@ -8,6 +8,7 @@ from gi.repository import Adw, Gio, GLib
 from kikoe.core.choice import ModelChoice
 from kikoe.core.models import Note, Recording
 from kikoe.core.recording import CaptureProgress, CaptureState
+from kikoe.core.transcription import LiveSnapshot, LiveState
 from kikoe.i18n import _
 from kikoe.media.recorder import SoundDeviceRecorder
 from kikoe.providers.base import TranscriptionOptions
@@ -101,7 +102,10 @@ class RecordingController:
             run_task(self._change_capture_state(pause=False), self._window)
 
     def on_stop(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        if self.session is not None:
+        if self.session is not None and not self._work.stopping:
+            self._work.stopping = True
+            self._bottom_bar.set_progress(_("Stopping recording…"), cancellable=False)
+            self._host.refresh_actions()
             run_task(self.session.stop(), self._window)
 
     def show_in_progress(self) -> None:
@@ -145,7 +149,8 @@ class RecordingController:
                 before_start=self._playback.finish,
                 started=lambda note: self._on_started(note, choice, options),
                 progress=self._on_progress,
-                live_update=self._note_view.update_live,
+                live_update=self._on_live_update,
+                finalizing=self._on_finalizing,
                 capture_ended=self._on_capture_ended,
                 saved=self._host.show_note,
                 nothing_recorded=lambda: self._host.toast(_("No audio was recorded")),
@@ -177,10 +182,22 @@ class RecordingController:
         self._refresh_sidebar()
         self._host.show_content_pane()
         self._bottom_bar.show_recording(self.summary)
+        if self.live is not None:
+            self._bottom_bar.set_live_state(LiveState.CONNECTING)
+
+    def _on_live_update(self, snapshot: LiveSnapshot) -> None:
+        self._note_view.update_live(snapshot)
+        if not self._work.stopping:
+            self._bottom_bar.set_live_state(snapshot.state)
+
+    def _on_finalizing(self) -> None:
+        self._work.stopping = True
+        self._bottom_bar.set_progress(_("Finishing transcription…"), cancellable=False)
+        self._host.refresh_actions()
 
     def _on_capture_ended(self) -> None:
-        self._note_view.hide_recording()
-        self._bottom_bar.set_progress(_("Saving recording…"))
+        self._work.stopping = True
+        self._bottom_bar.set_progress(_("Saving recording…"), cancellable=False)
         self._host.refresh_actions()
 
     def _on_live_failed(self, error: Exception) -> None:
@@ -195,6 +212,7 @@ class RecordingController:
         self._workflow = None
         self.note_id = None
         self._work.recording_task = None
+        self._work.stopping = False
         self._note_view.hide_recording()
         self._bottom_bar.set_progress(None)
         self._refresh_sidebar()

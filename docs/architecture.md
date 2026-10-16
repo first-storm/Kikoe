@@ -336,7 +336,8 @@ application binds that context once and passes the factory to workflows.
 `services.recording.RecordingSession` coordinates capture, local storage and
 finalization. `services.realtime.RealtimeRecording` owns live connections;
 `services.recording_workflow` reports connection failures while local capture
-continues.
+continues. Its finalizing callback runs after capture ends and before waiting for
+live text, so the UI can show progress throughout that wait.
 
 Native PCM is journaled before an independent sender reads it. A streaming ffmpeg
 process resamples bounded buffers to the provider's mono little-endian int16
@@ -444,8 +445,10 @@ uses a smaller set of callbacks.
 `core.activity.action_availability` derives enabled actions.
 `services.activity.ActivityTracker` coordinates shutdown: save edits, stop
 playback, stop capture, cancel imports, and let recovery already writing audio
-finish. Saved-note callbacks carry note identity so an old write cannot replace
-a newly selected note. Export and shutdown wait for pending edits.
+finish. An import already cancelling is awaited without cancelling it again, so
+its asynchronous cleanup can finish. Cancelling and stopping flags also keep
+actions disabled during cleanup and recording finalization. Saved-note callbacks
+carry note identity so an old write cannot replace a newly selected note. Export and shutdown wait for pending edits.
 
 `ui.note_view` renders a flat `Gtk.ListView` of recording headers and segments.
 Only visible rows need widgets. Reusable items, hidden spare rows and a bounded

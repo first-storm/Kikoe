@@ -20,6 +20,8 @@ class ActivityTracker:
         """Recovered audio is being written, which must finish rather than be cancelled."""
         self.committing = False
         """The transcription result is being saved, which can no longer be cancelled."""
+        self.cancelling = False
+        self.stopping = False
         self.closing = False
 
     @property
@@ -51,7 +53,7 @@ class ActivityTracker:
         recording = self.recording_task
         await stop_recording()
         importing = self.import_task
-        if importing is not None:
+        if importing is not None and not importing.cancelling():
             importing.cancel()
         recovery = self.recovery_task
         if recovery is not None and not recovery.done():

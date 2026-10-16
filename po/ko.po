@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kikoe 0.1.1\n"
 "Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
-"POT-Creation-Date: 2026-10-16 00:52+1100\n"
+"POT-Creation-Date: 2026-10-16 15:43+1100\n"
 "PO-Revision-Date: 2026-10-15 00:00+0000\n"
 "Last-Translator: Kikoe contributors\n"
 "Language-Team: Korean\n"
@@ -234,22 +234,33 @@ msgstr "{host}에서 전사를 완료하지 못했습니다: {message}"
 msgid "Local models are not available."
 msgstr "로컬 모델을 사용할 수 없습니다."
 
-#: src/kikoe/providers/local/client.py:50
+#: src/kikoe/providers/local/client.py:55
 #, python-brace-format
 msgid "“{model}” is no longer downloaded. Download it again in Preferences."
 msgstr ""
 "“{model}”이(가) 더 이상 다운로드되어 있지 않습니다. 환경설정에서 다시 다운로"
 "드하세요."
 
-#: src/kikoe/providers/local/client.py:97
+#: src/kikoe/providers/local/client.py:107
 msgid "This local model transcribes files only."
 msgstr "이 로컬 모델은 파일만 전사합니다."
 
-#: src/kikoe/providers/local/connection.py:99
+#: src/kikoe/providers/local/client.py:119
+#, python-brace-format
+msgid "Select a language before transcribing with “{model}”."
+msgstr "“{model}”로 전사하기 전에 언어를 선택하세요."
+
+#: src/kikoe/providers/local/client.py:125
+#, python-brace-format
+msgid ""
+"“{model}” does not support the selected language. Choose another language."
+msgstr "“{model}”은 선택한 언어를 지원하지 않습니다. 다른 언어를 선택하세요."
+
+#: src/kikoe/providers/local/connection.py:101
 msgid "The local engine returned an unreadable result."
 msgstr "로컬 엔진이 읽을 수 없는 결과를 반환했습니다."
 
-#: src/kikoe/providers/local/connection.py:123
+#: src/kikoe/providers/local/connection.py:125
 msgid ""
 "The local engine could not start. Try another acceleration option in "
 "Preferences, or download the engine again."
@@ -257,7 +268,7 @@ msgstr ""
 "로컬 엔진을 시작할 수 없습니다. 환경설정에서 다른 가속 옵션을 시도하거나 엔진"
 "을 다시 다운로드하세요."
 
-#: src/kikoe/providers/local/connection.py:131
+#: src/kikoe/providers/local/connection.py:133
 msgid ""
 "The model could not be loaded. It may need more memory than is free, or the "
 "file is damaged; download it again or choose a smaller model."
@@ -266,19 +277,19 @@ msgstr ""
 "나 파일이 손상되었을 수 있습니다. 다시 다운로드하거나 더 작은 모델을 선택하세"
 "요."
 
-#: src/kikoe/providers/local/connection.py:137
+#: src/kikoe/providers/local/connection.py:139
 msgid "The selected device failed. Choose another device in Preferences."
 msgstr "선택한 장치가 실패했습니다. 환경설정에서 다른 장치를 선택하세요."
 
-#: src/kikoe/providers/local/connection.py:140
+#: src/kikoe/providers/local/connection.py:142
 msgid "The local model could not process this audio."
 msgstr "로컬 모델이 이 오디오를 처리할 수 없습니다."
 
-#: src/kikoe/providers/local/connection.py:142
+#: src/kikoe/providers/local/connection.py:144
 msgid "Transcription was cancelled."
 msgstr "전사가 취소되었습니다."
 
-#: src/kikoe/providers/local/connection.py:144
+#: src/kikoe/providers/local/connection.py:146
 msgid "The local engine failed. See the log for details."
 msgstr "로컬 엔진이 실패했습니다. 자세한 내용은 로그를 확인하세요."
 
@@ -314,7 +325,7 @@ msgstr "실시간 전사에 실패했습니다. 오디오는 보관되었습니�
 msgid "Choose a file transcription model to retry this recording."
 msgstr "이 녹음을 다시 시도하려면 파일 전사 모델을 선택하세요."
 
-#: src/kikoe/services/importer.py:74 src/kikoe/ui/bottom_bar.py:166
+#: src/kikoe/services/importer.py:74 src/kikoe/ui/bottom_bar.py:187
 msgid "Choose a file transcription model to import audio."
 msgstr "오디오를 가져오려면 파일 전사 모델을 선택하세요."
 
@@ -469,36 +480,40 @@ msgstr "설정 파일 {detail}이 손상되었거나 인식할 수 없습니다:
 msgid "Could not save the settings file: {error}"
 msgstr "설정 파일을 저장할 수 없습니다: {error}"
 
-#: src/kikoe/ui/bottom_bar.py:98
+#: src/kikoe/ui/bottom_bar.py:103
 msgid "_Append Recording"
 msgstr "녹음 추가(_A)"
 
-#: src/kikoe/ui/bottom_bar.py:98 src/kikoe/ui/bottom_bar.ui:125
+#: src/kikoe/ui/bottom_bar.py:103 src/kikoe/ui/bottom_bar.ui:125
 msgid "_Record"
 msgstr "녹음(_R)"
 
-#: src/kikoe/ui/bottom_bar.py:119 src/kikoe/ui/bottom_bar.ui:224
-#: src/kikoe/ui/bottom_bar.ui:227
+#: src/kikoe/ui/bottom_bar.py:118 src/kikoe/ui/bottom_bar.ui:206
+msgid "Preparing transcription…"
+msgstr "전사 준비 중…"
+
+#: src/kikoe/ui/bottom_bar.py:140 src/kikoe/ui/bottom_bar.ui:233
+#: src/kikoe/ui/bottom_bar.ui:236
 msgid "Pause Recording"
 msgstr "녹음 일시 중지"
 
-#: src/kikoe/ui/bottom_bar.py:119
+#: src/kikoe/ui/bottom_bar.py:140
 msgid "Resume Recording"
 msgstr "녹음 재개"
 
-#: src/kikoe/ui/bottom_bar.py:149
+#: src/kikoe/ui/bottom_bar.py:170
 msgid "No Model"
 msgstr "모델 없음"
 
-#: src/kikoe/ui/bottom_bar.py:151
+#: src/kikoe/ui/bottom_bar.py:172
 msgid "Add a model in Preferences first"
 msgstr "먼저 환경설정에서 모델을 추가하세요"
 
-#: src/kikoe/ui/bottom_bar.py:152 src/kikoe/ui/bottom_bar.ui:44
+#: src/kikoe/ui/bottom_bar.py:173 src/kikoe/ui/bottom_bar.ui:44
 msgid "Transcription Model…"
 msgstr "전사 모델…"
 
-#: src/kikoe/ui/bottom_bar.py:157
+#: src/kikoe/ui/bottom_bar.py:178
 #, python-brace-format
 msgid ""
 "{model} · {provider}\n"
@@ -507,7 +522,7 @@ msgstr ""
 "{model} · {provider}\n"
 "{hint}"
 
-#: src/kikoe/ui/bottom_bar.py:164 src/kikoe/ui/bottom_bar.ui:90
+#: src/kikoe/ui/bottom_bar.py:185 src/kikoe/ui/bottom_bar.ui:90
 #: src/kikoe/ui/shortcuts.ui:27
 msgid "Import Audio…"
 msgstr "오디오 가져오기…"
@@ -534,12 +549,16 @@ msgstr "오디오 가져오기…(_I)"
 msgid "_Cancel"
 msgstr "취소(_C)"
 
-#: src/kikoe/ui/bottom_bar.ui:243
+#: src/kikoe/ui/bottom_bar.ui:208
+msgid "Transcription in progress"
+msgstr "전사 진행 중"
+
+#: src/kikoe/ui/bottom_bar.ui:252
 msgid "_Stop"
 msgstr "중지(_S)"
 
 #: src/kikoe/ui/content_header.ui:14
-#: src/kikoe/ui/transcription_controller.py:324 src/kikoe/ui/window.py:402
+#: src/kikoe/ui/transcription_controller.py:334 src/kikoe/ui/window.py:404
 #: src/kikoe/ui/window.ui:10 src/kikoe/ui/window.ui:37
 #: src/kikoe/ui/window.ui:119 src/kikoe/ui/window.ui:130
 msgid "Kikoe"
@@ -663,7 +682,7 @@ msgid "Audio Files"
 msgstr "오디오 파일"
 
 #: src/kikoe/ui/export_controller.py:99 src/kikoe/ui/speaker_controller.py:56
-#: src/kikoe/ui/transcription_controller.py:161
+#: src/kikoe/ui/transcription_controller.py:167
 msgid "The original audio is not available."
 msgstr "원본 오디오를 사용할 수 없습니다."
 
@@ -791,7 +810,7 @@ msgstr "실시간"
 
 #: src/kikoe/ui/labels.py:64 src/kikoe/ui/local_model_list.py:82
 #: src/kikoe/ui/model_dialog.ui:79 src/kikoe/ui/model_dialog.ui:140
-#: src/kikoe/ui/recording_controller.py:168
+#: src/kikoe/ui/recording_controller.py:173
 msgid "Timestamps"
 msgstr "타임스탬프"
 
@@ -799,7 +818,7 @@ msgstr "타임스탬프"
 msgid "Word Timestamps"
 msgstr "단어 타임스탬프"
 
-#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:170
+#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:175
 msgid "Speakers"
 msgstr "화자"
 
@@ -807,7 +826,7 @@ msgstr "화자"
 msgid "Streaming"
 msgstr "스트리밍"
 
-#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:174
+#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:179
 msgid "Text only"
 msgstr "텍스트만"
 
@@ -914,9 +933,9 @@ msgstr "오디오 변환 중…"
 msgid "Transcribing… {part} of {parts} chunks complete"
 msgstr "전사 중… 조각 {parts}개 중 {part}개 완료"
 
-#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:176
-#: src/kikoe/ui/transcription_controller.py:262
-#: src/kikoe/ui/transcription_controller.py:309
+#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:182
+#: src/kikoe/ui/transcription_controller.py:269
+#: src/kikoe/ui/transcription_controller.py:317
 msgid "Transcribing…"
 msgstr "전사 중…"
 
@@ -1544,24 +1563,32 @@ msgstr "아직 모델이 없습니다"
 msgid "_Remove Provider"
 msgstr "제공자 제거(_R)"
 
-#: src/kikoe/ui/recording_controller.py:151
+#: src/kikoe/ui/recording_controller.py:107
+msgid "Stopping recording…"
+msgstr "녹음 중지 중…"
+
+#: src/kikoe/ui/recording_controller.py:156
 msgid "No audio was recorded"
 msgstr "녹음된 오디오가 없습니다"
 
-#: src/kikoe/ui/recording_controller.py:171
+#: src/kikoe/ui/recording_controller.py:176
 #, python-brace-format
 msgid "{provider} {model} · {options}"
 msgstr "{provider} {model} · {options}"
 
-#: src/kikoe/ui/recording_controller.py:183
+#: src/kikoe/ui/recording_controller.py:195
+msgid "Finishing transcription…"
+msgstr "전사 마무리 중…"
+
+#: src/kikoe/ui/recording_controller.py:200
 msgid "Saving recording…"
 msgstr "녹음 저장 중…"
 
-#: src/kikoe/ui/recording_controller.py:191 src/kikoe/ui/tasks.py:59
+#: src/kikoe/ui/recording_controller.py:208 src/kikoe/ui/tasks.py:59
 msgid "An unexpected error occurred. See the local log for details."
 msgstr "예기치 않은 오류가 발생했습니다. 자세한 내용은 로컬 로그를 확인하세요."
 
-#: src/kikoe/ui/recording_controller.py:225
+#: src/kikoe/ui/recording_controller.py:243
 msgid "Recovering recordings…"
 msgstr "녹음 복구 중…"
 
@@ -1913,28 +1940,32 @@ msgstr "원본 오디오 내보내기…"
 msgid "Delete Recording"
 msgstr "녹음 삭제"
 
-#: src/kikoe/ui/transcription_controller.py:107
+#: src/kikoe/ui/transcription_controller.py:85
+msgid "Cancelling…"
+msgstr "취소 중…"
+
+#: src/kikoe/ui/transcription_controller.py:112
 msgid "Import cancelled"
 msgstr "가져오기 취소됨"
 
-#: src/kikoe/ui/transcription_controller.py:141
-#: src/kikoe/ui/transcription_controller.py:285
+#: src/kikoe/ui/transcription_controller.py:147
+#: src/kikoe/ui/transcription_controller.py:293
 msgid "Transcription Failed"
 msgstr "전사 실패"
 
-#: src/kikoe/ui/transcription_controller.py:149
+#: src/kikoe/ui/transcription_controller.py:155
 msgid "Transcription finished"
 msgstr "전사 완료"
 
-#: src/kikoe/ui/transcription_controller.py:169
+#: src/kikoe/ui/transcription_controller.py:175
 msgid "Choose an available file transcription model."
 msgstr "사용 가능한 파일 전사 모델을 선택하세요."
 
-#: src/kikoe/ui/transcription_controller.py:207
+#: src/kikoe/ui/transcription_controller.py:213
 msgid "Re-transcription cancelled"
 msgstr "재전사 취소됨"
 
-#: src/kikoe/ui/transcription_controller.py:212
+#: src/kikoe/ui/transcription_controller.py:218
 #, python-brace-format
 msgid ""
 "{error}\n"
@@ -1945,11 +1976,11 @@ msgstr ""
 "\n"
 "텍스트와 오디오는 보관되었습니다."
 
-#: src/kikoe/ui/transcription_controller.py:213
+#: src/kikoe/ui/transcription_controller.py:219
 msgid "Re-transcription Failed"
 msgstr "재전사 실패"
 
-#: src/kikoe/ui/transcription_controller.py:267
+#: src/kikoe/ui/transcription_controller.py:274
 msgid "Transcription cancelled"
 msgstr "전사 취소됨"
 

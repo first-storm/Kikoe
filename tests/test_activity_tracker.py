@@ -153,3 +153,34 @@ async def test_a_failing_recording_task_reports_its_error_to_the_caller() -> Non
     tracker.recording_task = asyncio.ensure_future(record())
     with pytest.raises(RuntimeError, match="disk full"):
         await wind_down(tracker, Steps())
+
+
+@run_async
+async def test_closing_during_cancel_does_not_interrupt_resource_cleanup() -> None:
+    tracker = ActivityTracker()
+    started = asyncio.Event()
+    cleaning = asyncio.Event()
+    release = asyncio.Event()
+    cleaned = asyncio.Event()
+
+    async def importing() -> None:
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cleaning.set()
+            await release.wait()
+            cleaned.set()
+
+    task = asyncio.create_task(importing())
+    tracker.import_task = task
+    await started.wait()
+    task.cancel()
+    await cleaning.wait()
+    closing = asyncio.create_task(wind_down(tracker, Steps()))
+    await asyncio.sleep(0)
+    release.set()
+    async with asyncio.timeout(1):
+        await closing
+    assert cleaned.is_set()
+    assert task.cancelled()

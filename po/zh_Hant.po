@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: kikoe 0.1.1\n"
 "Report-Msgid-Bugs-To: https://github.com/first-storm/Kikoe/issues\n"
-"POT-Creation-Date: 2026-10-16 00:52+1100\n"
+"POT-Creation-Date: 2026-10-16 15:43+1100\n"
 "PO-Revision-Date: 2026-10-15 00:00+0000\n"
 "Last-Translator: Kikoe contributors\n"
 "Language-Team: Traditional Chinese\n"
@@ -227,45 +227,56 @@ msgstr "{host} 無法完成轉錄：{message}"
 msgid "Local models are not available."
 msgstr "本地模型不可用。"
 
-#: src/kikoe/providers/local/client.py:50
+#: src/kikoe/providers/local/client.py:55
 #, python-brace-format
 msgid "“{model}” is no longer downloaded. Download it again in Preferences."
 msgstr "“{model}”已被刪除，請在偏好設定中重新下載。"
 
-#: src/kikoe/providers/local/client.py:97
+#: src/kikoe/providers/local/client.py:107
 msgid "This local model transcribes files only."
 msgstr "此本地模型僅支援檔案轉錄。"
 
-#: src/kikoe/providers/local/connection.py:99
+#: src/kikoe/providers/local/client.py:119
+#, python-brace-format
+msgid "Select a language before transcribing with “{model}”."
+msgstr "使用「{model}」轉錄前，請先選擇語言。"
+
+#: src/kikoe/providers/local/client.py:125
+#, python-brace-format
+msgid ""
+"“{model}” does not support the selected language. Choose another language."
+msgstr "「{model}」不支援所選語言，請選擇其他語言。"
+
+#: src/kikoe/providers/local/connection.py:101
 msgid "The local engine returned an unreadable result."
 msgstr "本地引擎返回了無法讀取的結果。"
 
-#: src/kikoe/providers/local/connection.py:123
+#: src/kikoe/providers/local/connection.py:125
 msgid ""
 "The local engine could not start. Try another acceleration option in "
 "Preferences, or download the engine again."
 msgstr "本地引擎無法啟動。請在偏好設定中換一種加速方式，或重新下載引擎。"
 
-#: src/kikoe/providers/local/connection.py:131
+#: src/kikoe/providers/local/connection.py:133
 msgid ""
 "The model could not be loaded. It may need more memory than is free, or the "
 "file is damaged; download it again or choose a smaller model."
 msgstr ""
 "無法載入模型。可能可用記憶體不足，或檔案已損壞；請重新下載或選擇更小的模型。"
 
-#: src/kikoe/providers/local/connection.py:137
+#: src/kikoe/providers/local/connection.py:139
 msgid "The selected device failed. Choose another device in Preferences."
 msgstr "所選裝置出錯，請在偏好設定中選擇其他裝置。"
 
-#: src/kikoe/providers/local/connection.py:140
+#: src/kikoe/providers/local/connection.py:142
 msgid "The local model could not process this audio."
 msgstr "本地模型無法處理此音訊。"
 
-#: src/kikoe/providers/local/connection.py:142
+#: src/kikoe/providers/local/connection.py:144
 msgid "Transcription was cancelled."
 msgstr "轉錄已取消。"
 
-#: src/kikoe/providers/local/connection.py:144
+#: src/kikoe/providers/local/connection.py:146
 msgid "The local engine failed. See the log for details."
 msgstr "本地引擎出錯，請檢視日誌瞭解詳情。"
 
@@ -299,7 +310,7 @@ msgstr "即時轉錄失敗，已保留音訊。"
 msgid "Choose a file transcription model to retry this recording."
 msgstr "請選擇檔案轉錄模型以重試這段錄音。"
 
-#: src/kikoe/services/importer.py:74 src/kikoe/ui/bottom_bar.py:166
+#: src/kikoe/services/importer.py:74 src/kikoe/ui/bottom_bar.py:187
 msgid "Choose a file transcription model to import audio."
 msgstr "請選擇檔案轉錄模型以匯入音訊。"
 
@@ -451,36 +462,40 @@ msgstr "設定檔 {detail} 已損毀或無法辨識：{error}"
 msgid "Could not save the settings file: {error}"
 msgstr "無法儲存設定檔：{error}"
 
-#: src/kikoe/ui/bottom_bar.py:98
+#: src/kikoe/ui/bottom_bar.py:103
 msgid "_Append Recording"
 msgstr "附加錄音(_A)"
 
-#: src/kikoe/ui/bottom_bar.py:98 src/kikoe/ui/bottom_bar.ui:125
+#: src/kikoe/ui/bottom_bar.py:103 src/kikoe/ui/bottom_bar.ui:125
 msgid "_Record"
 msgstr "錄音(_R)"
 
-#: src/kikoe/ui/bottom_bar.py:119 src/kikoe/ui/bottom_bar.ui:224
-#: src/kikoe/ui/bottom_bar.ui:227
+#: src/kikoe/ui/bottom_bar.py:118 src/kikoe/ui/bottom_bar.ui:206
+msgid "Preparing transcription…"
+msgstr "正在準備轉錄…"
+
+#: src/kikoe/ui/bottom_bar.py:140 src/kikoe/ui/bottom_bar.ui:233
+#: src/kikoe/ui/bottom_bar.ui:236
 msgid "Pause Recording"
 msgstr "暫停錄音"
 
-#: src/kikoe/ui/bottom_bar.py:119
+#: src/kikoe/ui/bottom_bar.py:140
 msgid "Resume Recording"
 msgstr "繼續錄音"
 
-#: src/kikoe/ui/bottom_bar.py:149
+#: src/kikoe/ui/bottom_bar.py:170
 msgid "No Model"
 msgstr "無模型"
 
-#: src/kikoe/ui/bottom_bar.py:151
+#: src/kikoe/ui/bottom_bar.py:172
 msgid "Add a model in Preferences first"
 msgstr "請先在偏好設定中新增模型"
 
-#: src/kikoe/ui/bottom_bar.py:152 src/kikoe/ui/bottom_bar.ui:44
+#: src/kikoe/ui/bottom_bar.py:173 src/kikoe/ui/bottom_bar.ui:44
 msgid "Transcription Model…"
 msgstr "轉錄模型…"
 
-#: src/kikoe/ui/bottom_bar.py:157
+#: src/kikoe/ui/bottom_bar.py:178
 #, python-brace-format
 msgid ""
 "{model} · {provider}\n"
@@ -489,7 +504,7 @@ msgstr ""
 "{model} · {provider}\n"
 "{hint}"
 
-#: src/kikoe/ui/bottom_bar.py:164 src/kikoe/ui/bottom_bar.ui:90
+#: src/kikoe/ui/bottom_bar.py:185 src/kikoe/ui/bottom_bar.ui:90
 #: src/kikoe/ui/shortcuts.ui:27
 msgid "Import Audio…"
 msgstr "匯入音訊…"
@@ -516,12 +531,16 @@ msgstr "匯入音訊…(_I)"
 msgid "_Cancel"
 msgstr "取消(_C)"
 
-#: src/kikoe/ui/bottom_bar.ui:243
+#: src/kikoe/ui/bottom_bar.ui:208
+msgid "Transcription in progress"
+msgstr "正在轉錄"
+
+#: src/kikoe/ui/bottom_bar.ui:252
 msgid "_Stop"
 msgstr "停止(_S)"
 
 #: src/kikoe/ui/content_header.ui:14
-#: src/kikoe/ui/transcription_controller.py:324 src/kikoe/ui/window.py:402
+#: src/kikoe/ui/transcription_controller.py:334 src/kikoe/ui/window.py:404
 #: src/kikoe/ui/window.ui:10 src/kikoe/ui/window.ui:37
 #: src/kikoe/ui/window.ui:119 src/kikoe/ui/window.ui:130
 msgid "Kikoe"
@@ -645,7 +664,7 @@ msgid "Audio Files"
 msgstr "音訊檔案"
 
 #: src/kikoe/ui/export_controller.py:99 src/kikoe/ui/speaker_controller.py:56
-#: src/kikoe/ui/transcription_controller.py:161
+#: src/kikoe/ui/transcription_controller.py:167
 msgid "The original audio is not available."
 msgstr "原始音訊無法使用。"
 
@@ -773,7 +792,7 @@ msgstr "即時"
 
 #: src/kikoe/ui/labels.py:64 src/kikoe/ui/local_model_list.py:82
 #: src/kikoe/ui/model_dialog.ui:79 src/kikoe/ui/model_dialog.ui:140
-#: src/kikoe/ui/recording_controller.py:168
+#: src/kikoe/ui/recording_controller.py:173
 msgid "Timestamps"
 msgstr "時間戳記"
 
@@ -781,7 +800,7 @@ msgstr "時間戳記"
 msgid "Word Timestamps"
 msgstr "逐字時間戳記"
 
-#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:170
+#: src/kikoe/ui/labels.py:68 src/kikoe/ui/recording_controller.py:175
 msgid "Speakers"
 msgstr "說話者"
 
@@ -789,7 +808,7 @@ msgstr "說話者"
 msgid "Streaming"
 msgstr "串流輸出"
 
-#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:174
+#: src/kikoe/ui/labels.py:76 src/kikoe/ui/recording_controller.py:179
 msgid "Text only"
 msgstr "僅文字"
 
@@ -895,9 +914,9 @@ msgstr "正在轉換音訊…"
 msgid "Transcribing… {part} of {parts} chunks complete"
 msgstr "正在轉錄… 已完成 {parts} 個分塊中的 {part} 個"
 
-#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:176
-#: src/kikoe/ui/transcription_controller.py:262
-#: src/kikoe/ui/transcription_controller.py:309
+#: src/kikoe/ui/labels.py:197 src/kikoe/ui/transcription_controller.py:182
+#: src/kikoe/ui/transcription_controller.py:269
+#: src/kikoe/ui/transcription_controller.py:317
 msgid "Transcribing…"
 msgstr "正在轉錄…"
 
@@ -1513,24 +1532,32 @@ msgstr "尚無模型"
 msgid "_Remove Provider"
 msgstr "移除服務商(_R)"
 
-#: src/kikoe/ui/recording_controller.py:151
+#: src/kikoe/ui/recording_controller.py:107
+msgid "Stopping recording…"
+msgstr "正在停止錄音…"
+
+#: src/kikoe/ui/recording_controller.py:156
 msgid "No audio was recorded"
 msgstr "未錄到音訊"
 
-#: src/kikoe/ui/recording_controller.py:171
+#: src/kikoe/ui/recording_controller.py:176
 #, python-brace-format
 msgid "{provider} {model} · {options}"
 msgstr "{provider} {model} · {options}"
 
-#: src/kikoe/ui/recording_controller.py:183
+#: src/kikoe/ui/recording_controller.py:195
+msgid "Finishing transcription…"
+msgstr "正在完成轉錄…"
+
+#: src/kikoe/ui/recording_controller.py:200
 msgid "Saving recording…"
 msgstr "正在儲存錄音…"
 
-#: src/kikoe/ui/recording_controller.py:191 src/kikoe/ui/tasks.py:59
+#: src/kikoe/ui/recording_controller.py:208 src/kikoe/ui/tasks.py:59
 msgid "An unexpected error occurred. See the local log for details."
 msgstr "發生非預期的錯誤，請查看本機記錄檔以瞭解詳情。"
 
-#: src/kikoe/ui/recording_controller.py:225
+#: src/kikoe/ui/recording_controller.py:243
 msgid "Recovering recordings…"
 msgstr "正在復原錄音…"
 
@@ -1874,28 +1901,32 @@ msgstr "匯出原始音訊…"
 msgid "Delete Recording"
 msgstr "刪除錄音"
 
-#: src/kikoe/ui/transcription_controller.py:107
+#: src/kikoe/ui/transcription_controller.py:85
+msgid "Cancelling…"
+msgstr "正在取消…"
+
+#: src/kikoe/ui/transcription_controller.py:112
 msgid "Import cancelled"
 msgstr "已取消匯入"
 
-#: src/kikoe/ui/transcription_controller.py:141
-#: src/kikoe/ui/transcription_controller.py:285
+#: src/kikoe/ui/transcription_controller.py:147
+#: src/kikoe/ui/transcription_controller.py:293
 msgid "Transcription Failed"
 msgstr "轉錄失敗"
 
-#: src/kikoe/ui/transcription_controller.py:149
+#: src/kikoe/ui/transcription_controller.py:155
 msgid "Transcription finished"
 msgstr "轉錄完成"
 
-#: src/kikoe/ui/transcription_controller.py:169
+#: src/kikoe/ui/transcription_controller.py:175
 msgid "Choose an available file transcription model."
 msgstr "請選擇可用的檔案轉錄模型。"
 
-#: src/kikoe/ui/transcription_controller.py:207
+#: src/kikoe/ui/transcription_controller.py:213
 msgid "Re-transcription cancelled"
 msgstr "已取消重新轉錄"
 
-#: src/kikoe/ui/transcription_controller.py:212
+#: src/kikoe/ui/transcription_controller.py:218
 #, python-brace-format
 msgid ""
 "{error}\n"
@@ -1906,11 +1937,11 @@ msgstr ""
 "\n"
 "已保留文字和音訊。"
 
-#: src/kikoe/ui/transcription_controller.py:213
+#: src/kikoe/ui/transcription_controller.py:219
 msgid "Re-transcription Failed"
 msgstr "重新轉錄失敗"
 
-#: src/kikoe/ui/transcription_controller.py:267
+#: src/kikoe/ui/transcription_controller.py:274
 msgid "Transcription cancelled"
 msgstr "已取消轉錄"
 

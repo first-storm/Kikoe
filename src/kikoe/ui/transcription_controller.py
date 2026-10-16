@@ -78,8 +78,13 @@ class TranscriptionController:
         run_task(self._pick_and_import(), self._window)
 
     def on_cancel_import(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        if self._work.import_task is not None and not self._work.committing:
-            self._work.import_task.cancel()
+        task = self._work.import_task
+        if task is None or task.done() or self._work.committing or self._work.cancelling:
+            return
+        self._work.cancelling = True
+        self._bottom_bar.set_progress(_("Cancelling…"))
+        self._host.refresh_actions()
+        task.cancel()
 
     async def _pick_and_import(self) -> None:
         path = await pick_audio_file(self._window)
@@ -107,6 +112,7 @@ class TranscriptionController:
             self._host.toast(_("Import cancelled"))
         finally:
             self._work.import_task = None
+            self._work.cancelling = False
             self._bottom_bar.set_progress(None)
             self._host.refresh_actions()
 
@@ -216,6 +222,7 @@ class TranscriptionController:
             self._end()
             self._work.committing = False
             self._work.import_task = None
+            self._work.cancelling = False
             self._bottom_bar.set_progress(None)
             self._host.refresh_actions()
 
@@ -267,6 +274,7 @@ class TranscriptionController:
             self._host.toast(_("Transcription cancelled"))
         finally:
             self._work.import_task = None
+            self._work.cancelling = False
 
     async def _upload(
         self, note_id: str, recording: Recording, choice: ModelChoice, options: TranscriptionOptions
@@ -311,8 +319,10 @@ class TranscriptionController:
         self._host.show_content_pane()
 
     def _on_progress(self, stage: ImportStage, part: int, parts: int) -> None:
+        if self._work.cancelling:
+            return
         self._work.committing = stage is ImportStage.SAVING
-        self._host.set_action_enabled("cancel-import", not self._work.committing)
+        self._host.refresh_actions()
         self._bottom_bar.set_progress(import_stage_label(stage, part, parts))
 
     def _end(self) -> None:

@@ -34,6 +34,10 @@ class Activity:
     """Unfinished recordings are being recovered."""
     committing: bool = False
     """The transcription result is being saved, which can no longer be cancelled."""
+    cancelling: bool = False
+    """A file task is releasing resources after cancellation."""
+    stopping: bool = False
+    """Capture is stopping or live transcription is finalizing."""
     closing: bool = False
     capture_state: CaptureState = CaptureState.STOPPED
     has_note: bool = False
@@ -65,7 +69,7 @@ def action_availability(activity: Activity) -> dict[str, bool]:
     can_use_note = not activity.locked and activity.has_note
     available = activity.has_model and not activity.busy
     can_transcribe_files = available and activity.model_transcribes_files
-    can_control = not activity.closing
+    can_control = not activity.closing and not activity.stopping
     state = activity.capture_state
     enabled: dict[str, bool] = dict.fromkeys(NOTE_CONTENT_ACTIONS, can_use_note)
     enabled.update(dict.fromkeys(SIDEBAR_ACTIONS, not activity.busy))
@@ -74,7 +78,9 @@ def action_availability(activity: Activity) -> dict[str, bool]:
             "import-audio": can_transcribe_files,
             "start-recording": available,
             "retry-recording": can_transcribe_files and activity.has_note,
-            "cancel-import": activity.importing and not activity.committing,
+            "cancel-import": activity.importing
+            and not activity.committing
+            and not activity.cancelling,
             "pause-recording": state is CaptureState.RECORDING and can_control,
             "resume-recording": state is CaptureState.PAUSED and can_control,
             "stop-recording": state is not CaptureState.STOPPED and can_control,

@@ -186,6 +186,15 @@ template $KikoeBottomBar: Adw.Bin {
 
           Adw.Bin meter_slot {}
 
+          Adw.Spinner connection_spinner {
+            visible: false;
+            tooltip-text: _("Preparing transcription…");
+
+            accessibility {
+              label: _("Transcription in progress");
+            }
+          }
+
           Label recording_summary {
             hexpand: true;
             xalign: 0;

@@ -182,7 +182,8 @@ language and options captured at their start.
 
 Import Audio… appends to the open note or creates a note named after the file.
 Progress and Cancel appear in the bottom bar; failures that need explanation use
-a dialog.
+a dialog. Clicking Cancel immediately shows Cancelling… and disables repeated
+cancellation until resource cleanup finishes.
 
 Models with Streaming Preview show temporary text during imports, stopped
 recording uploads, retries and re-transcription. Completed segments use normal
@@ -208,7 +209,15 @@ connection state.
 Realtime models show segments while capturing. The last, unfinished line is
 dimmed with a blinking caret. Existing and live recordings share the transcript
 list, preserving the reader's scroll position. Metadata indicates connecting,
-reconnecting or catching up.
+reconnecting or catching up. The recording bar also shows a spinner while
+transcription prepares (including local model loading), reconnects or catches up;
+capture controls remain available. At narrow widths the spinner remains visible
+when the summary is hidden.
+
+Stop immediately replaces the capture controls with a spinner and Stopping
+recording…, followed by Finishing transcription… while realtime text drains and
+Saving recording… during persistence. These stages offer no Cancel button.
+Displayed live text stays visible until the saved recording replaces it.
 
 File-only models show a centered microphone icon in an 88 px circle, a Recording
 heading, and an explanation that Kikoe will upload and transcribe after Stop.

@@ -321,6 +321,8 @@ class Window(Adw.ApplicationWindow):
             recording=self._work.recording_task is not None,
             recovering=self._work.recovery_busy,
             committing=self._work.committing,
+            cancelling=self._work.cancelling,
+            stopping=self._work.stopping,
             closing=self._work.closing,
             capture_state=session.state if session is not None else CaptureState.STOPPED,
             has_note=self._note is not None,

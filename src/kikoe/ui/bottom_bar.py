@@ -9,10 +9,11 @@ from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models, 
 from kikoe.core.formatting import format_timestamp
 from kikoe.core.models import ModeCapabilities
 from kikoe.core.recording import CaptureProgress, CaptureState
+from kikoe.core.transcription import LiveState
 from kikoe.i18n import _
 from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
-from kikoe.ui.labels import transcription_hint
+from kikoe.ui.labels import live_status_label, transcription_hint
 from kikoe.ui.level_meter import LevelMeter
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
@@ -35,10 +36,13 @@ class BottomBar(Adw.Bin):
     meter_slot: Adw.Bin = Gtk.Template.Child()
     progress_label: Gtk.Label = Gtk.Template.Child()
     import_button: Gtk.Button = Gtk.Template.Child()
+    cancel_button: Gtk.Button = Gtk.Template.Child()
+    connection_spinner: Adw.Spinner = Gtk.Template.Child()
 
     def __init__(self) -> None:
         super().__init__()
         self._recording_state = CaptureState.STOPPED
+        self._recording_summary = ""
         self.recording_dot.add_tick_callback(self._pulse_dot)
         self._meter = LevelMeter()
         self.meter_slot.set_child(self._meter)
@@ -86,8 +90,9 @@ class BottomBar(Adw.Bin):
         self._choice = None
         self._refresh()
 
-    def set_progress(self, message: str | None) -> None:
+    def set_progress(self, message: str | None, *, cancellable: bool = True) -> None:
         """Show ``message`` with a spinner and a Cancel button, or the controls when None."""
+        self.cancel_button.set_visible(cancellable)
         self.progress_label.set_label(message or "")
         self.state_stack.set_visible_child_name("progress" if message is not None else "idle")
         if message is None and self._defaults_pending:
@@ -98,8 +103,24 @@ class BottomBar(Adw.Bin):
         self.record_content.set_label(_("_Append Recording") if has_recordings else _("_Record"))
 
     def show_recording(self, summary: str) -> None:
+        self._recording_summary = summary
+        self.connection_spinner.set_visible(False)
         self.recording_summary.set_label(summary)
         self.state_stack.set_visible_child_name("recording")
+
+    def set_live_state(self, state: LiveState) -> None:
+        """Keep capture controls available while the recognizer prepares or reconnects."""
+        waiting = state in {LiveState.CONNECTING, LiveState.RECONNECTING, LiveState.CATCHING_UP}
+        self.connection_spinner.set_visible(waiting)
+        message = self._recording_summary
+        if waiting:
+            message = (
+                _("Preparing transcription…")
+                if state is LiveState.CONNECTING
+                else live_status_label(state)
+            )
+        self.recording_summary.set_label(message)
+        self.connection_spinner.set_tooltip_text(message)
 
     def update_recording(self, progress: CaptureProgress) -> None:
         """Capture measurements arrive on the application's asyncio/GTK thread."""
