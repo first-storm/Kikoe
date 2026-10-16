@@ -16,10 +16,14 @@ template $KikoeBottomBar: Adw.Bin {
       }
     }
 
+    // Only one breakpoint applies at a time, so the narrower one repeats the wider one's setters.
     Adw.Breakpoint {
       condition ("max-width: 480sp")
 
       setters {
+        provider_label.visible: false;
+        import_label.visible: false;
+        recording_summary.visible: false;
         meter_slot.visible: false;
       }
     }
