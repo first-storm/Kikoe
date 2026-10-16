@@ -131,13 +131,15 @@ It uses the libadwaita `toolbar` style, remains one line at a stable height and
 shows exactly one of three layouts, chosen by the window's current stage
 (`core.activity.Stage`). Every layout reads the same way: what is happening at
 the start, a flexible gap, then actions at the end. Secondary actions are flat;
-the one primary action uses `suggested-action`. There are no custom chips.
+the one primary action uses `suggested-action`. There are no custom chips. The
+end actions sit in one group with 6 px spacing, and the layouts crossfade in
+150 ms.
 
 | Stage | Layout |
 | --- | --- |
-| Idle | Transcription Model (service icon, bold model name, dimmed provider name); flat Import Audio…; primary Record for an empty note, Append Recording otherwise |
-| Recording | Pulsing record dot, elapsed time, level meter, dimmed model and options summary; flat Pause or Resume; primary Stop |
-| Stopping, finishing transcription, saving the recording, converting, transcribing, saving, cancelling, recovering | Spinner and dimmed progress text; flat Cancel where cancelling makes sense |
+| Idle | Transcription Model (service icon, bold model name, dimmed provider name, dimmed drop-down arrow); with no model, a warning icon and No Model; flat Import Audio…; primary Record for an empty note, Append Recording otherwise |
+| Recording | Pulsing record dot, elapsed time (`title-4`, numeric), accent-colored level meter, dimmed caption model and options summary with a spinner while the recognizer connects or catches up; circular flat Pause or Resume; primary Stop. While paused, the dot, time and meter dim and a Paused label follows the time |
+| Stopping, finishing transcription, saving the recording, converting, transcribing, saving, cancelling, recovering | Spinner and progress text at body contrast; flat Cancel where cancelling makes sense |
 
 Cancel appears for converting, transcribing, saving and cancelling. It is
 enabled only while converting or transcribing: Saving is atomic and Cancelling…
@@ -145,8 +147,10 @@ disables repeated requests. Stopping, saving a recording and recovering show
 progress only, because they must finish to keep the audio.
 
 Below 600 sp, the provider name, the Import Audio label and the recording
-summary hide; icon-only buttons keep their tooltip and accessibility name. Below
-480 sp the level meter hides too. The primary button keeps its label at 360 px.
+summary hide (the connection spinner stays, its tooltip carries the text);
+icon-only buttons keep their tooltip and accessibility name. Below 480 sp the
+level meter and the model arrow hide too, and the model name ellipsizes
+earlier; the Paused label stays. The primary button keeps its label at 360 px.
 Import Audio is also available through the main menu when no note is selected;
 invoking it opens the content pane to show progress and Cancel.
 

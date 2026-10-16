@@ -25,12 +25,16 @@ template $KikoeBottomBar: Adw.Bin {
         import_label.visible: false;
         recording_summary.visible: false;
         meter_slot.visible: false;
+        model_arrow.visible: false;
+        model_label.max-width-chars: 12;
       }
     }
 
     child: Stack state_stack {
       hhomogeneous: false;
       vhomogeneous: true;
+      transition-type: crossfade;
+      transition-duration: 150;
 
       StackPage {
         name: "idle";
@@ -48,7 +52,7 @@ template $KikoeBottomBar: Adw.Bin {
             child: Box {
               spacing: 6;
 
-              Image {
+              Image model_icon {
                 icon-name: "network-server-symbolic";
               }
 
@@ -70,6 +74,14 @@ template $KikoeBottomBar: Adw.Bin {
                   "dimmed",
                 ]
               }
+
+              Image model_arrow {
+                icon-name: "pan-down-symbolic";
+
+                styles [
+                  "dimmed",
+                ]
+              }
             };
 
             styles [
@@ -81,45 +93,49 @@ template $KikoeBottomBar: Adw.Bin {
             hexpand: true;
           }
 
-          Button import_button {
-            action-name: "win.import-audio";
-            tooltip-text: _("Import Audio…");
+          Box {
+            spacing: 6;
 
-            accessibility {
-              label: _("Import Audio");
+            Button import_button {
+              action-name: "win.import-audio";
+              tooltip-text: _("Import Audio…");
+
+              accessibility {
+                label: _("Import Audio");
+              }
+
+              child: Box {
+                spacing: 6;
+
+                Image {
+                  icon-name: "folder-open-symbolic";
+                }
+
+                Label import_label {
+                  label: _("_Import Audio…");
+                  use-underline: true;
+                  mnemonic-widget: import_button;
+                }
+              };
+
+              styles [
+                "flat",
+              ]
             }
 
-            child: Box {
-              spacing: 6;
+            Button record_button {
+              action-name: "win.start-recording";
 
-              Image {
-                icon-name: "folder-open-symbolic";
-              }
+              styles [
+                "suggested-action",
+              ]
 
-              Label import_label {
-                label: _("_Import Audio…");
+              child: Adw.ButtonContent record_content {
+                icon-name: "audio-input-microphone-symbolic";
+                label: _("_Record");
                 use-underline: true;
-                mnemonic-widget: import_button;
-              }
-            };
-
-            styles [
-              "flat",
-            ]
-          }
-
-          Button record_button {
-            action-name: "win.start-recording";
-
-            styles [
-              "suggested-action",
-            ]
-
-            child: Adw.ButtonContent record_content {
-              icon-name: "audio-input-microphone-symbolic";
-              label: _("_Record");
-              use-underline: true;
-            };
+              };
+            }
           }
 
           styles [
@@ -132,26 +148,36 @@ template $KikoeBottomBar: Adw.Bin {
         name: "progress";
 
         child: Box {
-          Adw.Spinner {}
-
-          Label progress_label {
+          Box {
+            spacing: 12;
             hexpand: true;
-            xalign: 0;
-            ellipsize: end;
+            margin-start: 6;
 
-            styles [
-              "dimmed",
-            ]
+            Adw.Spinner {
+              width-request: 16;
+              height-request: 16;
+              valign: center;
+            }
+
+            Label progress_label {
+              hexpand: true;
+              xalign: 0;
+              ellipsize: end;
+            }
           }
 
-          Button cancel_button {
-            label: _("_Cancel");
-            use-underline: true;
-            action-name: "win.cancel-import";
+          Box {
+            spacing: 6;
 
-            styles [
-              "flat",
-            ]
+            Button cancel_button {
+              label: _("_Cancel");
+              use-underline: true;
+              action-name: "win.cancel-import";
+
+              styles [
+                "flat",
+              ]
+            }
           }
 
           styles [
@@ -164,74 +190,105 @@ template $KikoeBottomBar: Adw.Bin {
         name: "recording";
 
         child: Box {
-          Image recording_dot {
-            icon-name: "media-record-symbolic";
-            pixel-size: 10;
+          Box {
+            spacing: 8;
+            margin-start: 6;
+            valign: center;
 
-            styles [
-              "recording-indicator",
-            ]
-          }
+            Image recording_dot {
+              icon-name: "media-record-symbolic";
+              pixel-size: 10;
+              valign: center;
 
-          Label elapsed_label {
-            label: "00:00";
+              styles [
+                "recording-indicator",
+              ]
+            }
 
-            styles [
-              "numeric",
-              "recording-time",
-            ]
-          }
+            Label elapsed_label {
+              label: "00:00";
 
-          Adw.Bin meter_slot {}
+              styles [
+                "title-4",
+                "numeric",
+              ]
+            }
 
-          Adw.Spinner connection_spinner {
-            visible: false;
-            tooltip-text: _("Preparing transcription…");
+            Label paused_label {
+              label: _("Paused");
+              visible: false;
 
-            accessibility {
-              label: _("Transcription in progress");
+              styles [
+                "caption-heading",
+                "dimmed",
+              ]
             }
           }
 
+          Adw.Bin meter_slot {
+            margin-start: 6;
+          }
+
           Box {
+            spacing: 8;
             hexpand: true;
+            margin-start: 6;
+
+            Adw.Spinner connection_spinner {
+              visible: false;
+              width-request: 16;
+              height-request: 16;
+              valign: center;
+              tooltip-text: _("Preparing transcription…");
+
+              accessibility {
+                label: _("Transcription in progress");
+              }
+            }
 
             Label recording_summary {
               xalign: 0;
               ellipsize: end;
 
               styles [
+                "caption",
                 "dimmed",
               ]
             }
           }
 
-          Button pause_button {
-            icon-name: "media-playback-pause-symbolic";
-            tooltip-text: _("Pause Recording");
-            action-name: "win.pause-recording";
+          Box {
+            spacing: 6;
 
-            accessibility {
-              label: _("Pause Recording");
+            Button pause_button {
+              icon-name: "media-playback-pause-symbolic";
+              tooltip-text: _("Pause Recording");
+              action-name: "win.pause-recording";
+              valign: center;
+
+              accessibility {
+                label: _("Pause Recording");
+              }
+
+              styles [
+                "circular",
+                "flat",
+              ]
             }
 
-            styles [
-              "flat",
-            ]
-          }
+            Button stop_button {
+              action-name: "win.stop-recording";
 
-          Button stop_button {
-            action-name: "win.stop-recording";
+              styles [
+                "suggested-action",
+              ]
 
-            styles [
-              "suggested-action",
-            ]
-
-            child: Adw.ButtonContent {
-              icon-name: "media-playback-stop-symbolic";
-              label: _("_Stop");
-              use-underline: true;
-            };
+              child: Adw.ButtonContent {
+                icon-name: "media-playback-stop-symbolic";
+                label: _("_Stop");
+                use-underline: true;
+              };
+            }
           }
 
           styles [

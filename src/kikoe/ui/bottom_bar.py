@@ -29,8 +29,10 @@ class BottomBar(Adw.Bin):
     __gtype_name__ = "KikoeBottomBar"
 
     model_button: Gtk.Button = Gtk.Template.Child()
+    model_icon: Gtk.Image = Gtk.Template.Child()
     model_label: Gtk.Label = Gtk.Template.Child()
     provider_label: Gtk.Label = Gtk.Template.Child()
+    paused_label: Gtk.Label = Gtk.Template.Child()
     state_stack: Gtk.Stack = Gtk.Template.Child()
     record_content: Adw.ButtonContent = Gtk.Template.Child()
     elapsed_label: Gtk.Label = Gtk.Template.Child()
@@ -134,8 +136,13 @@ class BottomBar(Adw.Bin):
         paused = progress.state is CaptureState.PAUSED
         self.elapsed_label.set_label(format_timestamp(progress.elapsed))
         self._meter.set_level(progress.level)
-        if progress.state is not CaptureState.RECORDING:
+        recording = progress.state is CaptureState.RECORDING
+        if not recording:
             self._meter.clear()
+        self._set_class(self._meter, "active", recording)
+        self._set_class(self._meter, "dimmed", not recording)
+        self._set_class(self.elapsed_label, "dimmed", paused)
+        self.paused_label.set_visible(paused)
         self.recording_dot.set_opacity(0.35 if paused else 1)
         self.pause_button.set_icon_name(
             "media-playback-start-symbolic" if paused else "media-playback-pause-symbolic"
@@ -146,6 +153,13 @@ class BottomBar(Adw.Bin):
         label = _("Resume Recording") if paused else _("Pause Recording")
         self.pause_button.set_tooltip_text(label)
         self.pause_button.update_property([Gtk.AccessibleProperty.LABEL], [label])
+
+    @staticmethod
+    def _set_class(widget: Gtk.Widget, name: str, enabled: bool) -> None:
+        if enabled:
+            widget.add_css_class(name)
+        else:
+            widget.remove_css_class(name)
 
     def _pulse_dot(self, _widget: Gtk.Widget, clock: Gdk.FrameClock) -> bool:
         if self._stage is Stage.RECORDING and self._recording_state is CaptureState.RECORDING:
@@ -170,6 +184,10 @@ class BottomBar(Adw.Bin):
 
     def _show_choice(self) -> None:
         choice = self._choice
+        self.model_icon.set_from_icon_name(
+            "dialog-warning-symbolic" if choice is None else "network-server-symbolic"
+        )
+        self._set_class(self.model_icon, "warning", choice is None)
         if choice is None:
             self.model_label.set_label(_("No Model"))
             self.provider_label.set_label("")

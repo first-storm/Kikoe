@@ -58,7 +58,8 @@ menubutton.timestamp-button > button {
 .speaker-3-dark { color: var(--purple-2); }
 
 .recording-indicator { color: var(--error-color); }
-.recording-time { font-size: 1.2em; }
+/* The level meter takes the accent color only while sound is being captured. */
+.level-meter.active { color: var(--accent-color); }
 .recording-microphone {
   min-width: 88px;
   min-height: 88px;
