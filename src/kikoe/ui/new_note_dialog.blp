@@ -1,0 +1,53 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeNewNoteDialog: Adw.Dialog {
+  title: _("New Note");
+  content-width: 450;
+  default-widget: create_button;
+  focus-widget: title_row;
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      show-start-title-buttons: false;
+      decoration-layout: ":close";
+    }
+
+    content: Box {
+      orientation: vertical;
+      spacing: 28;
+      margin-top: 24;
+      margin-bottom: 24;
+      margin-start: 16;
+      margin-end: 16;
+
+      ListBox {
+        selection-mode: none;
+
+        styles [
+          "boxed-list",
+        ]
+
+        Adw.EntryRow title_row {
+          title: _("Note Title");
+          activates-default: true;
+          changed => $_on_title_row_changed();
+        }
+      }
+
+      Button create_button {
+        label: _("_Create");
+        use-underline: true;
+        halign: center;
+        width-request: 108;
+        action-name: "note.create";
+
+        styles [
+          "pill",
+          "suggested-action",
+        ]
+      }
+    };
+  };
+}

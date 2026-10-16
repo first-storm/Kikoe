@@ -41,6 +41,12 @@ The sidebar header contains Kikoe, New Note, Search Notes and Main Menu. When
 system window controls occupy the start of the header, New Note moves alongside
 the other application controls at the end, and the title hides to avoid crowding.
 New Note is unavailable until a provider exists.
+Activating New Note opens a naming dialog with a centered title, a close button,
+a Note Title entry prefilled and selected with New Note, and a centered pill-shaped
+Create button below. Empty or whitespace-only titles disable Create. Enter creates
+and selects the note with the trimmed title; Escape or Close cancels without saving.
+Saving prevents duplicate submissions; failures preserve the title for retry.
+The main menu contains Preferences, Keyboard Shortcuts and About Kikoe.
 
 Rows show the note title and a concise subtitle with date, duration or recording
 count. New recordings appear at the top with a Recording status. Secondary click
@@ -151,7 +157,7 @@ summary hide (the connection spinner stays, its tooltip carries the text);
 icon-only buttons keep their tooltip and accessibility name. Below 480 sp the
 level meter and the model arrow hide too, and the model name ellipsizes
 earlier; the Paused label stays. The primary button keeps its label at 360 px.
-Import Audio is also available through the main menu when no note is selected;
+Import Audio is also available through Ctrl+O when no note is selected;
 invoking it opens the content pane to show progress and Cancel.
 
 ## Empty states

@@ -6,6 +6,7 @@ from kikoe.i18n import _
 from kikoe.services.playback import Playback
 from kikoe.storage.notes import NoteRepository
 from kikoe.ui.dialogs import alert_dialog, confirm_destructive
+from kikoe.ui.new_note_dialog import NewNoteDialog
 from kikoe.ui.tasks import run_task
 from kikoe.ui.window_host import WindowHost
 
@@ -26,10 +27,10 @@ class NoteActions:
         self._playback = playback
 
     def on_new_note(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
-        run_task(self._create_note(), self._window)
+        NewNoteDialog(self._create_note).present(self._window)
 
-    async def _create_note(self) -> None:
-        note = await self._notes.create_note(_("New Note"))
+    async def _create_note(self, title: str) -> None:
+        note = await self._notes.create_note(title)
         self._host.select_note(note.note_id)
 
     def on_rename_note(self, _action: Gio.SimpleAction, param: GLib.Variant | None) -> None:

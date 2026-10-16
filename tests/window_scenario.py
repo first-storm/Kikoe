@@ -29,6 +29,7 @@ from kikoe.storage.providers import ProviderRepository  # noqa: E402
 from kikoe.storage.settings import SettingsStore  # noqa: E402
 from kikoe.storage.settings_writer import SettingsWriter  # noqa: E402
 from kikoe.storage.window_state import WindowStateStore  # noqa: E402
+from kikoe.ui.new_note_dialog import NewNoteDialog  # noqa: E402
 
 if TYPE_CHECKING:
     from kikoe.ui.window import Window
@@ -83,6 +84,64 @@ async def settle(seconds: float = 0.4) -> None:
     await asyncio.sleep(seconds)
 
 
+async def new_note_scenario(
+    window: Window, notes: NoteRepository, result: dict[str, object]
+) -> None:
+    window.activate_action("win.new-note", None)
+    await settle()
+    dialog = window.get_visible_dialog()
+    assert isinstance(dialog, NewNoteDialog)
+    result["new_note_opens_without_saving"] = not notes.notes
+    focus = dialog.get_focus()
+    result["new_note_prefills_and_selects_title"] = (
+        dialog.title_row.get_text() == "New Note"
+        and dialog.title_row.get_selection_bounds() == (0, len("New Note"))
+        and focus is not None
+        and focus.is_ancestor(dialog.title_row)
+    )
+    for title in ("", "   "):
+        dialog.title_row.set_text(title)
+        await settle(0.05)
+        result["new_note_rejects_blank_titles"] = not dialog.create_button.is_sensitive()
+        assert result["new_note_rejects_blank_titles"]
+    dialog.close()
+    await settle()
+    result["new_note_cancel_does_not_save"] = not notes.notes
+    window.activate_action("win.new-note", None)
+    await settle()
+    dialog = window.get_visible_dialog()
+    assert isinstance(dialog, NewNoteDialog)
+    focus = dialog.get_focus()
+    assert focus is not None
+    focus.emit("activate")
+    await settle()
+    created = window.note
+    result["new_note_action_creates_and_selects"] = (
+        created is not None
+        and len(notes.notes) == 1
+        and created.note_id == notes.notes[0].note_id
+        and window.notes_list.get_selected_row() is not None
+        and created.title == "New Note"
+    )
+    if created is not None:
+        await notes.delete_note(created.note_id)
+    await settle()
+    window.activate_action("win.new-note", None)
+    await settle()
+    dialog = window.get_visible_dialog()
+    assert isinstance(dialog, NewNoteDialog)
+    dialog.title_row.set_text("  Team meeting  ")
+    dialog.create_button.activate()
+    await settle()
+    created = window.note
+    result["new_note_saves_trimmed_custom_title"] = (
+        created is not None and created.title == "Team meeting" and len(notes.notes) == 1
+    )
+    if created is not None:
+        await notes.delete_note(created.note_id)
+    await settle()
+
+
 async def scenario(
     window: Window,
     providers: ProviderRepository,
@@ -99,18 +158,8 @@ async def scenario(
     result["new_note_enabled_with_a_provider"] = (
         isinstance(new_note, Gio.SimpleAction) and new_note.get_enabled()
     )
-    window.activate_action("win.new-note", None)
-    await settle()
-    created = window.note
-    result["new_note_action_creates_and_selects"] = (
-        created is not None
-        and len(notes.notes) == 1
-        and created.note_id == notes.notes[0].note_id
-        and window.notes_list.get_selected_row() is not None
-    )
-    if created is not None:
-        await notes.delete_note(created.note_id)
-    await settle()
+    await new_note_scenario(window, notes, result)
+    await new_note_retry_scenario(window, result)
     await notes.create_note("Alpha meeting")
     await notes.create_note("Beta call")
     await settle()
@@ -135,6 +184,47 @@ async def scenario(
     window.search_bar.set_search_mode(False)
     await settle()
     result["leaving_search_restores_the_list"] = window.notes_list.get_row_at_index(1) is not None
+
+
+async def new_note_retry_scenario(window: Window, result: dict[str, object]) -> None:
+    """Hold a save open to verify duplicate protection and retry after a disk failure."""
+    release = asyncio.Event()
+    titles: list[str] = []
+
+    async def save(title: str) -> None:
+        titles.append(title)
+        await release.wait()
+        if len(titles) == 1:
+            raise OSError("Simulated disk failure")
+
+    dialog = NewNoteDialog(save)
+    dialog.present(window)
+    await settle()
+    dialog.title_row.set_text("Retry title")
+    dialog.activate_action("note.create", None)
+    dialog.activate_action("note.create", None)
+    await settle()
+    result["new_note_prevents_duplicate_saves"] = (
+        titles == ["Retry title"]
+        and not dialog.create_button.is_sensitive()
+        and not dialog.get_can_close()
+    )
+    release.set()
+    await settle()
+    error = window.get_visible_dialog()
+    assert isinstance(error, Adw.AlertDialog)
+    error.close()
+    await settle()
+    result["new_note_failure_preserves_input"] = (
+        dialog.title_row.get_text() == "Retry title"
+        and dialog.create_button.is_sensitive()
+        and dialog.get_can_close()
+    )
+    dialog.activate_action("note.create", None)
+    await settle()
+    result["new_note_can_retry_after_failure"] = (
+        titles == ["Retry title", "Retry title"] and window.get_visible_dialog() is None
+    )
 
 
 def main() -> None:
