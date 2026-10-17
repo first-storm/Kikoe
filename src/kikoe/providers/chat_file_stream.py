@@ -1,7 +1,8 @@
-"""Require a successful MiMo finish reason before committing chat transcription text."""
+"""Require a successful finish reason before committing chat transcription text."""
 
 from openai.types.chat import ChatCompletionChunk
 
+from kikoe.core.llm_prompt import clean_transcript
 from kikoe.core.models import Segment
 from kikoe.core.transcription import FileTranscriptSnapshot
 from kikoe.i18n import _
@@ -9,12 +10,21 @@ from kikoe.providers.base import TranscriptionError
 from kikoe.providers.errors import unreadable
 
 
-def completed_text(text: str | None, reason: str | None, host: str) -> tuple[Segment, ...]:
-    """Partial chat completions must never be saved as complete transcriptions."""
+def completed_text(
+    text: str | None, reason: str | None, host: str, *, allow_empty: bool = False
+) -> tuple[Segment, ...]:
+    """Partial chat completions must never be saved as complete transcriptions.
+
+    ``reason`` uses the OpenAI names; other APIs map their finish reasons onto them.
+    A prompted LLM answers silence with nothing, which ``allow_empty`` accepts.
+    """
     match reason:
         case "stop":
-            if text and text.strip():
-                return (Segment(text.strip()),)
+            cleaned = clean_transcript(text or "")
+            if cleaned:
+                return (Segment(cleaned),)
+            if allow_empty:
+                return ()
             raise unreadable(host)
         case "length":
             raise TranscriptionError(
@@ -31,11 +41,12 @@ def completed_text(text: str | None, reason: str | None, host: str) -> tuple[Seg
             raise unreadable(host)
 
 
-class MiMoFileTranscript:
-    """Chat deltas remain previews until the first choice ends with ``stop``."""
+class ChatFileTranscript:
+    """Text deltas remain previews until the first choice ends with ``stop``."""
 
-    def __init__(self, host: str) -> None:
+    def __init__(self, host: str, *, allow_empty: bool = False) -> None:
         self._host = host
+        self._allow_empty = allow_empty
         self._text = ""
         self._result: tuple[Segment, ...] | None = None
 
@@ -44,10 +55,15 @@ class MiMoFileTranscript:
         choice = next((choice for choice in event.choices if choice.index == 0), None)
         if choice is None:
             return False
-        delta = choice.delta.content or ""
+        return self.add(choice.delta.content or "", choice.finish_reason)
+
+    def add(self, delta: str, finish_reason: str | None) -> bool:
+        """Append one delta; return whether the visible snapshot changed."""
         self._text += delta
-        if choice.finish_reason is not None:
-            self._result = completed_text(self._text, choice.finish_reason, self._host)
+        if finish_reason is not None:
+            self._result = completed_text(
+                self._text, finish_reason, self._host, allow_empty=self._allow_empty
+            )
             return True
         return bool(delta)
 

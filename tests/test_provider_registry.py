@@ -31,6 +31,7 @@ def test_display_names_are_unique() -> None:
         (ApiKind.MIMO, "https://api.xiaomimimo.com/v1"),
         (ApiKind.GROQ, "https://api.groq.com"),
         (ApiKind.MISTRAL, "https://api.mistral.ai"),
+        (ApiKind.AUDIO_LLM, ""),
     ],
 )
 def test_default_base_urls_are_unchanged(api: ApiKind, url: str) -> None:
@@ -52,20 +53,39 @@ def test_default_base_urls_are_unchanged(api: ApiKind, url: str) -> None:
         (ApiKind.OPENROUTER, UploadPolicy(25_000_000)),
         (ApiKind.OPENAI_COMPATIBLE, UploadPolicy(25_000_000)),
         (ApiKind.GROQ, UploadPolicy(25_000_000)),
+        (
+            ApiKind.AUDIO_LLM,
+            UploadPolicy(14_000_000, 600, format=AudioFormat.WAV, formats=(AudioFormat.WAV,)),
+        ),
     ],
 )
 def test_upload_policies_are_unchanged(api: ApiKind, policy: UploadPolicy) -> None:
     assert descriptor(api).upload == policy
 
 
-def test_only_compatible_services_are_generic_names() -> None:
-    assert [d.api for d in PROVIDERS.values() if d.generic] == [ApiKind.OPENAI_COMPATIBLE]
+def test_only_protocols_are_generic_names() -> None:
+    generic = [d.api for d in PROVIDERS.values() if d.generic]
+    assert generic == [ApiKind.OPENAI_COMPATIBLE, ApiKind.AUDIO_LLM]
+
+
+def test_only_audio_llm_is_prompted() -> None:
+    assert [d.api for d in PROVIDERS.values() if d.prompted] == [ApiKind.AUDIO_LLM]
+
+
+def test_audio_llm_inline_base64_fits_gemini_request_limit() -> None:
+    assert descriptor(ApiKind.AUDIO_LLM).upload.bytes * 4 / 3 < 20_000_000
+
+
+def test_audio_llm_format_endpoints_count_as_defaults() -> None:
+    assert is_default_base_url("https://generativelanguage.googleapis.com")
+    assert not is_default_base_url("https://llm.example.test/v1")
 
 
 def test_upload_hints_mark_the_apis_with_special_limits() -> None:
     hinted = {d.api: d.upload_hints for d in PROVIDERS.values() if d.upload_hints}
     assert hinted == {
         ApiKind.OPENAI_COMPATIBLE: frozenset({UploadHint.SERVER_MAY_LIMIT_SIZE}),
+        ApiKind.AUDIO_LLM: frozenset({UploadHint.SERVER_MAY_LIMIT_SIZE}),
         ApiKind.GEMINI: frozenset({UploadHint.DURATION_DEPENDS_ON_OPTIONS}),
     }
 

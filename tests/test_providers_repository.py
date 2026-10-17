@@ -4,7 +4,15 @@ from pathlib import Path
 import pytest
 
 from helpers import file_caps, open_settings, run_async
-from kikoe.core.models import ApiKind, Capabilities, ModeCapabilities, ModelSpec, Provider
+from kikoe.core.models import (
+    ApiKind,
+    Capabilities,
+    LlmFormat,
+    LlmSettings,
+    ModeCapabilities,
+    ModelSpec,
+    Provider,
+)
 from kikoe.core.provider_registry import local_provider
 from kikoe.storage.providers import ProviderNotFoundError, ProviderRepository
 from kikoe.storage.settings import Settings, SettingsStore
@@ -259,3 +267,21 @@ async def test_built_in_providers_are_offered_but_never_stored_or_edited(
     await restarted.load()
     assert restarted.providers == (cloud,)
     assert changes[:2] == [0, 1]
+
+
+@run_async
+async def test_llm_settings_persist_and_reset_when_the_api_changes(
+    tmp_path: Path, repo: ProviderRepository, secrets: FakeSecrets
+) -> None:
+    llm = LlmSettings(LlmFormat.GEMINI, "Transcribe.")
+    provider = await repo.add_provider("LLM", ApiKind.AUDIO_LLM, URL, "k", llm=llm)
+    changed = LlmSettings(LlmFormat.OPENAI, "Other.")
+    await repo.update_llm(provider.provider_id, changed)
+
+    restarted = ProviderRepository(open_settings(tmp_path / "settings.json"), secrets)
+    await restarted.load()
+    assert restarted.get(provider.provider_id).llm == changed
+    await repo.update_provider(provider.provider_id, "LLM", ApiKind.AUDIO_LLM, URL, "k")
+    assert repo.get(provider.provider_id).llm == changed
+    await repo.update_provider(provider.provider_id, "LLM", ApiKind.OPENAI, URL, "k")
+    assert repo.get(provider.provider_id).llm == LlmSettings()

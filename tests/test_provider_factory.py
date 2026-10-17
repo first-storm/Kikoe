@@ -4,8 +4,10 @@ from typing import cast
 
 import pytest
 
-from kikoe.core.models import ApiKind, Provider
+from kikoe.core.models import ApiKind, LlmFormat, LlmSettings, Provider
 from kikoe.providers import factory
+from kikoe.providers.audio_llm import AudioLlmClient
+from kikoe.providers.audio_llm_gemini import AudioLlmGeminiClient
 from kikoe.providers.base import TranscriptionError
 from kikoe.providers.deepgram import DeepgramClient
 from kikoe.providers.gemini import GeminiClient
@@ -25,6 +27,7 @@ EXPECTED_CLIENTS: dict[ApiKind, type[object]] = {
     ApiKind.MIMO: MiMoClient,
     ApiKind.GROQ: GroqClient,
     ApiKind.MISTRAL: MistralClient,
+    ApiKind.AUDIO_LLM: AudioLlmClient,
     ApiKind.LOCAL: LocalClient,
 }
 """Written out by hand so the test does not just repeat ``factory.CLIENTS``."""
@@ -57,3 +60,10 @@ def test_unregistered_api_is_reported_as_a_transcription_error(
     monkeypatch.delitem(factory.CLIENTS, ApiKind.GROQ)
     with pytest.raises(TranscriptionError):
         factory.create_client(provider(ApiKind.GROQ), "key")
+
+
+def test_audio_llm_request_format_picks_the_client() -> None:
+    gemini = Provider(
+        "id", "Test", ApiKind.AUDIO_LLM, "https://example.test", llm=LlmSettings(LlmFormat.GEMINI)
+    )
+    assert type(factory.create_client(gemini, "key")) is AudioLlmGeminiClient

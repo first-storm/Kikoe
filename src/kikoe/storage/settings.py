@@ -13,6 +13,8 @@ from kikoe.core.models import (
     ApiKind,
     AudioFormat,
     Capabilities,
+    LlmFormat,
+    LlmSettings,
     ModeCapabilities,
     ModelKey,
     ModelSpec,
@@ -105,6 +107,9 @@ class SettingsStore:
 
 def _encode(provider: Provider) -> dict[str, object]:
     validate_upload(provider.upload, provider.api)
+    llm: dict[str, object] = {}
+    if descriptor(provider.api).prompted:
+        llm = {"llm": {"format": provider.llm.format.value, "prompt": provider.llm.prompt}}
     return {
         "id": provider.provider_id,
         "name": provider.name,
@@ -125,6 +130,7 @@ def _encode(provider: Provider) -> dict[str, object]:
             }
             for model in provider.models
         ],
+        **llm,
     }
 
 
@@ -173,7 +179,16 @@ def _decode_provider(entry: object) -> Provider:
         base_url=str(fields["base_url"]),
         models=tuple(_decode_model(model) for model in models),
         upload=_decode_upload(fields.get("upload", {}), api),
+        llm=_decode_llm(fields.get("llm", {})),
     )
+
+
+def _decode_llm(value: object) -> LlmSettings:
+    fields = _as_dict(value, "LLM settings")
+    prompt = fields.get("prompt", "")
+    if not isinstance(prompt, str):
+        raise ValueError("prompt must be a string")
+    return LlmSettings(LlmFormat(fields.get("format", LlmFormat.OPENAI)), prompt)
 
 
 def _decode_upload(value: object, api: ApiKind) -> UploadSettings:

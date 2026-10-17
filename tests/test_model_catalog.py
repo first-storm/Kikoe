@@ -28,6 +28,7 @@ def catalog() -> ModelCatalog:
         (ApiKind.GEMINI, "gemini-3.5-transcribe", True, False, True, True),
         (ApiKind.DEEPGRAM, "nova-3", True, True, True, True),
         (ApiKind.MIMO, "mimo-v2.5-asr", True, False, False, False),
+        (ApiKind.AUDIO_LLM, "gpt-4o-audio-preview", True, False, False, False),
         (ApiKind.MISTRAL, "voxtral-mini-latest", True, False, True, True),
         (ApiKind.MISTRAL, "voxtral-mini-transcribe-realtime-2602", False, True, False, False),
     ],
@@ -83,6 +84,14 @@ def test_mimo_streams_by_default_but_preserves_existing_switches(catalog: ModelC
             "mimo-v2.5-asr", "MiMo", Capabilities(file=ModeCapabilities(streaming=streaming))
         )
         assert catalog.clamp(ApiKind.MIMO, model) == model
+
+
+def test_audio_llm_models_stream_by_default_and_never_claim_timestamps(
+    catalog: ModelCatalog,
+) -> None:
+    preset = catalog.preset(ApiKind.AUDIO_LLM, "any-audio-model")
+    assert preset.defaults().file == ModeCapabilities(streaming=True)
+    assert preset.defaults().realtime is None
 
 
 def test_word_timestamps_are_offered_only_where_a_client_sends_them(

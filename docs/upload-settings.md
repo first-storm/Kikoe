@@ -39,6 +39,7 @@ limit and the applicable endpoint or model limit.
 | Gemini Files + Transcribe | 2,000 MB | 60 minutes; 30 with timestamps or speakers | Ogg Opus |
 | Mistral transcription | 500 MB | 60 minutes | Ogg Opus |
 | MiMo ASR | 7.5 MB audio, corresponding to 10 MB Base64 | Automatic, governed by size | WAV |
+| Audio LLM | 14 MB WAV, under 20 MB as Base64 | 10 minutes | WAV |
 
 Defaults and endpoint limits were checked against official documentation on
 13 October 2026, with Groq and Mistral checked on 14 October 2026. These dates
@@ -49,6 +50,10 @@ record the source review; provider policies and account quotas can change.
 - **OpenAI-compatible:** this is a protocol, not a single service. The 25 MB
   default follows Kikoe's adapter and is not a universal server maximum. Lower
   it when a custom endpoint requires smaller uploads.
+- **Audio LLM:** audio is sent inline, so the default keeps Base64 under
+  Gemini's 20 MB request limit. OpenAI-compatible servers may need smaller
+  chunks. Ten-minute chunks keep the transcript within typical output-token
+  limits; shorten them if the provider reports its output limit.
 - **Groq:** local multipart attachments use the 25 MB cap. Larger development-tier
   limits for URL-based audio do not apply to this upload path.
 - **OpenRouter:** Kikoe uses multipart transcription. Larger limits for JSON or

@@ -20,8 +20,8 @@ from kikoe.providers.base import (
     TranscriptionOptions,
     file_capabilities,
 )
+from kikoe.providers.chat_file_stream import ChatFileTranscript, completed_text
 from kikoe.providers.errors import openai_error, unreadable
-from kikoe.providers.mimo_file_stream import MiMoFileTranscript, completed_text
 from kikoe.providers.openai import openai_sdk
 
 
@@ -66,7 +66,7 @@ class MiMoClient(FileOnlyClient[httpx.AsyncBaseTransport]):
                     extra_body={"asr_options": {"language": asr_language(options.language)}},
                 )
                 if file_capabilities(model).streaming:
-                    transcript = MiMoFileTranscript(self._host)
+                    transcript = ChatFileTranscript(self._host)
                     stream = await create(stream=True)
                     async with stream:
                         async for event in stream:

@@ -224,6 +224,15 @@ EOF without a successful finish reason is a retryable streaming failure.
 New MiMo models enable file streaming by default; existing model settings remain
 unchanged. This does not enable realtime microphone transcription.
 
+Audio LLM providers send each WAV chunk with a prompt to a general audio-capable
+model: as an `input_audio` part of a chat completion, or as inline data to Gemini
+`generateContent` / `streamGenerateContent`. `core.llm_prompt` owns the built-in
+prompt, the language hint added for a chosen language and cleanup of a wrapping
+code fence. An empty stored prompt means the built-in one. Both formats share
+`providers.chat_file_stream` with MiMo; Gemini finish reasons are mapped to the
+OpenAI names (`MAX_TOKENS` → `length`, safety reasons → `content_filter`). Unlike
+MiMo, an empty successful reply is a silent chunk, not an error.
+
 `FileTranscriptSnapshot` separates completed segments from temporary previews.
 Callbacks pass through the shared service, which adds chunk offsets, scopes
 speakers and includes earlier completed chunks. Parallel previews expose only
@@ -243,6 +252,7 @@ section without changing the saved note.
 | Deepgram | `deepgram-sdk`; Listen v1 for file and live transcription |
 | Mistral | `mistralai[realtime]`; Voxtral file and live transcription, SDK root `https://api.mistral.ai` |
 | MiMo | `openai`; WAV input through chat completions, with optional file streaming previews |
+| Audio LLM | `openai` chat completions or `google-genai` `generateContent`, chosen by the provider's request format; WAV plus a prompt, plain text, optional file streaming previews |
 
 Mistral files use `audio.transcriptions.complete_async`, or `stream_async` for
 streaming models. Text deltas are previews; segment events replace them;

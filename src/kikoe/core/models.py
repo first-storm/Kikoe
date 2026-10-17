@@ -20,6 +20,8 @@ class ApiKind(StrEnum):
     MIMO = "mimo"
     GROQ = "groq"
     MISTRAL = "mistral"
+    AUDIO_LLM = "audio-llm"
+    """Any chat model that accepts audio, prompted to transcribe it."""
     LOCAL = "local"
     """Engines on this device; there is one such provider and the user never adds it."""
 
@@ -96,6 +98,24 @@ class UploadPolicy:
     formats: tuple[AudioFormat, ...] = tuple(AudioFormat)
 
 
+class LlmFormat(StrEnum):
+    """Request format of an Audio LLM provider."""
+
+    OPENAI = "openai"
+    """Chat completions with an ``input_audio`` part."""
+    GEMINI = "gemini"
+    """Google ``generateContent`` with inline audio."""
+
+
+@dataclass(frozen=True, slots=True)
+class LlmSettings:
+    """How an Audio LLM provider asks its model to transcribe."""
+
+    format: LlmFormat = LlmFormat.OPENAI
+    prompt: str = ""
+    """Empty uses the built-in prompt, so improvements to it reach existing providers."""
+
+
 @dataclass(frozen=True, slots=True)
 class Provider:
     """A configured transcription service. The API key lives in the OS keyring, not here."""
@@ -106,6 +126,8 @@ class Provider:
     base_url: str
     models: tuple[ModelSpec, ...] = ()
     upload: UploadSettings = UploadSettings()
+    llm: LlmSettings = LlmSettings()
+    """Only used by Audio LLM providers."""
 
 
 type ModelKey = tuple[str, str]

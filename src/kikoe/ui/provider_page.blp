@@ -60,6 +60,60 @@ template $KikoeProviderPage: Adw.NavigationPage {
         }
       }
 
+      Adw.PreferencesGroup llm_group {
+        title: _("Audio LLM");
+        description: _(
+          "Any chat model that accepts audio can transcribe when given a prompt. Results have no timestamps or speakers."
+        );
+        visible: false;
+
+        Adw.ComboRow format_row {
+          title: _("Request Format");
+          notify::selected => $_on_format_row_notify_selected();
+        }
+      }
+
+      Adw.PreferencesGroup prompt_group {
+        title: _("Prompt");
+        description: _("Sent with each audio chunk. A chosen transcription language is added as a hint.");
+        visible: false;
+
+        header-suffix: Button {
+          valign: center;
+          label: _("_Reset");
+          use-underline: true;
+          tooltip-text: _("Restore the default prompt");
+          clicked => $_on_reset_prompt_button_clicked();
+        };
+
+        ScrolledWindow {
+          hscrollbar-policy: never;
+          min-content-height: 180;
+          max-content-height: 360;
+          propagate-natural-height: true;
+
+          child: TextView prompt_view {
+            wrap-mode: word_char;
+            top-margin: 12;
+            bottom-margin: 12;
+            left-margin: 12;
+            right-margin: 12;
+
+            accessibility {
+              label: _("Prompt");
+            }
+
+            styles [
+              "inline",
+            ]
+          };
+
+          styles [
+            "card",
+          ]
+        }
+      }
+
       Adw.PreferencesGroup upload_group {
         title: _("File Transcription");
         description: _(

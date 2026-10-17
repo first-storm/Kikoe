@@ -391,8 +391,15 @@ normally about 640×780. Its groups are:
 
 - **Connection:** Name, API Type, Base URL and a masked API Key with Show Key.
   API types include OpenAI, OpenAI-compatible, OpenRouter, Deepgram, Gemini AI
-  Studio, MiMo, Groq and Mistral. API type determines request format; Base URL
-  identifies the endpoint.
+  Studio, MiMo, Groq, Mistral and Audio LLM. API type determines request format;
+  Base URL identifies the endpoint.
+- **Audio LLM** (Audio LLM providers only): Request Format chooses
+  OpenAI-compatible chat completions or Gemini `generateContent`. Choosing
+  Gemini offers its endpoint when Base URL is empty or another API's default.
+- **Prompt** (Audio LLM providers only): a multi-line text view in a card,
+  showing the built-in prompt until the user edits it, with Reset in the group
+  header. Edits apply when the text view loses focus or the page closes. Results
+  are plain text without timestamps or speakers.
 - **File Transcription:** Parallel Requests, Chunk Length (Minutes), Chunk Size
   (MB), Audio Format and Reset Transcription Defaults. Defaults and maximums
   depend on the API; Gemini applies its shorter metadata duration limit at

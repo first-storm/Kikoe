@@ -9,7 +9,7 @@ from typing import Protocol
 
 from kikoe.core.listeners import Listeners
 from kikoe.core.model_catalog import ModelCatalog
-from kikoe.core.models import ApiKind, ModelSpec, Provider, UploadSettings
+from kikoe.core.models import ApiKind, LlmSettings, ModelSpec, Provider, UploadSettings
 from kikoe.core.upload import validate_upload
 from kikoe.i18n import _
 from kikoe.storage.secrets import SecretStore
@@ -109,11 +109,14 @@ class ProviderRepository:
         base_url: str,
         api_key: str,
         upload: UploadSettings | None = None,
+        llm: LlmSettings | None = None,
     ) -> Provider:
         upload = upload or UploadSettings()
         validate_upload(upload, api)
         await self._writer.ensure_loaded()
-        provider = Provider(uuid.uuid4().hex, name.strip(), api, base_url, upload=upload)
+        provider = Provider(
+            uuid.uuid4().hex, name.strip(), api, base_url, upload=upload, llm=llm or LlmSettings()
+        )
         if api_key:
             await asyncio.to_thread(self._secrets.set, provider.provider_id, api_key)
         await self._commit(lambda: (*self.configured, provider))
@@ -147,6 +150,7 @@ class ProviderRepository:
                     api=api,
                     base_url=base_url,
                     upload=upload or (current.upload if current.api == api else UploadSettings()),
+                    llm=current.llm if current.api == api else LlmSettings(),
                 )
             )
 
@@ -159,6 +163,14 @@ class ProviderRepository:
             provider = self._configured(provider_id)
             validate_upload(upload, provider.api)
             return self._replace_provider(replace(provider, upload=upload))
+
+        await self._commit(change)
+
+    async def update_llm(self, provider_id: str, llm: LlmSettings) -> None:
+        """Change how an Audio LLM provider is asked to transcribe."""
+
+        def change() -> tuple[Provider, ...]:
+            return self._replace_provider(replace(self._configured(provider_id), llm=llm))
 
         await self._commit(change)
 

@@ -9,7 +9,8 @@ import asyncio
 
 from gi.repository import Adw, Gio, GObject, Gtk
 
-from kikoe.core.models import ApiKind, ModelSpec, Provider, UploadSettings
+from kikoe.core.llm_prompt import DEFAULT_PROMPT, FORMAT_BASE_URLS, effective_prompt, stored_prompt
+from kikoe.core.models import ApiKind, LlmFormat, LlmSettings, ModelSpec, Provider, UploadSettings
 from kikoe.core.provider_registry import configurable_apis, descriptor, is_default_base_url
 from kikoe.core.upload import MAX_CHUNK_SECONDS, MAX_PARALLELISM
 from kikoe.core.validation import effective_base_url, validate_provider
@@ -23,6 +24,7 @@ from kikoe.ui.labels import (
     capability_summary,
     chunk_length_subtitle,
     chunk_size_subtitle,
+    llm_format_label,
     provider_error_message,
 )
 from kikoe.ui.model_dialog import ModelDialog
@@ -31,6 +33,8 @@ from kikoe.ui.templates import ui_file
 
 _API_ORDER = configurable_apis()
 """The order of the API type rows, filled from the same registry."""
+
+_FORMAT_ORDER = tuple(LlmFormat)
 
 
 @Gtk.Template(filename=ui_file("provider_page"))
@@ -43,6 +47,10 @@ class ProviderPage(Adw.NavigationPage):
     base_url_row: Adw.EntryRow = Gtk.Template.Child()
     api_key_row: Adw.PasswordEntryRow = Gtk.Template.Child()
     error_label: Gtk.Label = Gtk.Template.Child()
+    llm_group: Adw.PreferencesGroup = Gtk.Template.Child()
+    format_row: Adw.ComboRow = Gtk.Template.Child()
+    prompt_group: Adw.PreferencesGroup = Gtk.Template.Child()
+    prompt_view: Gtk.TextView = Gtk.Template.Child()
     parallel_row: Adw.SpinRow = Gtk.Template.Child()
     chunk_length_row: Adw.SpinRow = Gtk.Template.Child()
     chunk_size_row: Adw.SpinRow = Gtk.Template.Child()
@@ -62,12 +70,19 @@ class ProviderPage(Adw.NavigationPage):
         self._models: Gio.ListStore[ModelItem] = Gio.ListStore(item_type=ModelItem)
         self.models_list.bind_model(self._models, self._create_model_row)
         self.api_row.set_model(Gtk.StringList.new([api_label(api) for api in _API_ORDER]))
+        self.format_row.set_model(
+            Gtk.StringList.new([llm_format_label(llm_format) for llm_format in _FORMAT_ORDER])
+        )
+        focus = Gtk.EventControllerFocus()
+        focus.connect("leave", self._on_prompt_focus_leave)
+        self.prompt_view.add_controller(focus)
         self._disconnect = lambda: None
         self._key_loaded = provider_id is None
         """Saving waits for the stored key, so an empty field cannot erase it by accident."""
         provider = repository.find(provider_id) if provider_id else None
         self._upload_api = provider.api if provider else _API_ORDER[self.api_row.get_selected()]
         self._show_upload(provider.upload if provider else UploadSettings())
+        self._show_llm(provider.llm if provider else LlmSettings())
         if provider is not None:
             self._show_provider(provider)
             self._disconnect = repository.connect_changed(self._refresh_models)
@@ -132,6 +147,7 @@ class ProviderPage(Adw.NavigationPage):
 
     @Gtk.Template.Callback()
     def _on_page_hidden(self, _page: Adw.NavigationPage) -> None:
+        self._save_llm()
         self._disconnect()
 
     @Gtk.Template.Callback()
@@ -139,16 +155,66 @@ class ProviderPage(Adw.NavigationPage):
         self, _row: Adw.ComboRow, _pspec: GObject.ParamSpec | None
     ) -> None:
         """Offer the default endpoint of hosted APIs, unless the user typed their own URL."""
+        api = _API_ORDER[self.api_row.get_selected()]
+        is_llm = descriptor(api).prompted
+        self.llm_group.set_visible(is_llm)
+        self.prompt_group.set_visible(is_llm)
         if self._populating.active:
             return
-        api = _API_ORDER[self.api_row.get_selected()]
         if api != self._upload_api:
             self._upload_api = api
             self._show_upload(UploadSettings())
+            self._show_llm(LlmSettings())
+        default_url = descriptor(api).default_base_url
+        if is_llm:
+            default_url = FORMAT_BASE_URLS[_FORMAT_ORDER[self.format_row.get_selected()]]
+        self._offer_base_url(default_url)
+        self._apply_changes()
+
+    def _offer_base_url(self, url: str) -> None:
+        """Replace the Base URL only when it is empty or some API's default."""
         current = self.base_url_row.get_text().strip()
         if not current or is_default_base_url(current):
-            self.base_url_row.set_text(descriptor(api).default_base_url)
+            self.base_url_row.set_text(url)
+
+    @Gtk.Template.Callback()
+    def _on_format_row_notify_selected(self, _row: Adw.ComboRow, _pspec: GObject.ParamSpec) -> None:
+        if self._populating.active:
+            return
+        self._offer_base_url(FORMAT_BASE_URLS[_FORMAT_ORDER[self.format_row.get_selected()]])
+        self._save_llm()
         self._apply_changes()
+
+    @Gtk.Template.Callback()
+    def _on_reset_prompt_button_clicked(self, _button: Gtk.Button) -> None:
+        self.prompt_view.get_buffer().set_text(DEFAULT_PROMPT)
+        self._save_llm()
+
+    def _on_prompt_focus_leave(self, _controller: Gtk.EventControllerFocus) -> None:
+        self._save_llm()
+
+    def _show_llm(self, settings: LlmSettings) -> None:
+        with self._populating:
+            self.format_row.set_selected(_FORMAT_ORDER.index(settings.format))
+            self.prompt_view.get_buffer().set_text(effective_prompt(settings))
+
+    def _llm_settings(self) -> LlmSettings:
+        buffer = self.prompt_view.get_buffer()
+        text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
+        return LlmSettings(_FORMAT_ORDER[self.format_row.get_selected()], stored_prompt(text))
+
+    def _save_llm(self) -> None:
+        """Save an existing Audio LLM provider's prompt and format when they changed."""
+        provider = self._repository.find(self._provider_id) if self._provider_id else None
+        if provider is None or not descriptor(provider.api).prompted:
+            return
+        settings = self._llm_settings()
+        if settings != provider.llm:
+            run_task(self._update_llm(provider.provider_id, settings), self)
+
+    async def _update_llm(self, provider_id: str, settings: LlmSettings) -> None:
+        async with self._save_lock:
+            await self._repository.update_llm(provider_id, settings)
 
     @Gtk.Template.Callback()
     def _on_row_apply(self, _row: Adw.EntryRow) -> None:
@@ -182,7 +248,9 @@ class ProviderPage(Adw.NavigationPage):
         return name, api, effective_base_url(api, base_url), api_key
 
     async def _add(self, name: str, api: ApiKind, base_url: str, api_key: str) -> None:
-        await self._repository.add_provider(name, api, base_url, api_key, self._upload_settings())
+        await self._repository.add_provider(
+            name, api, base_url, api_key, self._upload_settings(), self._llm_settings()
+        )
         self._pop()
 
     async def _update(

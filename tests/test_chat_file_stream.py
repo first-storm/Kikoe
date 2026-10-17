@@ -1,4 +1,4 @@
-"""Exercise MiMo chat SSE decoding and reject incomplete or filtered transcription."""
+"""Exercise chat SSE decoding through MiMo and reject incomplete or filtered transcription."""
 
 import asyncio
 import json

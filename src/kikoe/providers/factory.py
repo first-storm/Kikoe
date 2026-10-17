@@ -8,7 +8,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from kikoe.core.models import ApiKind, Provider
+from kikoe.core.models import ApiKind, LlmFormat, Provider
 from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionError, TranscriptionProvider
 
@@ -24,53 +24,63 @@ class ClientContext:
     """Installed engines and models; None where local models are not set up."""
 
 
-type ClientFactory = Callable[[str, str, ClientContext], TranscriptionProvider]
-"""Builds a client from a base URL, an API key and the application's context."""
+type ClientFactory = Callable[[Provider, str, ClientContext], TranscriptionProvider]
+"""Builds a client from a provider, its API key and the application's context."""
 
 
-def _deepgram(url: str, key: str, _context: ClientContext) -> TranscriptionProvider:
+def _deepgram(provider: Provider, key: str, _context: ClientContext) -> TranscriptionProvider:
     from kikoe.providers.deepgram import DeepgramClient
 
-    return DeepgramClient(url, key)
+    return DeepgramClient(provider.base_url, key)
 
 
-def _openai(url: str, key: str, _context: ClientContext) -> TranscriptionProvider:
+def _openai(provider: Provider, key: str, _context: ClientContext) -> TranscriptionProvider:
     from kikoe.providers.openai import OpenAIClient
 
-    return OpenAIClient(url, key)
+    return OpenAIClient(provider.base_url, key)
 
 
-def _openrouter(url: str, key: str, _context: ClientContext) -> TranscriptionProvider:
+def _openrouter(provider: Provider, key: str, _context: ClientContext) -> TranscriptionProvider:
     from kikoe.providers.openrouter import OpenRouterClient
 
-    return OpenRouterClient(url, key)
+    return OpenRouterClient(provider.base_url, key)
 
 
-def _gemini(url: str, key: str, _context: ClientContext) -> TranscriptionProvider:
+def _gemini(provider: Provider, key: str, _context: ClientContext) -> TranscriptionProvider:
     from kikoe.providers.gemini import GeminiClient
 
-    return GeminiClient(url, key)
+    return GeminiClient(provider.base_url, key)
 
 
-def _mimo(url: str, key: str, _context: ClientContext) -> TranscriptionProvider:
+def _mimo(provider: Provider, key: str, _context: ClientContext) -> TranscriptionProvider:
     from kikoe.providers.mimo import MiMoClient
 
-    return MiMoClient(url, key)
+    return MiMoClient(provider.base_url, key)
 
 
-def _groq(url: str, key: str, _context: ClientContext) -> TranscriptionProvider:
+def _groq(provider: Provider, key: str, _context: ClientContext) -> TranscriptionProvider:
     from kikoe.providers.groq import GroqClient
 
-    return GroqClient(url, key)
+    return GroqClient(provider.base_url, key)
 
 
-def _mistral(url: str, key: str, _context: ClientContext) -> TranscriptionProvider:
+def _mistral(provider: Provider, key: str, _context: ClientContext) -> TranscriptionProvider:
     from kikoe.providers.mistral import MistralClient
 
-    return MistralClient(url, key)
+    return MistralClient(provider.base_url, key)
 
 
-def _local(_url: str, _key: str, context: ClientContext) -> TranscriptionProvider:
+def _audio_llm(provider: Provider, key: str, _context: ClientContext) -> TranscriptionProvider:
+    if provider.llm.format == LlmFormat.GEMINI:
+        from kikoe.providers.audio_llm_gemini import AudioLlmGeminiClient
+
+        return AudioLlmGeminiClient(provider.base_url, key, provider.llm)
+    from kikoe.providers.audio_llm import AudioLlmClient
+
+    return AudioLlmClient(provider.base_url, key, provider.llm)
+
+
+def _local(_provider: Provider, _key: str, context: ClientContext) -> TranscriptionProvider:
     from kikoe.providers.local.client import LocalClient
 
     if context.local is None:
@@ -87,6 +97,7 @@ CLIENTS: dict[ApiKind, ClientFactory] = {
     ApiKind.MIMO: _mimo,
     ApiKind.GROQ: _groq,
     ApiKind.MISTRAL: _mistral,
+    ApiKind.AUDIO_LLM: _audio_llm,
     ApiKind.LOCAL: _local,
 }
 """One entry per ``ApiKind``; ``tests/test_provider_factory.py`` fails when one is missing."""
@@ -103,4 +114,4 @@ def create_client(
     factory = CLIENTS.get(provider.api)
     if factory is None:
         raise TranscriptionError(f"No client is available for {provider.api.value} providers")
-    return factory(provider.base_url, api_key, context)
+    return factory(provider, api_key, context)

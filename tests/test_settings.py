@@ -4,7 +4,15 @@ from pathlib import Path
 import pytest
 
 from helpers import file_caps
-from kikoe.core.models import ApiKind, Capabilities, ModeCapabilities, ModelSpec, Provider
+from kikoe.core.models import (
+    ApiKind,
+    Capabilities,
+    LlmFormat,
+    LlmSettings,
+    ModeCapabilities,
+    ModelSpec,
+    Provider,
+)
 from kikoe.core.preferences import WindowState
 from kikoe.core.provider_registry import configurable_apis
 from kikoe.storage.settings import Settings, SettingsError, SettingsStore
@@ -244,3 +252,24 @@ def test_damaged_upload_settings_are_refused(tmp_path: Path, upload: dict[str, o
     path.write_text(json.dumps(data), encoding="utf-8")
     with pytest.raises(SettingsError):
         store.load_state()
+
+
+def test_audio_llm_prompt_and_format_load_back(tmp_path: Path) -> None:
+    llm = LlmSettings(LlmFormat.GEMINI, "只转写。")
+    provider = Provider("p2", "Gemini LLM", ApiKind.AUDIO_LLM, "https://example.test", llm=llm)
+    store = SettingsStore(tmp_path / "settings.json")
+    store.save_state(Settings((provider,)))
+    assert store.load_state().providers == (provider,)
+
+
+def test_llm_settings_are_written_only_for_audio_llm(tmp_path: Path) -> None:
+    path = tmp_path / "settings.json"
+    SettingsStore(path).save_state(Settings((PROVIDER,)))
+    assert "llm" not in json.loads(path.read_text(encoding="utf-8"))["providers"][0]
+
+
+def test_audio_llm_saved_without_llm_settings_uses_defaults(tmp_path: Path) -> None:
+    path = tmp_path / "settings.json"
+    entry = {"id": "p", "name": "X", "api": "audio-llm", "base_url": "https://x"}
+    path.write_text(json.dumps({"version": 2, "providers": [entry]}), encoding="utf-8")
+    assert SettingsStore(path).load_state().providers[0].llm == LlmSettings()

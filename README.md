@@ -17,7 +17,7 @@ run on your own computer.
 ## ✨ Capture, refine, share
 
 - 🎙️ **Record or import** — microphone capture with pause/resume, plus existing audio files.
-- ☁️ **Choose your service** — Deepgram, OpenAI, OpenRouter, Gemini AI Studio, MiMo, Groq, Mistral, or an OpenAI-compatible API.
+- ☁️ **Choose your service** — Deepgram, OpenAI, OpenRouter, Gemini AI Studio, MiMo, Groq, Mistral, an OpenAI-compatible API, or any audio-capable LLM with your own transcription prompt.
 - 💻 **Or stay offline** — download Whisper, Fun-ASR, Parakeet or Voxtral models in Preferences → Local Models; they run with [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) on Vulkan, CUDA, Metal or the CPU.
 - 👥 **Follow each voice** — optional timestamps, speaker labels, and matching across recordings.
 - ✏️ **Polish your notes** — edit text and timestamps in place, with Undo/Redo; search titles and transcripts.
@@ -98,7 +98,7 @@ Preferences → General sets a default model and language hint; leave the hint e
 <details>
 <summary>Models, recovery, and re-transcription</summary>
 
-- **Model support varies.** Deepgram Nova-3 supports file/live transcription, timestamps, and speakers. Groq Whisper supports file transcription with segment and word timestamps. Mistral Voxtral supports file transcription with timestamps, speakers and streaming previews (the transcription language is ignored while timestamps or speakers are on), and its realtime model is microphone-only text. OpenRouter and MiMo support file transcription (MiMo returns plain text without timestamps or speakers); OpenAI, Gemini and Mistral also offer live models, with unsupported options disabled.
+- **Model support varies.** Deepgram Nova-3 supports file/live transcription, timestamps, and speakers. Groq Whisper supports file transcription with segment and word timestamps. Mistral Voxtral supports file transcription with timestamps, speakers and streaming previews (the transcription language is ignored while timestamps or speakers are on), and its realtime model is microphone-only text. OpenRouter and MiMo support file transcription (MiMo returns plain text without timestamps or speakers); Audio LLM providers prompt any chat model that accepts audio, in OpenAI-compatible or Gemini format, and return plain text; OpenAI, Gemini and Mistral also offer live models, with unsupported options disabled.
 - **Live-only models need a file alternative.** `gpt-live-transcribe`, `gemini-3.5-transcribe-live` and `voxtral-mini-transcribe-realtime-2602` are microphone-only; choose a file model for imports or retries.
 - **Audio stays available.** Recordings are saved locally. Interruptions retain audio and confirmed text; recovery never uploads automatically. Use **Retry Transcription** with a file model.
 - **Keep speakers consistent.** Click names to rename them; **Match Speakers** links people across recordings, with audio samples when timing allows.

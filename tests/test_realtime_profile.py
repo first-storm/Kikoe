@@ -21,6 +21,7 @@ PROFILES = [
     (ApiKind.GROQ, RealtimeProfile()),
     (ApiKind.MIMO, RealtimeProfile()),
     (ApiKind.OPENROUTER, RealtimeProfile()),
+    (ApiKind.AUDIO_LLM, RealtimeProfile()),
     (ApiKind.LOCAL, RealtimeProfile()),
 ]
 

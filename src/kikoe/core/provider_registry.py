@@ -7,6 +7,7 @@ the model presets. Callers look a provider up by ``ApiKind`` instead of branchin
 from dataclasses import dataclass
 from enum import StrEnum
 
+from kikoe.core.llm_prompt import FORMAT_BASE_URLS
 from kikoe.core.models import (
     ApiKind,
     AudioFormat,
@@ -40,6 +41,8 @@ class ProviderDescriptor:
     upload_hints: frozenset[UploadHint] = frozenset()
     sdk_loggers: tuple[str, ...] = ()
     """Logger names of the SDK, kept quiet because their debug output includes secrets."""
+    prompted: bool = False
+    """A general LLM told to transcribe by a prompt; the provider's ``LlmSettings`` apply."""
     configurable: bool = True
     """Users add providers of this API themselves; False for the built-in local provider."""
 
@@ -105,6 +108,17 @@ _DESCRIPTORS = (
         sdk_loggers=("mistralai",),
     ),
     ProviderDescriptor(
+        ApiKind.AUDIO_LLM,
+        "Audio LLM",
+        # OpenAI's input_audio takes only WAV or MP3. Base64 of 14 MB stays under Gemini's
+        # 20 MB inline request cap, and ten minutes keeps the reply within output limits.
+        UploadPolicy(14_000_000, 600, format=AudioFormat.WAV, formats=(AudioFormat.WAV,)),
+        generic=True,
+        upload_hints=frozenset({UploadHint.SERVER_MAY_LIMIT_SIZE}),
+        sdk_loggers=("openai", "google.genai"),
+        prompted=True,
+    ),
+    ProviderDescriptor(
         ApiKind.LOCAL,
         "On This Device",
         # Uncompressed 16 kHz speech; models with a length limit split it further.
@@ -140,4 +154,5 @@ def descriptor(api: ApiKind) -> ProviderDescriptor:
 
 def is_default_base_url(url: str) -> bool:
     """Whether ``url`` is some API's well-known endpoint, so switching APIs may replace it."""
-    return url != "" and any(d.default_base_url == url for d in PROVIDERS.values())
+    known = {*(d.default_base_url for d in PROVIDERS.values()), *FORMAT_BASE_URLS.values()}
+    return url != "" and url in known

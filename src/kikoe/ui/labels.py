@@ -11,6 +11,7 @@ from kikoe.core.formatting import RelativeDay, format_duration, relative_day
 from kikoe.core.models import (
     ApiKind,
     Capabilities,
+    LlmFormat,
     Note,
     NoteSummary,
     Recording,
@@ -26,7 +27,22 @@ from kikoe.i18n import _, ngettext
 
 def api_label(api: ApiKind) -> str:
     provider = descriptor(api)
-    return _("OpenAI-compatible") if provider.generic else provider.display_name
+    if not provider.generic:
+        return provider.display_name
+    # Literal strings, so that they are extracted for translation.
+    match provider.display_name:
+        case "Audio LLM":
+            return _("Audio LLM")
+        case _:
+            return _("OpenAI-compatible")
+
+
+def llm_format_label(llm_format: LlmFormat) -> str:
+    match llm_format:
+        case LlmFormat.OPENAI:
+            return _("OpenAI-compatible")
+        case LlmFormat.GEMINI:
+            return "Gemini"
 
 
 def chunk_length_subtitle(provider: ProviderDescriptor) -> str:
@@ -37,7 +53,9 @@ def chunk_length_subtitle(provider: ProviderDescriptor) -> str:
 
 def chunk_size_subtitle(provider: ProviderDescriptor, limit_megabytes: float) -> str:
     if UploadHint.SERVER_MAY_LIMIT_SIZE in provider.upload_hints:
-        return _("Defaults to 25 MB; your server may require smaller chunks")
+        return _("Defaults to {size:g} MB; your server may require smaller chunks").format(
+            size=limit_megabytes
+        )
     return _("Maximum {size:g} MB per chunk").format(size=limit_megabytes)
 
 
