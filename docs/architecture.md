@@ -215,6 +215,15 @@ text uses the completed text; diarized output uses segment events to retain
 speakers and times. EOF without a completion event is a retryable failure.
 Responses close on error or cancellation.
 
+MiMo uses the chat completions endpoint with `stream=True` when file streaming
+is enabled. It accumulates the first choice’s text deltas as previews and requires
+`finish_reason: stop` before committing the result. Both streaming and ordinary
+responses reject output stopped by length limits or content filtering; truncated
+output advises smaller upload chunks rather than retrying the same request.
+EOF without a successful finish reason is a retryable streaming failure.
+New MiMo models enable file streaming by default; existing model settings remain
+unchanged. This does not enable realtime microphone transcription.
+
 `FileTranscriptSnapshot` separates completed segments from temporary previews.
 Callbacks pass through the shared service, which adds chunk offsets, scopes
 speakers and includes earlier completed chunks. Parallel previews expose only
@@ -233,6 +242,7 @@ section without changing the saved note.
 | Gemini | `google-genai`; file Interactions and Live sessions |
 | Deepgram | `deepgram-sdk`; Listen v1 for file and live transcription |
 | Mistral | `mistralai[realtime]`; Voxtral file and live transcription, SDK root `https://api.mistral.ai` |
+| MiMo | `openai`; WAV input through chat completions, with optional file streaming previews |
 
 Mistral files use `audio.transcriptions.complete_async`, or `stream_async` for
 streaming models. Text deltas are previews; segment events replace them;

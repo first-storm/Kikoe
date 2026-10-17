@@ -2,6 +2,7 @@
 
 import asyncio
 import base64
+from functools import partial
 from pathlib import Path
 from typing import cast
 
@@ -11,12 +12,16 @@ from openai.types.chat import ChatCompletionMessageParam
 
 from kikoe.core.models import ModelSpec, Segment
 from kikoe.core.upload import WAV
+from kikoe.i18n import _
 from kikoe.providers.base import (
     FileOnlyClient,
     FileTranscriptCallback,
+    TranscriptionError,
     TranscriptionOptions,
+    file_capabilities,
 )
 from kikoe.providers.errors import openai_error, unreadable
+from kikoe.providers.mimo_file_stream import MiMoFileTranscript, completed_text
 from kikoe.providers.openai import openai_sdk
 
 
@@ -44,7 +49,8 @@ class MiMoClient(FileOnlyClient[httpx.AsyncBaseTransport]):
         data = f"data:{WAV.mime};base64,{base64.b64encode(content).decode('ascii')}"
         try:
             async with openai_sdk(self._url, self._key, self._transport) as sdk:
-                completion = await sdk.chat.completions.create(
+                create = partial(
+                    sdk.chat.completions.create,
                     model=model.model_id,
                     # MiMo takes a Data URL without the SDK's `format` field, so the typed
                     # input_audio param does not fit.
@@ -59,9 +65,29 @@ class MiMoClient(FileOnlyClient[httpx.AsyncBaseTransport]):
                     ),
                     extra_body={"asr_options": {"language": asr_language(options.language)}},
                 )
+                if file_capabilities(model).streaming:
+                    transcript = MiMoFileTranscript(self._host)
+                    stream = await create(stream=True)
+                    async with stream:
+                        async for event in stream:
+                            changed = transcript.apply(event)
+                            if changed and on_update is not None:
+                                on_update(transcript.snapshot)
+                            if transcript.finished:
+                                break
+                    return transcript.result()
+                completion = await create(stream=False)
+                if not completion.choices:
+                    raise unreadable(self._host)
+                choice = completion.choices[0]
+                return completed_text(choice.message.content, choice.finish_reason, self._host)
         except APIError as error:
             raise openai_error(error, self._host, self._key) from error
-        text = (completion.choices[0].message.content or "").strip() if completion.choices else ""
-        if not text:
-            raise unreadable(self._host)
-        return (Segment(text),)
+        except httpx.HTTPError as error:
+            # The SDK exposes transport errors directly while iterating an SSE response.
+            raise TranscriptionError(
+                _("Could not reach {host}. Try again later.").format(host=self._host),
+                retryable=True,
+            ) from error
+        except (ValueError, TypeError, KeyError, AttributeError) as error:
+            raise unreadable(self._host) from error

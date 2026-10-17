@@ -62,7 +62,8 @@
       "file": {
         "available": "on",
         "timestamps": "unsupported",
-        "diarization": "unsupported"
+        "diarization": "unsupported",
+        "streaming": "on"
       },
       "realtime": {
         "available": "unsupported",

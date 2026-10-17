@@ -75,6 +75,16 @@ def test_unknown_models_get_their_api_fallback(catalog: ModelCatalog) -> None:
     )
 
 
+def test_mimo_streams_by_default_but_preserves_existing_switches(catalog: ModelCatalog) -> None:
+    preset = catalog.preset(ApiKind.MIMO, "mimo-v2.5-asr")
+    assert preset.defaults().file == ModeCapabilities(streaming=True)
+    for streaming in (False, True):
+        model = ModelSpec(
+            "mimo-v2.5-asr", "MiMo", Capabilities(file=ModeCapabilities(streaming=streaming))
+        )
+        assert catalog.clamp(ApiKind.MIMO, model) == model
+
+
 def test_word_timestamps_are_offered_only_where_a_client_sends_them(
     catalog: ModelCatalog,
 ) -> None:

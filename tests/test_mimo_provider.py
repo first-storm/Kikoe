@@ -59,6 +59,7 @@ async def test_mimo_sends_audio_as_input_audio_and_returns_text(tmp_path: Path) 
     assert requests[0].url.path == "/v1/chat/completions"
     assert requests[0].headers["authorization"] == "Bearer fake-key"
     body = json.loads(requests[0].content)
+    assert body["stream"] is False
     assert body["model"] == "mimo-v2.5-asr"
     assert body["asr_options"] == {"language": "zh"}
     [part] = body["messages"][0]["content"]
