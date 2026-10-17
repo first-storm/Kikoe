@@ -157,9 +157,11 @@ macOS 26 and later use the layered Liquid Glass icon in
 `AppIcon.icns` fallback. Linux, Windows and the in-app GTK icon keep the shared
 SVG. This changes the macOS package icon only, not the GTK interface material.
 
-The macOS build requires full Xcode 26 or later, not just Command Line Tools.
-CI explicitly selects Xcode 26.3 on both macOS 15 runners, preserving the macOS 15
-deployment baseline. For a local build, select the installed Xcode with
+Icon compilation requires macOS 26 and full Xcode 26 or later, not just Command
+Line Tools. CI compiles the architecture-independent icons on a macOS 26 runner,
+then downloads them on both macOS 15 packaging runners, preserving the macOS 15
+deployment baseline. This avoids Xcode's asset runtime framework conflicts on
+macOS 15. For a local build on macOS 26, select the installed Xcode with
 `DEVELOPER_DIR` or `xcode-select` before invoking `packaging/macos/build.sh`.
 The icon step can also run independently:
 
@@ -167,6 +169,10 @@ The icon step can also run independently:
 DEVELOPER_DIR=/Applications/Xcode_26.3.app/Contents/Developer \
   bash packaging/macos/build-icons.sh build/macos-icons
 ```
+
+On macOS 15, copy `Assets.car`, `AppIcon.icns` and `icon-info.plist` from that
+icon build into `build/macos-icons/`, then run the package build with
+`KIKOE_PREBUILT_MACOS_ICONS=1`.
 
 Edit `AppIcon.icon` in Apple's Icon Composer. Its 1024×1024 SVG layers separate
 the document, transcript, blue badge and microphone. Keep those layers free of

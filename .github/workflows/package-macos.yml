@@ -19,13 +19,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  icons:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build Liquid Glass and fallback icons
+        run: bash packaging/macos/build-icons.sh build/macos-icons
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-icons
+          path: |
+            build/macos-icons/Assets.car
+            build/macos-icons/AppIcon.icns
+            build/macos-icons/icon-info.plist
+          if-no-files-found: error
+
   wheel:
     uses: ./.github/workflows/wheel.yml
     with:
       artifact-name: wheel-macos
 
   app:
-    needs: wheel
+    needs: [wheel, icons]
     strategy:
       fail-fast: false
       matrix:
@@ -38,18 +53,17 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Select Xcode for Liquid Glass icons
-        run: |
-          sudo xcode-select --switch /Applications/Xcode_26.3.app/Contents/Developer
-          xcodebuild -version
-          xcrun --find actool
-
       - uses: astral-sh/setup-uv@v6
 
       - uses: actions/download-artifact@v5
         with:
           name: wheel-macos
           path: dist
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: macos-icons
+          path: build/macos-icons
 
       # Saved right away, so a later failure in the job does not waste the build.
       - id: ffmpeg-cache
@@ -71,6 +85,8 @@ jobs:
           key: ffmpeg-macos-${{ matrix.arch }}-${{ hashFiles('packaging/ffmpeg/*.sh') }}
 
       - name: Build Kikoe.app and the disk image
+        env:
+          KIKOE_PREBUILT_MACOS_ICONS: "1"
         run: packaging/macos/build.sh
 
       - name: Start the app

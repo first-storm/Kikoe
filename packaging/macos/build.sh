@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Build Kikoe.app and a disk image on macOS (arm64 or x86_64, matching the host).
 #
-# Needs full Xcode 26+, Homebrew and uv. The wheel and requirements.txt must be
+# Needs macOS 26 with full Xcode 26+ (or prebuilt icons), Homebrew and uv.
+# The wheel and requirements.txt must be
 # in dist/; ffmpeg is built into build/ffmpeg unless it is already there.
 #
 # Usage: packaging/macos/build.sh
@@ -12,8 +13,13 @@ cd "$root"
 arch=$(uname -m)
 build="$root/build"
 
-# Fail before installing dependencies if the selected Xcode cannot build the icon.
-bash packaging/macos/build-icons.sh "$build/macos-icons"
+# CI compiles architecture-independent icons on macOS 26, then packages on macOS 15.
+if [[ ${KIKOE_PREBUILT_MACOS_ICONS:-0} != 1 ]]; then
+    bash packaging/macos/build-icons.sh "$build/macos-icons"
+fi
+for resource in Assets.car AppIcon.icns icon-info.plist; do
+    test -s "$build/macos-icons/$resource"
+done
 
 brew install --quiet gtk4 libadwaita adwaita-icon-theme gobject-introspection \
     pkgconf cairo libffi librsvg nasm
