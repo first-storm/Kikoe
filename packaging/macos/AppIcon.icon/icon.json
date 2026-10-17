@@ -1,0 +1,75 @@
+{
+  "color-space-for-untagged-svg-colors": "srgb",
+  "fill": {
+    "linear-gradient": [
+      "srgb:1,0.99216,0.97647,1",
+      "srgb:0.90980,0.88627,0.84706,1"
+    ]
+  },
+  "fill-specializations": [
+    {"appearance": "dark", "value": {"solid": "srgb:0.12,0.15,0.20,1"}},
+    {"appearance": "tinted", "value": {"solid": "srgb:0.16,0.16,0.16,1"}}
+  ],
+  "groups": [
+    {
+      "name": "Document",
+      "layers": [
+        {
+          "name": "01 Document",
+          "image-name": "01-document.svg",
+          "glass": true,
+          "fill-specializations": [
+            {"appearance": "dark", "value": {"solid": "srgb:0.45,0.50,0.57,1"}},
+            {"appearance": "tinted", "value": {"solid": "srgb:0.65,0.65,0.65,1"}}
+          ]
+        },
+        {
+          "name": "02 Transcript",
+          "image-name": "02-transcript.svg",
+          "glass": false,
+          "fill-specializations": [
+            {"appearance": "dark", "value": {"solid": "srgb:0.85,0.89,0.94,1"}},
+            {"appearance": "tinted", "value": {"solid": "srgb:0.20,0.20,0.20,1"}}
+          ]
+        }
+      ],
+      "lighting": "combined",
+      "specular": true,
+      "shadow": {"kind": "neutral", "opacity": 0.3},
+      "translucency": {"enabled": true, "value": 0.15}
+    },
+    {
+      "name": "Microphone Badge",
+      "layers": [
+        {
+          "name": "03 Blue Badge",
+          "image-name": "03-badge.svg",
+          "glass": true,
+          "fill-specializations": [
+            {"appearance": "tinted", "value": {"solid": "srgb:0.40,0.40,0.40,1"}}
+          ]
+        }
+      ],
+      "specular": true,
+      "shadow": {"kind": "neutral", "opacity": 0.35},
+      "translucency": {"enabled": true, "value": 0.25}
+    },
+    {
+      "name": "Microphone",
+      "layers": [
+        {
+          "name": "04 Microphone",
+          "image-name": "04-microphone.svg",
+          "glass": true,
+          "fill-specializations": [
+            {"appearance": "tinted", "value": {"solid": "srgb:1,1,1,1"}}
+          ]
+        }
+      ],
+      "specular": true,
+      "shadow": {"kind": "neutral", "opacity": 0.2},
+      "translucency": {"enabled": false, "value": 0.5}
+    }
+  ],
+  "supported-platforms": {"squares": ["macOS"]}
+}

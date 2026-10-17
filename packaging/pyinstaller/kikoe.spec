@@ -10,6 +10,7 @@
 # ruff: noqa: F821 - Analysis, PYZ, EXE, COLLECT, BUNDLE and SPECPATH come from PyInstaller.
 
 import os
+import plistlib
 import sys
 from importlib.metadata import version
 from pathlib import Path
@@ -29,9 +30,27 @@ icon = os.environ.get("KIKOE_ICON")
 binaries = [(str(ffmpeg), ".")]
 if sys.platform == "win32":
     # MSYS2's PortAudio; sounddevice's own hook only finds the pip wheel's copy.
-    binaries += [(str(dll), ".") for dll in (Path(sys.base_prefix) / "bin").glob("libportaudio*.dll")]
+    binaries += [
+        (str(dll), ".") for dll in (Path(sys.base_prefix) / "bin").glob("libportaudio*.dll")
+    ]
 
 datas = collect_data_files("kikoe", excludes=["**/*.blp"])
+macos_icon_info = {}
+if sys.platform == "darwin":
+    # DATA entries land in Contents/Resources before BUNDLE signs the app.
+    icon_dir = Path(os.environ["KIKOE_MACOS_ICON_DIR"]).resolve()
+    assets = icon_dir / "Assets.car"
+    if not assets.is_file() or assets.stat().st_size == 0:
+        raise SystemExit(f"Liquid Glass icon resources are missing: {assets}")
+    with (icon_dir / "icon-info.plist").open("rb") as stream:
+        macos_icon_info = plistlib.load(stream)
+    if macos_icon_info.get("CFBundleIconName") != "AppIcon":
+        raise SystemExit("The compiled Liquid Glass icon must be named AppIcon.")
+    # actool may name a generated legacy file; our independent fallback is canonical.
+    macos_icon_info["CFBundleIconFile"] = "AppIcon.icns"
+    if icon != str(icon_dir / "AppIcon.icns"):
+        raise SystemExit("KIKOE_ICON must point to the macOS AppIcon.icns fallback.")
+    datas.append((str(assets), "."))
 # Local engines prepared by scripts/bundle_engine.py (macOS ships transcribe.cpp built in).
 if engines := os.environ.get("KIKOE_BUNDLED_ENGINES"):
     for engine in sorted(Path(engines).iterdir()):
@@ -117,6 +136,7 @@ if sys.platform == "darwin":
         bundle_identifier=APP_ID,
         version=VERSION,
         info_plist={
+            **macos_icon_info,
             "CFBundleDisplayName": "Kikoe",
             "CFBundleShortVersionString": VERSION,
             "CFBundleVersion": VERSION,

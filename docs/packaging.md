@@ -147,6 +147,63 @@ libadwaita and Adwaita icons, with Python 3.14 supplied by uv. PyInstaller colle
 the native libraries into `Kikoe.app`. Their build baseline requires macOS 15 or
 newer, reflected in `LSMinimumSystemVersion`.
 
+### App icon
+
+macOS 26 and later use the layered Liquid Glass icon in
+`packaging/macos/AppIcon.icon`. macOS 15 uses the independent rounded-square
+`AppIcon.icns` fallback. Linux, Windows and the in-app GTK icon keep the shared
+SVG. This changes the macOS package icon only, not the GTK interface material.
+
+The macOS build requires full Xcode 26 or later, not just Command Line Tools.
+CI explicitly selects Xcode 26.3 on both macOS 15 runners, preserving the macOS 15
+deployment baseline. For a local build, select the installed Xcode with
+`DEVELOPER_DIR` or `xcode-select` before invoking `packaging/macos/build.sh`.
+The icon step can also run independently:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode_26.3.app/Contents/Developer \
+  bash packaging/macos/build-icons.sh build/macos-icons
+```
+
+Edit `AppIcon.icon` in Apple's Icon Composer. Its 1024×1024 SVG layers separate
+the document, transcript, blue badge and microphone. Keep those layers free of
+baked lighting, shadows and an outer rounded mask; Icon Composer supplies the
+glass effects and the system applies the enclosure. The document contains
+default, dark and tinted/mono color settings. See Apple's
+[Icon Composer guide](https://developer.apple.com/documentation/xcode/creating-your-app-icon-using-icon-composer).
+
+`AppIcon-fallback.svg` is the editable static macOS 15 counterpart, with its own
+rounded enclosure and static shadows. After changing the artwork, update it to
+match the default composition and regenerate the committed 1024×1024 PNG with
+Homebrew's existing librsvg tool:
+
+```sh
+rsvg-convert --width 1024 --height 1024 packaging/macos/AppIcon-fallback.svg \
+  --output packaging/macos/AppIcon-fallback.png
+```
+
+`build-icons.sh` compiles the `.icon` with `actool` into `Assets.car` and an icon
+Info.plist fragment, targeting macOS 26 for the layered resource only. It creates
+all standard 1×/2× `.icns` sizes from the fallback PNG using `sips` and `iconutil`.
+Missing tools, failed compilation and missing outputs fail the build. Generated
+resources stay under `build/`; only artwork sources and the fallback PNG are
+committed.
+
+The build passes `KIKOE_MACOS_ICON_DIR` and `KIKOE_ICON` to PyInstaller. Its spec
+collects `Assets.car` into `Contents/Resources` before signing, merges the
+compiler's icon metadata, and uses `CFBundleIconName=AppIcon` plus
+`CFBundleIconFile=AppIcon.icns`. Before creating the disk image, the build checks
+those resources and references and verifies the bundle's code signature.
+
+On macOS 26+, visually check the packaged app in Dock and Finder using default,
+dark, clear and tinted system icon appearances, including small sizes. On macOS
+15, check the rounded static fallback and startup. Linux can validate the source
+artwork and packaging orchestration, but cannot run `actool` or verify native
+Liquid Glass rendering; those checks require macOS. The current change has no
+recorded macOS compilation or visual acceptance yet.
+
+### Bundled engines and permissions
+
 Unlike the other packages, the macOS app ships the transcribe.cpp local engine:
 `scripts/bundle_engine.py` downloads its pinned binding and native library for the
 build machine's architecture (Metal on arm64, CPU on x86_64), verifies them, and
