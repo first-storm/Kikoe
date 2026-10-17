@@ -18,6 +18,14 @@ STREAMING = ModelSpec(MODEL.model_id, MODEL.display_name, file_caps(streaming=Tr
 LLM = LlmSettings(LlmFormat.GEMINI, "Transcribe.")
 
 
+@pytest.fixture
+def audio(tmp_path: Path) -> Path:
+    """MP3 is the default upload format of this API."""
+    path = tmp_path / "upload.mp3"
+    path.write_bytes(b"ID3 fake audio")
+    return path
+
+
 def reply(text: str, reason: str | None = "STOP") -> dict[str, object]:
     candidate: dict[str, object] = {"content": {"role": "model", "parts": [{"text": text}]}}
     if reason is not None:
@@ -105,3 +113,16 @@ async def test_stream_ending_without_stop_is_retryable(audio: Path) -> None:
     with pytest.raises(TranscriptionError) as error:
         await client(transport).transcribe_file(audio, STREAMING, TranscriptionOptions())
     assert error.value.retryable
+
+
+@run_async
+async def test_mp3_chunk_is_labelled_audio_mpeg(audio: Path) -> None:
+    requests: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(200, json=reply("ok"))
+
+    await client(httpx.MockTransport(respond)).transcribe_file(audio, MODEL, TranscriptionOptions())
+    sound = json.loads(requests[0].content)["contents"][0]["parts"][0]
+    assert "audio/mpeg" in sound["inlineData"].values()

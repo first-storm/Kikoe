@@ -36,9 +36,9 @@ def test_asr_language_falls_back_to_automatic_detection(tag: str | None, expecte
     assert asr_language(tag) == expected
 
 
-def test_mimo_uploads_only_wav_within_the_base64_limit() -> None:
+def test_mimo_uploads_only_mp3_or_wav_within_the_base64_limit() -> None:
     policy = descriptor(ApiKind.MIMO).upload
-    assert policy.formats == (AudioFormat.WAV,)
+    assert policy.formats == (AudioFormat.MP3, AudioFormat.WAV)
     assert policy.bytes * 4 / 3 < 10 * 1024 * 1024
 
 

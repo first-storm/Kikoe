@@ -86,6 +86,7 @@ class AudioFormat(StrEnum):
     OGG = "ogg"
     FLAC = "flac"
     WAV = "wav"
+    MP3 = "mp3"
 
 
 @dataclass(frozen=True, slots=True)

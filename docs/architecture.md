@@ -176,8 +176,9 @@ The pipeline has six stages:
    ffmpeg produces a lossless FLAC that is retained before uploading. Duration
    comes from the saved sample count and excludes pauses.
 3. **Encode uploads.** `media.transcode.to_upload` produces 16 kHz mono Ogg Opus
-   at 32 kbit/s, FLAC or WAV. Most APIs default to Ogg Opus; OpenAI and MiMo default
-   to WAV. ffmpeg progress supplies duration, so ffprobe is unnecessary.
+   or MP3 at 32 kbit/s, FLAC or WAV. Most APIs default to Ogg Opus; OpenAI defaults
+   to WAV; MiMo and Audio LLM, which accept only MP3 or WAV, default to MP3. Clients
+   that must name the encoding read it from the chunk with `core.upload.upload_format_of`. ffmpeg progress supplies duration, so ffprobe is unnecessary.
 4. **Plan and validate chunks.** `core.upload.effective_upload_limits` intersects
    user settings with endpoint and model bounds. Endpoint formats and caps belong
    to the registry's `UploadPolicy`; client `upload_limits()` supplies additional

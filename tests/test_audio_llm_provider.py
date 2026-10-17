@@ -21,6 +21,14 @@ STREAMING = ModelSpec(MODEL.model_id, MODEL.display_name, file_caps(streaming=Tr
 DEFAULT_LLM = LlmSettings()
 
 
+@pytest.fixture
+def audio(tmp_path: Path) -> Path:
+    """MP3 is the default upload format of this API."""
+    path = tmp_path / "upload.mp3"
+    path.write_bytes(b"ID3 fake audio")
+    return path
+
+
 def client(
     respond: httpx.MockTransport, llm: LlmSettings = DEFAULT_LLM, key: str = "secret"
 ) -> AudioLlmClient:
@@ -135,3 +143,13 @@ async def test_stream_ending_without_stop_is_retryable(audio: Path) -> None:
             audio, STREAMING, TranscriptionOptions()
         )
     assert error.value.retryable
+
+
+@run_async
+async def test_mp3_chunk_is_sent_as_mp3(audio: Path) -> None:
+    requests: list[httpx.Request] = []
+    await client(replying(completion("ok"), requests)).transcribe_file(
+        audio, MODEL, TranscriptionOptions()
+    )
+    sound = json.loads(requests[0].content)["messages"][0]["content"][1]
+    assert sound["input_audio"]["format"] == "mp3"

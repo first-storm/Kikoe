@@ -138,14 +138,15 @@ async def test_failed_flac_conversion_preserves_the_pcm(
 
 @needs_ffmpeg
 @run_async
-async def test_lossless_upload_formats_use_the_expected_container_and_duration(
+async def test_upload_formats_use_the_expected_container_and_duration(
     tmp_path: Path,
 ) -> None:
-    from kikoe.core.upload import FLAC, WAV
+    from kikoe.core.upload import FLAC, MP3, WAV
 
     source = tmp_path / "source.wav"
     await ffmpeg.run("-f", "lavfi", "-i", "sine=frequency=440:duration=1", "-y", str(source))
-    for format, magic in ((FLAC, b"fLaC"), (WAV, b"RIFF")):
+    # ffmpeg starts MP3 files with an ID3v2 tag.
+    for format, magic in ((FLAC, b"fLaC"), (WAV, b"RIFF"), (MP3, b"ID3")):
         destination = tmp_path / f"upload{format.suffix}"
         duration = await transcode.to_upload(source, destination, format=format)
         content = await asyncio.to_thread(destination.read_bytes)

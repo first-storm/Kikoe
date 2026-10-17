@@ -12,7 +12,7 @@ use their realtime connection settings instead.
 | Parallel Requests | Maximum concurrent uploads for this configured provider | 2; range 1–32; 1 processes chunks sequentially |
 | Chunk Length (Minutes) | Maximum duration of an uploaded chunk | API default, or 0 for automatic sizing; custom values up to 24 hours where the API permits, with 0.1-minute precision |
 | Chunk Size (MB) | Maximum encoded size of an uploaded chunk | API default; minimum 0.1 decimal MB |
-| Audio Format | Encoding used for uploads | Ogg Opus, FLAC or WAV, subject to API support |
+| Audio Format | Encoding used for uploads | Ogg Opus, FLAC, WAV or MP3, subject to API support |
 
 Existing-provider changes apply immediately. A new provider saves them when Add
 is pressed. Reset Transcription Defaults restores all four values. Running jobs
@@ -38,8 +38,8 @@ limit and the applicable endpoint or model limit.
 | Deepgram pre-recorded | 2,000 MB | Automatic, governed by size | Ogg Opus |
 | Gemini Files + Transcribe | 2,000 MB | 60 minutes; 30 with timestamps or speakers | Ogg Opus |
 | Mistral transcription | 500 MB | 60 minutes | Ogg Opus |
-| MiMo ASR | 7.5 MB audio, corresponding to 10 MB Base64 | Automatic, governed by size | WAV |
-| Audio LLM | 14 MB WAV, under 20 MB as Base64 | 10 minutes | WAV |
+| MiMo ASR | 7.5 MB audio, corresponding to 10 MB Base64 | Automatic, governed by size | MP3 |
+| Audio LLM | 14 MB, under 20 MB as Base64 | 10 minutes | MP3 |
 
 Defaults and endpoint limits were checked against official documentation on
 13 October 2026, with Groq and Mistral checked on 14 October 2026. These dates
@@ -66,11 +66,13 @@ record the source review; provider policies and account quotas can change.
   60-minute limit, splitting longer audio as needed.
 - **Deepgram:** a processing timeout is not an audio-duration cap.
 - **MiMo:** the 10 MB limit applies to Base64, leaving a 7.5 MB audio budget.
-  Its API accepts WAV and MP3; Kikoe offers WAV because the bundled ffmpeg does
-  not encode MP3.
+  Its API accepts only MP3 and WAV. MP3 at 32 kbit/s fits about 30 minutes,
+  WAV about 4 minutes.
 
-OpenAI defaults to WAV, while its API also accepts Ogg and FLAC. Available formats
-use Kikoe's bundled encoders at 16 kHz mono. Upload conversion leaves retained
+OpenAI defaults to WAV, while its API also accepts Ogg, FLAC and MP3. Every cloud
+API except MiMo and Audio LLM offers all four formats; the local engines take WAV
+only. MP3 uses 32 kbit/s, about 4 MB per 15 minutes. Available formats use Kikoe's
+bundled encoders at 16 kHz mono. Upload conversion leaves retained
 original audio unchanged.
 
 ## Chunking, ordering and failure behavior

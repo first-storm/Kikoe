@@ -88,8 +88,8 @@ _DESCRIPTORS = (
     ProviderDescriptor(
         ApiKind.MIMO,
         "MiMo",
-        # 10 MB of Base64 holds at most 7.5 MB of raw audio.
-        UploadPolicy(7_500_000, format=AudioFormat.WAV, formats=(AudioFormat.WAV,)),
+        # 10 MB of Base64 holds at most 7.5 MB of raw audio. MiMo takes only MP3 or WAV.
+        UploadPolicy(7_500_000, format=AudioFormat.MP3, formats=(AudioFormat.MP3, AudioFormat.WAV)),
         "https://api.xiaomimimo.com/v1",
     ),
     ProviderDescriptor(
@@ -110,9 +110,11 @@ _DESCRIPTORS = (
     ProviderDescriptor(
         ApiKind.AUDIO_LLM,
         "Audio LLM",
-        # OpenAI's input_audio takes only WAV or MP3. Base64 of 14 MB stays under Gemini's
+        # OpenAI's input_audio takes only MP3 or WAV. Base64 of 14 MB stays under Gemini's
         # 20 MB inline request cap, and ten minutes keeps the reply within output limits.
-        UploadPolicy(14_000_000, 600, format=AudioFormat.WAV, formats=(AudioFormat.WAV,)),
+        UploadPolicy(
+            14_000_000, 600, format=AudioFormat.MP3, formats=(AudioFormat.MP3, AudioFormat.WAV)
+        ),
         generic=True,
         upload_hints=frozenset({UploadHint.SERVER_MAY_LIMIT_SIZE}),
         sdk_loggers=("openai", "google.genai"),

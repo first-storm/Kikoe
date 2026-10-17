@@ -17,6 +17,14 @@ from test_mimo_provider import completion
 MODEL = ModelSpec("mimo-v2.5-asr", "MiMo", file_caps(streaming=True))
 
 
+@pytest.fixture
+def audio(tmp_path: Path) -> Path:
+    """MP3 is the default upload format of this API."""
+    path = tmp_path / "upload.mp3"
+    path.write_bytes(b"ID3 fake audio")
+    return path
+
+
 def chunk(text: str | None = None, reason: str | None = None) -> dict[str, object]:
     return {
         "id": "x",
@@ -83,7 +91,7 @@ async def test_stream_preserves_spaces_and_commits_only_after_stop(audio: Path) 
     assert requests[0].url.path == "/v1/chat/completions"
     assert requests[0].headers["authorization"] == "Bearer secret"
     assert body["messages"][0]["content"][0]["input_audio"]["data"].startswith(
-        "data:audio/wav;base64,"
+        "data:audio/mpeg;base64,"
     )
 
 

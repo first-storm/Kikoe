@@ -11,7 +11,7 @@ from google.genai import types
 
 from kikoe.core.llm_prompt import render_prompt
 from kikoe.core.models import LlmSettings, ModelSpec, Segment
-from kikoe.core.upload import WAV
+from kikoe.core.upload import upload_format_of
 from kikoe.providers.base import (
     FileOnlyClient,
     FileTranscriptCallback,
@@ -65,7 +65,7 @@ def chat_finish_reason(response: types.GenerateContentResponse) -> str | None:
 
 
 class AudioLlmGeminiClient(FileOnlyClient[httpx.AsyncBaseTransport]):
-    """Send one WAV inline with the provider's prompt; the reply is plain text."""
+    """Send one chunk inline with the provider's prompt; the reply is plain text."""
 
     name = "Audio LLM"
 
@@ -100,9 +100,8 @@ class AudioLlmGeminiClient(FileOnlyClient[httpx.AsyncBaseTransport]):
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         content = await asyncio.to_thread(audio.read_bytes)
-        # WAV is the only upload format the provider registry allows for Audio LLM.
         contents = [
-            types.Part.from_bytes(data=content, mime_type=WAV.mime),
+            types.Part.from_bytes(data=content, mime_type=upload_format_of(audio).mime),
             types.Part.from_text(text=render_prompt(self._llm, options.language)),
         ]
         transcript = ChatFileTranscript(self._host, allow_empty=True)

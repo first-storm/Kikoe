@@ -1,5 +1,6 @@
 from dataclasses import replace
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 
@@ -7,9 +8,13 @@ from kikoe.core.models import ApiKind, AudioFormat, UploadSettings
 from kikoe.core.provider_registry import descriptor
 from kikoe.core.upload import (
     FLAC,
+    MP3,
+    OGG_OPUS,
     WAV,
+    UploadFormat,
     UploadLimits,
     effective_upload_limits,
+    upload_format_of,
     validate_upload,
 )
 
@@ -62,7 +67,7 @@ def test_boolean_limits_are_rejected(field: str) -> None:
             ApiKind.MIMO,
             UploadSettings(),
             UploadLimits(format=FLAC),
-            UploadLimits(7_500_000, format=WAV),
+            UploadLimits(7_500_000, format=MP3),
         ),
         (
             ApiKind.DEEPGRAM,
@@ -81,3 +86,23 @@ def test_effective_limits_preserve_endpoint_and_model_bounds(
 def test_effective_limits_reject_invalid_settings() -> None:
     with pytest.raises(ValueError, match="size"):
         effective_upload_limits(UploadLimits(), UploadSettings(chunk_bytes=0), ApiKind.OPENAI)
+
+
+@pytest.mark.parametrize(
+    ("name", "expected"),
+    [("a.ogg", OGG_OPUS), ("a.flac", FLAC), ("a.wav", WAV), ("a.MP3", MP3)],
+)
+def test_upload_format_is_read_from_the_chunk_suffix(name: str, expected: UploadFormat) -> None:
+    assert upload_format_of(Path(name)) == expected
+
+
+def test_unknown_chunk_suffix_is_rejected() -> None:
+    with pytest.raises(ValueError):
+        upload_format_of(Path("a.m4a"))
+
+
+def test_mp3_is_offered_where_the_api_accepts_it_but_not_for_local_engines() -> None:
+    for api in (ApiKind.MIMO, ApiKind.AUDIO_LLM, ApiKind.OPENAI, ApiKind.GEMINI):
+        validate_upload(UploadSettings(format=AudioFormat.MP3), api)
+    with pytest.raises(ValueError):
+        validate_upload(UploadSettings(format=AudioFormat.MP3), ApiKind.LOCAL)

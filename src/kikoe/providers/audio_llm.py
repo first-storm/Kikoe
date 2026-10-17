@@ -4,12 +4,14 @@ import asyncio
 import base64
 from functools import partial
 from pathlib import Path
+from typing import Literal
 
 import httpx2 as httpx
 from openai import APIError, omit
 
 from kikoe.core.llm_prompt import render_prompt
 from kikoe.core.models import LlmSettings, ModelSpec, Segment
+from kikoe.core.upload import MP3, upload_format_of
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileOnlyClient,
@@ -24,7 +26,7 @@ from kikoe.providers.openai import openai_sdk
 
 
 class AudioLlmClient(FileOnlyClient[httpx.AsyncBaseTransport]):
-    """Send one WAV and the provider's prompt per request; the reply is plain text."""
+    """Send one MP3 or WAV and the provider's prompt per request; the reply is plain text."""
 
     name = "Audio LLM"
 
@@ -47,7 +49,8 @@ class AudioLlmClient(FileOnlyClient[httpx.AsyncBaseTransport]):
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         content = await asyncio.to_thread(audio.read_bytes)
-        # WAV is the only upload format the provider registry allows for Audio LLM.
+        # input_audio takes only these two, which is all the provider registry allows.
+        audio_format: Literal["mp3", "wav"] = "mp3" if upload_format_of(audio) == MP3 else "wav"
         data = base64.b64encode(content).decode("ascii")
         prompt = render_prompt(self._llm, options.language)
         try:
@@ -65,7 +68,7 @@ class AudioLlmClient(FileOnlyClient[httpx.AsyncBaseTransport]):
                                 {"type": "text", "text": prompt},
                                 {
                                     "type": "input_audio",
-                                    "input_audio": {"data": data, "format": "wav"},
+                                    "input_audio": {"data": data, "format": audio_format},
                                 },
                             ],
                         }

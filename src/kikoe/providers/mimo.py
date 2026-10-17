@@ -11,7 +11,7 @@ from openai import APIError
 from openai.types.chat import ChatCompletionMessageParam
 
 from kikoe.core.models import ModelSpec, Segment
-from kikoe.core.upload import WAV
+from kikoe.core.upload import upload_format_of
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileOnlyClient,
@@ -32,7 +32,7 @@ def asr_language(tag: str | None) -> str:
 
 
 class MiMoClient(FileOnlyClient[httpx.AsyncBaseTransport]):
-    """Send one WAV per request and return its plain text; MiMo gives no timestamps."""
+    """Send one MP3 or WAV per request and return its plain text; MiMo gives no timestamps."""
 
     name = "MiMo"
 
@@ -45,8 +45,9 @@ class MiMoClient(FileOnlyClient[httpx.AsyncBaseTransport]):
         on_update: FileTranscriptCallback | None = None,
     ) -> tuple[Segment, ...]:
         content = await asyncio.to_thread(audio.read_bytes)
-        # WAV is the only upload format the provider registry allows for MiMo.
-        data = f"data:{WAV.mime};base64,{base64.b64encode(content).decode('ascii')}"
+        # The provider registry allows only MP3 and WAV for MiMo.
+        mime = upload_format_of(audio).mime
+        data = f"data:{mime};base64,{base64.b64encode(content).decode('ascii')}"
         try:
             async with openai_sdk(self._url, self._key, self._transport) as sdk:
                 create = partial(

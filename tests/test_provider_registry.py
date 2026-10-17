@@ -46,7 +46,9 @@ def test_default_base_urls_are_unchanged(api: ApiKind, url: str) -> None:
         (ApiKind.GEMINI, UploadPolicy(2_000_000_000, 3600)),
         (
             ApiKind.MIMO,
-            UploadPolicy(7_500_000, format=AudioFormat.WAV, formats=(AudioFormat.WAV,)),
+            UploadPolicy(
+                7_500_000, format=AudioFormat.MP3, formats=(AudioFormat.MP3, AudioFormat.WAV)
+            ),
         ),
         (ApiKind.OPENAI, UploadPolicy(25_000_000, format=AudioFormat.WAV)),
         (ApiKind.MISTRAL, UploadPolicy(500_000_000, 3600)),
@@ -55,7 +57,12 @@ def test_default_base_urls_are_unchanged(api: ApiKind, url: str) -> None:
         (ApiKind.GROQ, UploadPolicy(25_000_000)),
         (
             ApiKind.AUDIO_LLM,
-            UploadPolicy(14_000_000, 600, format=AudioFormat.WAV, formats=(AudioFormat.WAV,)),
+            UploadPolicy(
+                14_000_000,
+                600,
+                format=AudioFormat.MP3,
+                formats=(AudioFormat.MP3, AudioFormat.WAV),
+            ),
         ),
     ],
 )

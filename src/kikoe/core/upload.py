@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import timedelta
+from pathlib import Path
 
 from kikoe.core.models import ApiKind, AudioFormat, UploadSettings
 from kikoe.core.provider_registry import descriptor
@@ -23,10 +24,26 @@ OGG_OPUS = UploadFormat(".ogg", "audio/ogg", (*_SPEECH, "-c:a", "libopus", "-b:a
 
 FLAC = UploadFormat(".flac", "audio/flac", (*_SPEECH, "-c:a", "flac"))
 WAV = UploadFormat(".wav", "audio/wav", (*_SPEECH, "-c:a", "pcm_s16le"))
+MP3 = UploadFormat(".mp3", "audio/mpeg", (*_SPEECH, "-c:a", "libmp3lame", "-b:a", "32k"))
+"""About 4 MB per 15 minutes; for APIs that take only WAV or MP3."""
 
-UPLOAD_FORMATS = {AudioFormat.OGG: OGG_OPUS, AudioFormat.FLAC: FLAC, AudioFormat.WAV: WAV}
+UPLOAD_FORMATS = {
+    AudioFormat.OGG: OGG_OPUS,
+    AudioFormat.FLAC: FLAC,
+    AudioFormat.WAV: WAV,
+    AudioFormat.MP3: MP3,
+}
 MAX_PARALLELISM = 32
 MAX_CHUNK_SECONDS = 24 * 60 * 60
+
+
+def upload_format_of(path: Path) -> UploadFormat:
+    """The encoding of an upload chunk, for APIs that must be told what they receive."""
+    suffix = path.suffix.lower()
+    for upload_format in UPLOAD_FORMATS.values():
+        if upload_format.suffix == suffix:
+            return upload_format
+    raise ValueError(f"{path.name} is not an upload format")
 
 
 @dataclass(frozen=True, slots=True)
