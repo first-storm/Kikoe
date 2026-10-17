@@ -44,6 +44,18 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.3.2" date="2026-10-17">
+      <description>
+        <p>More flexible audio transcription and improved macOS packaging.</p>
+        <ul>
+          <li>Transcribe with audio-capable chat models using custom prompts.</li>
+          <li>Support MiMo streaming and validate completion reasons.</li>
+          <li>Offer MP3 uploads and use MP3 by default for MiMo and Audio LLM.</li>
+          <li>Bundle MP3 encoding support in packaged builds.</li>
+          <li>Add native macOS Liquid Glass app icons.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.1" date="2026-10-16">
       <description>
         <p>More local models and clearer recording and transcription controls.</p>
