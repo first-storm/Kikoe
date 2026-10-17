@@ -8,7 +8,7 @@ output=${1:?Usage: build-icons.sh OUTPUT_DIR}
 mkdir -p "$output"
 output=$(cd "$output" && pwd)
 
-xcode_version=$(xcodebuild -version | head -n 1 | cut -d ' ' -f2)
+xcode_version=$(xcodebuild -version | sed -n '1s/^Xcode //p')
 if [[ ${xcode_version%%.*} -lt 26 ]]; then
     echo "Liquid Glass icons require full Xcode 26 or later; select it with DEVELOPER_DIR." >&2
     exit 1

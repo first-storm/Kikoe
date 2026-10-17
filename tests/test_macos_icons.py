@@ -13,6 +13,9 @@ set -euo pipefail
 case "${0##*/}" in
     xcodebuild)
         echo "Xcode ${TEST_XCODE_VERSION:-26.3}"
+        if [[ ${TEST_XCODE_LONG_OUTPUT:-0} = 1 ]]; then
+            printf '%65536s\\n' 'Build version 17C100'
+        fi
         ;;
     xcrun)
         if [[ $1 = --find ]]; then
@@ -88,6 +91,16 @@ def test_macos_icons_build_native_and_all_legacy_sizes(icon_tools: Path) -> None
         for scale in (1, 2)
     }
     assert set(sizes) == expected
+
+
+def test_macos_icons_consume_complete_xcode_version_output(
+    icon_tools: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TEST_XCODE_LONG_OUTPUT", "1")
+
+    subprocess.run(["bash", str(_BUILD_SCRIPT), str(icon_tools)], check=True)
+
+    assert (icon_tools / "Assets.car").is_file()
 
 
 @pytest.mark.parametrize("failure", ["TEST_COMPILE_FAILURE", "TEST_MISSING_ASSETS"])
