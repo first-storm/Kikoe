@@ -23,7 +23,7 @@ more of the Actions minutes allowance than Linux.
 1. `wheel.yml` runs on Ubuntu 26.04, compiles Blueprints and translations, builds
    with `uv build`, and exports locked runtime requirements to `requirements.txt`.
    Hatch includes generated `.ui` and `.mo` files as wheel artifacts.
-2. `packaging/ffmpeg/build.sh` builds ffmpeg and libopus from pinned,
+2. `packaging/ffmpeg/build.sh` builds ffmpeg, libopus and LAME from pinned,
    hash-verified sources for AppImage, macOS and Windows. ffmpeg comes from the
    `FFmpeg/FFmpeg` GitHub tag archive. Builds are cached by architecture.
 3. `packaging/pyinstaller/kikoe.spec` freezes the wheel into a one-folder
@@ -34,10 +34,13 @@ more of the Actions minutes allowance than Linux.
    instead of launching a graphical window.
 
 The common `packaging/ffmpeg/configure.sh` retains audio decoders, demuxers and
-filters, but limits encoders to libopus, FLAC and PCM; muxers to Ogg, FLAC, WAV,
-PCM and null; and protocols to file and pipe. Flatpak uses the same configuration.
-When updating ffmpeg or Opus, update version constants and hashes together, plus
-the Flatpak manifest's ffmpeg tag and commit.
+filters, but limits encoders to libopus, LAME (MP3), FLAC and PCM; muxers to Ogg,
+FLAC, MP3, WAV, PCM and null; and protocols to file and pipe. Flatpak uses the same
+configuration, with LAME as its own module because the runtime does not guarantee
+it. LAME is LGPL, so ffmpeg stays LGPL. When updating ffmpeg, Opus or LAME, update
+version constants and hashes together, plus the Flatpak manifest's ffmpeg tag and
+commit and its lame archive. On Windows, `automake-wrapper` supplies a `config.sub`
+recent enough for LAME on arm64.
 
 Startup smoke checks establish that a package loads. Microphone, playback and
 real-provider acceptance are separate checks described below.

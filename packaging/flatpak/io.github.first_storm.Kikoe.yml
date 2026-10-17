@@ -43,6 +43,18 @@ modules:
         url: https://github.com/PortAudio/portaudio.git
         tag: v19.7.0
 
+  # MP3 uploads; not guaranteed in the runtime. Keep in step with ffmpeg/build.sh.
+  - name: lame
+    buildsystem: autotools
+    config-opts:
+      - --disable-static
+      - --disable-frontend
+      - --disable-decoder
+    sources:
+      - type: archive
+        url: https://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz
+        sha256: ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e
+
   - name: ffmpeg
     buildsystem: simple
     build-commands:

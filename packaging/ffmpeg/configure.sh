@@ -2,7 +2,7 @@
 # Configure an ffmpeg source tree with only what Kikoe needs.
 #
 # Kikoe reads audio from audio or video containers (always with -vn) and writes Ogg
-# Opus, FLAC and raw PCM. Video decoders, other encoders, devices and network
+# Opus, FLAC, MP3 and raw PCM. Video decoders, other encoders, devices and network
 # protocols are left out. The lavfi input stays for generating test audio.
 # Shared by build.sh and the Flatpak manifest.
 #
@@ -23,7 +23,7 @@ exec ./configure \
     --disable-network --disable-devices --enable-indev=lavfi \
     --disable-protocols --enable-protocol=file,pipe \
     --disable-decoders --enable-decoder="$audio_decoders" \
-    --disable-encoders --enable-encoder=libopus,flac,pcm_s16le \
-    --disable-muxers --enable-muxer=ogg,opus,flac,wav,pcm_s16le,null \
-    --enable-libopus \
+    --disable-encoders --enable-encoder=libopus,libmp3lame,flac,pcm_s16le \
+    --disable-muxers --enable-muxer=ogg,opus,flac,mp3,wav,pcm_s16le,null \
+    --enable-libopus --enable-libmp3lame \
     "$@"

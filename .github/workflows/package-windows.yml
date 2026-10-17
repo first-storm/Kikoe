@@ -47,7 +47,8 @@ jobs:
         with:
           msystem: ${{ matrix.msystem }}
           update: true
-          install: make diffutils curl tar xz
+          # automake supplies a config.sub new enough for LAME on arm64.
+          install: make diffutils curl tar xz automake-wrapper
           pacboy: >-
             toolchain:p python:p python-pip:p python-setuptools:p
             meson:p ninja:p pkgconf:p rust:p
