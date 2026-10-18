@@ -1,6 +1,13 @@
 """The repository reloads summaries only after changes that can alter them."""
 
+import asyncio
+import shutil
+import threading
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
+from typing import BinaryIO
+
+import pytest
 
 from helpers import run_async
 from kikoe.core.models import (
@@ -89,3 +96,29 @@ async def test_segment_edits_are_saved_without_notifying(notes: NoteRepository) 
     assert events == []
     saved = await notes.get_note(note.note_id)
     assert saved.recordings[0].segments[0].text == "Edited"
+
+
+@run_async
+async def test_cancelled_audio_copy_leaves_no_file_behind(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, notes: NoteRepository
+) -> None:
+    source = tmp_path / "talk.wav"
+    source.write_bytes(b"original")
+    copying, release = threading.Event(), threading.Event()
+    copy = shutil.copyfileobj
+
+    def held_copy(origin: BinaryIO, destination: BinaryIO) -> None:
+        copying.set()
+        release.wait()
+        copy(origin, destination)
+
+    monkeypatch.setattr(shutil, "copyfileobj", held_copy)
+    task = asyncio.create_task(notes.store_audio(source, "recording"))
+    await asyncio.to_thread(copying.wait)
+    task.cancel()
+    await asyncio.sleep(0)
+    release.set()
+
+    with pytest.raises(asyncio.CancelledError):
+        await task
+    assert list((tmp_path / "audio").iterdir()) == []

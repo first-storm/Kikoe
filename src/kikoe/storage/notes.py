@@ -122,7 +122,18 @@ class NoteRepository:
         return await self._change_summaries(note_id, call, note_id, recording_id)
 
     async def store_audio(self, source: Path, recording_id: str) -> Path:
-        return await asyncio.to_thread(self._library.audio.store, source, recording_id)
+        """Copy ``source`` into the library; a cancelled copy is removed, not left behind."""
+        copying = asyncio.ensure_future(
+            asyncio.to_thread(self._library.audio.store, source, recording_id)
+        )
+        try:
+            return await asyncio.shield(copying)
+        except asyncio.CancelledError:
+            # The thread copies on regardless, so wait for it before removing the file.
+            await asyncio.wait([copying])
+            if not copying.cancelled() and copying.exception() is None:
+                await self.discard_audio(copying.result())
+            raise
 
     async def discard_audio(self, path: Path) -> None:
         await asyncio.to_thread(self._library.audio.discard, path)
