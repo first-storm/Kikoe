@@ -181,8 +181,11 @@ class LocalEngineGroup(Adw.PreferencesGroup):
             self.refresh()
 
     @Gtk.Template.Callback()
-    def _on_device_row_notify_selected(self, _row: Adw.ComboRow, _spec: GObject.ParamSpec) -> None:
-        pass
+    def _on_device_row_notify_selected(self, row: Adw.ComboRow, _spec: GObject.ParamSpec) -> None:
+        index = row.get_selected()
+        if self._updating.active or index >= len(self._devices):
+            return
+        run_task(self._manager.set_device(self._engine.engine_id, self._devices[index]), self)
 
 
 _DEVICE_KINDS = {"vulkan": "Vulkan", "cuda": "CUDA", "metal": "Metal", "rocm": "ROCm"}
