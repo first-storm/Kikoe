@@ -53,6 +53,10 @@ class EditingSession:
         for (recording_id, position), fields in self._unsaved.items():
             if note is not None and segment_fields(note, recording_id, position) is not None:
                 note = apply_segment_fields(note, recording_id, position, fields)
+        if note is not None and not self.history.matches(
+            lambda recording_id, position: segment_fields(note, recording_id, position)
+        ):
+            self.history.clear()
         self._note = note
         return note
 

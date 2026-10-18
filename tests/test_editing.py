@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 from helpers import run_async
-from kikoe.core.models import Note, Recording, RecordingSource, Segment
+from kikoe.core.models import Note, Recording, RecordingSource, Segment, TranscriptionState
 from kikoe.services.editing import EditingSession
 from kikoe.storage.library import Library
 from kikoe.storage.notes import NoteRepository
@@ -254,3 +254,26 @@ async def test_a_reload_cannot_return_text_from_before_a_finished_save(
     assert reload_task is not None
     reloaded = session.set_note(reload_task.result())
     assert reloaded is not None and text(reloaded) == "Edited"
+
+
+@run_async
+async def test_undo_cannot_overwrite_a_retranscription_of_the_same_shape(tmp_path: Path) -> None:
+    notes, note = await repository(tmp_path)
+    session = EditingSession(notes, start_task, lambda _n, _rid, _pos: None)
+    session.set_note(note)
+    session.edit("recording", 0, lambda fields: replace(fields, text="Edited"))
+    await session.wait_saved()
+    await notes.update_transcription(
+        note.note_id,
+        "recording",
+        TranscriptionState.READY,
+        segments=(Segment("New first"), Segment("New second")),
+        provider_name="Cloud",
+        model_id="Model",
+    )
+
+    session.set_note(await session.read_note(note.note_id))
+
+    assert not session.history.can_undo
+    assert session.undo() is None
+    assert await saved_text(notes, note) == "New first"

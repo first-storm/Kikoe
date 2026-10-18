@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
 from kikoe.core.edit_history import (
@@ -161,3 +162,32 @@ def test_segment_fields_of_a_missing_segment_are_none() -> None:
     assert segment_fields(note, "r2", 1) is None
     assert segment_fields(note, "r2", -1) is None
     assert segment_fields(note, "missing", 0) is None
+
+
+def _current(**values: str) -> Callable[[str, int], SegmentFields | None]:
+    return lambda recording_id, position: SegmentFields(values[f"{recording_id}{position}"])
+
+
+def test_history_matches_a_note_that_holds_the_edited_values() -> None:
+    history = EditHistory()
+    history.record(_change("a", "b"))
+    assert history.matches(_current(r10="b"))
+
+
+def test_history_matches_after_undo_when_the_note_holds_the_older_value() -> None:
+    history = EditHistory()
+    history.record(_change("a", "b"))
+    history.undo()
+    assert history.matches(_current(r10="a"))
+    assert not history.matches(_current(r10="b"))
+
+
+def test_history_does_not_match_a_segment_replaced_behind_its_back() -> None:
+    history = EditHistory()
+    history.record(_change("a", "b"))
+    assert not history.matches(_current(r10="c"))
+    assert not history.matches(lambda _recording_id, _position: None)
+
+
+def test_history_without_steps_matches_any_note() -> None:
+    assert EditHistory().matches(lambda _recording_id, _position: None)

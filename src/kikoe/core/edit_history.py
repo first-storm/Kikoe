@@ -4,6 +4,7 @@ Edits are autosaved while typing, so several saves of one segment in quick succe
 are merged into one step; otherwise Undo would only remove a few characters at a time.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import timedelta
 
@@ -115,6 +116,23 @@ class EditHistory:
         self._undo.append(change)
         self._sealed = True
         return change
+
+    def matches(self, current: Callable[[str, int], SegmentFields | None]) -> bool:
+        """Whether every edited segment still has the value the history leaves it with.
+
+        A transcript replaced behind the history's back (e.g. a re-transcription) makes
+        Undo write old text over the new result, so such a history must be dropped.
+        """
+        expected: dict[tuple[str, int], SegmentFields] = {}
+        for change in self._undo:
+            expected[change.recording_id, change.position] = change.after
+        redone: set[tuple[str, int]] = set()
+        for change in reversed(self._redo):
+            key = change.recording_id, change.position
+            if key not in redone:
+                redone.add(key)
+                expected[key] = change.before
+        return all(current(*key) == fields for key, fields in expected.items())
 
     def clear(self) -> None:
         self._undo.clear()
