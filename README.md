@@ -91,14 +91,14 @@ uv run kikoe
 3. **Make it useful.** Review the text, name speakers, and export from the note menu.
 
 **Shortcuts:** Ctrl+N creates a note · Ctrl+O imports audio · Ctrl+F searches · F2 renames.
-Preferences → General sets a default model and language hint; leave the hint empty for automatic detection.
+Kikoe remembers the last selected model. Preferences → General sets a language hint; leave it empty for automatic detection.
 
 ### Transcription tips
 
 <details>
 <summary>Models, recovery, and re-transcription</summary>
 
-- **Model support varies.** Deepgram Nova-3 supports file/live transcription, timestamps, and speakers. Groq Whisper supports file transcription with segment and word timestamps. Mistral Voxtral supports file transcription with timestamps, speakers and streaming previews (the transcription language is ignored while timestamps or speakers are on), and its realtime model is microphone-only text. OpenRouter and MiMo support file transcription (MiMo returns plain text without timestamps or speakers); Audio LLM providers prompt any chat model that accepts audio, in OpenAI-compatible or Gemini format, and return plain text; OpenAI, Gemini and Mistral also offer live models, with unsupported options disabled.
+- **Model support varies.** Deepgram Nova-3 supports file/live transcription, timestamps, and speakers. Groq Whisper supports file transcription with timestamps. Mistral Voxtral supports file transcription with timestamps, speakers and streaming previews (the transcription language is ignored while timestamps or speakers are on), and its realtime model is microphone-only text. OpenRouter and MiMo support file transcription (MiMo returns plain text without timestamps or speakers); Audio LLM providers prompt any chat model that accepts audio, in OpenAI-compatible or Gemini format, and return plain text; OpenAI, Gemini and Mistral also offer live models, with unsupported options disabled.
 - **Live-only models need a file alternative.** `gpt-live-transcribe`, `gemini-3.5-transcribe-live` and `voxtral-mini-transcribe-realtime-2602` are microphone-only; choose a file model for imports or retries.
 - **Audio stays available.** Recordings are saved locally. Interruptions retain audio and confirmed text; recovery never uploads automatically. Use **Retry Transcription** with a file model.
 - **Keep speakers consistent.** Click names to rename them; **Match Speakers** links people across recordings, with audio samples when timing allows.

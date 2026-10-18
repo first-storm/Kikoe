@@ -10,7 +10,7 @@ from pathlib import Path
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk
 
 from kikoe.constants import APP_ID, APP_NAME, ISSUE_URL, VERSION, WEBSITE
-from kikoe.core.preferences import WindowState, default_provider
+from kikoe.core.preferences import WindowState, recent_provider
 from kikoe.i18n import _, is_right_to_left
 from kikoe.paths import bundled_engines_dir, config_dir, data_dir, log_dir
 from kikoe.providers.factory import ClientContext, create_client
@@ -98,16 +98,16 @@ class Application(Adw.Application):
     async def _load_settings(self) -> None:
         """Providers are announced first, then the defaults that choose among them.
 
-        Local models are found first so that a default local model is still there.
+        Local models are found first so that the last selected local model is still there.
         """
         await self.local_models.load()
         await self.providers.load()
         await self.preferences.load()
-        await self._prewarm_default_provider()
+        await self._prewarm_recent_provider()
 
-    async def _prewarm_default_provider(self) -> None:
+    async def _prewarm_recent_provider(self) -> None:
         """Prepare the next transcription's SDK and credentials while the user looks around."""
-        provider = default_provider(self.preferences.current, self.providers.providers)
+        provider = recent_provider(self.preferences.current, self.providers.providers)
         if provider is not None:
             await asyncio.gather(
                 prewarm_provider(provider, self.clients),

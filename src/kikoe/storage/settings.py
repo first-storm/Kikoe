@@ -87,7 +87,6 @@ class SettingsStore:
             "version": SETTINGS_VERSION,
             "providers": [_encode(p) for p in settings.providers],
             "preferences": {
-                "default_model": settings.preferences.default_model,
                 "recent_model": settings.preferences.recent_model,
                 "language": settings.preferences.language,
                 "input_device": settings.preferences.input_device,
@@ -139,7 +138,6 @@ def _encode_mode(mode: ModeCapabilities | None) -> dict[str, bool] | None:
         return None
     return {
         "timestamps": mode.timestamps,
-        "word_timestamps": mode.word_timestamps,
         "diarization": mode.diarization,
         "streaming": mode.streaming,
     }
@@ -227,7 +225,6 @@ def _decode_mode(value: object) -> ModeCapabilities | None:
     fields = _as_dict(value, "model capabilities")
     return ModeCapabilities(
         timestamps=bool(fields.get("timestamps", False)),
-        word_timestamps=bool(fields.get("word_timestamps", False)),
         diarization=bool(fields.get("diarization", False)),
         streaming=bool(fields.get("streaming", False)),
     )
@@ -239,7 +236,6 @@ def _decode_preferences(value: object) -> Preferences:
     if language is not None and (not isinstance(language, str) or not valid_language(language)):
         raise ValueError("invalid transcription language")
     return Preferences(
-        default_model=_decode_model_key(fields.get("default_model")),
         recent_model=_decode_model_key(fields.get("recent_model")),
         language=language,
         input_device=_decode_device(fields.get("input_device")),

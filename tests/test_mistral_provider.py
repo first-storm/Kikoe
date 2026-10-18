@@ -16,7 +16,6 @@ from kikoe.core.models import (
     ModelSpec,
     Provider,
     Segment,
-    TimestampGranularity,
 )
 from kikoe.core.provider_registry import descriptor
 from kikoe.core.transcription import FileTranscriptSnapshot
@@ -30,7 +29,7 @@ MODEL = ModelSpec("voxtral-mini-latest", "Voxtral Mini", file_caps())
 FULL = ModelSpec(
     "voxtral-mini-latest",
     "Voxtral Mini",
-    file_caps(timestamps=True, word_timestamps=True, diarization=True),
+    file_caps(timestamps=True, diarization=True),
 )
 
 
@@ -146,7 +145,7 @@ async def test_speakers_are_mapped_from_speaker_id_and_force_segment_times(audio
     result = await client_for(transport).transcribe_file(
         audio,
         FULL,
-        TranscriptionOptions(language="en", timestamp_granularities=(TimestampGranularity.WORD,)),
+        TranscriptionOptions(language="en"),
     )
 
     assert [(s.text, s.speaker_id) for s in result] == [("Hi.", "speaker_1"), ("Hey.", "speaker_2")]
@@ -190,46 +189,6 @@ async def test_unrequested_speakers_are_not_reported(audio: Path) -> None:
 
     assert result[0].speaker_id is None
     assert form_field(requests[0], "diarize") in (None, "false")
-
-
-@run_async
-async def test_word_requests_group_words_into_sentences(audio: Path) -> None:
-    words = [
-        {"text": "Hello", "start": 0, "end": 0.5, "type": "transcription_segment"},
-        {"text": "there.", "start": 0.5, "end": 1, "type": "transcription_segment"},
-    ]
-    requests, transport = recorder(body("Hello there.", segments=words))
-
-    result = await client_for(transport).transcribe_file(
-        audio,
-        FULL,
-        TranscriptionOptions(
-            diarization=False, timestamp_granularities=(TimestampGranularity.WORD,)
-        ),
-    )
-
-    assert fields_named(requests[0], "timestamp_granularities") == ["word"]
-    assert len(result) == 1
-    assert result[0].text == "Hello there."
-    assert (result[0].start, result[0].end) == (timedelta(0), timedelta(seconds=1))
-
-
-@run_async
-async def test_segment_and_word_granularities_are_both_requested(audio: Path) -> None:
-    segment = {"text": "Hi.", "start": 0, "end": 1, "type": "transcription_segment"}
-    requests, transport = recorder(body(segments=[segment]))
-
-    result = await client_for(transport).transcribe_file(
-        audio,
-        FULL,
-        TranscriptionOptions(
-            diarization=False,
-            timestamp_granularities=(TimestampGranularity.SEGMENT, TimestampGranularity.WORD),
-        ),
-    )
-
-    assert fields_named(requests[0], "timestamp_granularities") == ["segment", "word"]
-    assert result == (Segment("Hi.", timedelta(0), timedelta(seconds=1)),)
 
 
 @run_async
@@ -358,7 +317,7 @@ def test_mistral_configuration_roundtrips_with_its_upload_limits(tmp_path: Path)
 STREAMING = ModelSpec(
     "voxtral-mini-latest",
     "Voxtral Mini",
-    file_caps(timestamps=True, word_timestamps=True, diarization=True, streaming=True),
+    file_caps(timestamps=True, diarization=True, streaming=True),
 )
 
 
@@ -442,30 +401,6 @@ async def test_streaming_keeps_speakers_from_the_final_event(audio: Path) -> Non
     result = await client_for(transport).transcribe_file(audio, STREAMING, TranscriptionOptions())
 
     assert [(s.text, s.speaker_id) for s in result] == [("Hi.", "speaker_1")]
-
-
-@run_async
-async def test_streaming_word_requests_show_text_and_group_words_at_the_end(
-    audio: Path,
-) -> None:
-    words = [segment("Hello", 0, 0.5), segment("there.", 0.5, 1)]
-    transport = httpx.MockTransport(
-        lambda request: sse(delta("Hello"), *words, done("Hello there.", words))
-    )
-    snapshots: list[FileTranscriptSnapshot] = []
-
-    result = await client_for(transport).transcribe_file(
-        audio,
-        STREAMING,
-        TranscriptionOptions(
-            diarization=False, timestamp_granularities=(TimestampGranularity.WORD,)
-        ),
-        on_update=snapshots.append,
-    )
-
-    assert snapshots[0].preview == (Segment("Hello"),)
-    assert [s.segments for s in snapshots[:-1]] == [()] * (len(snapshots) - 1)
-    assert [s.text for s in result] == ["Hello there."]
 
 
 @run_async

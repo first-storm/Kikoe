@@ -14,7 +14,6 @@ from kikoe.core.models import (
     ModelSpec,
     Provider,
     Segment,
-    TimestampGranularity,
 )
 from kikoe.core.provider_registry import descriptor
 from kikoe.core.upload import OGG_OPUS, UploadLimits, effective_upload_limits
@@ -81,7 +80,7 @@ async def test_disabled_timestamps_omit_metadata_and_automatic_language(
 
 @run_async
 @pytest.mark.parametrize("both", [False, True])
-async def test_word_timestamps_parse_words_and_prefer_segments_when_both_requested(
+async def test_word_responses_are_parsed_and_segments_take_precedence(
     audio: Path, both: bool
 ) -> None:
     requests: list[httpx.Request] = []
@@ -93,18 +92,10 @@ async def test_word_timestamps_parse_words_and_prefer_segments_when_both_request
         requests.append(request)
         return httpx.Response(200, json=body)
 
-    granularities = (
-        (TimestampGranularity.SEGMENT, TimestampGranularity.WORD)
-        if both
-        else (TimestampGranularity.WORD,)
-    )
     client = GroqClient("https://api.groq.com", "secret", httpx.MockTransport(respond))
-    result = await client.transcribe_file(
-        audio, MODEL, TranscriptionOptions(timestamp_granularities=granularities)
-    )
+    result = await client.transcribe_file(audio, MODEL, TranscriptionOptions())
     assert result == (Segment("Hi.", timedelta(0), timedelta(seconds=2 if both else 1)),)
-    assert b"\r\n\r\nword\r\n" in requests[0].content
-    assert (b"\r\n\r\nsegment\r\n" in requests[0].content) is both
+    assert form_field(requests[0], "timestamp_granularities[]") == "segment"
 
 
 @run_async
@@ -216,17 +207,17 @@ def test_groq_configuration_roundtrips_with_its_upload_limits(tmp_path: Path) ->
 
 
 @pytest.mark.parametrize("model_id", ["whisper-large-v3", "whisper-large-v3-turbo"])
-def test_whisper_capabilities_support_words_without_live_or_speakers(model_id: str) -> None:
+def test_whisper_capabilities_support_timestamps_without_live_or_speakers(model_id: str) -> None:
     from kikoe.core.models import Capabilities, ModeCapabilities
 
     catalog = load_catalog()
     caps = catalog.preset(ApiKind.GROQ, model_id).defaults()
-    assert caps == Capabilities(file=ModeCapabilities(timestamps=True, word_timestamps=True))
+    assert caps == Capabilities(file=ModeCapabilities(timestamps=True))
     claimed = ModelSpec(
         model_id,
         model_id,
         Capabilities(
-            file=ModeCapabilities(True, True, True, True), realtime=ModeCapabilities(True, True)
+            file=ModeCapabilities(True, True, True), realtime=ModeCapabilities(True, False)
         ),
     )
     assert catalog.clamp(ApiKind.GROQ, claimed).capabilities == caps

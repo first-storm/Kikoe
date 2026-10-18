@@ -25,7 +25,6 @@ class ModelDialog(Adw.Dialog):
     display_name_row: Adw.EntryRow = Gtk.Template.Child()
     file_row: Adw.ExpanderRow = Gtk.Template.Child()
     file_timestamps_check: Gtk.CheckButton = Gtk.Template.Child()
-    file_words_check: Gtk.CheckButton = Gtk.Template.Child()
     file_speakers_check: Gtk.CheckButton = Gtk.Template.Child()
     file_streaming_check: Gtk.CheckButton = Gtk.Template.Child()
     realtime_row: Adw.ExpanderRow = Gtk.Template.Child()
@@ -50,7 +49,6 @@ class ModelDialog(Adw.Dialog):
         self._checks = {
             self.file_row: (
                 (self.file_timestamps_check, "timestamps"),
-                (self.file_words_check, "word_timestamps"),
                 (self.file_speakers_check, "diarization"),
                 (self.file_streaming_check, "streaming"),
             ),

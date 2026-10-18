@@ -9,7 +9,6 @@ from kikoe.core.choice import (
     available_models,
     language_dropped,
     model_matches,
-    normalize_granularities,
     resolve_choice,
     unsupported_features,
 )
@@ -20,7 +19,6 @@ from kikoe.core.models import (
     ModelKey,
     ModelSpec,
     Provider,
-    TimestampGranularity,
 )
 from kikoe.core.validation import Capability
 from kikoe.providers.base import TranscriptionOptions
@@ -64,21 +62,19 @@ def test_no_models_means_no_choice() -> None:
 
 
 @pytest.mark.parametrize(
-    ("current", "recent", "default", "expected"),
+    ("current", "recent", "expected"),
     [
-        (("o", "gpt-4o-transcribe"), ("o", "whisper-1"), None, "gpt-4o-transcribe"),
-        (None, ("o", "gpt-4o-transcribe"), ("o", "whisper-1"), "gpt-4o-transcribe"),
-        (None, ("gone", "x"), ("o", "gpt-4o-transcribe"), "gpt-4o-transcribe"),
-        (("gone", "x"), None, ("o", "gpt-4o-transcribe"), "gpt-4o-transcribe"),
-        (("gone", "x"), ("o", "gone"), ("o", "gone"), "whisper-1"),
-        (None, None, None, "whisper-1"),
+        (("o", "gpt-4o-transcribe"), ("o", "whisper-1"), "gpt-4o-transcribe"),
+        (None, ("o", "gpt-4o-transcribe"), "gpt-4o-transcribe"),
+        (("gone", "x"), ("o", "gpt-4o-transcribe"), "gpt-4o-transcribe"),
+        (("gone", "x"), ("o", "gone"), "whisper-1"),
+        (None, None, "whisper-1"),
     ],
 )
-def test_wanted_models_are_tried_in_order_before_the_first(
-    current: ModelKey | None, recent: ModelKey | None, default: ModelKey | None, expected: str
+def test_current_then_recent_model_are_tried_before_the_first(
+    current: ModelKey | None, recent: ModelKey | None, expected: str
 ) -> None:
-    choice = resolve_choice([OPENAI], current, recent, default)
-
+    choice = resolve_choice([OPENAI], current, recent)
     assert choice is not None and choice.model.model_id == expected
 
 
@@ -120,40 +116,10 @@ def test_requested_features_are_limited_to_the_model() -> None:
     assert wanted.allowed_by(ModeCapabilities()) == RequestedFeatures(False, False)
 
 
-def test_granularity_defaults_to_segment() -> None:
-    assert RequestedFeatures().timestamp_granularities == (TimestampGranularity.SEGMENT,)
-
-
-def test_allowed_by_keeps_granularity_only_with_word_timestamps() -> None:
-    wanted = RequestedFeatures(
-        timestamp_granularities=(TimestampGranularity.WORD, TimestampGranularity.SEGMENT)
-    )
-
-    words = ModeCapabilities(timestamps=True, word_timestamps=True)
-    assert wanted.allowed_by(words).timestamp_granularities == (
-        TimestampGranularity.SEGMENT,
-        TimestampGranularity.WORD,
-    )
-    assert wanted.allowed_by(ModeCapabilities()).timestamp_granularities == (
-        TimestampGranularity.SEGMENT,
-    )
-
-
 def test_request_options_are_limited_like_the_features_they_extend() -> None:
-    options = TranscriptionOptions(True, True, (TimestampGranularity.WORD,), language="zh")
+    options = TranscriptionOptions(True, True, language="zh")
 
     assert options.allowed_by(ModeCapabilities(diarization=True)) == RequestedFeatures(False, True)
-
-
-def test_normalize_granularities_dedupes_orders_and_falls_back() -> None:
-    assert normalize_granularities(
-        [
-            TimestampGranularity.WORD,
-            TimestampGranularity.WORD,
-            TimestampGranularity.SEGMENT,
-        ]
-    ) == (TimestampGranularity.SEGMENT, TimestampGranularity.WORD)
-    assert normalize_granularities([]) == (TimestampGranularity.SEGMENT,)
 
 
 def test_unsupported_features_feed_the_hint() -> None:

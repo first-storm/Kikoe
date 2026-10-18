@@ -170,7 +170,7 @@ class BottomBar(Adw.Bin):
         return True
 
     def _refresh(self) -> None:
-        """Keep the current model if it still exists, else the recent, default or first one."""
+        """Keep the current model if it still exists, else the recent or first one."""
         if self._providers is None or self._preferences is None:
             return
         current = self._preferences.current
@@ -178,7 +178,6 @@ class BottomBar(Adw.Bin):
             self._providers.providers,
             self._choice.key if self._choice else None,
             current.recent_model,
-            current.default_model,
         )
         self._show_choice()
 

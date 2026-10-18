@@ -16,7 +16,7 @@ from mistralai.client.types import UNSET
 from mistralai.extra.exceptions import RealtimeTranscriptionException
 
 from kikoe.core.choice import RequestedFeatures, language_dropped
-from kikoe.core.models import ApiKind, ModelSpec, Segment, TimestampGranularity
+from kikoe.core.models import ApiKind, ModelSpec, Segment
 from kikoe.i18n import _
 from kikoe.providers.base import (
     FileTranscriptCallback,
@@ -36,8 +36,6 @@ REQUEST_TIMEOUT_MS = 900_000
 REALTIME_SAMPLE_RATE = 16000
 REALTIME_CONNECT_TIMEOUT_MS = 30_000
 
-type Granularity = Literal["segment", "word"]
-
 
 @dataclass(frozen=True, slots=True)
 class _Request:
@@ -47,11 +45,7 @@ class _Request:
     file: File
     language: str | None
     diarize: bool
-    granularities: list[Granularity]
-
-    @property
-    def words_only(self) -> bool:
-        return self.granularities == ["word"]
+    granularities: list[Literal["segment"]]
 
 
 class MistralClient(HttpClient[httpx.AsyncBaseTransport]):
@@ -77,7 +71,7 @@ class MistralClient(HttpClient[httpx.AsyncBaseTransport]):
             ),
             _language(features, options.language),
             features.diarization,
-            _granularities(features),
+            ["segment"] if features.timestamps or features.diarization else [],
         )
         try:
             # The SDK never closes a client it was given, so this adapter owns its lifetime.
@@ -169,7 +163,6 @@ async def _complete(
         result.model_dump(warnings=False),
         features.timestamps,
         features.diarization,
-        request.words_only,
     )
 
 
@@ -179,9 +172,7 @@ async def _stream(
     features: RequestedFeatures,
     on_update: FileTranscriptCallback | None,
 ) -> tuple[Segment, ...]:
-    transcript = MistralFileTranscript(
-        timed=features.timestamps, diarize=features.diarization, words_only=request.words_only
-    )
+    transcript = MistralFileTranscript(timed=features.timestamps, diarize=features.diarization)
     stream = await sdk.audio.transcriptions.stream_async(
         model=request.model,
         file=request.file,
@@ -204,18 +195,6 @@ def _language(features: RequestedFeatures, language: str | None) -> str | None:
     if not language or language_dropped(ApiKind.MISTRAL, features, language):
         return None
     return language.split("-")[0].lower()
-
-
-def _granularities(features: RequestedFeatures) -> list[Granularity]:
-    """Speakers only exist on segments, so they win over word-level times."""
-    if features.diarization:
-        return ["segment"]
-    if not features.timestamps:
-        return []
-    return [
-        "word" if g is TimestampGranularity.WORD else "segment"
-        for g in features.timestamp_granularities
-    ]
 
 
 def _detail(body: str) -> str | None:

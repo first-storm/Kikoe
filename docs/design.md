@@ -20,7 +20,7 @@ smaller windows adapt rather than removing essential actions.
 | Provider | A configured cloud service with a name, API type, URL, key and models, or the built-in On This Device provider of installed local models |
 | Model | A provider's transcription model, with separate file and realtime capabilities |
 
-File capabilities include timestamps, word timestamps, speaker detection and
+File capabilities include timestamps, speaker detection and
 streaming previews. Realtime capabilities describe text appearing during capture,
 with optional timestamps and speakers. Bundled presets supply defaults for known
 models and disable options an endpoint rejects. Other options remain editable.
@@ -203,8 +203,6 @@ The Options group explains whether transcription happens during or after
 recording. Timestamps and Speakers switches request those features for the next
 session. A model without a capability disables its switch and explains “Not
 supported by this model”; the earlier choice returns with a supporting model.
-When word timestamps are available and timestamps are enabled, Timestamp Detail
-offers Segments, Words, and Segments and Words.
 
 If an upload must omit a configured language because Mistral cannot combine it
 with timestamps or speakers, a visible caption explains automatic language
@@ -212,10 +210,9 @@ detection. It disappears when both options are off and does not apply to live
 recording. Manage Providers and Models… closes the picker and opens Preferences.
 The model button's tooltip includes the model, provider and capability restrictions.
 
-Most recently selected model takes priority on restart, followed by the default
-model and then the first configured model. Missing choices fall back in that
-order. Changing the default selects it when idle. Running tasks retain the model,
-language and options captured at their start.
+The most recently selected model is restored on restart, falling back to the first
+configured model if it is missing. Running tasks retain the model, language and
+options captured at their start.
 
 ## Importing and file transcription
 
@@ -340,7 +337,7 @@ remain intact, and speaker names are preserved where possible.
 
 A Model row pushes the same Choose Model page, listing only models with file
 transcription and without a Close button, since Cancel discards the dialog.
-Timestamps, Timestamp Detail and Speakers use the selected model's file
+Timestamps and Speakers use the selected model's file
 capabilities. The picker starts with the bottom bar's model only if it supports
 files; otherwise the row reads Choose a File Model and Transcribe stays
 unavailable until one is chosen.
@@ -365,7 +362,7 @@ Providers and Local Models pages and standard grouped rows.
 
 | Group | Controls and behavior |
 | --- | --- |
-| Transcription | Default Model and Transcription Language; empty language means automatic detection; visible examples include `zh`, `en` and `ja`; invalid codes are not saved |
+| Transcription | Transcription Language; empty language means automatic detection; visible examples include `zh`, `en` and `ja`; invalid codes are not saved |
 | Audio | Microphone and Audio Output; System Default is first and initially selected |
 | Storage | Data Folder shows and opens the current location; relocating the library is unavailable |
 | Troubleshooting | Log Folder opens local diagnostics and explains that users choose what to attach to reports |
@@ -451,7 +448,7 @@ The approximately 480×600 Add Model dialog has Cancel and suggested Add, Model 
 and Display Name entries, and a What This Model Supports group. File transcription
 and transcription while recording use expander rows with mode switches.
 
-File options are Timestamps, Word Timestamps, Speaker Detection and Streaming
+File options are Timestamps, Speaker Detection and Streaming
 Preview. Realtime options are Timestamps and Speaker Detection. Explanations
 clarify that file transcription includes imports and audio uploaded after Stop,
 whereas realtime shows text during capture.

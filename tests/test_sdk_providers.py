@@ -11,7 +11,6 @@ from helpers import file_caps, run_async
 from kikoe.core.models import (
     ModelSpec,
     Segment,
-    TimestampGranularity,
 )
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.providers.deepgram import DeepgramClient, parse_deepgram
@@ -161,7 +160,7 @@ def openrouter_client(requests: list[httpx.Request], payload: object) -> OpenRou
 
 
 @run_async
-async def test_openrouter_default_requests_segment_only(tmp_path: Path) -> None:
+async def test_openrouter_requests_segment_only(tmp_path: Path) -> None:
     requests: list[httpx.Request] = []
     audio = tmp_path / "clip.ogg"
     audio.write_bytes(b"fake ogg")
@@ -173,36 +172,6 @@ async def test_openrouter_default_requests_segment_only(tmp_path: Path) -> None:
 
     assert result == (Segment("Hi"),)
     assert b"verbose_json" in requests[0].content
-    assert granularity_fields(requests[0]) == ["segment"]
-
-
-@run_async
-async def test_openrouter_word_and_segment_requests_both_in_canonical_order(
-    tmp_path: Path,
-) -> None:
-    requests: list[httpx.Request] = []
-    audio = tmp_path / "clip.ogg"
-    audio.write_bytes(b"fake ogg")
-    model = ModelSpec("m", "M", file_caps(timestamps=True, word_timestamps=True))
-    options = TranscriptionOptions(
-        timestamp_granularities=(TimestampGranularity.WORD, TimestampGranularity.SEGMENT)
-    )
-
-    await openrouter_client(requests, {"text": "Hi"}).transcribe_file(audio, model, options)
-
-    assert granularity_fields(requests[0]) == ["segment", "word"]
-
-
-@run_async
-async def test_openrouter_sends_segments_only_without_word_timestamps(tmp_path: Path) -> None:
-    requests: list[httpx.Request] = []
-    audio = tmp_path / "clip.ogg"
-    audio.write_bytes(b"fake ogg")
-    model = ModelSpec("m", "M", file_caps(timestamps=True))
-    options = TranscriptionOptions(timestamp_granularities=(TimestampGranularity.WORD,))
-
-    await openrouter_client(requests, {"text": "Hi"}).transcribe_file(audio, model, options)
-
     assert granularity_fields(requests[0]) == ["segment"]
 
 
@@ -221,20 +190,6 @@ async def test_openrouter_timestamps_off_sends_no_granularities_and_json(
 
     assert b"verbose_json" not in requests[0].content
     assert b"timestamp_granularities" not in requests[0].content
-
-
-@run_async
-async def test_openrouter_empty_granularities_falls_back_to_segment(tmp_path: Path) -> None:
-    requests: list[httpx.Request] = []
-    audio = tmp_path / "clip.ogg"
-    audio.write_bytes(b"fake ogg")
-    model = ModelSpec("m", "M", file_caps(timestamps=True))
-
-    await openrouter_client(requests, {"text": "Hi"}).transcribe_file(
-        audio, model, TranscriptionOptions(timestamp_granularities=())
-    )
-
-    assert granularity_fields(requests[0]) == ["segment"]
 
 
 @run_async

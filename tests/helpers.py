@@ -25,7 +25,6 @@ def run_async[**P](test: Callable[P, Coroutine[None, None, None]]) -> Callable[P
 def file_caps(
     *,
     timestamps: bool = False,
-    word_timestamps: bool = False,
     diarization: bool = False,
     streaming: bool = False,
 ) -> Capabilities:
@@ -33,7 +32,6 @@ def file_caps(
     return Capabilities(
         file=ModeCapabilities(
             timestamps=timestamps,
-            word_timestamps=word_timestamps,
             diarization=diarization,
             streaming=streaming,
         )

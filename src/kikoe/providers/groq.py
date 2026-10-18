@@ -3,7 +3,6 @@
 import asyncio
 import mimetypes
 from pathlib import Path
-from typing import Literal
 
 import httpx
 from groq import APIError, AsyncGroq, omit
@@ -34,9 +33,6 @@ class GroqClient(FileOnlyClient[httpx.AsyncBaseTransport]):
     ) -> tuple[Segment, ...]:
         content = await asyncio.to_thread(audio.read_bytes)
         features = options.allowed_by(file_capabilities(model))
-        granularities: list[Literal["segment", "word"]] = [
-            "word" if g.value == "word" else "segment" for g in features.timestamp_granularities
-        ]
         mime = mimetypes.guess_type(audio.name)[0] or "application/octet-stream"
         try:
             async with AsyncGroq(
@@ -51,7 +47,7 @@ class GroqClient(FileOnlyClient[httpx.AsyncBaseTransport]):
                     model=model.model_id,
                     language=options.language.split("-")[0].lower() if options.language else omit,
                     response_format="verbose_json" if features.timestamps else "json",
-                    timestamp_granularities=granularities if features.timestamps else omit,
+                    timestamp_granularities=["segment"] if features.timestamps else omit,
                 )
                 # Verbose fields are preserved as SDK extras, although only text is typed.
                 # Parsing validates text and times; serializer warnings could expose payloads.

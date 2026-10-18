@@ -34,7 +34,6 @@ class OpenRouterClient(FileOnlyClient[httpx.AsyncBaseTransport]):
         caps = file_capabilities(model)
         features = options.allowed_by(caps)
         timed, diarize = features.timestamps, features.diarization
-        granularities = features.timestamp_granularities
         try:
             async with (
                 httpx.AsyncClient(transport=self._transport) as http,
@@ -46,7 +45,7 @@ class OpenRouterClient(FileOnlyClient[httpx.AsyncBaseTransport]):
                     language=options.language,
                     diarize=diarize,
                     response_format="verbose_json" if timed or diarize else "json",
-                    timestamp_granularities=([g.value for g in granularities] if timed else None),
+                    timestamp_granularities=["segment"] if timed else None,
                 )
                 data = result.model_dump()
                 # OpenRouter attaches speaker identity to words, not every segment.

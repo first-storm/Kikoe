@@ -70,13 +70,12 @@ def test_capability_list_is_empty_for_text_only_models() -> None:
 
 def test_capability_list_keeps_display_order() -> None:
     caps = Capabilities(
-        file=ModeCapabilities(timestamps=True, word_timestamps=True, streaming=True),
+        file=ModeCapabilities(timestamps=True, streaming=True),
         realtime=ModeCapabilities(diarization=True),
     )
     assert capability_list(caps) == (
         Capability.REALTIME,
         Capability.TIMESTAMPS,
-        Capability.WORD_TIMESTAMPS,
         Capability.DIARIZATION,
         Capability.STREAMING,
     )

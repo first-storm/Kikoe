@@ -6,7 +6,6 @@ from dataclasses import replace
 
 from gi.repository import Adw, Gio, GObject, Gtk
 
-from kikoe.core.choice import ModelChoice, available_models
 from kikoe.core.models import Provider
 from kikoe.core.preferences import Preferences, valid_language
 from kikoe.i18n import _, ngettext
@@ -17,7 +16,7 @@ from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.guard import Guard
 from kikoe.ui.items import ProviderItem
-from kikoe.ui.labels import api_label, model_choice_label
+from kikoe.ui.labels import api_label
 from kikoe.ui.local_models_page import LocalModelsPage
 from kikoe.ui.provider_page import ProviderPage
 from kikoe.ui.tasks import run_task
@@ -31,7 +30,6 @@ class PreferencesDialog(Adw.PreferencesDialog):
     __gtype_name__ = "KikoePreferencesDialog"
 
     providers_list: Gtk.ListBox = Gtk.Template.Child()
-    default_model_row: Adw.ComboRow = Gtk.Template.Child()
     language_row: Adw.EntryRow = Gtk.Template.Child()
     language_error: Gtk.Label = Gtk.Template.Child()
     input_device_row: Adw.ComboRow = Gtk.Template.Child()
@@ -52,7 +50,6 @@ class PreferencesDialog(Adw.PreferencesDialog):
         self._preferences = preferences
         self._updating = Guard()
         self._shown_language: str | None = None
-        self._choices: tuple[ModelChoice, ...] = ()
         self._device_names: dict[DeviceKind, list[str]] = {"input": [], "output": []}
         self._disconnect_preferences = preferences.connect_changed(self._refresh_defaults)
         run_task(self._show_paths(), self)
@@ -136,42 +133,12 @@ class PreferencesDialog(Adw.PreferencesDialog):
 
     def _refresh_defaults(self) -> None:
         with self._updating:
-            self._choices = available_models(self._repository.providers)
-            names = [
-                _("No Default Model"),
-                *[model_choice_label(c) for c in self._choices],
-            ]
-            self.default_model_row.set_model(Gtk.StringList.new(names))
-            selected = next(
-                (
-                    i + 1
-                    for i, c in enumerate(self._choices)
-                    if c.key == self._preferences.current.default_model
-                ),
-                0,
-            )
-            self.default_model_row.set_selected(selected)
             self._refresh_devices()
             language = self._preferences.current.language
             if language != self._shown_language:
                 self.language_row.set_text(language or "")
                 self._shown_language = language
                 self._show_language_error(False)
-
-    @Gtk.Template.Callback()
-    def _on_default_model_row_notify_selected(
-        self, _row: Adw.ComboRow, _spec: GObject.ParamSpec
-    ) -> None:
-        if self._updating.active:
-            return
-        index = self.default_model_row.get_selected()
-        if index > len(self._choices):
-            return
-        key = self._choices[index - 1].key if index else None
-        run_task(
-            self._preferences.update(lambda p: replace(p, default_model=key, recent_model=key)),
-            self,
-        )
 
     @Gtk.Template.Callback()
     def _on_language_row_apply(self, _row: Adw.EntryRow) -> None:

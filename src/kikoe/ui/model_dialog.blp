@@ -80,18 +80,6 @@ template $KikoeModelDialog: Adw.Dialog {
           }
 
           Adw.ActionRow {
-            title: _("Word Timestamps");
-            subtitle: _("Times can be requested for single words.");
-            activatable-widget: file_words_check;
-
-            [prefix]
-            CheckButton file_words_check {
-              valign: center;
-              notify::active => $_on_option_changed();
-            }
-          }
-
-          Adw.ActionRow {
             title: _("Speaker Detection");
             subtitle: _("Tells different people apart and labels them.");
             activatable-widget: file_speakers_check;

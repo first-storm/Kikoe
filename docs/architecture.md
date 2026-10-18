@@ -111,7 +111,7 @@ a note removes its associated audio files.
 
 `storage.settings.SettingsStore` reads and atomically writes
 `paths.config_dir()/settings.json`. Version 2 contains providers and preferences.
-Default and recent models are `[provider_id, model_id]` pairs or null; the
+The recent model is a `[provider_id, model_id]` pair or null; the
 transcription language is a BCP 47 tag or null for automatic detection. Version 1
 files keep their providers and receive empty defaults. Optional window geometry
 stores width, height and maximized state; invalid geometry is ignored.
@@ -248,7 +248,7 @@ section without changing the saved note.
 | --- | --- |
 | OpenAI and compatible | `openai[realtime]`; file and live support follow stored model capabilities |
 | OpenRouter | `openrouter`; multipart speech-to-text uploads |
-| Groq | `groq`; SDK root `https://api.groq.com` adds `/openai/v1`; Whisper supports segment and word times, with uploads after recording stops |
+| Groq | `groq`; SDK root `https://api.groq.com` adds `/openai/v1`; Whisper supports segment times, with uploads after recording stops |
 | Gemini | `google-genai`; file Interactions and Live sessions |
 | Deepgram | `deepgram-sdk`; Listen v1 for file and live transcription |
 | Mistral | `mistralai[realtime]`; Voxtral file and live transcription, SDK root `https://api.mistral.ai` |
@@ -258,8 +258,8 @@ section without changing the saved note.
 Mistral files use `audio.transcriptions.complete_async`, or `stream_async` for
 streaming models. Text deltas are previews; segment events replace them;
 `transcription.done` supplies the authoritative result. EOF without it is a
-retryable failure. Speaker requests use segment granularity; word timestamps are
-grouped into sentences. Language cannot be combined with timestamp granularities,
+retryable failure. Timestamp or speaker requests use segment granularity.
+Language cannot be combined with timestamp granularities,
 so `core.choice.language_dropped` controls omission and the UI explains automatic
 detection. Primary language codes are sent for explicit language tags. The live
 `voxtral-mini-transcribe-realtime-*` family accepts 16 kHz PCM and returns text
@@ -518,7 +518,7 @@ text without an FTS index and return only matching summaries in newest-first
 order. `NoteRepository.search` runs off the GTK thread. `ui.search.NoteSearch`
 debounces input by 200 ms, cancels old tasks and rejects stale results.
 
-Model selection keeps the current choice when valid, then tries recent, default,
+Model selection keeps the current choice when valid, then tries recent,
 first configured model, and finally none (`core.choice.resolve_choice`). Explicit
 selection is persisted. Each workflow captures language and options at request
 start; preference changes apply when controls return idle.

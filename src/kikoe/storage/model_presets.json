@@ -9,7 +9,6 @@
       "file": {
         "available": "on",
         "timestamps": "on",
-        "word_timestamps": "on",
         "diarization": "unsupported",
         "streaming": "unsupported"
       },
@@ -35,7 +34,6 @@
       "file": {
         "available": "on",
         "timestamps": "on",
-        "word_timestamps": "off",
         "diarization": "off"
       },
       "realtime": {
@@ -48,7 +46,6 @@
       "file": {
         "available": "on",
         "timestamps": "on",
-        "word_timestamps": "on",
         "diarization": "on",
         "streaming": "on"
       },

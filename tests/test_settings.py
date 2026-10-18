@@ -110,7 +110,7 @@ def test_per_mode_capabilities_round_trip(tmp_path: Path) -> None:
         "both",
         "Both",
         Capabilities(
-            file=ModeCapabilities(True, True, True, True),
+            file=ModeCapabilities(True, True, True),
             realtime=ModeCapabilities(diarization=True),
         ),
     )
@@ -140,7 +140,6 @@ def test_failed_atomic_replace_keeps_previous_settings(
     [
         {"language": "en_US"},
         {"language": 42},
-        {"default_model": ["p"]},
         {"recent_model": ["p", ""]},
         {"recent_model": "model"},
     ],
@@ -153,6 +152,24 @@ def test_malformed_defaults_are_reported(tmp_path: Path, preferences: dict[str, 
     )
     with pytest.raises(SettingsError):
         SettingsStore(path).load_state()
+
+
+def test_obsolete_default_model_is_ignored_and_removed_on_save(tmp_path: Path) -> None:
+    path = tmp_path / "settings.json"
+    path.write_text(
+        json.dumps(
+            {
+                "version": 2,
+                "providers": [],
+                "preferences": {"default_model": ["obsolete"], "recent_model": ["p", "m"]},
+            }
+        )
+    )
+    store = SettingsStore(path)
+    settings = store.load_state()
+    assert settings.preferences.recent_model == ("p", "m")
+    store.save_state(settings)
+    assert "default_model" not in json.loads(path.read_text())["preferences"]
 
 
 def test_audio_devices_round_trip_and_default_to_system(tmp_path: Path) -> None:

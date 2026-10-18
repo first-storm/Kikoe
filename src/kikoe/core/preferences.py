@@ -9,27 +9,19 @@ from kikoe.core.models import ModelKey, Provider
 
 @dataclass(frozen=True, slots=True)
 class Preferences:
-    """Model identities and audio device names survive restarts; no device means system default."""
+    """The recent model and audio device names survive restarts; no device means system default."""
 
-    default_model: ModelKey | None = None
     recent_model: ModelKey | None = None
     language: str | None = None
     input_device: str | None = None
     output_device: str | None = None
 
 
-def default_provider(preferences: Preferences, providers: Sequence[Provider]) -> Provider | None:
-    """The provider the next transcription most likely uses: the default model's, else the last.
-
-    A removed provider counts as absent, so a stale preference never selects anything.
-    """
-    for key in (preferences.default_model, preferences.recent_model):
-        if key is None:
-            continue
-        provider = next((p for p in providers if p.provider_id == key[0]), None)
-        if provider is not None:
-            return provider
-    return None
+def recent_provider(preferences: Preferences, providers: Sequence[Provider]) -> Provider | None:
+    """Find the last selected provider for startup prewarming."""
+    if preferences.recent_model is None:
+        return None
+    return next((p for p in providers if p.provider_id == preferences.recent_model[0]), None)
 
 
 MIN_WINDOW_WIDTH = 360

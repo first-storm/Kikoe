@@ -7,7 +7,7 @@ from kikoe.core.models import ApiKind, Capabilities, ModeCapabilities, ModelSpec
 from kikoe.storage.model_catalog import load_catalog
 
 ALL_ON = Capabilities(
-    file=ModeCapabilities(True, True, True, True), realtime=ModeCapabilities(True, True, True, True)
+    file=ModeCapabilities(True, True, True), realtime=ModeCapabilities(True, True, True)
 )
 
 
@@ -94,13 +94,6 @@ def test_audio_llm_models_stream_by_default_and_never_claim_timestamps(
     assert preset.defaults().realtime is None
 
 
-def test_word_timestamps_are_offered_only_where_a_client_sends_them(
-    catalog: ModelCatalog,
-) -> None:
-    allowed = [api for api in ApiKind if catalog.apis[api].file.word_timestamps.allowed]
-    assert allowed == [ApiKind.OPENROUTER, ApiKind.GROQ, ApiKind.MISTRAL]
-
-
 def test_a_model_left_without_any_mode_gets_the_defaults(catalog: ModelCatalog) -> None:
     model = ModelSpec("gpt-live-transcribe", "Live", Capabilities())
     assert catalog.clamp(ApiKind.OPENAI, model).capabilities == Capabilities(
@@ -160,6 +153,4 @@ def test_every_api_needs_an_entry() -> None:
 
 def test_mistral_streams_file_previews_by_default(catalog: ModelCatalog) -> None:
     file = catalog.preset(ApiKind.MISTRAL, "voxtral-mini-latest").defaults().file
-    assert file == ModeCapabilities(
-        timestamps=True, word_timestamps=True, diarization=True, streaming=True
-    )
+    assert file == ModeCapabilities(timestamps=True, diarization=True, streaming=True)

@@ -9,7 +9,6 @@ from kikoe.core.models import (
     ModelKey,
     ModelSpec,
     Provider,
-    TimestampGranularity,
 )
 from kikoe.core.provider_registry import descriptor
 from kikoe.core.validation import Capability
@@ -61,27 +60,13 @@ class RequestedFeatures:
 
     timestamps: bool = True
     diarization: bool = True
-    timestamp_granularities: tuple[TimestampGranularity, ...] = (TimestampGranularity.SEGMENT,)
-    """Timestamp detail; honoured only by models with word timestamps."""
 
     def allowed_by(self, capabilities: ModeCapabilities) -> RequestedFeatures:
         """Drop what the model cannot do; those options are shown as unavailable."""
         return RequestedFeatures(
             timestamps=self.timestamps and capabilities.timestamps,
             diarization=self.diarization and capabilities.diarization,
-            timestamp_granularities=normalize_granularities(self.timestamp_granularities)
-            if capabilities.word_timestamps
-            else (TimestampGranularity.SEGMENT,),
         )
-
-
-def normalize_granularities(
-    values: Iterable[TimestampGranularity],
-) -> tuple[TimestampGranularity, ...]:
-    """Deduplicate a granularity selection into canonical order, never empty."""
-    selected = set(values)
-    ordered = tuple(g for g in TimestampGranularity if g in selected)
-    return ordered or (TimestampGranularity.SEGMENT,)
 
 
 def unsupported_features(capabilities: ModeCapabilities) -> tuple[Capability, ...]:

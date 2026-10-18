@@ -75,7 +75,6 @@ class TranscriptionController:
         return TranscriptionOptions(
             features.timestamps,
             features.diarization,
-            features.timestamp_granularities,
             language=self._preferences.current.language,
         )
 

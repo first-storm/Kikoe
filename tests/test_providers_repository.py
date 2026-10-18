@@ -124,7 +124,7 @@ async def test_listeners_are_told_about_changes(repo: ProviderRepository) -> Non
 
 
 ALL_ON = Capabilities(
-    file=ModeCapabilities(True, True, True, True), realtime=ModeCapabilities(True, True, True, True)
+    file=ModeCapabilities(True, True, True), realtime=ModeCapabilities(True, True, True)
 )
 
 

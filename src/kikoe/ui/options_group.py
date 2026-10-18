@@ -1,21 +1,14 @@
-"""Timestamps, timestamp detail and speakers switches shared by every model picker."""
+"""Timestamps and speakers switches shared by every model picker."""
 
 from dataclasses import replace
 
 from gi.repository import Adw, GObject, Gtk
 
-from kikoe.core.choice import RequestedFeatures, language_dropped, normalize_granularities
-from kikoe.core.models import ApiKind, ModeCapabilities, TimestampGranularity
+from kikoe.core.choice import RequestedFeatures, language_dropped
+from kikoe.core.models import ApiKind, ModeCapabilities
 from kikoe.ui.guard import Guard
 from kikoe.ui.labels import unsupported_option_subtitle
 from kikoe.ui.templates import ui_file
-
-_GRANULARITIES: tuple[tuple[TimestampGranularity, ...], ...] = (
-    (TimestampGranularity.SEGMENT,),
-    (TimestampGranularity.WORD,),
-    (TimestampGranularity.SEGMENT, TimestampGranularity.WORD),
-)
-"""Selections offered by the Timestamp Detail row, in its order."""
 
 
 @Gtk.Template(filename=ui_file("options_group"))
@@ -25,7 +18,6 @@ class OptionsGroup(Adw.PreferencesGroup):
     __gtype_name__ = "KikoeOptionsGroup"
 
     timestamps_row: Adw.SwitchRow = Gtk.Template.Child()
-    granularity_row: Adw.ComboRow = Gtk.Template.Child()
     speakers_row: Adw.SwitchRow = Gtk.Template.Child()
     language_notice: Gtk.Label = Gtk.Template.Child()
 
@@ -79,11 +71,6 @@ class OptionsGroup(Adw.PreferencesGroup):
             self.language_notice.set_visible(
                 self._api is not None and language_dropped(self._api, allowed, self._language)
             )
-            self.granularity_row.set_visible(capabilities.word_timestamps and allowed.timestamps)
-            wanted = normalize_granularities(self._wanted.timestamp_granularities)
-            self.granularity_row.set_selected(
-                _GRANULARITIES.index(wanted) if wanted in _GRANULARITIES else 0
-            )
 
     @Gtk.Template.Callback()
     def _on_option_row_notify_active(self, _row: Adw.SwitchRow, _spec: GObject.ParamSpec) -> None:
@@ -100,14 +87,4 @@ class OptionsGroup(Adw.PreferencesGroup):
             else self._wanted.diarization,
         )
         self._refresh()
-        self.emit("changed")
-
-    @Gtk.Template.Callback()
-    def _on_granularity_row_notify_selected(
-        self, row: Adw.ComboRow, _spec: GObject.ParamSpec
-    ) -> None:
-        index = row.get_selected()
-        if self._updating.active or index >= len(_GRANULARITIES):
-            return
-        self._wanted = replace(self._wanted, timestamp_granularities=_GRANULARITIES[index])
         self.emit("changed")

@@ -30,7 +30,6 @@ class Capability(StrEnum):
 
     REALTIME = "realtime"
     TIMESTAMPS = "timestamps"
-    WORD_TIMESTAMPS = "word-timestamps"
     DIARIZATION = "diarization"
     STREAMING = "streaming"
 
@@ -80,7 +79,6 @@ def capability_list(capabilities: Capabilities) -> tuple[Capability, ...]:
     pairs = (
         (capabilities.realtime is not None, Capability.REALTIME),
         (any(m.timestamps for m in modes), Capability.TIMESTAMPS),
-        (file is not None and file.word_timestamps, Capability.WORD_TIMESTAMPS),
         (any(m.diarization for m in modes), Capability.DIARIZATION),
         (file is not None and file.streaming, Capability.STREAMING),
     )

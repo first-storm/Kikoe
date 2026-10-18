@@ -80,8 +80,6 @@ def capability_label(capability: Capability) -> str:
             return _("Realtime")
         case Capability.TIMESTAMPS:
             return _("Timestamps")
-        case Capability.WORD_TIMESTAMPS:
-            return _("Word Timestamps")
         case Capability.DIARIZATION:
             return _("Speakers")
         case Capability.STREAMING:
@@ -259,22 +257,14 @@ def _feature_name(capability: Capability) -> str:
             return _("realtime transcription")
         case Capability.TIMESTAMPS:
             return _("timestamps")
-        case Capability.WORD_TIMESTAMPS:
-            return _("word timestamps")
         case Capability.DIARIZATION:
             return _("speaker detection")
         case Capability.STREAMING:
             return _("streaming preview")
 
 
-def model_choice_label(choice: ModelChoice) -> str:
-    return _("{provider} · {model}").format(
-        provider=choice.provider.name, model=choice.model.display_name
-    )
-
-
 def model_choice_subtitle(choice: ModelChoice) -> str:
-    """Under a model name in pickers, e.g. “Groq · Timestamps · Word Timestamps”."""
+    """Under a model name in pickers, e.g. “Groq · Timestamps”."""
     return _("{provider} · {capabilities}").format(
         provider=choice.provider.name, capabilities=capability_summary(choice.model.capabilities)
     )

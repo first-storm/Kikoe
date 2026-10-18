@@ -17,10 +17,9 @@ from kikoe.providers.parsing import parse_text
 class MistralFileTranscript:
     """Completed segments replace the text preview; ``transcription.done`` is authoritative."""
 
-    def __init__(self, *, timed: bool, diarize: bool, words_only: bool) -> None:
+    def __init__(self, *, timed: bool, diarize: bool) -> None:
         self._timed = timed
         self._diarize = diarize
-        self._words_only = words_only
         self._segments: list[Segment] = []
         self._preview = ""
         self._done: tuple[Segment, ...] | None = None
@@ -31,9 +30,6 @@ class MistralFileTranscript:
             case TranscriptionStreamTextDelta():
                 self._preview += event.text
             case TranscriptionStreamSegmentDelta():
-                # Word-level entries are grouped into sentences only once the text is complete.
-                if self._words_only:
-                    return
                 self._preview = ""
                 self._segments += self._parse({"text": "", "segments": [event.model_dump()]})
             case TranscriptionStreamDone():
@@ -43,7 +39,7 @@ class MistralFileTranscript:
                 pass
 
     def _parse(self, body: object) -> tuple[Segment, ...]:
-        return parse_mistral(body, self._timed, self._diarize, self._words_only)
+        return parse_mistral(body, self._timed, self._diarize)
 
     @property
     def finished(self) -> bool:

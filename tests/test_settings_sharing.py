@@ -69,13 +69,14 @@ async def test_concurrent_defaults_and_provider_edits_both_survive(path: Path) -
         stores.preferences.update(lambda p: replace(p, language="zh")),
         stores.providers.save_model(provider.provider_id, ModelSpec("a", "A", Capabilities())),
         stores.providers.save_model(provider.provider_id, ModelSpec("b", "B", Capabilities())),
-        stores.preferences.update(lambda p: replace(p, default_model=(provider.provider_id, "b"))),
+        stores.preferences.update(lambda p: replace(p, recent_model=(provider.provider_id, "b"))),
         stores.window.update(WindowState(1000, 700, maximized=True)),
     )
     restarted = Repositories(path, stores.secrets)
     await restarted.load()
     assert restarted.preferences.current.language == "zh"
-    assert restarted.preferences.current.default_model == (provider.provider_id, "b")
+    assert restarted.preferences.current.recent_model == (provider.provider_id, "b")
+    assert "default_model" not in json.loads(read(path))["preferences"]
     assert [m.model_id for m in restarted.providers.get(provider.provider_id).models] == ["a", "b"]
     assert restarted.window.window == WindowState(1000, 700, maximized=True)
 

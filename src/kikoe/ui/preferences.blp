@@ -18,12 +18,6 @@ template $KikoePreferencesDialog: Adw.PreferencesDialog {
         "Defaults for the next transcription. Language is detected automatically when left empty. To set it, enter a language code such as zh, en, or ja."
       );
 
-      Adw.ComboRow default_model_row {
-        title: _("Default Model");
-        use-markup: false;
-        notify::selected => $_on_default_model_row_notify_selected();
-      }
-
       Adw.EntryRow language_row {
         title: _("Transcription Language");
         show-apply-button: true;

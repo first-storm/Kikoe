@@ -28,12 +28,10 @@ class ApiKind(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class ModeCapabilities:
-    """What one request mode returns. Word timestamps and streaming apply to files only."""
+    """What one request mode returns. Streaming applies to files only."""
 
     timestamps: bool = False
     """Segments carry times. Required for subtitle export."""
-    word_timestamps: bool = False
-    """Times can be requested per word, not only per segment."""
     diarization: bool = False
     """Segments are attributed to distinct speakers."""
     streaming: bool = False
@@ -53,13 +51,6 @@ class Capabilities:
     def recording(self) -> ModeCapabilities:
         """Microphone recordings stream when they can, otherwise they are uploaded."""
         return self.realtime or self.file or ModeCapabilities()
-
-
-class TimestampGranularity(StrEnum):
-    """Detail level requested in a verbose transcription response."""
-
-    SEGMENT = "segment"
-    WORD = "word"
 
 
 @dataclass(frozen=True, slots=True)

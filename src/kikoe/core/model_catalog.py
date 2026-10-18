@@ -30,9 +30,9 @@ class Support(StrEnum):
         return self is not Support.UNSUPPORTED
 
 
-_FILE_FIELDS = ("available", "timestamps", "word_timestamps", "diarization", "streaming")
+_FILE_FIELDS = ("available", "timestamps", "diarization", "streaming")
 _REALTIME_FIELDS = ("available", "timestamps", "diarization")
-"""Word timestamps and streaming describe uploads; live text never has them."""
+"""Streaming describes uploads; live text never has it."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,7 +41,6 @@ class ModePreset:
 
     available: Support = Support.OFF
     timestamps: Support = Support.OFF
-    word_timestamps: Support = Support.UNSUPPORTED
     diarization: Support = Support.OFF
     streaming: Support = Support.UNSUPPORTED
 
@@ -50,7 +49,6 @@ class ModePreset:
             return None
         return ModeCapabilities(
             timestamps=self.timestamps is Support.ON,
-            word_timestamps=self.word_timestamps is Support.ON,
             diarization=self.diarization is Support.ON,
             streaming=self.streaming is Support.ON,
         )
@@ -60,7 +58,6 @@ class ModePreset:
             return None
         return ModeCapabilities(
             timestamps=capabilities.timestamps and self.timestamps.allowed,
-            word_timestamps=capabilities.word_timestamps and self.word_timestamps.allowed,
             diarization=capabilities.diarization and self.diarization.allowed,
             streaming=capabilities.streaming and self.streaming.allowed,
         )
