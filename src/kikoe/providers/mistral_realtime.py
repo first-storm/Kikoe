@@ -36,6 +36,7 @@ class MistralSession:
         self._turn = 0
         self._text = ""
         self._dirty = False
+        self._consuming = False
         self._last_text = 0.0
         self._pump_task = asyncio.create_task(self._pump())
 
@@ -57,6 +58,9 @@ class MistralSession:
                 break
             await asyncio.sleep(min(quiet, started + FLUSH_LIMIT_SECONDS - now))
         self._finish_turn()
+        if self._consuming:
+            # The caller checkpoints on return, so the turn's text must be handled by then.
+            await self._queue.join()
 
     async def keep_alive(self) -> None:
         pass  # The SDK's WebSocket answers pings while the microphone is paused.
@@ -67,13 +71,20 @@ class MistralSession:
         await close_stack(self._stack)
 
     async def events(self) -> AsyncGenerator[TranscriptEvent]:
-        while True:
-            item = await self._queue.get()
-            if item is None:
-                return
-            if isinstance(item, Exception):
-                raise item
-            yield item
+        self._consuming = True
+        try:
+            while True:
+                item = await self._queue.get()
+                try:
+                    if item is None:
+                        return
+                    if isinstance(item, Exception):
+                        raise item
+                    yield item
+                finally:
+                    self._queue.task_done()
+        finally:
+            self._consuming = False
 
     async def _pump(self) -> None:
         """Read the connection independently, so flush can wait without consuming events."""

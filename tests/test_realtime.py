@@ -2,10 +2,14 @@
 
 import asyncio
 from collections.abc import AsyncIterator
+from contextlib import AsyncExitStack
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import cast
 
 import pytest
+from mistralai.client.models import TranscriptionStreamTextDelta
+from mistralai.extra.realtime import RealtimeConnection
 
 from helpers import LIVE_ONLY, run_async
 from kikoe.core.choice import ModelChoice
@@ -25,6 +29,7 @@ from kikoe.providers.base import (
     TranscriptionError,
     TranscriptionOptions,
 )
+from kikoe.providers.mistral_realtime import MistralSession
 from kikoe.services import realtime
 from kikoe.services.realtime import RealtimeRecording
 from kikoe.services.recording import RecordingSession
@@ -351,3 +356,53 @@ async def test_service_converts_audio_to_the_rate_the_provider_asks_for(
     async with asyncio.timeout(5):
         await job.run()
     assert RateRecordingConverter.rates == [8000]
+
+
+class MistralConnection:
+    """Answers a flush with one text delta, like the SDK's WebSocket connection."""
+
+    def __init__(self) -> None:
+        self.events: asyncio.Queue[TranscriptionStreamTextDelta | None] = asyncio.Queue()
+
+    def __aiter__(self) -> MistralConnection:
+        return self
+
+    async def __anext__(self) -> TranscriptionStreamTextDelta:
+        event = await self.events.get()
+        if event is None:
+            raise StopAsyncIteration
+        return event
+
+    async def send_audio(self, pcm: bytes) -> None:
+        pass
+
+    async def flush_audio(self) -> None:
+        await self.events.put(TranscriptionStreamTextDelta(text="Hello"))
+
+
+class MistralClient(Client):
+    def __init__(self) -> None:
+        super().__init__(profile=RealtimeProfile(checkpoint=CheckpointStrategy.FLUSH))
+
+    async def open_realtime(
+        self, model: ModelSpec, options: TranscriptionOptions
+    ) -> RealtimeSession:
+        connection = cast(RealtimeConnection, MistralConnection())
+        return MistralSession(connection, AsyncExitStack(), "key")
+
+
+@pytest.mark.parametrize("attempt", range(3))
+@run_async
+async def test_stopping_a_mistral_recording_keeps_the_last_text_and_finishes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, attempt: int
+) -> None:
+    monkeypatch.setattr(realtime, "PCMStream", Converter)
+    recorded = capture(tmp_path, finished=True)
+    job = RealtimeRecording(
+        recorded, CHOICE, MistralClient(), TranscriptionOptions(False, False), lambda _: None
+    )
+    await job.run()
+    assert job.complete
+    assert job.segments == (Segment("Hello"),)
+    assert recorded.journal is not None
+    assert recorded.store.transcript(recorded.journal) == job.segments

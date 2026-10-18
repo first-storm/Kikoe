@@ -58,6 +58,7 @@ class RealtimeRecording:
         self._state = LiveState.CONNECTING
         self._exhausted = False
         self._profile = RealtimeProfile()
+        self._persist_lock = asyncio.Lock()
 
     def snapshot(self) -> LiveSnapshot:
         return LiveSnapshot(self.segments, self._text.preview, self._state)
@@ -247,7 +248,10 @@ class RealtimeRecording:
 
     async def _persist(self) -> None:
         journal = self.capture.journal
-        if journal is not None:
+        if journal is None:
+            return
+        # The receiver and the sender both persist, and the file is replaced via one temporary.
+        async with self._persist_lock:
             await asyncio.to_thread(self.capture.store.checkpoint, journal, self.segments)
 
     async def _keep_alive(self, session: RealtimeSession) -> None:
