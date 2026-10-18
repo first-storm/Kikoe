@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import io
 import tarfile
+import time
 import zipfile
 from collections.abc import AsyncIterator, Callable
 from dataclasses import replace
@@ -25,6 +26,7 @@ from kikoe.core.local_models import (
     InstallStatus,
     LocalCatalog,
     LocalModelSpec,
+    LocalSettings,
     ModelRole,
     OperatingSystem,
     Platform,
@@ -391,6 +393,29 @@ async def test_the_chosen_device_is_remembered(tmp_path: Path) -> None:
     restarted = _manager(tmp_path, server)
     await restarted.load()
     assert restarted.device("engine") == "vulkan:1"
+
+
+@run_async
+async def test_overlapping_device_changes_are_all_saved(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    server = Server()
+    manager = _manager(tmp_path, server)
+    await manager.load()
+    store = manager._settings_store
+    save = store.save
+
+    def slow_save(settings: LocalSettings) -> None:
+        time.sleep(0.05)  # Keeps two saves overlapping unless the manager serializes them.
+        save(settings)
+
+    monkeypatch.setattr(store, "save", slow_save)
+    await asyncio.gather(
+        manager.set_device("engine", "cpu:0"), manager.set_device("other", "vulkan:1")
+    )
+    restarted = _manager(tmp_path, server)
+    await restarted.load()
+    assert (restarted.device("engine"), restarted.device("other")) == ("cpu:0", "vulkan:1")
 
 
 def test_an_engine_that_is_not_installed_has_no_connection(tmp_path: Path) -> None:

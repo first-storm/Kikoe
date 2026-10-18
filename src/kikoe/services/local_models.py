@@ -83,6 +83,8 @@ class LocalModelManager:
         self._last_emit = 0.0
         self._settings_store = settings
         self._settings = LocalSettings()
+        self._settings_lock = asyncio.Lock()
+        """Makes changing and saving settings one step, so overlapping saves cannot clash."""
         self._connect = connect
         self._connections: dict[str, EngineConnection] = {}
         self._probes: dict[str, EngineProbe | TranscriptionError] = {}
@@ -140,9 +142,10 @@ class LocalModelManager:
         return self._settings.device(engine_id)
 
     async def set_device(self, engine_id: str, device_id: str | None) -> None:
-        settings = self._settings.with_device(engine_id, device_id)
-        await asyncio.to_thread(self._settings_store.save, settings)
-        self._settings = settings
+        async with self._settings_lock:
+            settings = self._settings.with_device(engine_id, device_id)
+            await asyncio.to_thread(self._settings_store.save, settings)
+            self._settings = settings
         self._listeners.emit()
 
     async def _disconnect(self, engine_id: str) -> None:
