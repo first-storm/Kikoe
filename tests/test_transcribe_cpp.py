@@ -94,3 +94,45 @@ async def test_worker_transcription_preserves_native_speakers_without_times(
             "1" if diarization else None,
         ),
     )
+
+
+def test_changing_the_device_reloads_the_speaker_model(tmp_path: Path) -> None:
+    loaded: list[str | None] = []
+
+    class DiarizeSession:
+        def run(self, pcm: object) -> list[object]:
+            return []
+
+        def close(self) -> None:
+            pass
+
+    class DiarizeModel:
+        roles = ("diarize",)
+
+        def __init__(self, path: str, *, device: object = None) -> None:
+            loaded.append(getattr(device, "kind", None))
+
+        def diarize_session(self) -> DiarizeSession:
+            return DiarizeSession()
+
+        def close(self) -> None:
+            pass
+
+    devices = [
+        SimpleNamespace(kind="cpu", device_id="0", name="cpu"),
+        SimpleNamespace(kind="vulkan", device_id="1", name="gpu"),
+    ]
+    binding = SimpleNamespace(
+        Model=DiarizeModel,
+        Role=SimpleNamespace(DIARIZE="diarize"),
+        backends=lambda: devices,
+        TranscribeError=RuntimeError,
+    )
+    audio = tmp_path / "audio.wav"
+    with wave.open(str(audio), "wb") as wav:
+        wav.setparams((1, 2, 16000, 0, "NONE", "not compressed"))
+        wav.writeframes(b"\0\0" * 160)
+    adapter = TranscribeCpp(binding)
+    for device in ("cpu:0", "vulkan:1", "vulkan:1"):
+        adapter.handle(Op.DIARIZE, {"model": "m", "audio": str(audio), "device": device}, print)
+    assert loaded == ["cpu", "vulkan"]

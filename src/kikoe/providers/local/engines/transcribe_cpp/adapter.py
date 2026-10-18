@@ -61,8 +61,8 @@ class TranscribeCpp:
         self._lock = threading.Lock()
         """Guards ``_session`` between the compute thread and ``cancel``."""
         self._stream: Any = None
-        self._diarizer: tuple[str, Any, Any] | None = None
-        """Path, model and session of the diarization model, kept beside the ASR model."""
+        self._diarizer: tuple[tuple[str, str | None], Any, Any] | None = None
+        """Path and device, model and session of the diarization model, beside the ASR model."""
         self._stream_language: str | None = None
 
     def handle(self, op: Op, args: dict[str, object], emit: Emit) -> dict[str, object]:
@@ -144,16 +144,16 @@ class TranscribeCpp:
         return reply
 
     def _diarize(self, args: dict[str, object]) -> dict[str, object]:
-        path = _text(args, "model")
-        if self._diarizer is None or self._diarizer[0] != path:
-            chosen = self._device(_optional(args, "device"))
+        path, device = _text(args, "model"), _optional(args, "device")
+        if self._diarizer is None or self._diarizer[0] != (path, device):
+            chosen = self._device(device)
             model = self._t.Model(path, device=chosen) if chosen else self._t.Model(path)
             if self._t.Role.DIARIZE not in model.roles:
                 model.close()
                 raise EngineError(ErrorKind.MODEL, "not a diarization model")
             session = model.diarize_session()
             with self._lock:
-                old, self._diarizer = self._diarizer, (path, model, session)
+                old, self._diarizer = self._diarizer, ((path, device), model, session)
             if old is not None:
                 old[2].close()
                 old[1].close()
