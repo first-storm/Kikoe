@@ -158,12 +158,17 @@ def _subtitle_cues(note: Note) -> tuple[_Cue, ...]:
                     offset_ms + start_ms,
                     offset_ms + end_ms,
                     speaker,
-                    segment.text.strip(),
+                    _cue_text(segment.text),
                 )
             )
             cursor_ms = max(cursor_ms, end_ms)
         offset_ms += _to_ms(recording.duration)
     return tuple(cues)
+
+
+def _cue_text(text: str) -> str:
+    """Drop blank lines: in SRT and WebVTT a blank line ends the cue and loses the rest."""
+    return "\n".join(line for raw in text.splitlines() if (line := raw.strip()))
 
 
 def _cue_start_ms(segment: Segment, cursor_ms: int) -> int:

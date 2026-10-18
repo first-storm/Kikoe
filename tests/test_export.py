@@ -350,3 +350,12 @@ def test_export_resolves_matched_speakers_consistently(fmt: ExportFormat) -> Non
     assert "Alice" in output
     assert "Speaker 1" not in output
     assert "Alice" not in export_note(note, fmt, DisplayOptions(show_speakers=False))
+
+
+@pytest.mark.parametrize("fmt", [ExportFormat.SRT, ExportFormat.WEBVTT])
+def test_subtitle_export_never_puts_a_blank_line_inside_a_cue(fmt: ExportFormat) -> None:
+    note = _note([_recording([_segment("One\n\n  \r\nTwo", start=1, end=3)])])
+    output = export_note(note, fmt, _SHOW_ALL)
+    assert "One\nTwo\n" in output
+    assert [block for block in output.strip().split("\n\n") if "Two" in block]
+    assert len(output.strip().split("\n\n")) == (2 if fmt is ExportFormat.WEBVTT else 1)
