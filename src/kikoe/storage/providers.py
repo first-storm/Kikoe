@@ -22,6 +22,10 @@ class ProviderNotFoundError(LookupError):
     """A provider or model was removed while something still referred to it."""
 
 
+class DuplicateModelError(ValueError):
+    """A save would give a provider two models with the same ID."""
+
+
 class ProviderSource(Protocol):
     """Providers that exist without being configured, such as the local engines."""
 
@@ -188,6 +192,9 @@ class ProviderRepository:
 
         def change() -> tuple[Provider, ...]:
             provider = self._configured(provider_id)
+            # The dialog validated against a snapshot that a concurrent save may have outdated.
+            if any(m.model_id == model.model_id != replacing_id for m in provider.models):
+                raise DuplicateModelError(_("This provider already has a model with that ID."))
             if replacing_id is None:
                 models = (*provider.models, model)
             else:

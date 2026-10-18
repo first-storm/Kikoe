@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import Callable
 from pathlib import Path
 
@@ -14,7 +15,11 @@ from kikoe.core.models import (
     Provider,
 )
 from kikoe.core.provider_registry import local_provider
-from kikoe.storage.providers import ProviderNotFoundError, ProviderRepository
+from kikoe.storage.providers import (
+    DuplicateModelError,
+    ProviderNotFoundError,
+    ProviderRepository,
+)
 from kikoe.storage.settings import Settings, SettingsStore
 
 URL = "https://api.groq.com/openai/v1"
@@ -111,6 +116,40 @@ async def test_editing_an_unknown_model_is_an_error(repo: ProviderRepository) ->
     provider = await repo.add_provider("Groq", ApiKind.OPENAI_COMPATIBLE, URL, "")
     with pytest.raises(ProviderNotFoundError):
         await repo.save_model(provider.provider_id, ModelSpec("x", "X", Capabilities()), "gone")
+
+
+@run_async
+async def test_concurrent_adds_of_one_model_keep_a_single_copy(
+    tmp_path: Path, repo: ProviderRepository, secrets: FakeSecrets
+) -> None:
+    provider = await repo.add_provider("Groq", ApiKind.OPENAI_COMPATIBLE, URL, "")
+    model = ModelSpec("a", "A", file_caps())
+
+    results = await asyncio.gather(
+        repo.save_model(provider.provider_id, model),
+        repo.save_model(provider.provider_id, model),
+        return_exceptions=True,
+    )
+
+    assert sum(isinstance(r, DuplicateModelError) for r in results) == 1
+    restarted = ProviderRepository(open_settings(tmp_path / "settings.json"), secrets)
+    await restarted.load()
+    assert restarted.get(provider.provider_id).models == (model,)
+
+
+@run_async
+async def test_renaming_a_model_to_another_models_id_is_an_error(
+    repo: ProviderRepository,
+) -> None:
+    provider = await repo.add_provider("Groq", ApiKind.OPENAI_COMPATIBLE, URL, "")
+    first, second = ModelSpec("a", "A", file_caps()), ModelSpec("b", "B", file_caps())
+    await repo.save_model(provider.provider_id, first)
+    await repo.save_model(provider.provider_id, second)
+
+    with pytest.raises(DuplicateModelError):
+        await repo.save_model(provider.provider_id, ModelSpec("b", "B2", file_caps()), "a")
+    await repo.save_model(provider.provider_id, ModelSpec("b", "B2", file_caps()), "b")
+    assert [m.display_name for m in repo.get(provider.provider_id).models] == ["A", "B2"]
 
 
 @run_async

@@ -7,7 +7,7 @@ from kikoe.storage.captures import CaptureStoreError
 from kikoe.storage.downloads import DownloadError
 from kikoe.storage.errors import LibraryError, NoteNotFoundError
 from kikoe.storage.local_installs import InstallError
-from kikoe.storage.providers import ProviderNotFoundError
+from kikoe.storage.providers import DuplicateModelError, ProviderNotFoundError
 from kikoe.storage.secrets import SecretStoreError
 from kikoe.storage.settings import SettingsError
 
@@ -15,6 +15,7 @@ USER_FACING_ERRORS = (
     SettingsError,
     SecretStoreError,
     ProviderNotFoundError,
+    DuplicateModelError,
     LibraryError,
     NoteNotFoundError,
     TranscriptionError,
