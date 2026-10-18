@@ -208,7 +208,11 @@ class TranscriptionController:
                 on_update=self.display.update,
             )
             self._end()
-            self._host.show_note(note)
+            shown = self._host.note
+            if shown is not None and shown.note_id == note.note_id:
+                self._host.show_note(note)
+            else:
+                self._host.toast(_("Transcription finished"))
         except asyncio.CancelledError:
             self._host.toast(_("Re-transcription cancelled"))
         except USER_FACING_ERRORS as error:
