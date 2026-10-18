@@ -121,6 +121,7 @@ reportMissingModuleSource = "none"
 
 [[tool.pyright.executionEnvironments]]
 root = "tests"
+extraPaths = ["src", "."]
 reportPrivateUsage = false
 
 # ---------------------------------------------------------------- pytest

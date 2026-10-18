@@ -64,7 +64,7 @@ reads that provider's API key to initialize the credential store before the firs
 recording. The key is discarded; transcription still reads the current key.
 Built-in providers skip the credential store. Prewarm failures are logged without
 interrupting startup, and credential prewarm logs omit keys and error details.
-Other providers load on first use. `tests/test_lazy_imports.py` guards this boundary.
+Other providers load on first use. `tests/repository/test_lazy_imports.py` guards this boundary.
 
 ## Domain data and persistence
 
@@ -150,7 +150,7 @@ rule wins. Fields are `on` or `off` for editable defaults, or `unsupported` for
 hard restrictions. `core.model_catalog` validates the catalog and
 `storage.model_catalog` loads it. Settings are clamped on load and whenever a
 model is saved, including after an API-type change. Add a catalog rule and a test
-in `tests/test_model_catalog.py` when introducing a known model.
+in `tests/storage/test_model_catalog.py` when introducing a known model.
 
 ## File transcription
 

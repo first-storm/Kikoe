@@ -3,10 +3,12 @@
 import asyncio
 import functools
 from collections.abc import Callable, Coroutine
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
 
 from kikoe.core.models import Capabilities, ModeCapabilities
+from kikoe.storage.captures import CaptureJournal
 from kikoe.storage.model_catalog import load_catalog
 from kikoe.storage.settings import SettingsStore
 from kikoe.storage.settings_writer import SettingsWriter
@@ -62,3 +64,10 @@ def form_field(request: SentRequest, name: str) -> str | None:
         return None
     start = body.index(marker) + len(marker)
     return body[start : body.index(b"\r\n", start)].decode()
+
+
+def journal(note_id: str = "deleted") -> CaptureJournal:
+    """A pending capture whose note may need to be recreated during recovery."""
+    return CaptureJournal(
+        "a" * 32, note_id, "Recovered", datetime.now(UTC), 16000, "OpenAI", "whisper-1"
+    )
