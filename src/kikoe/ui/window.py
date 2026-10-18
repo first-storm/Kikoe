@@ -7,7 +7,8 @@ from functools import partial
 from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
 from kikoe.core.activity import Activity, Stage, action_availability
-from kikoe.core.models import DisplayOptions, Note
+from kikoe.core.models import Note
+from kikoe.core.open_requests import OpenRequests
 from kikoe.core.preferences import WindowState
 from kikoe.core.recording import CaptureState
 from kikoe.i18n import _
@@ -21,6 +22,7 @@ from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.storage.window_state import WindowStateStore
 from kikoe.ui.bottom_bar import BottomBar
+from kikoe.ui.display_actions import DisplayActions
 from kikoe.ui.export_controller import ExportController
 from kikoe.ui.labels import note_title_subtitle
 from kikoe.ui.note_actions import NoteActions
@@ -87,6 +89,7 @@ class Window(Adw.ApplicationWindow):
         self._preferences = preferences
         self._notes = notes
         self._note: Note | None = None
+        self._open_requests = OpenRequests()
         self._providers_loaded = False
         self._recovery_checked = False
         self._work = ActivityTracker()
@@ -198,8 +201,7 @@ class Window(Adw.ApplicationWindow):
             ("stop-recording", self._recorder.on_stop, None),
         ):
             self._add_action(name, handler, parameter)
-        self._add_toggle_action("show-timestamps")
-        self._add_toggle_action("show-speakers")
+        self._display_actions = DisplayActions(self, self._notes, lambda: self._note)
         for action, keys in (
             ("new-note", ["<primary>n"]),
             ("search-notes", ["<primary>f"]),
@@ -243,36 +245,6 @@ class Window(Adw.ApplicationWindow):
         action = Gio.SimpleAction.new(name, parameter_type)
         action.connect("activate", callback)
         self.add_action(action)
-
-    def _add_toggle_action(self, name: str) -> None:
-        action = Gio.SimpleAction.new_stateful(name, None, GLib.Variant.new_boolean(False))
-        action.connect("activate", self._on_display_action_activate)
-        self.add_action(action)
-
-    def _display_action_state(self, name: str) -> bool:
-        action = self.lookup_action(name)
-        return action is not None and action.get_state() == GLib.Variant.new_boolean(True)
-
-    def _set_display_action_state(self, name: str, value: bool) -> None:
-        action = self.lookup_action(name)
-        if isinstance(action, Gio.SimpleAction):
-            action.set_state(GLib.Variant.new_boolean(value))
-
-    def _on_display_action_activate(
-        self, action: Gio.SimpleAction, _param: GLib.Variant | None
-    ) -> None:
-        if self._note is None:
-            return
-        action.set_state(
-            GLib.Variant.new_boolean(not self._display_action_state(action.get_name()))
-        )
-        options = DisplayOptions(
-            self._display_action_state("show-timestamps"),
-            self._display_action_state("show-speakers"),
-        )
-        # Not compared with the open note: it still shows the previous choice until the
-        # save is reloaded, so a quick change back would look like no change at all.
-        run_task(self._notes.set_display_options(self._note.note_id, options), self)
 
     @Gtk.Template.Callback()
     def _on_window_notify_current_breakpoint(
@@ -351,7 +323,7 @@ class Window(Adw.ApplicationWindow):
                 self._follow_summaries(note_id)
             case ContentChanged(note_id):
                 if self._note is not None and note_id == self._note.note_id:
-                    run_task(self._open_note(note_id), self)
+                    run_task(self._open_note(note_id, reload=True), self)
 
     def _follow_summaries(self, note_id: str | None) -> None:
         """Keep the content pane on a note that still exists, reloading it if it changed."""
@@ -363,7 +335,7 @@ class Window(Adw.ApplicationWindow):
             self.show_note(None)
             self.split_view.set_show_content(False)
         elif note_id == current:
-            run_task(self._open_note(current), self)
+            run_task(self._open_note(current, reload=True), self)
 
     def _on_providers_changed(self) -> None:
         self._providers_loaded = True
@@ -379,8 +351,14 @@ class Window(Adw.ApplicationWindow):
 
     # Content
 
-    async def _open_note(self, note_id: str) -> None:
+    async def _open_note(self, note_id: str, *, reload: bool = False) -> None:
+        """Show ``note_id``; a ``reload`` yields to a newer request to open another note."""
+        if not self._open_requests.start(note_id, reload=reload):
+            return
         note = await self._editor.read_note(note_id)
+        open_id = self._note.note_id if self._note else None
+        if not self._open_requests.finish(note_id, reload=reload, open_id=open_id):
+            return
         current = self._recorder.note_id or (self._note.note_id if self._note else None)
         if not self._switch_locked() or note_id == current:
             self.show_note(note)
@@ -402,8 +380,7 @@ class Window(Adw.ApplicationWindow):
             self.set_titles(_("Kikoe"), "", "")
         else:
             self.set_titles(note.title, note.title, note_title_subtitle(note))
-            self._set_display_action_state("show-timestamps", note.display.show_timestamps)
-            self._set_display_action_state("show-speakers", note.display.show_speakers)
+            self._display_actions.show(note.display)
             if self.note_view.show_note(note):
                 self._editor.forget()
             self._transcribe.display.show(note)

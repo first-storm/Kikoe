@@ -8,6 +8,7 @@ import asyncio
 import json
 import sys
 import tempfile
+import threading
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -17,10 +18,10 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
 from gi.events import GLibEventLoopPolicy  # noqa: E402
-from gi.repository import Adw, Gio, GLib  # noqa: E402
+from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from kikoe import i18n  # noqa: E402
-from kikoe.core.models import ApiKind  # noqa: E402
+from kikoe.core.models import ApiKind, Note, NoteSummary  # noqa: E402
 from kikoe.storage.library import Library  # noqa: E402
 from kikoe.storage.model_catalog import load_catalog  # noqa: E402
 from kikoe.storage.notes import NoteRepository  # noqa: E402
@@ -173,6 +174,7 @@ async def scenario(
     result["opens_selected_note"] = window.note is not None and window.note.note_id == first.note_id
     result["highlights_selected_row"] = window.notes_list.get_selected_row() is not None
     await display_toggle_scenario(window, notes, first.note_id, result)
+    await stale_reload_scenario(window, notes, result)
     window.search_bar.set_search_mode(True)
     window.search_entry.set_text("Alpha")
     await settle(0.7)
@@ -196,6 +198,66 @@ async def display_toggle_scenario(
     await settle()
     saved = (await notes.get_note(note_id)).display
     result["display_toggles_keep_the_last_choice"] = saved.show_timestamps is True
+
+
+async def stale_reload_scenario(
+    window: Window, notes: NoteRepository, result: dict[str, object]
+) -> None:
+    """Click another note while a background change to the open one is being reloaded."""
+    library = notes._library  # pyright: ignore[reportPrivateUsage]  # slow reads like a busy disk
+    alpha = next(n for n in notes.notes if n.title == "Alpha meeting")
+    beta = next(n for n in notes.notes if n.title == "Beta call")
+    window.search_bar.set_search_mode(True)
+    window.search_entry.set_text("a")
+    await settle(0.8)
+
+    def row_of(note_id: str) -> Gtk.ListBoxRow:
+        items = window._sidebar._items  # pyright: ignore[reportPrivateUsage]  # the list model behind the rows
+        ids = [item.summary.note_id for item in items]
+        row = window.notes_list.get_row_at_index(ids.index(note_id))
+        assert row is not None
+        return row
+
+    window.notes_list.select_row(row_of(alpha.note_id))
+    await settle()
+    gate_beta, gate_search = threading.Event(), threading.Event()
+    read, search = library.get_note, library.search_notes
+    slow = {"on": False}
+
+    def slow_read(note_id: str) -> Note:
+        note = read(note_id)
+        if slow["on"] and note_id == beta.note_id:
+            gate_beta.wait(5)
+        return note
+
+    def slow_search(query: str) -> tuple[NoteSummary, ...]:
+        found = search(query)
+        if slow["on"]:
+            gate_search.wait(5)
+        return found
+
+    library.get_note = slow_read  # pyright: ignore[reportAttributeAccessIssue]  # test double
+    library.search_notes = slow_search  # pyright: ignore[reportAttributeAccessIssue]  # test double
+    slow["on"] = True
+    window.notes_list.select_row(row_of(beta.note_id))
+    await asyncio.sleep(0.2)
+    await notes.rename_note(alpha.note_id, "Alpha meeting")
+    await asyncio.sleep(0.2)
+    gate_beta.set()
+    await asyncio.sleep(0.4)
+    gate_search.set()
+    await settle(0.8)
+    library.get_note, library.search_notes = read, search  # pyright: ignore[reportAttributeAccessIssue]  # restore
+    selected = window.notes_list.get_selected_row()
+    shown = window.note
+    result["stale_reload_does_not_replace_the_new_note"] = (
+        shown is not None
+        and shown.note_id == beta.note_id
+        and selected is not None
+        and selected.get_index() == row_of(beta.note_id).get_index()
+    )
+    window.search_bar.set_search_mode(False)
+    await settle()
 
 
 async def new_note_retry_scenario(window: Window, result: dict[str, object]) -> None:
