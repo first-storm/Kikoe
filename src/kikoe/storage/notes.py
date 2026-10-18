@@ -1,6 +1,7 @@
 """Async access to the note library, with change notifications for the UI."""
 
 import asyncio
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -15,7 +16,9 @@ from kikoe.core.models import (
     Segment,
     TranscriptionState,
 )
-from kikoe.storage.library import Library
+from kikoe.storage.library import Library, LibraryError
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,7 +62,9 @@ class NoteRepository:
         return self._listeners.connect(listener)
 
     async def load(self) -> None:
-        await self._change_summaries(None, self._library.migrate)
+        await asyncio.to_thread(self._library.migrate)
+        self._notes = await asyncio.to_thread(self._library.list_notes)
+        self._listeners.emit(SummariesChanged(None))
 
     async def search(self, query: str) -> tuple[NoteSummary, ...]:
         """Run title and transcript queries away from the GTK thread."""
@@ -172,9 +177,16 @@ class NoteRepository:
         *args: P.args,
         **kwargs: P.kwargs,
     ) -> R:
-        """Write, then reload the summaries; ``changed`` may find the note's ID in the result."""
+        """Write, then reload the summaries; ``changed`` may find the note's ID in the result.
+
+        Once the write is committed a failed reload must not look like a failed write:
+        callers would undo work (such as deleting the audio) that the library now relies on.
+        """
         result = await asyncio.to_thread(call, *args, **kwargs)
-        self._notes = await asyncio.to_thread(self._library.list_notes)
+        try:
+            self._notes = await asyncio.to_thread(self._library.list_notes)
+        except LibraryError:
+            log.warning("Could not reload the note summaries after a saved change", exc_info=True)
         self._listeners.emit(SummariesChanged(changed(result) if callable(changed) else changed))
         return result
 

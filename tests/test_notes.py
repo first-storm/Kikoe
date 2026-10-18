@@ -2,6 +2,7 @@
 
 import asyncio
 import shutil
+import sqlite3
 import threading
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -13,6 +14,7 @@ from helpers import run_async
 from kikoe.core.models import (
     DisplayOptions,
     Note,
+    NoteSummary,
     Recording,
     RecordingSource,
     Segment,
@@ -122,3 +124,25 @@ async def test_cancelled_audio_copy_leaves_no_file_behind(
     with pytest.raises(asyncio.CancelledError):
         await task
     assert list((tmp_path / "audio").iterdir()) == []
+
+
+@run_async
+async def test_a_failed_summary_reload_does_not_fail_the_saved_change(
+    notes: NoteRepository, tmp_path: Path
+) -> None:
+    await notes.load()
+    library = notes._library
+    reload = library.list_notes
+
+    def locked() -> tuple[NoteSummary, ...]:
+        other = sqlite3.connect(tmp_path / "library.sqlite3", isolation_level=None)
+        other.execute("BEGIN EXCLUSIVE")
+        try:
+            return reload()
+        finally:
+            other.close()
+
+    library.list_notes = locked  # pyright: ignore[reportAttributeAccessIssue]  # simulate a lock held by another process
+    note = await notes.add_recording(None, "Meeting", recording())
+    library.list_notes = reload  # pyright: ignore[reportAttributeAccessIssue]  # restore the real query
+    assert library.get_note(note.note_id).recordings[0].recording_id == "recording"

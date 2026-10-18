@@ -1,4 +1,5 @@
 import asyncio
+import sqlite3
 from dataclasses import replace
 from datetime import timedelta
 from pathlib import Path
@@ -13,6 +14,7 @@ from kikoe.core.models import (
     AudioFormat,
     ModelSpec,
     Note,
+    NoteSummary,
     Provider,
     Recording,
     RecordingSource,
@@ -673,3 +675,29 @@ async def test_cancel_waits_for_slow_request_cleanup(
             await task
     assert sorted(cleaned) == [0, 1]
     assert not any(path.exists() for path in client.uploads)
+
+
+@run_async
+async def test_a_locked_summary_reload_keeps_the_audio_of_a_saved_import(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, notes: NoteRepository, source: Path
+) -> None:
+    use_converter(monkeypatch, FakeConverter(s(10), size=10))
+    await notes.load()
+    library = notes._library
+    reload = library.list_notes
+
+    def locked() -> tuple[NoteSummary, ...]:
+        other = sqlite3.connect(tmp_path / "library.sqlite3", isolation_level=None)
+        other.execute("BEGIN EXCLUSIVE")
+        try:
+            return reload()
+        finally:
+            other.close()
+
+    library.list_notes = locked  # pyright: ignore[reportAttributeAccessIssue]  # a lock held by another process
+    note = await import_audio(
+        source, None, CHOICE, client=FakeClient(), notes=notes, work_dir=tmp_path
+    )
+    library.list_notes = reload  # pyright: ignore[reportAttributeAccessIssue]  # restore the real query
+    audio_path = library.get_note(note.note_id).recordings[0].audio_path
+    assert audio_path is not None and audio_path.exists()
