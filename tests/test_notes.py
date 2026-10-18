@@ -146,3 +146,34 @@ async def test_a_failed_summary_reload_does_not_fail_the_saved_change(
     note = await notes.add_recording(None, "Meeting", recording())
     library.list_notes = reload  # pyright: ignore[reportAttributeAccessIssue]  # restore the real query
     assert library.get_note(note.note_id).recordings[0].recording_id == "recording"
+
+
+@run_async
+async def test_display_options_are_saved_in_the_order_they_were_chosen(
+    notes: NoteRepository,
+) -> None:
+    note, _events = await note_with_events(notes)
+    library = notes._library
+    save = library.set_display_options
+    first_started = threading.Event()
+    release_first = threading.Event()
+    saved: list[DisplayOptions] = []
+
+    def slow_save(note_id: str, options: DisplayOptions) -> None:
+        if not saved:
+            first_started.set()
+            release_first.wait(5)
+        saved.append(options)
+        save(note_id, options)
+
+    library.set_display_options = slow_save  # pyright: ignore[reportAttributeAccessIssue]  # hold the first write open
+    off, on = DisplayOptions(False, True), DisplayOptions(True, True)
+    first = asyncio.create_task(notes.set_display_options(note.note_id, off))
+    await asyncio.to_thread(first_started.wait, 5)
+    second = asyncio.create_task(notes.set_display_options(note.note_id, on))
+    await asyncio.sleep(0.05)
+    assert saved == []
+    release_first.set()
+    await asyncio.gather(first, second)
+    assert saved == [off, on]
+    assert (await notes.get_note(note.note_id)).display == on

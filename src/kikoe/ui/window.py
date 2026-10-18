@@ -270,8 +270,9 @@ class Window(Adw.ApplicationWindow):
             self._display_action_state("show-timestamps"),
             self._display_action_state("show-speakers"),
         )
-        if options != self._note.display:
-            run_task(self._notes.set_display_options(self._note.note_id, options), self)
+        # Not compared with the open note: it still shows the previous choice until the
+        # save is reloaded, so a quick change back would look like no change at all.
+        run_task(self._notes.set_display_options(self._note.note_id, options), self)
 
     @Gtk.Template.Callback()
     def _on_window_notify_current_breakpoint(

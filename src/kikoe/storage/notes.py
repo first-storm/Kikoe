@@ -51,6 +51,8 @@ class NoteRepository:
         self._library = library
         self._notes: tuple[NoteSummary, ...] = ()
         self._listeners = Listeners[NoteEvent]()
+        self._display_lock = asyncio.Lock()
+        """Saves display choices in the order they were made, so the last one wins."""
 
     @property
     def notes(self) -> tuple[NoteSummary, ...]:
@@ -84,7 +86,9 @@ class NoteRepository:
         await self._change_summaries(note_id, self._library.rename_note, note_id, title.strip())
 
     async def set_display_options(self, note_id: str, options: DisplayOptions) -> None:
-        await self._change_content(note_id, self._library.set_display_options, note_id, options)
+        async with self._display_lock:
+            call = self._library.set_display_options
+            await self._change_content(note_id, call, note_id, options)
 
     async def rename_speaker(self, note_id: str, speaker_id: str, name: str) -> None:
         """Persist a shared person name and refresh all consumers."""

@@ -172,6 +172,7 @@ async def scenario(
     await settle()
     result["opens_selected_note"] = window.note is not None and window.note.note_id == first.note_id
     result["highlights_selected_row"] = window.notes_list.get_selected_row() is not None
+    await display_toggle_scenario(window, notes, first.note_id, result)
     window.search_bar.set_search_mode(True)
     window.search_entry.set_text("Alpha")
     await settle(0.7)
@@ -184,6 +185,17 @@ async def scenario(
     window.search_bar.set_search_mode(False)
     await settle()
     result["leaving_search_restores_the_list"] = window.notes_list.get_row_at_index(1) is not None
+
+
+async def display_toggle_scenario(
+    window: Window, notes: NoteRepository, note_id: str, result: dict[str, object]
+) -> None:
+    """Switch an option off and straight back on; the last choice must be the one saved."""
+    window.activate_action("win.show-timestamps", None)
+    window.activate_action("win.show-timestamps", None)
+    await settle()
+    saved = (await notes.get_note(note_id)).display
+    result["display_toggles_keep_the_last_choice"] = saved.show_timestamps is True
 
 
 async def new_note_retry_scenario(window: Window, result: dict[str, object]) -> None:

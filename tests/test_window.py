@@ -62,6 +62,7 @@ def test_every_window_action_is_registered(outcome: dict[str, object]) -> None:
         "search_narrows_the_list",
         "no_match_placeholder",
         "leaving_search_restores_the_list",
+        "display_toggles_keep_the_last_choice",
     ],
 )
 def test_sidebar_behavior(outcome: dict[str, object], check: str) -> None:
