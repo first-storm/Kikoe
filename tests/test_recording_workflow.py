@@ -529,3 +529,38 @@ async def test_stopping_a_stalled_recognizer_saves_audio_and_releases_the_sessio
     assert final.transcription_state is TranscriptionState.FAILED
     assert closed.is_set() is (phase == "flush")
     assert screen.events[-1] == "finished"
+
+
+@run_async
+async def test_closing_the_window_while_finalizing_cancels_the_stalled_recognizer(
+    notes: NoteRepository, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(realtime, "PCMStream", IdentityConverter)
+    entered = asyncio.Event()
+    closing = False
+
+    class StalledSession(LiveSession):
+        async def flush(self) -> None:
+            entered.set()
+            await asyncio.Event().wait()
+
+    class StalledClient(LiveClient):
+        async def open_realtime(
+            self, model: ModelSpec, options: TranscriptionOptions
+        ) -> RealtimeSession:
+            return StalledSession()
+
+    screen = Screen()
+    workflow = make_workflow(notes, tmp_path, screen, client=StalledClient())
+    workflow._is_closing = lambda: closing
+    await notes.load()
+    task = asyncio.create_task(workflow.run(None, "Memo", LIVE_CHOICE, OPTIONS))
+    async with asyncio.timeout(3):
+        await screen.started.wait()
+        assert workflow.session is not None
+        await workflow.session.stop()
+        await entered.wait()
+        closing = True
+        await task
+    assert screen.saved[-1].recordings[0].transcription_state is TranscriptionState.FAILED
+    assert screen.events[-1] == "finished"

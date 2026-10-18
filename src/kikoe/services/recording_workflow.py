@@ -29,6 +29,9 @@ log = logging.getLogger(__name__)
 LIVE_FINISH_SECONDS = 10
 """How long live recognition may keep finalizing after the microphone stops."""
 
+_CLOSING_POLL_SECONDS = 0.1
+"""How often finalizing checks whether the window is closing."""
+
 
 @dataclass(frozen=True, slots=True)
 class RecordingCallbacks:
@@ -139,15 +142,17 @@ class RecordingWorkflow:
             self._callbacks.live_failed(error)
 
     async def _finish_live(self, live_task: asyncio.Task[None]) -> None:
-        """Give live recognition time to finalize, unless the window is closing."""
-        if self._is_closing():
-            live_task.cancel()
-        else:
-            try:
-                async with asyncio.timeout(LIVE_FINISH_SECONDS):
-                    await asyncio.shield(live_task)
-            except TimeoutError:
+        """Give live recognition time to finalize, unless the window is closing.
+
+        Closing is polled while waiting so a stalled provider cannot hold the window open.
+        """
+        deadline = asyncio.get_running_loop().time() + LIVE_FINISH_SECONDS
+        while not live_task.done():
+            remaining = deadline - asyncio.get_running_loop().time()
+            if self._is_closing() or remaining <= 0:
                 live_task.cancel()
+                break
+            await asyncio.wait({live_task}, timeout=min(remaining, _CLOSING_POLL_SECONDS))
         await asyncio.gather(live_task, return_exceptions=True)
 
     async def _save(self, session: RecordingSession, error: RecorderError | None) -> None:
