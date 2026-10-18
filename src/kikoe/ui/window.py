@@ -461,7 +461,7 @@ class Window(Adw.ApplicationWindow):
         self.search_button.set_sensitive(not activity.busy)
         # Typing in the list starts a search, which must not hide the Stop controls.
         self._sidebar.allow_typing_to_search(not activity.busy)
-        self._editor.blocked = activity.locked
+        self._editor.set_blocked(activity.locked)
         self.note_view.set_editable(not activity.locked)
         self._editor.update_actions()
 

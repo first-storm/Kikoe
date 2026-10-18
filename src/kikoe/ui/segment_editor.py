@@ -35,6 +35,13 @@ class SegmentEditor:
         note_view.connect("times-edited", self._on_note_view_times_edited)
         note_view.connect("segment-left", self._on_note_view_segment_left)
 
+    def set_blocked(self, blocked: bool) -> None:
+        """Refuse edits while work writes to the note, after saving what was just typed."""
+        if blocked and not self.blocked:
+            # Typing not yet committed would be refused once edits are blocked.
+            self._note_view.flush_edits()
+        self.blocked = blocked
+
     @property
     def pending(self) -> bool:
         return self._session.pending
