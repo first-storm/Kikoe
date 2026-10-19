@@ -44,6 +44,20 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.3.3" date="2026-10-19">
+      <description>
+        <p>More reliable recording, transcription and note editing.</p>
+        <ul>
+          <li>Preserve pending edits when recording starts and reset undo history after re-transcription.</li>
+          <li>Keep the selected note open when background transcription or reloads finish.</li>
+          <li>Save live transcription checkpoints in order and retain Mistral's final text.</li>
+          <li>Keep imported audio after a note reload fails and remove copies from cancelled imports.</li>
+          <li>Remember local processing devices and the latest timestamp and speaker display choices.</li>
+          <li>Preserve text after blank lines in subtitle exports.</li>
+          <li>Simplify model and timestamp settings and prevent duplicate model IDs.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.2" date="2026-10-17">
       <description>
         <p>More flexible audio transcription and improved macOS packaging.</p>
