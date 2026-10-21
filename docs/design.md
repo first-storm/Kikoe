@@ -412,6 +412,7 @@ Remove Provider is a full-width destructive row at the end. Existing connection
 fields apply on confirmation, such as Enter or the row's apply button; changing
 API type also applies immediately. Upload-setting rows apply immediately. New
 providers use Add in the header to commit their configuration.
+Add is unavailable while saving; a failed save preserves the form for retry.
 
 Use stock `Adw.NavigationPage`, `Adw.EntryRow`, `Adw.PasswordEntryRow`,
 `Adw.ComboRow`, `Adw.SpinRow` and `Adw.ButtonRow` controls.

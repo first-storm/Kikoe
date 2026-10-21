@@ -67,6 +67,7 @@ class ProviderPage(Adw.NavigationPage):
         self._repository = repository
         self._save_lock = asyncio.Lock()
         self._provider_id = provider_id
+        self._adding = False
         self._models: Gio.ListStore[ModelItem] = Gio.ListStore(item_type=ModelItem)
         self.models_list.bind_model(self._models, self._create_model_row)
         self.api_row.set_model(Gtk.StringList.new([api_label(api) for api in _API_ORDER]))
@@ -222,8 +223,12 @@ class ProviderPage(Adw.NavigationPage):
 
     @Gtk.Template.Callback()
     def _on_add_button_clicked(self, _button: Gtk.Button) -> None:
+        if self._adding:
+            return
         fields = self._valid_fields()
         if fields is not None:
+            self._adding = True
+            self.add_button.set_sensitive(False)
             run_task(self._add(*fields), self)
 
     def _apply_changes(self) -> None:
@@ -248,10 +253,14 @@ class ProviderPage(Adw.NavigationPage):
         return name, api, effective_base_url(api, base_url), api_key
 
     async def _add(self, name: str, api: ApiKind, base_url: str, api_key: str) -> None:
-        await self._repository.add_provider(
-            name, api, base_url, api_key, self._upload_settings(), self._llm_settings()
-        )
-        self._pop()
+        try:
+            await self._repository.add_provider(
+                name, api, base_url, api_key, self._upload_settings(), self._llm_settings()
+            )
+            self._pop()
+        finally:
+            self._adding = False
+            self.add_button.set_sensitive(True)
 
     async def _update(
         self,
