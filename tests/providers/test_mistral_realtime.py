@@ -244,3 +244,20 @@ async def test_closing_while_waiting_for_events_stops_quickly() -> None:
         async with asyncio.timeout(3):
             await session.close()
         assert await waiting == []
+
+
+@run_async
+async def test_session_requests_the_configured_delay() -> None:
+    async with running(record) as server:
+        session = await MistralClient(server.url, "secret").open_realtime(
+            MODEL, TranscriptionOptions(realtime_delay_ms=480)
+        )
+        await session.send(PCM)
+        await asyncio.sleep(0.1)
+        await session.close()
+
+    update = next(m for m in server.received if m["type"] == "session.update")
+    assert update["session"] == {
+        "audio_format": {"encoding": "pcm_s16le", "sample_rate": 16000},
+        "target_streaming_delay_ms": 480,
+    }

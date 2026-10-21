@@ -263,8 +263,17 @@ Language cannot be combined with timestamp granularities,
 so `core.choice.language_dropped` controls omission and the UI explains automatic
 detection. Primary language codes are sent for explicit language tags. The live
 `voxtral-mini-transcribe-realtime-*` family accepts 16 kHz PCM and returns text
-without times or speakers. Without a flush acknowledgement, `MistralSession.flush`
+without times or speakers; Voxtral 3 (`voxtral-mini-transcribe-realtime-3-0`)
+matches that prefix and so inherits the live-only rule, while
+`voxtral-small-transcribe-3-0` and `voxtral-mini-transcribe-3-0` are ordinary file
+models. Without a flush acknowledgement, `MistralSession.flush`
 uses a quiet period, bounded at eight seconds.
+
+Two preferences reach Mistral through `TranscriptionOptions`: `context_bias`
+(custom vocabulary) is sent as `context_bias` on file requests, and
+`realtime_delay_ms` becomes `target_streaming_delay_ms` (80–2400 ms) when a live
+session opens. The SDK's realtime session has no vocabulary field, so live
+sessions do not use the vocabulary. Other providers ignore both options.
 
 Gemini file requests use a cancellable worker event loop because resumable-upload
 retries can block. Cancellation waits for remote-file cleanup before local

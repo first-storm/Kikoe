@@ -7,7 +7,14 @@ from dataclasses import replace
 from gi.repository import Adw, Gio, GObject, Gtk
 
 from kikoe.core.models import Provider
-from kikoe.core.preferences import Preferences, valid_language
+from kikoe.core.preferences import (
+    MAX_REALTIME_DELAY_MS,
+    MIN_REALTIME_DELAY_MS,
+    Preferences,
+    parse_context_bias,
+    valid_context_bias,
+    valid_language,
+)
 from kikoe.i18n import _, ngettext
 from kikoe.media.devices import DeviceKind, list_devices
 from kikoe.paths import data_dir, log_dir
@@ -32,6 +39,9 @@ class PreferencesDialog(Adw.PreferencesDialog):
     providers_list: Gtk.ListBox = Gtk.Template.Child()
     language_row: Adw.EntryRow = Gtk.Template.Child()
     language_error: Gtk.Label = Gtk.Template.Child()
+    vocabulary_row: Adw.EntryRow = Gtk.Template.Child()
+    vocabulary_error: Gtk.Label = Gtk.Template.Child()
+    realtime_delay_row: Adw.SpinRow = Gtk.Template.Child()
     input_device_row: Adw.ComboRow = Gtk.Template.Child()
     output_device_row: Adw.ComboRow = Gtk.Template.Child()
     data_row: Adw.ActionRow = Gtk.Template.Child()
@@ -50,6 +60,9 @@ class PreferencesDialog(Adw.PreferencesDialog):
         self._preferences = preferences
         self._updating = Guard()
         self._shown_language: str | None = None
+        self._shown_vocabulary: tuple[str, ...] | None = None
+        # Blueprint rejects increments next to value, so the coarse steps are set here.
+        self.realtime_delay_row.get_adjustment().configure(0, 0, MAX_REALTIME_DELAY_MS, 20, 200, 0)
         self._device_names: dict[DeviceKind, list[str]] = {"input": [], "output": []}
         self._disconnect_preferences = preferences.connect_changed(self._refresh_defaults)
         run_task(self._show_paths(), self)
@@ -139,6 +152,36 @@ class PreferencesDialog(Adw.PreferencesDialog):
                 self.language_row.set_text(language or "")
                 self._shown_language = language
                 self._show_language_error(False)
+            vocabulary = self._preferences.current.context_bias
+            if vocabulary != self._shown_vocabulary:
+                self.vocabulary_row.set_text(", ".join(vocabulary))
+                self._shown_vocabulary = vocabulary
+                self.vocabulary_error.set_visible(False)
+            self.realtime_delay_row.set_value(self._preferences.current.realtime_delay_ms or 0)
+
+    @Gtk.Template.Callback()
+    def _on_vocabulary_row_apply(self, _row: Adw.EntryRow) -> None:
+        terms = parse_context_bias(self.vocabulary_row.get_text())
+        invalid = not valid_context_bias(terms)
+        self.vocabulary_error.set_visible(invalid)
+        if invalid:
+            return
+        run_task(self._preferences.update(lambda p: replace(p, context_bias=terms)), self)
+
+    @Gtk.Template.Callback()
+    def _on_realtime_delay_row_notify_value(
+        self, _row: Adw.SpinRow, _spec: GObject.ParamSpec
+    ) -> None:
+        if self._updating.active:
+            return
+        value = round(self.realtime_delay_row.get_value())
+        delay = max(value, MIN_REALTIME_DELAY_MS) if value else None
+        if delay is not None:
+            delay = min(delay, MAX_REALTIME_DELAY_MS)
+        if delay != value and delay is not None:
+            with self._updating:
+                self.realtime_delay_row.set_value(delay)
+        run_task(self._preferences.update(lambda p: replace(p, realtime_delay_ms=delay)), self)
 
     @Gtk.Template.Callback()
     def _on_language_row_apply(self, _row: Adw.EntryRow) -> None:

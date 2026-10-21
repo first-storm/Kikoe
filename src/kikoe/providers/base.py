@@ -35,6 +35,10 @@ class TranscriptionOptions(RequestedFeatures):
 
     language: str | None = field(default=None, kw_only=True)
     """BCP 47 tag, or None to let the service detect it."""
+    context_bias: tuple[str, ...] = field(default=(), kw_only=True)
+    """Terms to favor; services without such a setting ignore them."""
+    realtime_delay_ms: int | None = field(default=None, kw_only=True)
+    """Live transcription delay; None keeps the service default."""
 
 
 def file_capabilities(model: ModelSpec) -> ModeCapabilities:

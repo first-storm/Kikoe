@@ -21,7 +21,14 @@ from kikoe.core.models import (
     Provider,
     UploadSettings,
 )
-from kikoe.core.preferences import Preferences, WindowState, valid_language, valid_window_state
+from kikoe.core.preferences import (
+    Preferences,
+    WindowState,
+    valid_context_bias,
+    valid_language,
+    valid_realtime_delay,
+    valid_window_state,
+)
 from kikoe.core.provider_registry import descriptor
 from kikoe.core.upload import validate_upload
 from kikoe.i18n import _
@@ -89,6 +96,8 @@ class SettingsStore:
             "preferences": {
                 "recent_model": settings.preferences.recent_model,
                 "language": settings.preferences.language,
+                "context_bias": list(settings.preferences.context_bias),
+                "realtime_delay_ms": settings.preferences.realtime_delay_ms,
                 "input_device": settings.preferences.input_device,
                 "output_device": settings.preferences.output_device,
             },
@@ -230,6 +239,26 @@ def _decode_mode(value: object) -> ModeCapabilities | None:
     )
 
 
+def _decode_context_bias(value: object) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, list):
+        raise ValueError("invalid context bias")
+    items = cast(list[object], value)
+    terms = tuple(term for term in items if isinstance(term, str))
+    if len(terms) != len(items) or not valid_context_bias(terms):
+        raise ValueError("invalid context bias")
+    return terms
+
+
+def _decode_realtime_delay(value: object) -> int | None:
+    if value is None:
+        return None
+    if not isinstance(value, int) or isinstance(value, bool) or not valid_realtime_delay(value):
+        raise ValueError("invalid realtime delay")
+    return value
+
+
 def _decode_preferences(value: object) -> Preferences:
     fields = _as_dict(value, "preferences")
     language = fields.get("language")
@@ -238,6 +267,8 @@ def _decode_preferences(value: object) -> Preferences:
     return Preferences(
         recent_model=_decode_model_key(fields.get("recent_model")),
         language=language,
+        context_bias=_decode_context_bias(fields.get("context_bias")),
+        realtime_delay_ms=_decode_realtime_delay(fields.get("realtime_delay_ms")),
         input_device=_decode_device(fields.get("input_device")),
         output_device=_decode_device(fields.get("output_device")),
     )

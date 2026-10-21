@@ -76,6 +76,8 @@ class TranscriptionController:
             features.timestamps,
             features.diarization,
             language=self._preferences.current.language,
+            context_bias=self._preferences.current.context_bias,
+            realtime_delay_ms=self._preferences.current.realtime_delay_ms,
         )
 
     # Import

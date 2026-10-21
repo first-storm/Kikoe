@@ -207,7 +207,11 @@ supported by this model”; the earlier choice returns with a supporting model.
 If an upload must omit a configured language because Mistral cannot combine it
 with timestamps or speakers, a visible caption explains automatic language
 detection. It disappears when both options are off and does not apply to live
-recording. Manage Providers and Models… closes the picker and opens Preferences.
+recording.
+
+The Transcription group in Preferences also holds Custom Vocabulary (comma-separated
+terms sent to Mistral file requests) and Live Transcription Delay (80–2400 ms,
+0 for the service default, used by Mistral live sessions). Manage Providers and Models… closes the picker and opens Preferences.
 The model button's tooltip includes the model, provider and capability restrictions.
 
 The most recently selected model is restored on restart, falling back to the first

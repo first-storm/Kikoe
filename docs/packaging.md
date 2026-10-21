@@ -321,7 +321,9 @@ and recovery must preserve audio and confirmed text without automatic upload.
 Mistral's fake-response and loopback tests leave these real-service details to
 confirm: word-timestamp response shape, diarization granularity requirements,
 500 MB/60-minute bounds where documentation differs, stream event order, and the
-realtime quiet-period flush behavior.
+realtime quiet-period flush behavior. For Voxtral 3, also confirm the exact
+model IDs, that `context_bias` is accepted, the `target_streaming_delay_ms` range,
+and what Voxtral 3 realtime returns for diarization.
 
 ### Playback acceptance
 

@@ -15,7 +15,7 @@ template $KikoePreferencesDialog: Adw.PreferencesDialog {
     Adw.PreferencesGroup {
       title: _("Transcription");
       description: _(
-        "Defaults for the next transcription. Language is detected automatically when left empty. To set it, enter a language code such as zh, en, or ja."
+        "Defaults for the next transcription. Language is detected automatically when left empty. To set it, enter a language code such as zh, en, or ja. Custom vocabulary and live delay are used by Mistral Voxtral 3 models."
       );
 
       Adw.EntryRow language_row {
@@ -34,6 +34,36 @@ template $KikoePreferencesDialog: Adw.PreferencesDialog {
         styles [
           "error",
         ]
+      }
+
+      Adw.EntryRow vocabulary_row {
+        title: _("Custom Vocabulary");
+        show-apply-button: true;
+        apply => $_on_vocabulary_row_apply();
+      }
+
+      Label vocabulary_error {
+        label: _("Use up to 100 terms of at most 100 characters each, separated by commas.");
+        wrap: true;
+        xalign: 0;
+        margin-top: 6;
+        visible: false;
+
+        styles [
+          "error",
+        ]
+      }
+
+      Adw.SpinRow realtime_delay_row {
+        title: _("Live Transcription Delay");
+        subtitle: _("In milliseconds. Shorter delays are faster but less accurate. 0 uses the service default.");
+        notify::value => $_on_realtime_delay_row_notify_value();
+
+        adjustment: Adjustment {
+          lower: 0;
+          upper: 2400;
+          value: 0;
+        };
       }
     }
 

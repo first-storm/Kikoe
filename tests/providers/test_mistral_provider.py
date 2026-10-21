@@ -488,3 +488,15 @@ async def test_cancelling_a_stream_closes_the_response(audio: Path) -> None:
     with pytest.raises(asyncio.CancelledError):
         await task
     assert closed.is_set()
+
+
+@run_async
+async def test_context_bias_terms_are_sent_only_when_set(audio: Path) -> None:
+    requests, transport = recorder(body("Hello"))
+    client = client_for(transport)
+
+    await client.transcribe_file(audio, MODEL, TranscriptionOptions(context_bias=("Kikoe", "GTK")))
+    await client.transcribe_file(audio, MODEL, TranscriptionOptions())
+
+    assert fields_named(requests[0], "context_bias") == ["Kikoe", "GTK"]
+    assert fields_named(requests[1], "context_bias") == []

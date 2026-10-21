@@ -46,6 +46,7 @@ class _Request:
     language: str | None
     diarize: bool
     granularities: list[Literal["segment"]]
+    context_bias: list[str]
 
 
 class MistralClient(HttpClient[httpx.AsyncBaseTransport]):
@@ -72,6 +73,7 @@ class MistralClient(HttpClient[httpx.AsyncBaseTransport]):
             _language(features, options.language),
             features.diarization,
             ["segment"] if features.timestamps or features.diarization else [],
+            list(options.context_bias),
         )
         try:
             # The SDK never closes a client it was given, so this adapter owns its lifetime.
@@ -122,6 +124,7 @@ class MistralClient(HttpClient[httpx.AsyncBaseTransport]):
             connection = await sdk.audio.realtime.connect(
                 model=model.model_id,
                 audio_format=AudioFormat(encoding="pcm_s16le", sample_rate=REALTIME_SAMPLE_RATE),
+                target_streaming_delay_ms=options.realtime_delay_ms,
             )
             stack.push_async_callback(connection.close)
             return MistralSession(connection, stack, self._key)
@@ -158,6 +161,7 @@ async def _complete(
         language=request.language or UNSET,
         diarize=request.diarize,
         timestamp_granularities=request.granularities or None,
+        context_bias=request.context_bias or None,
     )
     return parse_mistral(
         result.model_dump(warnings=False),
@@ -179,6 +183,7 @@ async def _stream(
         language=request.language or UNSET,
         diarize=request.diarize,
         timestamp_granularities=request.granularities or None,
+        context_bias=request.context_bias or None,
     )
     async with stream:
         async for event in stream:

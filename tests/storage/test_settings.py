@@ -290,3 +290,38 @@ def test_audio_llm_saved_without_llm_settings_uses_defaults(tmp_path: Path) -> N
     entry = {"id": "p", "name": "X", "api": "audio-llm", "base_url": "https://x"}
     path.write_text(json.dumps({"version": 2, "providers": [entry]}), encoding="utf-8")
     assert SettingsStore(path).load_state().providers[0].llm == LlmSettings()
+
+
+def test_vocabulary_and_realtime_delay_round_trip(tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    from kikoe.core.preferences import Preferences
+    from kikoe.storage.settings import Settings
+
+    store = SettingsStore(tmp_path / "settings.json")
+    preferences = replace(Preferences(), context_bias=("Kikoe", "GTK"), realtime_delay_ms=480)
+    store.save_state(Settings((), preferences))
+    assert store.load_state().preferences == preferences
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("context_bias", "Kikoe"),
+        ("context_bias", [1]),
+        ("context_bias", [""]),
+        ("realtime_delay_ms", 79),
+        ("realtime_delay_ms", True),
+        ("realtime_delay_ms", "480"),
+    ],
+)
+def test_malformed_vocabulary_or_delay_is_reported(
+    tmp_path: Path, field: str, value: object
+) -> None:
+    path = tmp_path / "settings.json"
+    path.write_text(
+        json.dumps({"version": 2, "providers": [], "preferences": {field: value}}),
+        encoding="utf-8",
+    )
+    with pytest.raises(SettingsError):
+        SettingsStore(path).load_state()

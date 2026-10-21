@@ -31,6 +31,9 @@ def catalog() -> ModelCatalog:
         (ApiKind.AUDIO_LLM, "gpt-4o-audio-preview", True, False, False, False),
         (ApiKind.MISTRAL, "voxtral-mini-latest", True, False, True, True),
         (ApiKind.MISTRAL, "voxtral-mini-transcribe-realtime-2602", False, True, False, False),
+        (ApiKind.MISTRAL, "voxtral-small-transcribe-3-0", True, False, True, True),
+        (ApiKind.MISTRAL, "voxtral-mini-transcribe-3-0", True, False, True, True),
+        (ApiKind.MISTRAL, "voxtral-mini-transcribe-realtime-3-0", False, True, False, False),
     ],
 )
 def test_known_api_limits_override_manual_capability_claims(
