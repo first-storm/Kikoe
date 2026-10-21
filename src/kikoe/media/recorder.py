@@ -163,8 +163,9 @@ class SoundDeviceRecorder:
         async with self._lock:
             if self._stopped.is_set():
                 return
-            self._paused.clear()
             await self._control("resume")
+            # Disconnect polling must ignore the inactive device until startup finishes.
+            self._paused.clear()
 
     async def _control(self, operation: str) -> None:
         stream = self._stream

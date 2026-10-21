@@ -1,5 +1,7 @@
 """The PortAudio boundary is tested with a fake device, never a real microphone."""
 
+import asyncio
+import threading
 from collections.abc import Buffer, Callable
 from dataclasses import dataclass
 
@@ -176,3 +178,44 @@ async def test_recorder_falls_back_to_default_when_saved_microphone_is_missing()
     await recorder.start()
     assert backend.device is None
     await recorder.stop()
+
+
+@run_async
+async def test_slow_resume_does_not_report_a_disconnected_microphone(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    backend = FakeBackend()
+    recorder = SoundDeviceRecorder(backend=backend)
+    await recorder.start()
+    await recorder.pause()
+    assert backend.stream is not None
+    stream = backend.stream
+    starting = threading.Event()
+    release = threading.Event()
+
+    def start() -> None:
+        starting.set()
+        if not release.wait(5):
+            raise RuntimeError("Test did not release microphone startup")
+        stream.active = True
+
+    async def consume() -> list[bytes]:
+        return [chunk async for chunk in recorder.chunks()]
+
+    monkeypatch.setattr(stream, "start", start)
+    resume = asyncio.create_task(recorder.resume())
+    consumer = asyncio.create_task(consume())
+    try:
+        assert await asyncio.to_thread(starting.wait, 5)
+        # Keep startup blocked across several disconnect polls.
+        await asyncio.wait({consumer}, timeout=0.3)
+        release.set()
+        await resume
+        stream.feed(b"\x01\x00")
+        await recorder.stop()
+        assert await consumer == [b"\x01\x00"]
+    finally:
+        release.set()
+        await resume
+        await recorder.stop()
+        await asyncio.gather(consumer, return_exceptions=True)
