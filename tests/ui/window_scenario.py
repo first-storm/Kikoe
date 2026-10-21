@@ -187,6 +187,41 @@ async def scenario(
     window.search_bar.set_search_mode(False)
     await settle()
     result["leaving_search_restores_the_list"] = window.notes_list.get_row_at_index(1) is not None
+    await close_retry_scenario(window, result)
+
+
+async def close_retry_scenario(window: Window, result: dict[str, object]) -> None:
+    """An unexpected save failure must leave the window able to retry closing."""
+    dialog = window.get_visible_dialog()
+    if dialog is not None:
+        dialog.force_close()
+        await settle()
+    editor = window._editor
+    original = editor.wait_saved
+
+    async def importing() -> None:
+        await asyncio.Event().wait()
+
+    pending = asyncio.create_task(importing())
+    window._work.import_task = pending
+
+    async def fail() -> None:
+        raise RuntimeError("Simulated shutdown bug")
+
+    editor.wait_saved = fail  # pyright: ignore[reportAttributeAccessIssue]  # inject a shutdown failure
+    window.close()
+    await settle()
+    result["close_failure_allows_retry"] = not window._work.closing
+    error = window.get_visible_dialog()
+    assert isinstance(error, Adw.AlertDialog)
+    error.close()
+    editor.wait_saved = original  # pyright: ignore[reportAttributeAccessIssue]  # restore the real saver
+    await settle()
+    window.close()
+    await settle()
+    result["close_retry_finishes_shutdown"] = not window.get_visible() and pending.cancelled()
+    pending.cancel()
+    await asyncio.gather(pending, return_exceptions=True)
 
 
 async def display_toggle_scenario(

@@ -14,7 +14,6 @@ from kikoe.core.recording import CaptureState
 from kikoe.i18n import _
 from kikoe.media.player import PlaybackError
 from kikoe.services.activity import ActivityTracker
-from kikoe.services.errors import USER_FACING_ERRORS
 from kikoe.services.file_transcription import ClientFactory
 from kikoe.services.playback import Playback
 from kikoe.storage.notes import ContentChanged, NoteEvent, NoteRepository, SummariesChanged
@@ -471,7 +470,7 @@ class Window(Adw.ApplicationWindow):
                 stop_recording=self._recorder.stop,
             )
             self.destroy()
-        except USER_FACING_ERRORS:
+        except BaseException:
             self._work.closing = False
             self.refresh_actions()
             raise
