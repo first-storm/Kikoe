@@ -40,7 +40,10 @@ def validate_provider(name: str, api: ApiKind, base_url: str) -> ProviderError |
         return ProviderError.EMPTY_NAME
     if not base_url.strip():
         return None if descriptor(api).default_base_url else ProviderError.EMPTY_BASE_URL
-    parts = urlsplit(base_url.strip())
+    try:
+        parts = urlsplit(base_url.strip())
+    except ValueError:
+        return ProviderError.INVALID_BASE_URL
     if parts.scheme not in ("http", "https") or not parts.hostname:
         return ProviderError.INVALID_BASE_URL
     return None

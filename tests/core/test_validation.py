@@ -19,7 +19,17 @@ def test_provider_name_must_not_be_blank() -> None:
     assert error is ProviderError.EMPTY_NAME
 
 
-@pytest.mark.parametrize("url", ["ftp://example.com", "example.com", "https://", "http:///x"])
+@pytest.mark.parametrize(
+    "url",
+    [
+        "ftp://example.com",
+        "example.com",
+        "https://",
+        "http:///x",
+        "http://[::1",
+        "http://[not-an-ip]",
+    ],
+)
 def test_provider_url_must_be_http_with_host(url: str) -> None:
     error = validate_provider("Groq", ApiKind.OPENAI_COMPATIBLE, url)
     assert error is ProviderError.INVALID_BASE_URL
@@ -37,6 +47,11 @@ def test_hosted_apis_accept_an_empty_base_url(api: ApiKind) -> None:
 
 def test_valid_provider_has_no_error() -> None:
     assert validate_provider("Groq", ApiKind.OPENAI_COMPATIBLE, GROQ_URL) is None
+
+
+@pytest.mark.parametrize("url", ["http://[::1]:8000", "http://[::1]/v1"])
+def test_valid_ipv6_provider_has_no_error(url: str) -> None:
+    assert validate_provider("IPv6", ApiKind.OPENAI_COMPATIBLE, url) is None
 
 
 def test_effective_base_url_uses_default_when_empty() -> None:

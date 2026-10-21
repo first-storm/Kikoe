@@ -55,3 +55,18 @@ async def test_repeated_add_creates_one_provider_and_failure_can_be_retried(
     page.add_button.emit("clicked")
     await saves[0]
     assert len(repository.configured) == 1
+
+
+def test_invalid_ipv6_shows_an_inline_validation_error(view: NoteView, tmp_path: Path) -> None:
+    from kikoe.ui.provider_page import ProviderPage
+
+    repository = ProviderRepository(open_settings(tmp_path / "settings.json"), FakeSecrets())
+    page = ProviderPage(repository)
+    page.name_row.set_text("IPv6 Provider")
+    page.base_url_row.set_text("http://[::1")
+    assert page._valid_fields() is None
+    assert page.error_label.get_visible()
+    assert page.add_button.get_sensitive()
+    page.base_url_row.set_text("http://[::1]:8000/v1")
+    assert page._valid_fields() is not None
+    assert not page.error_label.get_visible()
