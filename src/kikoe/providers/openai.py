@@ -166,6 +166,11 @@ class OpenAIClient(HttpClient[httpx.AsyncBaseTransport]):
                                 host=self._host, message=event.error.message
                             )
                         )
+                else:
+                    raise TranscriptionError(
+                        _("Realtime transcription failed. Your audio has been kept."),
+                        retryable=True,
+                    )
             return OpenAISession(connection, stack)
         except BaseException:
             await close_stack(stack)

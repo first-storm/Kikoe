@@ -1,5 +1,6 @@
 """Run the real OpenAI SDK realtime handshake against a WebSocket server on the loopback."""
 
+import json
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -54,3 +55,34 @@ async def test_rejected_handshake_reports_the_api_key() -> None:
     async with rejecting(401) as url:
         with pytest.raises(TranscriptionError, match="rejected the API key"):
             await OpenAIClient(url, "secret").open_realtime(MODEL, TranscriptionOptions())
+
+
+@pytest.mark.parametrize("acknowledged", [False, True])
+@run_async
+async def test_realtime_session_requires_the_server_to_acknowledge_configuration(
+    acknowledged: bool,
+) -> None:
+    requests: list[str] = []
+
+    async def handshake(connection: ServerConnection) -> None:
+        message = json.loads(await connection.recv())
+        requests.append(message["type"])
+        if acknowledged:
+            await connection.send(json.dumps({"type": "session.updated"}))
+            await connection.wait_closed()
+        else:
+            await connection.close(code=1000)
+
+    async with serve(handshake, "127.0.0.1", 0) as server:
+        port = int(next(iter(server.sockets)).getsockname()[1])
+        client = OpenAIClient(f"http://127.0.0.1:{port}/v1", "fake-key")
+        if acknowledged:
+            session = await client.open_realtime(MODEL, TranscriptionOptions())
+            await session.close()
+        else:
+            # Close an incorrectly returned session too, so the old implementation leaks nothing.
+            with pytest.raises(TranscriptionError) as caught:
+                session = await client.open_realtime(MODEL, TranscriptionOptions())
+                await session.close()
+            assert caught.value.retryable
+    assert requests == ["session.update"]
