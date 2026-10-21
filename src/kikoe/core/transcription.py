@@ -104,6 +104,7 @@ class LiveTranscript:
     def __init__(self) -> None:
         self._final: dict[str, tuple[Segment, ...]] = {}
         self._preview: tuple[Segment, ...] = ()
+        self._preview_id: str | None = None
 
     @property
     def segments(self) -> tuple[Segment, ...]:
@@ -116,9 +117,12 @@ class LiveTranscript:
     def apply(self, event: TranscriptEvent) -> None:
         if event.final:
             self._final[event.id] = event.segments
-            self._preview = ()
+            if event.id == self._preview_id:
+                self._preview = ()
+                self._preview_id = None
         elif event.id not in self._final:
             self._preview = event.segments
+            self._preview_id = event.id
 
 
 class SpeechBoundary:

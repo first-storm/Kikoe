@@ -381,8 +381,9 @@ OpenAI uses 24 kHz; the other live adapters use 16 kHz. Network delays cannot bl
 the capture writer, and retained audio stays at the device's native rate.
 
 `core.transcription` models interim and final events. Adapters interpret wire
-events; `LiveTranscript` replaces previews and repeated finals. OpenAI completions
-follow committed-item order. Deepgram retains every `is_final` chunk, even before
+events; `LiveTranscript` replaces previews and repeated finals. A final clears
+only its own utterance's preview, preserving a newer utterance still in progress.
+OpenAI completions follow committed-item order. Deepgram retains every `is_final` chunk, even before
 `speech_final`. Gemini restarts its finite receive iterator for each turn.
 Metadata absent from an endpoint is never invented. OpenAI manual commits use PCM
 energy, 500 ms silence and a 15-second speech limit.

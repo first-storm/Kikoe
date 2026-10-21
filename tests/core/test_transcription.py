@@ -27,6 +27,27 @@ def test_final_replaces_preview_and_duplicate_final_without_appending() -> None:
     assert text.preview == ()
 
 
+def test_final_preserves_another_utterances_preview() -> None:
+    text = LiveTranscript()
+    text.apply(TranscriptEvent("B", (Segment("B preview"),), False))
+    text.apply(TranscriptEvent("A", (Segment("A final"),), True))
+    assert text.preview == (Segment("B preview"),)
+    # A repeated final is also unrelated to B's current preview.
+    text.apply(TranscriptEvent("A", (Segment("A revised"),), True))
+    assert text.preview == (Segment("B preview"),)
+    text.apply(TranscriptEvent("B", (Segment("B final"),), True))
+    assert text.preview == ()
+    assert text.segments == (Segment("A revised"), Segment("B final"))
+
+
+def test_final_of_a_replaced_preview_preserves_the_latest_preview() -> None:
+    text = LiveTranscript()
+    text.apply(TranscriptEvent("A", (Segment("A preview"),), False))
+    text.apply(TranscriptEvent("B", (Segment("B preview"),), False))
+    text.apply(TranscriptEvent("A", (Segment("A final"),), True))
+    assert text.preview == (Segment("B preview"),)
+
+
 def test_speaker_zero_is_scoped_without_merging_independent_recordings() -> None:
     source = (Segment("hello", speaker_id="0"), Segment("text"))
     first = scope_speakers(source, "recording-1")
