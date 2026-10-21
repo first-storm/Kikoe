@@ -198,6 +198,26 @@ async def test_installing_an_engine_unpacks_every_component(tmp_path: Path) -> N
     assert _entries(tmp_path / "staging") == []
 
 
+@pytest.mark.parametrize("target", ["", "native"])
+@run_async
+async def test_engine_plain_file_component_installs_alongside_archives(
+    tmp_path: Path, target: str
+) -> None:
+    server = Server()
+    engine = _engine(server)
+    item = server.add("engine.bin", b"engine component", target=target)
+    build = replace(engine.builds[0], components=(item,))
+    engine = replace(engine, builds=(build,))
+    installs = LocalInstalls(tmp_path, server.transport())
+    await installs.install_engine(engine, build, _ignore)
+    folder = installs.engine_dir(engine.engine_id)
+    assert (folder / target / item.filename).read_bytes() == b"engine component"
+    assert (folder / "python" / "pkg" / "__init__.py").is_file()
+    receipt = installs.engine_receipt(engine.engine_id)
+    assert receipt is not None and receipt.build_id == build.build_id
+    assert _entries(tmp_path / "staging") == []
+
+
 @run_async
 async def test_installed_state_survives_a_restart(tmp_path: Path) -> None:
     server = Server()

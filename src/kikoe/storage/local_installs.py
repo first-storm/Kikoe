@@ -113,7 +113,8 @@ class LocalInstalls:
                 file = staging / item.filename
                 await self._download(item, file, on_progress)
                 await asyncio.to_thread(_unpack, item, file, folder)
-                await asyncio.to_thread(file.unlink)
+                if item.archive is not ArchiveKind.FILE:
+                    await asyncio.to_thread(file.unlink)
             receipt = {
                 "version": RECEIPT_VERSION,
                 "engine": engine.engine_id,
