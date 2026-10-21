@@ -95,8 +95,9 @@ digits through the `numeric` style class.
 
 Speaker colors use four GNOME palette slots, assigned by persistent person
 number. Renaming or confidently preserving an identity retains its color.
-Unnamed people appear as Speaker N. Color supplements the name rather than
-being the only way to distinguish a person.
+Unnamed people appear as Speaker N. The Rename Speaker field contains only the
+saved name, remaining empty for an unnamed person; Save requires a nonblank name.
+Color supplements the name rather than being the only way to distinguish a person.
 
 ### Editing text and timestamps
 

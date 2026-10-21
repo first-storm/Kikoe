@@ -7,7 +7,6 @@ from gi.repository import Adw, Gtk
 from kikoe.core.models import Note
 from kikoe.storage.notes import NoteRepository
 from kikoe.ui.dialogs import confirm_discard
-from kikoe.ui.speaker_row import speaker_label
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
 
@@ -25,7 +24,9 @@ class SpeakerEditor(Adw.Dialog):
     ) -> None:
         super().__init__()
         self._notes, self._note, self._person, self._match = notes, note, person, match
-        self.name_row.set_text(speaker_label(note, person))
+        speaker = note.speaker(person)
+        self.name_row.set_text(speaker.name if speaker is not None else "")
+        self._on_name_row_changed(self.name_row)
         initial = self.name_row.get_text()
         confirm_discard(self, lambda: self.name_row.get_text() != initial)
 
