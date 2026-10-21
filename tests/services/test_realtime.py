@@ -22,6 +22,7 @@ from kikoe.core.transcription import (
     TranscriptEvent,
 )
 from kikoe.core.upload import UploadLimits
+from kikoe.media.ffmpeg import FFmpegError
 from kikoe.providers.base import (
     FileTranscriptCallback,
     RealtimeSession,
@@ -248,6 +249,45 @@ async def test_rejected_credentials_are_raised_without_retry_and_keep_the_audio(
     assert not job.complete
     assert client.attempts == 1
     assert snapshots[-1].state is LiveState.INCOMPLETE
+    assert recorded.journal is not None
+    assert recorded.store.pcm_path(recorded.journal).read_bytes() == PCM
+
+
+@pytest.mark.parametrize("phase", ["start", "feed", "chunks"])
+@run_async
+async def test_converter_failure_is_incomplete_without_reconnecting(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, phase: str
+) -> None:
+    class FailingConverter(Converter):
+        @classmethod
+        async def start(cls, input_rate: int, output_rate: int) -> FailingConverter:
+            if phase == "start":
+                raise FFmpegError("Converter failed")
+            return cls()
+
+        async def feed(self, block: bytes) -> None:
+            if phase == "feed":
+                raise FFmpegError("Converter failed")
+            await super().feed(block)
+
+        async def chunks(self) -> AsyncIterator[bytes]:
+            if phase == "chunks":
+                raise FFmpegError("Converter failed")
+            async for block in super().chunks():
+                yield block
+
+    monkeypatch.setattr(realtime, "PCMStream", FailingConverter)
+    recorded = capture(tmp_path, finished=True)
+    snapshots: list[LiveSnapshot] = []
+    client = Client()
+    job = RealtimeRecording(recorded, CHOICE, client, TranscriptionOptions(), snapshots.append)
+    with pytest.raises(FFmpegError, match="Converter failed"):
+        await job.run()
+    assert not job.complete
+    assert client.attempts == 1
+    assert client.sessions[0].closed
+    assert snapshots[-1].state is LiveState.INCOMPLETE
+    assert all(snapshot.state is not LiveState.RECONNECTING for snapshot in snapshots)
     assert recorded.journal is not None
     assert recorded.store.pcm_path(recorded.journal).read_bytes() == PCM
 

@@ -397,6 +397,8 @@ database transaction are durable.
 
 - Retryable failures reconnect after 1, 2, 4, 8 and then 15 seconds.
   Authentication and configuration failures stop retries.
+- A local resampler failure stops live transcription as incomplete and reports
+  the conversion error. Capture continues retaining audio for recovery or retry.
 - Unconfirmed audio replays from the local journal at no more than 1.25 times
   realtime. Previously displayed final text stays visible until replay catches
   up and commits its replacement.

@@ -18,7 +18,7 @@ from kikoe.core.transcription import (
     RealtimeProfile,
     scope_speakers,
 )
-from kikoe.media.ffmpeg import PCMStream
+from kikoe.media.ffmpeg import FFmpegError, PCMStream
 from kikoe.providers.base import (
     RealtimeSession,
     TranscriptionOptions,
@@ -90,6 +90,10 @@ class RealtimeRecording:
                 if self.capture.finished and self._exhausted:
                     self.complete = True
                     return
+            except FFmpegError:
+                # Reopening a network session cannot repair the local converter.
+                self._notify(LiveState.INCOMPLETE)
+                raise
             except Exception as error:
                 failure = sdk_error(error)
                 self._replay_until = max(self._replay_until, self._sent)
