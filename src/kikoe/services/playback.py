@@ -85,5 +85,7 @@ async def _wait_cancelled(task: asyncio.Task[None] | None) -> None:
     try:
         await asyncio.shield(task)
     except asyncio.CancelledError:
-        if not task.cancelled():
+        current = asyncio.current_task()
+        # Both tasks can be cancelled in the same turn; only the child's is expected.
+        if not task.cancelled() or (current is not None and current.cancelling()):
             raise

@@ -100,3 +100,49 @@ async def test_sample_uses_requested_range_and_reports_failure(
     assert calls == [(timedelta(seconds=1.25), timedelta(seconds=2.5), "speaker")]
     assert str(errors[0]) == "device lost"
     assert not playback.pending
+
+
+@run_async
+async def test_stop_during_previous_cleanup_does_not_restart_cancelled_playback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    entered = asyncio.Event()
+    cleanup = asyncio.Event()
+    release = asyncio.Event()
+    calls: list[str] = []
+    tasks: list[asyncio.Task[None]] = []
+
+    async def play(path: Path, **_options: object) -> None:
+        calls.append(path.name)
+        entered.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            cleanup.set()
+            await release.wait()
+
+    def start(coroutine: Coroutine[None, None, None]) -> asyncio.Task[None]:
+        task = asyncio.create_task(coroutine)
+        tasks.append(task)
+        return task
+
+    monkeypatch.setattr("kikoe.services.playback.play_audio", play)
+    playback = Playback(start, lambda _key: None, lambda _error: None)
+    playback.play(Path("A"), "A", 0, None, None)
+    await entered.wait()
+    playback.play(Path("B"), "B", 0, None, None)
+    await cleanup.wait()
+    # The shield completion and our cancellation must reach B in the same loop turn.
+    tasks[0].add_done_callback(lambda _task: playback.stop())
+    release.set()
+    for _ in range(10):
+        await asyncio.sleep(0)
+    observed = calls.copy()
+    playback.stop()
+    stopped = not playback.pending
+    # Direct cancellation bounds cleanup even against the original, broken implementation.
+    tasks[1].cancel()
+    await asyncio.gather(*tasks, return_exceptions=True)
+    await playback.finish()
+    assert observed == ["A"]
+    assert stopped
