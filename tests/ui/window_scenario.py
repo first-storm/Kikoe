@@ -9,6 +9,8 @@ import json
 import sys
 import tempfile
 import threading
+from contextlib import suppress
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -22,6 +24,7 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from kikoe import i18n  # noqa: E402
 from kikoe.core.models import ApiKind, Note, NoteSummary  # noqa: E402
+from kikoe.storage.errors import NoteNotFoundError  # noqa: E402
 from kikoe.storage.library import Library  # noqa: E402
 from kikoe.storage.model_catalog import load_catalog  # noqa: E402
 from kikoe.storage.notes import NoteRepository  # noqa: E402
@@ -175,6 +178,7 @@ async def scenario(
     result["highlights_selected_row"] = window.notes_list.get_selected_row() is not None
     await display_toggle_scenario(window, notes, first.note_id, result)
     await stale_reload_scenario(window, notes, result)
+    await failed_read_scenario(window, notes, result)
     window.search_bar.set_search_mode(True)
     window.search_entry.set_text("Alpha")
     await settle(0.7)
@@ -188,6 +192,23 @@ async def scenario(
     await settle()
     result["leaving_search_restores_the_list"] = window.notes_list.get_row_at_index(1) is not None
     await close_retry_scenario(window, result)
+
+
+async def failed_read_scenario(
+    window: Window, notes: NoteRepository, result: dict[str, object]
+) -> None:
+    """A missing note must not prevent future content notifications from refreshing the view."""
+    current = window.note
+    assert current is not None
+    with suppress(NoteNotFoundError):
+        await window._open_note("missing-note")
+    display = replace(current.display, show_speakers=not current.display.show_speakers)
+    await notes.set_display_options(current.note_id, display)
+    await settle()
+    shown = window.note
+    result["failed_note_read_allows_automatic_reload"] = (
+        shown is not None and shown.display == display
+    )
 
 
 async def close_retry_scenario(window: Window, result: dict[str, object]) -> None:

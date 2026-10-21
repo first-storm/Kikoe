@@ -492,6 +492,10 @@ finish. An import already cancelling is awaited without cancelling it again, so
 its asynchronous cleanup can finish. Saved-note callbacks
 carry note identity so an old write cannot replace a newly selected note. Export and shutdown wait for pending edits.
 
+`core.open_requests` tags note reads with the current selection generation.
+Failed or cancelled reads release their own pending selection so automatic
+reloads can continue; older reads cannot release or replace a newer selection.
+
 `ui.note_view` renders a flat `Gtk.ListView` of recording headers and segments.
 Only visible rows need widgets. Reusable items, hidden spare rows and a bounded
 widget cache avoid rebuilding the list on note changes or sidebar folding. Visible

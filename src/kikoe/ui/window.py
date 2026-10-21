@@ -352,11 +352,16 @@ class Window(Adw.ApplicationWindow):
 
     async def _open_note(self, note_id: str, *, reload: bool = False) -> None:
         """Show ``note_id``; a ``reload`` yields to a newer request to open another note."""
-        if not self._open_requests.start(note_id, reload=reload):
+        request = self._open_requests.start(note_id, reload=reload)
+        if request is None:
             return
-        note = await self._editor.read_note(note_id)
+        try:
+            note = await self._editor.read_note(note_id)
+        except BaseException:
+            self._open_requests.cancel(request)
+            raise
         open_id = self._note.note_id if self._note else None
-        if not self._open_requests.finish(note_id, reload=reload, open_id=open_id):
+        if not self._open_requests.finish(request, open_id=open_id):
             return
         current = self._recorder.note_id or (self._note.note_id if self._note else None)
         if not self._switch_locked() or note_id == current:
