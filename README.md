@@ -4,6 +4,8 @@
 
 # Kikoe
 
+[![Please do not theme this app](https://stopthemingmy.app/badge.svg)](https://stopthemingmy.app/)
+
 **Your conversations, turned into useful notes.**
 
 Record a meeting, import an interview, or capture a voice memo. Kikoe turns audio
