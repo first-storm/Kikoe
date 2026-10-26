@@ -18,6 +18,7 @@ from kikoe.providers.base import (
     FileTranscriptCallback,
     TranscriptionError,
     TranscriptionOptions,
+    consume_file_stream,
     file_capabilities,
 )
 from kikoe.providers.chat_file_stream import ChatFileTranscript, completed_text
@@ -78,13 +79,7 @@ class AudioLlmClient(FileOnlyClient[httpx.AsyncBaseTransport]):
                     transcript = ChatFileTranscript(self._host, allow_empty=True)
                     stream = await create(stream=True)
                     async with stream:
-                        async for event in stream:
-                            changed = transcript.apply(event)
-                            if changed and on_update is not None:
-                                on_update(transcript.snapshot)
-                            if transcript.finished:
-                                break
-                    return transcript.result()
+                        return await consume_file_stream(stream, transcript, on_update)
                 completion = await create(stream=False)
                 if not completion.choices:
                     raise unreadable(self._host)

@@ -25,6 +25,7 @@ from kikoe.providers.base import (
     TranscriptionError,
     TranscriptionOptions,
     close_stack,
+    consume_file_stream,
     file_capabilities,
 )
 from kikoe.providers.errors import body_detail, redact, status_error, unreadable
@@ -186,13 +187,7 @@ async def _stream(
         context_bias=request.context_bias or None,
     )
     async with stream:
-        async for event in stream:
-            transcript.apply(event.data)
-            if on_update is not None:
-                on_update(transcript.snapshot)
-            if transcript.finished:
-                break
-    return transcript.result()
+        return await consume_file_stream(stream, transcript, on_update)
 
 
 def _language(features: RequestedFeatures, language: str | None) -> str | None:

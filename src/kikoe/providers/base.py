@@ -54,6 +54,66 @@ class TranscriptionError(Exception):
         self.retryable = retryable
 
 
+class FileTranscript[E]:
+    """Accumulate one provider's streaming file events until it confirms completion.
+
+    Only the provider's own completion event proves the text is final; EOF, cancellation
+    and dropped connections do not. Subclasses decode their SDK's events and call
+    :meth:`commit` once.
+    """
+
+    _result: tuple[Segment, ...] | None = None
+
+    def apply(self, event: E) -> bool:
+        """Handle one event and report whether the visible snapshot changed."""
+        raise NotImplementedError
+
+    def committed(self) -> tuple[Segment, ...]:
+        """Segments the provider has finalized during the stream."""
+        return ()
+
+    def preview(self) -> tuple[Segment, ...]:
+        """Text that stays a preview until the completion event arrives."""
+        return ()
+
+    @property
+    def finished(self) -> bool:
+        """Whether the provider's completion event has been seen."""
+        return self._result is not None
+
+    @property
+    def snapshot(self) -> FileTranscriptSnapshot:
+        if self._result is not None:
+            return FileTranscriptSnapshot(self._result)
+        return FileTranscriptSnapshot(self.committed(), self.preview())
+
+    def result(self) -> tuple[Segment, ...]:
+        """The committed transcript; EOF alone is not a completion event."""
+        if self._result is None:
+            raise TranscriptionError(
+                _("Transcription ended before it was complete. Try again."), retryable=True
+            )
+        return self._result
+
+    def commit(self, segments: tuple[Segment, ...]) -> None:
+        """Record the completion event; later events cannot change the result."""
+        self._result = segments
+
+
+async def consume_file_stream[E](
+    events: AsyncIterator[E],
+    transcript: FileTranscript[E],
+    on_update: FileTranscriptCallback | None = None,
+) -> tuple[Segment, ...]:
+    """Drive an SDK stream into ``transcript``; the caller still owns closing it."""
+    async for event in events:
+        if transcript.apply(event) and on_update is not None:
+            on_update(transcript.snapshot)
+        if transcript.finished:
+            break
+    return transcript.result()
+
+
 class RealtimeSession(Protocol):
     """One SDK connection; reconnection and durable audio belong to the service layer."""
 

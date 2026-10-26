@@ -28,6 +28,7 @@ from kikoe.providers.base import (
     TranscriptionError,
     TranscriptionOptions,
     close_stack,
+    consume_file_stream,
     file_capabilities,
 )
 from kikoe.providers.errors import openai_error, status_error, unreadable
@@ -95,13 +96,7 @@ class OpenAIClient(HttpClient[httpx.AsyncBaseTransport]):
                         chunking_strategy="auto" if caps.diarization else omit,
                     )
                     async with stream:
-                        async for event in stream:
-                            transcript.apply(event)
-                            if on_update is not None:
-                                on_update(transcript.snapshot)
-                            if event.type == "transcript.text.done":
-                                break
-                    return transcript.result()
+                        return await consume_file_stream(stream, transcript, on_update)
                 if structured:
                     result = await create(
                         response_format="diarized_json", stream=False, chunking_strategy="auto"

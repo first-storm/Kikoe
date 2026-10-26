@@ -4,9 +4,8 @@ from openai.types.chat import ChatCompletionChunk
 
 from kikoe.core.llm_prompt import clean_transcript
 from kikoe.core.models import Segment
-from kikoe.core.transcription import FileTranscriptSnapshot
 from kikoe.i18n import _
-from kikoe.providers.base import TranscriptionError
+from kikoe.providers.base import FileTranscript, TranscriptionError
 from kikoe.providers.errors import unreadable
 
 
@@ -41,14 +40,13 @@ def completed_text(
             raise unreadable(host)
 
 
-class ChatFileTranscript:
+class ChatFileTranscript(FileTranscript[ChatCompletionChunk]):
     """Text deltas remain previews until the first choice ends with ``stop``."""
 
     def __init__(self, host: str, *, allow_empty: bool = False) -> None:
         self._host = host
         self._allow_empty = allow_empty
         self._text = ""
-        self._result: tuple[Segment, ...] | None = None
 
     def apply(self, event: ChatCompletionChunk) -> bool:
         """Ignore metadata events and return whether the visible snapshot changed."""
@@ -61,27 +59,11 @@ class ChatFileTranscript:
         """Append one delta; return whether the visible snapshot changed."""
         self._text += delta
         if finish_reason is not None:
-            self._result = completed_text(
-                self._text, finish_reason, self._host, allow_empty=self._allow_empty
+            self.commit(
+                completed_text(self._text, finish_reason, self._host, allow_empty=self._allow_empty)
             )
             return True
         return bool(delta)
 
-    @property
-    def finished(self) -> bool:
-        return self._result is not None
-
-    @property
-    def snapshot(self) -> FileTranscriptSnapshot:
-        if self._result is not None:
-            return FileTranscriptSnapshot(self._result)
-        preview = (Segment(self._text),) if self._text.strip() else ()
-        return FileTranscriptSnapshot(preview=preview)
-
-    def result(self) -> tuple[Segment, ...]:
-        """A clean SSE EOF alone does not prove the transcription is complete."""
-        if self._result is None:
-            raise TranscriptionError(
-                _("Transcription ended before it was complete. Try again."), retryable=True
-            )
-        return self._result
+    def preview(self) -> tuple[Segment, ...]:
+        return (Segment(self._text),) if self._text.strip() else ()

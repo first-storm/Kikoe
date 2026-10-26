@@ -234,6 +234,13 @@ code fence. An empty stored prompt means the built-in one. Both formats share
 OpenAI names (`MAX_TOKENS` → `length`, safety reasons → `content_filter`). Unlike
 MiMo, an empty successful reply is a silent chunk, not an error.
 
+All streaming adapters drive their SDK stream through
+`providers.base.consume_file_stream`. It feeds each event to a
+`providers.base.FileTranscript`, forwards a snapshot only when the visible text
+changed, stops at the provider's completion event and then returns the committed
+segments. A subclass decodes only its own event types and calls `commit` once;
+EOF, cancellation and dropped connections are never treated as success.
+
 `FileTranscriptSnapshot` separates completed segments from temporary previews.
 Callbacks pass through the shared service, which adds chunk offsets, scopes
 speakers and includes earlier completed chunks. Parallel previews expose only
@@ -579,7 +586,9 @@ must not branch on `ApiKind`; architecture tests enforce this outside the regist
    URL, upload policy, language restrictions, hints and SDK logger names.
 3. Implement `TranscriptionProvider` in `providers/<name>.py`, using
    `providers.base.HttpClient` or `FileOnlyClient` as appropriate. Register it in
-   `providers.factory.CLIENTS` and declare the realtime profile when needed.
+   `providers.factory.CLIENTS` and declare the realtime profile when needed. A
+   streaming response needs a `providers.base.FileTranscript` subclass driven by
+   `consume_file_stream`, not its own loop or EOF check.
 4. Add the API fallback and model rules to `storage/model_presets.json`.
 5. Test the client with recorded or fake responses. Registry, factory and profile
    completeness tests cover integration. Update translation catalogs with
