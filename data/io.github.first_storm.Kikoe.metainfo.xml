@@ -44,6 +44,18 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.3.4" date="2026-10-21">
+      <description>
+        <p>Voxtral 3 support and more reliable recording and transcription.</p>
+        <ul>
+          <li>Support Voxtral 3 with custom vocabulary and configurable live delay.</li>
+          <li>Preserve live previews and handle realtime setup and audio conversion failures reliably.</li>
+          <li>Improve pause, resume, playback cancellation and shutdown recovery.</li>
+          <li>Fix note loading races, repeated provider creation and provider URL validation.</li>
+          <li>Keep automatic speaker labels out of saved names and preserve moved engine files.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.3" date="2026-10-19">
       <description>
         <p>More reliable recording, transcription and note editing.</p>
