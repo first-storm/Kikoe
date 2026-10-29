@@ -353,7 +353,7 @@ Regional language tags use their primary subtag (for example, `en-GB` becomes `e
 MOSS-Transcribe-Diarize is available in Q8_0 (987 MB) and Q5_K_M (700 MB),
 with English/Chinese file transcription, automatic language selection, segment
 timestamps and native speaker attribution; it does not support realtime.
-The [transcribe.cpp 0.4.0 model documentation](https://github.com/handy-computer/transcribe.cpp/blob/v0.4.0/docs/models/moss-transcribe-diarize.md)
+The [transcribe.cpp 0.4.1 model documentation](https://github.com/handy-computer/transcribe.cpp/blob/v0.4.1/docs/models/moss-transcribe-diarize.md)
 describes the supported checkpoint and its memory use. Kikoe conservatively splits
 MOSS inputs at 600 seconds through the existing upload pipeline. Speaker labels are
 local to each chunk; identities are not matched across chunks.
