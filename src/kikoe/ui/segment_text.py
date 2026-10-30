@@ -6,7 +6,9 @@ corrects itself after it has been drawn. This view lays its text out with Pango 
 offered width, line by line as the text view does, so rows are right in the first frame.
 """
 
-from gi.repository import Gtk, Pango
+from collections.abc import Sequence
+
+from gi.repository import Adw, Gdk, Gtk, Pango
 
 from kikoe.ui.templates import ui_file
 
@@ -14,6 +16,9 @@ _CURSOR_SPACE = 1
 """Pixels the text view keeps free at the end of each line for the caret."""
 _MEASURED_WIDTHS = 4
 """Heights kept per text; resizing the window asks about a new width every frame."""
+_MATCH_ALPHA = 0.2
+_CURRENT_MATCH_ALPHA = 0.6
+"""Opacity of the accent color behind found text, and behind the current match."""
 
 
 @Gtk.Template(filename=ui_file("segment_text"))
@@ -25,6 +30,8 @@ class SegmentText(Gtk.TextView):
         self._preedit = ""
         self._heights: dict[tuple[int, str], int] = {}
         """Heights of the current text by (width, font); width -1 is unlimited."""
+        self._match_tags: tuple[Gtk.TextTag, Gtk.TextTag] | None = None
+        self._match_accent: Gdk.RGBA | None = None
         self.get_buffer().connect("changed", self._on_buffer_changed)
         self.connect("preedit-changed", self._on_preedit_changed)
 
@@ -67,6 +74,54 @@ class SegmentText(Gtk.TextView):
             height += self.get_pixels_above_lines() + self.get_pixels_below_lines()
         self._heights[key] = height
         return height
+
+    def show_matches(
+        self, text: str, ranges: Sequence[tuple[int, int]], current: tuple[int, int] | None
+    ) -> None:
+        """Tint the ``ranges`` found in ``text``; the current match is also underlined.
+
+        Nothing changes while the view holds other text, e.g. typing not saved yet: the
+        tints already shown move along with that typing.
+        """
+        if self._match_tags is None and not ranges:
+            return
+        buffer = self.get_buffer()
+        start, end = buffer.get_bounds()
+        if buffer.get_text(start, end, False) != text:
+            return
+        match, current_match = self._find_tags()
+        buffer.remove_tag(match, start, end)
+        buffer.remove_tag(current_match, start, end)
+        for first, last in ranges:
+            buffer.apply_tag(
+                current_match if (first, last) == current else match,
+                buffer.get_iter_at_offset(first),
+                buffer.get_iter_at_offset(last),
+            )
+
+    def _find_tags(self) -> tuple[Gtk.TextTag, Gtk.TextTag]:
+        """The tags that tint matches, in the current accent color.
+
+        Text tags cannot use CSS, so the color is read from the style manager. Only the
+        background and underline change: they keep the measured height right.
+        """
+        if self._match_tags is None:
+            match = Gtk.TextTag(name="find-match")
+            current = Gtk.TextTag(name="find-current", underline=Pango.Underline.SINGLE)
+            table = self.get_buffer().get_tag_table()
+            table.add(match)
+            table.add(current)
+            self._match_tags = match, current
+        accent = Adw.StyleManager.get_default().get_accent_color_rgba()
+        if self._match_accent is None or not accent.equal(self._match_accent):
+            self._match_accent = accent
+            for tag, alpha in zip(
+                self._match_tags, (_MATCH_ALPHA, _CURRENT_MATCH_ALPHA), strict=True
+            ):
+                color = accent.copy()
+                color.alpha = alpha
+                tag.set_property("background-rgba", color)
+        return self._match_tags
 
     def _laid_out_text(self) -> str:
         """The text, including what an input method is still composing at the caret."""

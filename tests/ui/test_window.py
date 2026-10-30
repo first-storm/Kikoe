@@ -71,3 +71,19 @@ def test_every_window_action_is_registered(outcome: dict[str, object]) -> None:
 )
 def test_sidebar_behavior(outcome: dict[str, object], check: str) -> None:
     assert outcome.get(check) is True
+
+
+@pytest.mark.parametrize(
+    "check",
+    [
+        "find_counts_the_matches_in_the_note",
+        "replace_continues_after_the_inserted_text",
+        "each_replace_is_its_own_undo_step",
+        "replace_all_saves_every_match",
+        "one_undo_reverts_replace_all",
+        "an_invalid_pattern_is_reported",
+        "closing_find_clears_the_matches",
+    ],
+)
+def test_find_and_replace_behavior(outcome: dict[str, object], check: str) -> None:
+    assert outcome.get(check) is True

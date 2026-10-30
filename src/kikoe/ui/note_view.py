@@ -22,6 +22,7 @@ from kikoe.core.transcription import FileTranscriptSnapshot, LiveSnapshot, LiveS
 from kikoe.i18n import _
 from kikoe.ui.items import TranscriptItem
 from kikoe.ui.labels import live_status_label
+from kikoe.ui.match_highlights import MatchHighlights
 from kikoe.ui.recording_view import RecordingView
 from kikoe.ui.row_focus import RowFocus
 from kikoe.ui.speaker_banner import update_speaker_banner
@@ -82,7 +83,7 @@ class NoteView(Adw.BreakpointBin):
         """Prepared or recycled widgets kept outside the list until they are needed."""
         self._stale = StaleRows(self.transcript_list, self._bound, self._bind_row)
         """Rows off screen still showing the previous note."""
-        self._focus = RowFocus(
+        self.rows = RowFocus(
             self._items,
             self._segments,
             self.transcript_list,
@@ -90,6 +91,9 @@ class NoteView(Adw.BreakpointBin):
             self._stale,
             self._bind_row,
         )
+        """Moves the caret or the view to a segment."""
+        self.matches = MatchHighlights(self._bound, self._stale)
+        """Find matches tinted in the rows."""
         self._renderer = StreamRenderer(
             self._items,
             self.transcript_scroll,
@@ -251,10 +255,10 @@ class NoteView(Adw.BreakpointBin):
 
     def focus_segment(self, recording_id: str, position: int) -> None:
         """Scroll to a segment and put the caret at the end of its text."""
-        self._focus.focus_segment(recording_id, position)
+        self.rows.focus_segment(recording_id, position)
 
     def _on_row_navigate(self, row: TranscriptRow, step: int) -> None:
-        self._focus.navigate(row, step)
+        self.rows.navigate(row, step)
 
     def _on_row_text_committed(self, row: TranscriptRow, text: str) -> None:
         item = None if row in self._stale else self._bound.get(row)
@@ -486,5 +490,6 @@ class NoteView(Adw.BreakpointBin):
             compact=self._compact,
             editable=self._editable,
         )
+        self.matches.apply(row, data)
         if data.segment is None:
             row.set_playing(data.recording.recording_id == self._playing)

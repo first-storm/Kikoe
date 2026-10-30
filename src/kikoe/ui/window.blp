@@ -184,6 +184,9 @@ template $KikoeWindow: Adw.ApplicationWindow {
             }
           }
 
+          [top]
+          Adw.Bin find_bar_slot {}
+
           content: Stack content_stack {
             hhomogeneous: false;
 
@@ -309,6 +312,11 @@ menu note_menu {
     item {
       label: _("_Rename…");
       action: "win.rename-note";
+    }
+
+    item {
+      label: _("_Find and Replace");
+      action: "win.find-replace";
     }
 
     item {

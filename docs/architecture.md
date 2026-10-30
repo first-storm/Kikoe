@@ -92,9 +92,10 @@ The database modules have separate responsibilities:
 (creating, renaming or deleting notes, adding or deleting recordings) and then
 emits `SummariesChanged`; the sidebar refreshes. Display options, speaker names
 and matches, and transcription results emit `ContentChanged`, which reloads only
-the open note. Segment edits emit nothing and are a single `UPDATE` that checks
-the segment belongs to the note: the editor already shows them, and no summary
-depends on segment text. An active search therefore keeps its results until the
+the open note. Segment edits emit nothing: each save is one transaction of
+`UPDATE`s (`Library.update_segments`) that checks the segments belong to the
+note, so Replace All is saved entirely or not at all. The editor already shows
+the edits, and no summary depends on segment text. An active search therefore keeps its results until the
 query changes.
 
 `PRAGMA user_version` records the schema version. Migrations run in order at
@@ -479,6 +480,7 @@ uses a smaller set of callbacks.
 | `ui.note_sidebar` | Notes list, search, context menu and selection |
 | `ui.note_actions` | Create, rename and delete notes and recordings |
 | `ui.segment_editor` | In-place edits and note-wide Undo/Redo through `services.editing.EditingSession` |
+| `ui.find_controller`, `ui.find_bar` | Find and Replace in the open note through `core.find_replace` and the segment editor |
 | `ui.export_controller`, `ui.file_dialogs` | Copy, export and save dialogs |
 | `ui.speaker_controller` | Speaker naming, matching and samples through `services.playback.Playback` |
 | `ui.transcription_controller` | Import, retry and re-transcription through the file workflow |
@@ -515,9 +517,12 @@ in the background one write at a time, and lays values not saved yet over a note
 read again meanwhile. The window then updates only the edited row:
 `ui.transcript_rows.SegmentIndex` finds it from its recording header's position,
 so an edit's cost does not grow with the transcript. `core.edit_history` owns
-history, `core.transcript_rows` decides row changes, `ui.transcript_rows` builds
-rows and overlays, `ui.stale_rows` binds off-screen rows over later frames, and
-`ui.row_focus` moves the caret.
+history; a step is one segment's typing or several segments changed together
+(`EditingSession.edit_texts`, used by Replace and Replace All), which typing never
+joins and which is saved in one write. `core.transcript_rows` decides row
+changes, `ui.transcript_rows` builds rows and overlays, `ui.stale_rows` binds
+off-screen rows over later frames, and `ui.row_focus` moves the caret or scrolls
+to a segment.
 
 `ui.file_transcription.FileTranscriptionDisplay` owns preview snapshots and refresh
 scheduling, restoring the latest preview when the target note is revisited.
@@ -540,6 +545,15 @@ function over titles and transcript text. Wildcards are literal. Searches scan
 text without an FTS index and return only matching summaries in newest-first
 order. `NoteRepository.search` runs off the GTK thread. `ui.search.NoteSearch`
 debounces input by 200 ms, cancels old tasks and rejects stale results.
+
+Find and Replace searches the open note in memory with Python `re`
+(`core.find_replace`): literal text is escaped, whole words use `\w` lookarounds
+so words ending in punctuation still match, and ignoring case uses `re.IGNORECASE`
+simple case folding rather than the `casefold` of note search. Matches come from
+the saved note, so `ui.find_controller` finds them again after every change,
+coalesced into one idle pass so Replace All and its Undo do not search once per
+segment. `ui.match_highlights` keeps each segment's ranges with the text they
+were found in and tints rows as they bind, skipping text that has changed since.
 
 Model selection keeps the current choice when valid, then tries recent,
 first configured model, and finally none (`core.choice.resolve_choice`). Explicit

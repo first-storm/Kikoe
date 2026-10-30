@@ -11,6 +11,7 @@ import tempfile
 import threading
 from contextlib import suppress
 from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -23,7 +24,14 @@ from gi.events import GLibEventLoopPolicy  # noqa: E402
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from kikoe import i18n  # noqa: E402
-from kikoe.core.models import ApiKind, Note, NoteSummary  # noqa: E402
+from kikoe.core.models import (  # noqa: E402
+    ApiKind,
+    Note,
+    NoteSummary,
+    Recording,
+    RecordingSource,
+    Segment,
+)
 from kikoe.storage.errors import NoteNotFoundError  # noqa: E402
 from kikoe.storage.library import Library  # noqa: E402
 from kikoe.storage.model_catalog import load_catalog  # noqa: E402
@@ -81,6 +89,14 @@ ACTIONS = (
     "retranscribe-recording",
     "delete-recording",
     "search-notes",
+    "find-replace",
+    "find-next",
+    "find-previous",
+    "replace",
+    "replace-all",
+    "find-match-case",
+    "find-whole-words",
+    "find-regex",
 )
 
 
@@ -191,7 +207,71 @@ async def scenario(
     window.search_bar.set_search_mode(False)
     await settle()
     result["leaving_search_restores_the_list"] = window.notes_list.get_row_at_index(1) is not None
+    await find_replace_scenario(window, notes, result)
     await close_retry_scenario(window, result)
+
+
+async def find_replace_scenario(
+    window: Window, notes: NoteRepository, result: dict[str, object]
+) -> None:
+    """Replace one match at a time and then all of them, undoing each step."""
+    original = ["The cat sat.", "A Cat and a cat.", "cat"]
+    recording = Recording(
+        "find",
+        datetime.now(UTC),
+        timedelta(seconds=3),
+        RecordingSource.IMPORTED,
+        "Cloud",
+        "Model",
+        tuple(Segment(text) for text in original),
+    )
+    note = await notes.add_recording(None, "Cats", recording)
+    await settle()
+    window.select_note(note.note_id)
+    await settle()
+    bar = window.find_bar
+
+    async def saved() -> list[str]:
+        return [s.text for s in (await notes.get_note(note.note_id)).recordings[0].segments]
+
+    window.activate_action("win.find-replace", None)
+    bar.find_entry.set_text("cat")
+    await settle()
+    result["find_counts_the_matches_in_the_note"] = (
+        bar.is_open and bar.match_label.get_label() == "1 of 4"
+    )
+    bar.replace_entry.set_text("cats")
+    window.activate_action("win.replace", None)
+    window.activate_action("win.replace", None)
+    await settle()
+    result["replace_continues_after_the_inserted_text"] = (
+        await saved() == ["The cats sat.", "A cats and a cat.", "cat"]
+        and bar.match_label.get_label() == "3 of 4"
+    )
+    window.activate_action("win.undo", None)
+    window.activate_action("win.undo", None)
+    await settle()
+    result["each_replace_is_its_own_undo_step"] = await saved() == original
+    bar.replace_entry.set_text("dog")
+    window.activate_action("win.replace-all", None)
+    await settle()
+    result["replace_all_saves_every_match"] = (
+        await saved() == ["The dog sat.", "A dog and a dog.", "dog"]
+        and bar.match_label.get_label() == "No matches"
+    )
+    window.activate_action("win.undo", None)
+    await settle()
+    result["one_undo_reverts_replace_all"] = await saved() == original
+    window.activate_action("win.find-regex", None)
+    bar.find_entry.set_text("(")
+    await settle()
+    result["an_invalid_pattern_is_reported"] = bar.match_label.get_label() == "Invalid pattern"
+    window.activate_action("win.find-regex", None)
+    bar.close()
+    await settle()
+    result["closing_find_clears_the_matches"] = not window.lookup_action("find-next").get_enabled()  # pyright: ignore[reportOptionalMemberAccess]  # registered by the window
+    await notes.delete_note(note.note_id)
+    await settle()
 
 
 async def failed_read_scenario(

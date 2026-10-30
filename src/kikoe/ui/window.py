@@ -23,6 +23,8 @@ from kikoe.storage.window_state import WindowStateStore
 from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.display_actions import DisplayActions
 from kikoe.ui.export_controller import ExportController
+from kikoe.ui.find_bar import FindBar
+from kikoe.ui.find_controller import FindController
 from kikoe.ui.labels import note_title_subtitle
 from kikoe.ui.note_actions import NoteActions
 from kikoe.ui.note_sidebar import NoteSidebar
@@ -39,6 +41,7 @@ log = logging.getLogger(__name__)
 
 _NOTE_ACTIONS = (
     "rename-note",
+    "find-replace",
     "copy-all-text",
     "delete-note",
     "export",
@@ -64,6 +67,7 @@ class Window(Adw.ApplicationWindow):
     note_menu_button: Gtk.MenuButton = Gtk.Template.Child()
     display_options_button: Gtk.MenuButton = Gtk.Template.Child()
     content_stack: Gtk.Stack = Gtk.Template.Child()
+    find_bar_slot: Adw.Bin = Gtk.Template.Child()
     note_view_slot: Adw.Bin = Gtk.Template.Child()
     bottom_bar_slot: Adw.Bin = Gtk.Template.Child()
 
@@ -116,12 +120,15 @@ class Window(Adw.ApplicationWindow):
         self.note_view_slot.set_child(self.note_view)
         self.bottom_bar = BottomBar()
         self.bottom_bar_slot.set_child(self.bottom_bar)
+        self.find_bar = FindBar()
+        self.find_bar_slot.set_child(self.find_bar)
 
     def _create_controllers(self) -> None:
         """Each controller owns one kind of work; the window only wires them together."""
         notes, providers, preferences = self._notes, self._providers, self._preferences
         start_task = partial(run_task, parent=self)
         self._editor = SegmentEditor(self, notes, self.note_view, start_task)
+        self._find = FindController(self, self, self.find_bar, self.note_view, self._editor)
         self._export = ExportController(
             self, self, self.note_view.flush_edits, self._editor.wait_saved
         )
@@ -209,6 +216,10 @@ class Window(Adw.ApplicationWindow):
             ("export", ["<primary><shift>e"]),
             ("undo", ["<primary>z"]),
             ("redo", ["<primary><shift>z", "<primary>y"]),
+            # macOS keeps Command+H for hiding the app, so it also gets Option+Command+F.
+            ("find-replace", ["<primary>h", "<primary><alt>f"]),
+            ("find-next", ["<primary>g"]),
+            ("find-previous", ["<primary><shift>g"]),
         ):
             application.set_accels_for_action(f"win.{action}", keys)
 
@@ -376,6 +387,7 @@ class Window(Adw.ApplicationWindow):
             self._editor.forget()
         note = self._editor.set_note(note)
         self._note = note
+        self._find.show(note)
         self.note_menu_button.set_visible(note is not None)
         self.display_options_button.set_visible(note is not None)
         for name in _NOTE_ACTIONS:
@@ -404,6 +416,7 @@ class Window(Adw.ApplicationWindow):
             return
         self._note = note
         self.note_view.update_segment(note, recording_id, position)
+        self._find.note_changed()
 
     def refresh_content(self) -> None:
         if self._note is not None or self._transcribe.display.active:
@@ -446,6 +459,7 @@ class Window(Adw.ApplicationWindow):
         self._editor.set_blocked(activity.locked)
         self.note_view.set_editable(not activity.locked)
         self._editor.update_actions()
+        self._find.update_actions()
 
     def _on_choose_model(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         self.bottom_bar.present_transcription_dialog()

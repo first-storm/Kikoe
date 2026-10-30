@@ -1,0 +1,145 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeFindBar: Adw.Bin {
+  child: SearchBar search_bar {
+    show-close-button: true;
+    notify::search-mode-enabled => $_on_search_bar_notify_search_mode_enabled();
+
+    child: Adw.Clamp {
+      maximum-size: 760;
+      tightening-threshold: 600;
+      hexpand: true;
+
+      child: Box {
+        orientation: vertical;
+        spacing: 6;
+
+        EventControllerKey {
+          key-pressed => $_on_bar_key_pressed();
+        }
+
+        Box {
+          spacing: 6;
+
+          SearchEntry find_entry {
+            placeholder-text: _("Find");
+            hexpand: true;
+            width-chars: 4;
+            search-delay: 150;
+            search-changed => $_on_find_entry_search_changed();
+            activate => $_on_find_entry_activate();
+
+            accessibility {
+              label: _("Find");
+            }
+
+            EventControllerKey {
+              propagation-phase: capture;
+              key-pressed => $_on_find_entry_key_pressed();
+            }
+          }
+
+          Label match_label {
+            styles [
+              "dimmed",
+              "numeric",
+            ]
+          }
+
+          Box {
+            styles [
+              "linked",
+            ]
+
+            Button {
+              icon-name: "go-up-symbolic";
+              tooltip-text: _("Previous Match");
+              action-name: "win.find-previous";
+
+              accessibility {
+                label: _("Previous Match");
+              }
+            }
+
+            Button {
+              icon-name: "go-down-symbolic";
+              tooltip-text: _("Next Match");
+              action-name: "win.find-next";
+
+              accessibility {
+                label: _("Next Match");
+              }
+            }
+          }
+
+          MenuButton {
+            icon-name: "emblem-system-symbolic";
+            tooltip-text: _("Search Options");
+            menu-model: options_menu;
+
+            accessibility {
+              label: _("Search Options");
+            }
+          }
+        }
+
+        Box {
+          spacing: 6;
+
+          Entry replace_entry {
+            placeholder-text: _("Replace With");
+            hexpand: true;
+            width-chars: 6;
+            changed => $_on_replace_entry_changed();
+            activate => $_on_replace_entry_activate();
+
+            accessibility {
+              label: _("Replace With");
+            }
+          }
+
+          // Long translations shorten rather than widen the window past 360 px.
+          Button {
+            action-name: "win.replace";
+
+            child: Label {
+              label: _("_Replace");
+              use-underline: true;
+              ellipsize: end;
+            };
+          }
+
+          Button {
+            action-name: "win.replace-all";
+
+            child: Label {
+              label: _("Replace _All");
+              use-underline: true;
+              ellipsize: end;
+            };
+          }
+        }
+      };
+    };
+  };
+}
+
+menu options_menu {
+  section {
+    item {
+      label: _("Match _Case");
+      action: "win.find-match-case";
+    }
+
+    item {
+      label: _("Match _Whole Words");
+      action: "win.find-whole-words";
+    }
+
+    item {
+      label: _("_Regular Expressions");
+      action: "win.find-regex";
+    }
+  }
+}

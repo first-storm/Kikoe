@@ -69,8 +69,8 @@ Note Menu appear at the end.
 
 Display Options contains Show Timestamps and Show Speakers. These affect display
 and export, without altering stored transcript data. Note Menu contains Rename…,
-Copy All Text, Export… and destructive Delete Note. Keeping Export in the menu
-leaves room for editing controls at narrow widths.
+Find and Replace, Copy All Text, Export… and destructive Delete Note. Keeping Export
+in the menu leaves room for editing controls at narrow widths.
 
 Export opens a dialog with four formats and options for timestamps and speaker
 labels, then a save dialog. Subtitle formats are unavailable when the note has
@@ -126,10 +126,45 @@ Enter keeps the popover open and focuses the first invalid field. Closing with
 invalid input restores saved times and reports that the changes were not saved.
 
 Undo and Redo cover text and time edits across the note. Quick successive saves
-of one segment form one step. History clears on a note change or when recordings
+of one segment form one step; each Replace and each Replace All is one step of its
+own, and undoing Replace All restores every segment it changed. History clears on a note change or when recordings
 are added, removed or re-transcribed. Undo and Redo scroll to the affected segment
 and place the caret there. Recording, import and recovery make transcript text
 read-only and disable history actions. Live preview rows are never editable.
+
+### Find and replace
+
+Find and Replace (Note Menu, Ctrl+H) shows a search bar under the content header,
+clamped like the transcript and with a close button. Its first row holds the find
+entry, a match count, linked Previous Match and Next Match buttons and a Search
+Options menu; the second holds a Replace With entry, Replace and Replace All. At
+360 px both rows stay on one line; long translated button labels ellipsize rather
+than widen the window. Opening the bar focuses the find entry with its text
+selected. A one-line selection in the focused segment becomes the query, and
+searching starts from the segment holding the caret.
+
+Search is live and covers saved segment text, never speakers, titles or live
+preview rows; a match never spans segments. By default it matches literal text,
+ignoring case. Search Options toggles Match Case, Match Whole Words and Regular
+Expressions for the rest of the session. Every match is tinted with the accent
+color; the current match is tinted more strongly and underlined, and the list
+scrolls to it without moving focus from the bar. The count reads “3 of 12”, “No
+matches”, or “Invalid pattern” with the entry in its error style.
+
+Enter or Ctrl+G moves to the next match and Shift+Enter or Shift+Ctrl+G to the
+previous one, wrapping at either end. Replace (or Enter in Replace With) changes
+the current match and moves past the inserted text, so a replacement containing
+the query is not replaced again. Replace All reports how many matches it replaced.
+With regular expressions, `\1` and `\g<name>` insert matched groups; a reference
+to a missing group marks Replace With as an error and explains it in a toast.
+Replacements are trimmed like typed text. A segment that would become empty keeps
+its text, and a toast says so.
+
+Escape or the close button closes the bar, clears the tints and places the caret
+on the current match with it selected. Finding still works while recording or
+transcription writes to the note, but Replace and Replace All are unavailable.
+Opening another note searches it with the same query; with no note open, the bar
+closes.
 
 ### Bottom bar
 
@@ -477,6 +512,8 @@ Ctrl on macOS.
 | --- | --- |
 | New Note | Ctrl+N |
 | Search Notes | Ctrl+F |
+| Find and Replace | Ctrl+H or Ctrl+Alt+F |
+| Next Match / Previous Match | Ctrl+G / Shift+Ctrl+G |
 | Import Audio | Ctrl+O |
 | Rename Note | F2 |
 | Export Note | Ctrl+Shift+E |
@@ -488,7 +525,9 @@ Ctrl on macOS.
 | Quit | Ctrl+Q |
 
 Keyboard Shortcuts opens `Adw.ShortcutsDialog`. Close and Quit use the same local
-save path. Escape closes search and standard dialogs; it never stops recording.
+save path. Ctrl+Alt+F exists because macOS reserves Command+H for hiding the
+application. Escape closes search, Find and Replace and standard dialogs; it never
+stops recording.
 Timestamp popovers apply the validation behavior described above, and unsaved
 form dialogs require a discard decision.
 
