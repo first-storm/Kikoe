@@ -29,7 +29,7 @@ def test_undo_then_redo_returns_the_same_step() -> None:
 
     undone = history.undo()
 
-    assert undone is not None and undone.before.text == "a"
+    assert undone is not None and undone[0].before.text == "a"
     assert not history.can_undo and history.can_redo
     redone = history.redo()
     assert redone == undone
@@ -50,7 +50,7 @@ def test_quick_saves_of_one_segment_merge_into_one_step() -> None:
 
     step = history.undo()
 
-    assert step is not None and (step.before.text, step.after.text) == ("a", "abc")
+    assert step is not None and (step[0].before.text, step[0].after.text) == ("a", "abc")
     assert not history.can_undo
 
 
@@ -101,7 +101,7 @@ def test_timestamp_changes_are_never_merged() -> None:
     )
     history.record(moved)
 
-    assert history.undo() == moved
+    assert history.undo() == (moved,)
     assert history.can_undo
 
 
@@ -112,6 +112,33 @@ def test_recording_clears_redo() -> None:
     history.record(_change("a", "c"))
 
     assert not history.can_redo
+
+
+def test_changes_recorded_together_are_undone_as_one_step() -> None:
+    history = EditHistory()
+    changes = (_change("a", "A"), _change("b", "B", position=1))
+    history.record_all(changes)
+
+    assert history.undo() == changes
+    assert not history.can_undo
+    assert history.redo() == changes
+
+
+def test_typing_never_joins_a_step_recorded_together() -> None:
+    history = EditHistory()
+    history.record_all((_change("a", "ab", at=0.0),))
+    history.record(_change("ab", "abc", at=0.5))
+
+    history.undo()
+
+    assert history.can_undo
+
+
+def test_recording_together_drops_no_op_changes() -> None:
+    history = EditHistory()
+    history.record_all((_change("a", "a"),))
+
+    assert not history.can_undo
 
 
 def test_no_op_change_is_dropped() -> None:
@@ -191,3 +218,13 @@ def test_history_does_not_match_a_segment_replaced_behind_its_back() -> None:
 
 def test_history_without_steps_matches_any_note() -> None:
     assert EditHistory().matches(lambda _recording_id, _position: None)
+
+
+def test_history_matches_every_segment_of_a_step_recorded_together() -> None:
+    history = EditHistory()
+    history.record_all((_change("a", "A"), _change("b", "B", position=1)))
+    assert history.matches(_current(r10="A", r11="B"))
+    assert not history.matches(_current(r10="A", r11="b"))
+    history.undo()
+    assert history.matches(_current(r10="a", r11="b"))
+    assert not history.matches(_current(r10="A", r11="b"))

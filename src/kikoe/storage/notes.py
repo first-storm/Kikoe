@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,7 +16,7 @@ from kikoe.core.models import (
     Segment,
     TranscriptionState,
 )
-from kikoe.storage.library import Library, LibraryError
+from kikoe.storage.library import Library, LibraryError, SegmentUpdate
 
 log = logging.getLogger(__name__)
 
@@ -102,26 +102,9 @@ class NoteRepository:
         call = self._library.match_speakers
         return await self._change_content(note_id, call, note_id, recording_id, choices)
 
-    async def update_segment(
-        self,
-        note_id: str,
-        recording_id: str,
-        position: int,
-        *,
-        text: str,
-        start_ms: int | None,
-        end_ms: int | None,
-    ) -> None:
-        """Persist an edited segment's text and timestamps; the editor shows it itself."""
-        await asyncio.to_thread(
-            self._library.update_segment,
-            note_id,
-            recording_id,
-            position,
-            text=text,
-            start_ms=start_ms,
-            end_ms=end_ms,
-        )
+    async def update_segments(self, note_id: str, updates: Sequence[SegmentUpdate]) -> None:
+        """Persist edited segments together; the editor shows them itself."""
+        await asyncio.to_thread(self._library.update_segments, note_id, updates)
 
     async def delete_note(self, note_id: str) -> None:
         await self._change_summaries(note_id, self._library.delete_note, note_id)

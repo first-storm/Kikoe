@@ -1,7 +1,7 @@
 """Edits show at once and stay ordered even when undo and note reloads race with storage."""
 
 import asyncio
-from collections.abc import Coroutine
+from collections.abc import Coroutine, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -10,7 +10,7 @@ import pytest
 
 from kikoe.core.models import Note, Recording, RecordingSource, Segment, TranscriptionState
 from kikoe.services.editing import EditingSession
-from kikoe.storage.library import Library
+from kikoe.storage.library import Library, SegmentUpdate
 from kikoe.storage.notes import NoteRepository
 from tests.helpers import run_async
 
@@ -83,23 +83,15 @@ async def test_reloaded_note_keeps_edits_that_are_still_being_saved(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     notes, note = await repository(tmp_path)
-    write = notes.update_segment
+    write = notes.update_segments
     saving, release_save = asyncio.Event(), asyncio.Event()
 
-    async def blocked_write(
-        note_id: str,
-        recording_id: str,
-        position: int,
-        *,
-        text: str,
-        start_ms: int | None,
-        end_ms: int | None,
-    ) -> None:
+    async def blocked_write(note_id: str, updates: Sequence[SegmentUpdate]) -> None:
         saving.set()
         await release_save.wait()
-        await write(note_id, recording_id, position, text=text, start_ms=start_ms, end_ms=end_ms)
+        await write(note_id, updates)
 
-    monkeypatch.setattr(notes, "update_segment", blocked_write)
+    monkeypatch.setattr(notes, "update_segments", blocked_write)
     session = EditingSession(notes, start_task, lambda _n, _rid, _pos: None)
     session.set_note(note)
     session.edit("recording", 0, lambda fields: replace(fields, text="Edited"))
@@ -185,7 +177,7 @@ async def test_failed_save_reaches_task_owner_and_keeps_the_shown_text(
     async def fail(*_args: object, **_kwargs: object) -> None:
         raise ValueError("storage failed")
 
-    monkeypatch.setattr(notes, "update_segment", fail)
+    monkeypatch.setattr(notes, "update_segments", fail)
     tasks: list[asyncio.Task[None]] = []
 
     def start(coroutine: Coroutine[None, None, None]) -> asyncio.Task[None]:
@@ -207,28 +199,20 @@ async def test_a_reload_cannot_return_text_from_before_a_finished_save(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     notes, note = await repository(tmp_path)
-    write, read = notes.update_segment, notes.get_note
+    write, read = notes.update_segments, notes.get_note
     saving, release_save = asyncio.Event(), asyncio.Event()
     reload_requested, reading = asyncio.Event(), asyncio.Event()
 
-    async def blocked_write(
-        note_id: str,
-        recording_id: str,
-        position: int,
-        *,
-        text: str,
-        start_ms: int | None,
-        end_ms: int | None,
-    ) -> None:
+    async def blocked_write(note_id: str, updates: Sequence[SegmentUpdate]) -> None:
         saving.set()
         await release_save.wait()
-        await write(note_id, recording_id, position, text=text, start_ms=start_ms, end_ms=end_ms)
+        await write(note_id, updates)
 
     async def observed_read(note_id: str) -> Note:
         reading.set()
         return await read(note_id)
 
-    monkeypatch.setattr(notes, "update_segment", blocked_write)
+    monkeypatch.setattr(notes, "update_segments", blocked_write)
     monkeypatch.setattr(notes, "get_note", observed_read)
     session = EditingSession(notes, start_task, lambda _n, _rid, _pos: None)
 
@@ -277,3 +261,47 @@ async def test_undo_cannot_overwrite_a_retranscription_of_the_same_shape(tmp_pat
     assert not session.history.can_undo
     assert session.undo() is None
     assert await saved_text(notes, note) == "New first"
+
+
+@run_async
+async def test_texts_edited_together_are_one_step_saved_in_one_write(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    notes, note = await repository(tmp_path)
+    write = notes.update_segments
+    writes: list[list[str]] = []
+
+    async def counted_write(note_id: str, updates: Sequence[SegmentUpdate]) -> None:
+        writes.append([update.text for update in updates])
+        await write(note_id, updates)
+
+    monkeypatch.setattr(notes, "update_segments", counted_write)
+    applied: list[int] = []
+    session = EditingSession(notes, start_task, lambda _n, _rid, pos: applied.append(pos))
+    session.set_note(note)
+
+    session.edit_texts({("recording", 0): "One", ("recording", 1): "Two"})
+    await session.wait_saved()
+
+    assert sorted(applied) == [0, 1]
+    assert writes == [["One", "Two"]]
+    assert [await saved_text(notes, note, i) for i in (0, 1)] == ["One", "Two"]
+    step = session.undo()
+    assert step is not None and len(step) == 2
+    await session.wait_saved()
+    assert [await saved_text(notes, note, i) for i in (0, 1)] == ["Original", "Second"]
+    assert not session.history.can_undo
+
+
+@run_async
+async def test_texts_that_do_not_change_anything_leave_no_step(tmp_path: Path) -> None:
+    notes, note = await repository(tmp_path)
+    session = EditingSession(
+        notes, start_task, lambda _n, _rid, _pos: pytest.fail("Nothing was edited")
+    )
+    session.set_note(note)
+
+    session.edit_texts({("recording", 0): "Original", ("missing", 0): "Edited"})
+
+    assert not session.pending
+    assert not session.history.can_undo

@@ -8,7 +8,7 @@ import pytest
 
 from kikoe.core.models import DisplayOptions, Recording, RecordingSource, Segment
 from kikoe.storage.errors import LibraryError, NoteNotFoundError
-from kikoe.storage.library import Library
+from kikoe.storage.library import Library, SegmentUpdate
 from kikoe.storage.schema import SCHEMA_VERSION
 
 WHEN = datetime(2026, 10, 12, 6, 30, tzinfo=UTC)
@@ -480,6 +480,38 @@ def test_update_segment_only_edits_a_recording_of_the_given_note(library: Librar
         )
 
     assert library.get_note(note.note_id).recordings[0].segments == (Segment("One"),)
+
+
+def test_update_segments_edits_several_segments(library: Library) -> None:
+    note = library.add_recording(
+        None, "Meeting", recording(segments=(Segment("One"), Segment("Two"), Segment("Three")))
+    )
+    recording_id = note.recordings[0].recording_id
+
+    library.update_segments(
+        note.note_id,
+        (SegmentUpdate(recording_id, 0, "First"), SegmentUpdate(recording_id, 2, "Third")),
+    )
+
+    assert library.get_note(note.note_id).recordings[0].segments == (
+        Segment("First"),
+        Segment("Two"),
+        Segment("Third"),
+    )
+
+
+def test_update_segments_saves_nothing_when_one_segment_is_missing(library: Library) -> None:
+    note = library.add_recording(None, "Meeting", recording(segments=(Segment("One"),)))
+    recording_id = note.recordings[0].recording_id
+    before = library.get_note(note.note_id)
+
+    with pytest.raises(LibraryError):
+        library.update_segments(
+            note.note_id,
+            (SegmentUpdate(recording_id, 0, "Edited"), SegmentUpdate(recording_id, 5, "Gone")),
+        )
+
+    assert library.get_note(note.note_id) == before
 
 
 def test_update_segment_rejects_bad_input_and_missing_rows(library: Library) -> None:

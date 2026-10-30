@@ -4,7 +4,7 @@ Edits are autosaved while typing, so several saves of one segment in quick succe
 are merged into one step; otherwise Undo would only remove a few characters at a time.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from datetime import timedelta
 
@@ -61,14 +61,19 @@ class SegmentChange:
     at: float
 
 
+type EditStep = tuple[SegmentChange, ...]
+"""What one Undo reverts: typing in one segment, or segments changed together such as
+by Replace All. Each segment appears at most once in a step."""
+
+
 class EditHistory:
     """Undo and redo stacks of segment changes for one open note."""
 
     __slots__ = ("_redo", "_sealed", "_undo")
 
     def __init__(self) -> None:
-        self._undo: list[SegmentChange] = []
-        self._redo: list[SegmentChange] = []
+        self._undo: list[EditStep] = []
+        self._redo: list[EditStep] = []
         self._sealed = True
 
     @property
@@ -84,38 +89,47 @@ class EditHistory:
         if change.before == change.after:
             return
         self._redo.clear()
-        previous = self._undo[-1] if self._undo else None
-        if previous is not None and not self._sealed and _continues(previous, change):
-            merged = replace(change, before=previous.before)
+        previous = self._undo[-1] if self._undo else ()
+        if len(previous) == 1 and not self._sealed and _continues(previous[0], change):
+            merged = replace(change, before=previous[0].before)
             if merged.before == merged.after:
                 self._undo.pop()
             else:
-                self._undo[-1] = merged
+                self._undo[-1] = (merged,)
         else:
-            self._undo.append(change)
+            self._undo.append((change,))
         self._sealed = False
+
+    def record_all(self, changes: Sequence[SegmentChange]) -> None:
+        """Add changes made together as one step, which later typing never joins."""
+        step = tuple(change for change in changes if change.before != change.after)
+        if not step:
+            return
+        self._redo.clear()
+        self._undo.append(step)
+        self._sealed = True
 
     def seal(self) -> None:
         """End the current typing step, e.g. when the caret leaves a segment."""
         self._sealed = True
 
-    def undo(self) -> SegmentChange | None:
-        """The step to revert (apply its ``before``), or None when there is none."""
+    def undo(self) -> EditStep | None:
+        """The step to revert (apply each ``before``), or None when there is none."""
         if not self._undo:
             return None
-        change = self._undo.pop()
-        self._redo.append(change)
+        step = self._undo.pop()
+        self._redo.append(step)
         self._sealed = True
-        return change
+        return step
 
-    def redo(self) -> SegmentChange | None:
-        """The step to reapply (apply its ``after``), or None when there is none."""
+    def redo(self) -> EditStep | None:
+        """The step to reapply (apply each ``after``), or None when there is none."""
         if not self._redo:
             return None
-        change = self._redo.pop()
-        self._undo.append(change)
+        step = self._redo.pop()
+        self._undo.append(step)
         self._sealed = True
-        return change
+        return step
 
     def matches(self, current: Callable[[str, int], SegmentFields | None]) -> bool:
         """Whether every edited segment still has the value the history leaves it with.
@@ -124,14 +138,16 @@ class EditHistory:
         Undo write old text over the new result, so such a history must be dropped.
         """
         expected: dict[tuple[str, int], SegmentFields] = {}
-        for change in self._undo:
-            expected[change.recording_id, change.position] = change.after
+        for step in self._undo:
+            for change in step:
+                expected[change.recording_id, change.position] = change.after
         redone: set[tuple[str, int]] = set()
-        for change in reversed(self._redo):
-            key = change.recording_id, change.position
-            if key not in redone:
-                redone.add(key)
-                expected[key] = change.before
+        for step in reversed(self._redo):
+            for change in step:
+                key = change.recording_id, change.position
+                if key not in redone:
+                    redone.add(key)
+                    expected[key] = change.before
         return all(current(*key) == fields for key, fields in expected.items())
 
     def clear(self) -> None:

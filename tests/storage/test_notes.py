@@ -19,6 +19,7 @@ from kikoe.core.models import (
     Segment,
     TranscriptionState,
 )
+from kikoe.storage.library import SegmentUpdate
 from kikoe.storage.notes import ContentChanged, NoteEvent, NoteRepository, SummariesChanged
 from tests.helpers import run_async
 
@@ -92,9 +93,7 @@ async def test_content_changes_keep_summaries_and_name_the_note(notes: NoteRepos
 @run_async
 async def test_segment_edits_are_saved_without_notifying(notes: NoteRepository) -> None:
     note, events = await note_with_events(notes)
-    await notes.update_segment(
-        note.note_id, "recording", 0, text="Edited", start_ms=None, end_ms=None
-    )
+    await notes.update_segments(note.note_id, (SegmentUpdate("recording", 0, "Edited"),))
     assert events == []
     saved = await notes.get_note(note.note_id)
     assert saved.recordings[0].segments[0].text == "Edited"

@@ -1,13 +1,13 @@
 """In-place transcript editing: forwards row edits to the editing session, with Undo and Redo."""
 
 import asyncio
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable, Coroutine, Mapping
 from dataclasses import replace
 from datetime import timedelta
 
 from gi.repository import Gio, GLib
 
-from kikoe.core.edit_history import SegmentChange, SegmentFields
+from kikoe.core.edit_history import EditStep, SegmentFields
 from kikoe.core.models import Note
 from kikoe.services.editing import EditingSession
 from kikoe.storage.notes import NoteRepository
@@ -73,11 +73,19 @@ class SegmentEditor:
     def on_redo(self, _action: Gio.SimpleAction, _param: GLib.Variant | None) -> None:
         self._step(self._session.redo)
 
-    def _step(self, step: Callable[[], SegmentChange | None]) -> None:
+    def replace_texts(self, texts: Mapping[tuple[str, int], str]) -> None:
+        """Give segments new text as one Undo step, e.g. from Replace All."""
+        if self.blocked:
+            return
         self._note_view.flush_edits()
-        change = step()
-        if change is not None:
-            self._note_view.focus_segment(change.recording_id, change.position)
+        self._session.edit_texts(texts)
+        self.update_actions()
+
+    def _step(self, step: Callable[[], EditStep | None]) -> None:
+        self._note_view.flush_edits()
+        changes = step()
+        if changes:
+            self._note_view.focus_segment(changes[0].recording_id, changes[0].position)
         self.update_actions()
 
     def _on_note_view_text_edited(

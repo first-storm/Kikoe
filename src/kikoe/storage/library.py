@@ -7,8 +7,9 @@ does not matter which worker thread runs it.
 import logging
 import sqlite3
 import uuid
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
 from contextlib import closing, contextmanager
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -49,6 +50,17 @@ def database_path() -> Path:
 
 def audio_dir() -> Path:
     return paths.data_dir() / AUDIO_DIR_NAME
+
+
+@dataclass(frozen=True, slots=True)
+class SegmentUpdate:
+    """An edited segment's new text and times, in the milliseconds the database stores."""
+
+    recording_id: str
+    position: int
+    text: str
+    start_ms: int | None = None
+    end_ms: int | None = None
 
 
 class Library:
@@ -279,27 +291,46 @@ class Library:
         start_ms: int | None,
         end_ms: int | None,
     ) -> None:
-        """Edit one segment's text and timestamps with a single UPDATE.
+        """Edit one segment's text and timestamps."""
+        self.update_segments(
+            note_id, (SegmentUpdate(recording_id, position, text, start_ms, end_ms),)
+        )
 
+    def update_segments(self, note_id: str, updates: Sequence[SegmentUpdate]) -> None:
+        """Edit segments with one UPDATE each, all in one transaction.
+
+        Either every segment changes or none does, so Replace All cannot be half saved.
         The note is not read back: the editor already holds the new values, and reading
-        a long transcript would cost far more than the write.
+        a long transcript would cost far more than the writes.
         """
-        if not text.strip():
-            raise LibraryError(_("Enter transcript text."))
-        if start_ms is not None and end_ms is not None and end_ms <= start_ms:
-            raise LibraryError(_("The end time must be after the start time."))
+        for update in updates:
+            if not update.text.strip():
+                raise LibraryError(_("Enter transcript text."))
+            start_ms, end_ms = update.start_ms, update.end_ms
+            if start_ms is not None and end_ms is not None and end_ms <= start_ms:
+                raise LibraryError(_("The end time must be after the start time."))
         with self._connect() as connection, connection:
-            cursor = connection.execute(
-                "UPDATE segments SET text = ?, start_ms = ?, end_ms = ? "
-                "WHERE recording_id = ? AND position = ? "
-                "AND recording_id IN (SELECT id FROM recordings WHERE note_id = ?)",
-                (text.strip(), start_ms, end_ms, recording_id, position, note_id),
-            )
-            if cursor.rowcount:
-                return
-            if not connection.execute("SELECT 1 FROM notes WHERE id = ?", (note_id,)).fetchone():
-                raise note_not_found()
-            raise LibraryError(_("This recording no longer exists."))
+            for update in updates:
+                cursor = connection.execute(
+                    "UPDATE segments SET text = ?, start_ms = ?, end_ms = ? "
+                    "WHERE recording_id = ? AND position = ? "
+                    "AND recording_id IN (SELECT id FROM recordings WHERE note_id = ?)",
+                    (
+                        update.text.strip(),
+                        update.start_ms,
+                        update.end_ms,
+                        update.recording_id,
+                        update.position,
+                        note_id,
+                    ),
+                )
+                if cursor.rowcount:
+                    continue
+                if not connection.execute(
+                    "SELECT 1 FROM notes WHERE id = ?", (note_id,)
+                ).fetchone():
+                    raise note_not_found()
+                raise LibraryError(_("This recording no longer exists."))
 
     def rename_speaker(self, note_id: str, speaker_id: str, name: str) -> None:
         """Rename a person everywhere without changing their recognition labels."""
