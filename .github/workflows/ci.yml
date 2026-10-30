@@ -17,6 +17,8 @@ jobs:
     steps:
       # git and a C compiler come first: checkout needs git, and uv builds
       # pygobject/pycairo from source and fetches blueprint-compiler with git.
+      # pyright runs on the system Node.js; without it, pyright downloads the
+      # newest release through nodeenv, which breaks whenever that is a prerelease.
       - name: Install GTK and build dependencies
         run: |
           apt-get update
@@ -24,7 +26,7 @@ jobs:
             ca-certificates git gcc pkg-config \
             libgirepository-2.0-dev libcairo2-dev \
             gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-girepository-3.0 \
-            gettext libportaudio2 ffmpeg
+            gettext libportaudio2 ffmpeg nodejs
 
       - uses: actions/checkout@v5
 
