@@ -177,7 +177,9 @@ icon build into `build/macos-icons/`, then run the package build with
 Edit `AppIcon.icon` in Apple's Icon Composer. Its 1024×1024 SVG layers separate
 the document, transcript, blue badge and microphone. Keep those layers free of
 baked lighting, shadows and an outer rounded mask; Icon Composer supplies the
-glass effects and the system applies the enclosure. The document contains
+glass effects and the system applies the enclosure. `icon.json` lists groups
+and their layers front to back, like Icon Composer's sidebar: the first entry is
+drawn on top, while the numbered SVG names count from the back. The document contains
 default, dark and tinted/mono color settings. See Apple's
 [Icon Composer guide](https://developer.apple.com/documentation/xcode/creating-your-app-icon-using-icon-composer).
 
