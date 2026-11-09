@@ -44,6 +44,17 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.3.5" date="2026-11-09">
+      <description>
+        <p>A second local engine for Apple Silicon Macs and an easier way to manage local models.</p>
+        <ul>
+          <li>Add the speech-swift engine with Qwen3-ASR, Parakeet, Nemotron and Omnilingual models on Apple Silicon Macs.</li>
+          <li>Give each local engine its own page, with models grouped by family and download progress.</li>
+          <li>List every downloaded model in one place with its engine and the space it uses.</li>
+          <li>Support local models made of several files and stop engine helper processes with their worker.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.4" date="2026-10-21">
       <description>
         <p>Voxtral 3 support and more reliable recording and transcription.</p>
