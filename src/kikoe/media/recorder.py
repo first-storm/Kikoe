@@ -17,6 +17,58 @@ class RecorderError(Exception):
     """Microphone capture failed; already captured audio can still be saved."""
 
 
+class SystemAudioError(RecorderError):
+    """What the computer plays could not be captured; captured audio can still be saved."""
+
+
+class ChunkQueue:
+    """Bounded hand-off from an audio thread; the first failure wins and ends the stream.
+
+    Callbacks must stay short, so a full queue records an error instead of waiting.
+    """
+
+    def __init__(self, maxsize: int = 64) -> None:
+        self._queue: queue.Queue[bytes] = queue.Queue(maxsize=maxsize)
+        self.stopped = threading.Event()
+        self.error: RecorderError | None = None
+
+    def put(self, chunk: bytes) -> None:
+        try:
+            self._queue.put_nowait(chunk)
+        except queue.Full:
+            self.fail(
+                RecorderError(
+                    _("Audio could not be saved fast enough. The captured audio has been kept.")
+                )
+            )
+
+    def fail(self, error: RecorderError) -> None:
+        if self.error is None:
+            self.error = error
+
+    async def drain(self, check: Callable[[], None] = lambda: None) -> AsyncIterator[bytes]:
+        """Yield accepted blocks before reporting an error or a normal stop.
+
+        ``check`` runs while no audio arrives so a source can notice a vanished device.
+        """
+        while True:
+            chunk = await asyncio.to_thread(self._next, check)
+            if chunk is None:
+                if self.error is not None:
+                    raise self.error
+                return
+            yield chunk
+
+    def _next(self, check: Callable[[], None]) -> bytes | None:
+        while True:
+            try:
+                return self._queue.get(timeout=0.1)
+            except queue.Empty:
+                if self.error is not None or self.stopped.is_set():
+                    return None
+                check()
+
+
 class Recorder(Protocol):
     """Capture mono little-endian int16 PCM at the input device's native sample rate."""
 
@@ -67,10 +119,9 @@ class SoundDeviceRecorder:
         self._device = device
         self._backend = backend
         self._stream: _InputStream | None = None
-        self._queue: queue.Queue[bytes | None] = queue.Queue(maxsize=64)
+        self._buffer = ChunkQueue()
         self._paused = threading.Event()
-        self._stopped = threading.Event()
-        self._error: RecorderError | None = None
+        self._stopped = self._buffer.stopped
         self._lock = asyncio.Lock()
 
     async def start(self) -> None:
@@ -110,11 +161,11 @@ class SoundDeviceRecorder:
             ) from error
 
     def _on_audio(self, data: Buffer, _frames: int, _time: object, status: _Status) -> None:
-        if self._stopped.is_set() or self._paused.is_set() or self._error is not None:
+        if self._stopped.is_set() or self._paused.is_set() or self._buffer.error is not None:
             return
         if status.input_overflow:
-            self._error = RecorderError(
-                _("The microphone lost audio. The captured audio has been kept.")
+            self._buffer.fail(
+                RecorderError(_("The microphone lost audio. The captured audio has been kept."))
             )
             return
         chunk = bytes(data)
@@ -122,36 +173,18 @@ class SoundDeviceRecorder:
             samples = array("h", chunk)
             samples.byteswap()
             chunk = samples.tobytes()
-        try:
-            self._queue.put_nowait(chunk)
-        except queue.Full:
-            self._error = RecorderError(
-                _("Audio could not be saved fast enough. The captured audio has been kept.")
-            )
+        self._buffer.put(chunk)
 
-    async def chunks(self) -> AsyncIterator[bytes]:
+    def chunks(self) -> AsyncIterator[bytes]:
         """Drain accepted blocks before reporting a device error or a normal stop."""
-        while True:
-            chunk = await asyncio.to_thread(self._next_chunk)
-            if chunk is None:
-                if self._error is not None:
-                    raise self._error
-                return
-            yield chunk
+        return self._buffer.drain(self._check_connected)
 
-    def _next_chunk(self) -> bytes | None:
-        while True:
-            try:
-                return self._queue.get(timeout=0.1)
-            except queue.Empty:
-                if self._error is not None or self._stopped.is_set():
-                    return None
-                stream = self._stream
-                if stream is not None and not self._paused.is_set() and not stream.active:
-                    self._error = RecorderError(
-                        _("The microphone disconnected. The captured audio has been kept.")
-                    )
-                    return None
+    def _check_connected(self) -> None:
+        stream = self._stream
+        if stream is not None and not self._paused.is_set() and not stream.active:
+            self._buffer.fail(
+                RecorderError(_("The microphone disconnected. The captured audio has been kept."))
+            )
 
     async def pause(self) -> None:
         """Stop the device so the next resume cannot include buffered pause audio."""
@@ -174,10 +207,11 @@ class SoundDeviceRecorder:
         try:
             await asyncio.to_thread(stream.start if operation == "resume" else stream.stop)
         except Exception as error:
-            self._error = RecorderError(
+            failure = RecorderError(
                 _("The microphone stopped responding. ({detail})").format(detail=error)
             )
-            raise self._error from error
+            self._buffer.fail(failure)
+            raise failure from error
 
     async def stop(self) -> None:
         """Close once; a waiting consumer wakes even when no audio has arrived."""
@@ -193,7 +227,8 @@ class SoundDeviceRecorder:
                     finally:
                         await asyncio.to_thread(stream.close)
                 except Exception as error:
-                    self._error = RecorderError(
+                    failure = RecorderError(
                         _("Could not close the microphone. ({detail})").format(detail=error)
                     )
-                    raise self._error from error
+                    self._buffer.fail(failure)
+                    raise failure from error
