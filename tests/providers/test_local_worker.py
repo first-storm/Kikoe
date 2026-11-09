@@ -314,7 +314,20 @@ def _alive(pid: int) -> bool:
         os.kill(pid, 0)
     except ProcessLookupError:
         return False
-    return True
+    return not _zombie(pid)
+
+
+def _zombie(pid: int) -> bool:
+    """A killed helper stays a zombie where its new parent never reaps it.
+
+    CI runs in a container whose PID 1 is not an init process, so orphans are not
+    reaped there; without ``/proc`` (macOS) the system reaps them itself.
+    """
+    try:
+        stat = Path(f"/proc/{pid}/stat").read_text()
+    except OSError:
+        return False
+    return stat.rpartition(")")[2].split()[0] == "Z"
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="process groups are POSIX only")
