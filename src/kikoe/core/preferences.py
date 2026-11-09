@@ -4,6 +4,7 @@ import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from kikoe.core.audio_source import AudioSource
 from kikoe.core.models import ModelKey, Provider
 
 
@@ -19,6 +20,8 @@ class Preferences:
     """Live transcription delay; None keeps the service default."""
     input_device: str | None = None
     output_device: str | None = None
+    audio_source: AudioSource = AudioSource.MICROPHONE
+    """What the next recording captures, chosen from the Record button's menu."""
 
 
 def recent_provider(preferences: Preferences, providers: Sequence[Provider]) -> Provider | None:

@@ -179,7 +179,7 @@ end actions sit in one group with 6 px spacing, and the layouts crossfade in
 
 | Stage | Layout |
 | --- | --- |
-| Idle | Transcription Model (service icon, bold model name, dimmed provider name, dimmed drop-down arrow); with no model, a warning icon and No Model; flat Import Audio…; primary Record for an empty note, Append Recording otherwise |
+| Idle | Transcription Model (service icon, bold model name, dimmed provider name, dimmed drop-down arrow); with no model, a warning icon and No Model; flat Import Audio…; primary Record for an empty note, Append Recording otherwise, as a split button whose arrow chooses the audio source |
 | Recording | Pulsing record dot, elapsed time (`title-4`, numeric), accent-colored level meter, dimmed caption model and options summary with a spinner while the recognizer connects or catches up; circular flat Pause or Resume; primary Stop. While paused, the dot, time and meter dim and a Paused label follows the time |
 | Stopping, finishing transcription, saving the recording, converting, transcribing, saving, cancelling, recovering | Spinner and progress text at body contrast; flat Cancel where cancelling makes sense |
 
@@ -300,6 +300,21 @@ heading, and an explanation that Kikoe will upload and transcribe after Stop.
 Existing recordings remain above this section. Native live endpoints for OpenAI,
 Deepgram, Gemini and Mistral use the realtime view when the selected model supports
 it.
+
+### Audio source
+
+Record is an `Adw.SplitButton`. Its arrow (tooltip Audio Source) opens a menu with
+one radio section: Microphone, System Audio, and Microphone and System Audio. The
+choice persists across launches and cannot change during capture. The button's
+icon follows the source: a microphone for Microphone and for the mixed source, a
+speaker for System Audio. Its tooltip names what will be recorded. The label stays
+Record or Append Recording, so the button still fits at 360 px.
+
+System Audio records what the computer plays, such as meetings and videos, from the
+current default output. Kikoe's own playback is excluded where the platform allows.
+The mixed source sums the selected input device and system audio into one recording.
+Where system audio is unavailable (Windows, or Linux without a PulseAudio-compatible
+sound server) the arrow is unavailable and recording uses the microphone.
 
 ### Capture controls
 

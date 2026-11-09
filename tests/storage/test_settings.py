@@ -185,6 +185,32 @@ def test_audio_devices_round_trip_and_default_to_system(tmp_path: Path) -> None:
     assert store.load_state().preferences == preferences
 
 
+def test_audio_source_round_trips(tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    from kikoe.core.audio_source import AudioSource
+    from kikoe.core.preferences import Preferences
+    from kikoe.storage.settings import Settings
+
+    store = SettingsStore(tmp_path / "settings.json")
+    assert store.load_state().preferences.audio_source is AudioSource.MICROPHONE
+    preferences = replace(Preferences(), audio_source=AudioSource.MIXED)
+    store.save_state(Settings((), preferences))
+    assert store.load_state().preferences.audio_source is AudioSource.MIXED
+
+
+@pytest.mark.parametrize("value", ["loopback", 3, None])
+def test_unknown_audio_source_means_microphone(tmp_path: Path, value: object) -> None:
+    from kikoe.core.audio_source import AudioSource
+
+    path = tmp_path / "settings.json"
+    path.write_text(
+        json.dumps({"version": 2, "providers": [], "preferences": {"audio_source": value}}),
+        encoding="utf-8",
+    )
+    assert SettingsStore(path).load_state().preferences.audio_source is AudioSource.MICROPHONE
+
+
 @pytest.mark.parametrize("value", ["", 3, ["x"]])
 def test_malformed_audio_device_is_reported(tmp_path: Path, value: object) -> None:
     path = tmp_path / "settings.json"

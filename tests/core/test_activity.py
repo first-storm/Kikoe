@@ -25,6 +25,7 @@ def test_an_idle_window_offers_everything_except_running_work_controls() -> None
         *SIDEBAR_ACTIONS,
         "import-audio",
         "start-recording",
+        "audio-source",
         "retry-recording",
         "new-note",
     }
@@ -140,3 +141,10 @@ def test_only_file_stages_show_cancel_and_only_working_ones_enable_it(stage: Sta
     assert stage.can_cancel is (stage in {Stage.CONVERTING, Stage.TRANSCRIBING})
     activity = Activity(stage=stage, importing=True)
     assert ("cancel-import" in enabled(activity)) is stage.can_cancel
+
+
+def test_audio_source_cannot_change_while_recording() -> None:
+    recording = replace(
+        READY, stage=Stage.RECORDING, recording=True, capture_state=CaptureState.RECORDING
+    )
+    assert "audio-source" not in enabled(recording)

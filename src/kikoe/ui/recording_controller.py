@@ -1,17 +1,19 @@
-"""Microphone recording on screen: start, pause, resume, stop and recover."""
+"""Recording on screen: audio source, start, pause, resume, stop and recover."""
 
 import asyncio
+from dataclasses import replace
 from datetime import UTC, datetime
 
 from gi.repository import Adw, Gio, GLib
 
 from kikoe.core.activity import Stage
+from kikoe.core.audio_source import AudioSource
 from kikoe.core.choice import ModelChoice
 from kikoe.core.models import Note, Recording
 from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.core.transcription import LiveSnapshot, LiveState
 from kikoe.i18n import _
-from kikoe.media.recorder import SoundDeviceRecorder
+from kikoe.media.system_audio import create_recorder
 from kikoe.providers.base import TranscriptionOptions
 from kikoe.services.activity import ActivityTracker
 from kikoe.services.errors import USER_FACING_ERRORS
@@ -71,6 +73,33 @@ class RecordingController:
         """The note being recorded into; its sidebar row shows the recording state."""
         self.summary = ""
         self.model = ""
+        self._source_action = Gio.SimpleAction.new_stateful(
+            "audio-source",
+            GLib.VariantType.new("s"),
+            GLib.Variant.new_string(preferences.current.audio_source.value),
+        )
+        self._source_action.connect("change-state", self._on_audio_source_change_state)
+        window.add_action(self._source_action)
+        preferences.connect_changed(self._on_preferences_changed)
+
+    def _on_audio_source_change_state(
+        self, action: Gio.SimpleAction, value: GLib.Variant | None
+    ) -> None:
+        if value is None:
+            return
+        try:
+            source = AudioSource(value.get_string())
+        except ValueError:
+            return
+        action.set_state(value)
+        run_task(self._preferences.update(lambda p: replace(p, audio_source=source)), self._window)
+
+    def _on_preferences_changed(self) -> None:
+        """Loading settings after the window opens must show the saved source as chosen."""
+        saved = self._preferences.current.audio_source.value
+        state = self._source_action.get_state()
+        if state is None or state.get_string() != saved:
+            self._source_action.set_state(GLib.Variant.new_string(saved))
 
     @property
     def session(self) -> RecordingSession | None:
@@ -158,7 +187,9 @@ class RecordingController:
                 upload=upload,
                 finished=self._on_finished,
             ),
-            make_recorder=lambda: SoundDeviceRecorder(self._preferences.current.input_device),
+            make_recorder=lambda: create_recorder(
+                self._preferences.current.audio_source, self._preferences.current.input_device
+            ),
             open_store=lambda: CaptureStore(capture_dir()),
             is_closing=lambda: self._work.closing,
         )

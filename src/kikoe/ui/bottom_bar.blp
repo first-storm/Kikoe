@@ -123,8 +123,10 @@ template $KikoeBottomBar: Adw.Bin {
               ]
             }
 
-            Button record_button {
+            Adw.SplitButton record_button {
               action-name: "win.start-recording";
+              menu-model: audio_source_menu;
+              dropdown-tooltip: _("Audio Source");
 
               styles [
                 "suggested-action",
@@ -298,4 +300,28 @@ template $KikoeBottomBar: Adw.Bin {
       }
     };
   };
+}
+
+menu audio_source_menu {
+  section {
+    label: _("Audio Source");
+
+    item {
+      label: _("_Microphone");
+      action: "win.audio-source";
+      target: "microphone";
+    }
+
+    item {
+      label: _("_System Audio");
+      action: "win.audio-source";
+      target: "system";
+    }
+
+    item {
+      label: _("Microphone _and System Audio");
+      action: "win.audio-source";
+      target: "mixed";
+    }
+  }
 }

@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import cast
 
+from kikoe.core.audio_source import AudioSource
 from kikoe.core.models import (
     ApiKind,
     AudioFormat,
@@ -100,6 +101,7 @@ class SettingsStore:
                 "realtime_delay_ms": settings.preferences.realtime_delay_ms,
                 "input_device": settings.preferences.input_device,
                 "output_device": settings.preferences.output_device,
+                "audio_source": settings.preferences.audio_source.value,
             },
             "window": _encode_window(settings.window),
         }
@@ -271,7 +273,16 @@ def _decode_preferences(value: object) -> Preferences:
         realtime_delay_ms=_decode_realtime_delay(fields.get("realtime_delay_ms")),
         input_device=_decode_device(fields.get("input_device")),
         output_device=_decode_device(fields.get("output_device")),
+        audio_source=_decode_audio_source(fields.get("audio_source")),
     )
+
+
+def _decode_audio_source(value: object) -> AudioSource:
+    """Older files lack the field, and a newer source this version lacks means microphone."""
+    try:
+        return AudioSource(value) if isinstance(value, str) else AudioSource.MICROPHONE
+    except ValueError:
+        return AudioSource.MICROPHONE
 
 
 def _encode_window(window: WindowState | None) -> dict[str, object] | None:

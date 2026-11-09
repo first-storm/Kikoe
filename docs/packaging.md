@@ -69,8 +69,8 @@ manifest. The current distribution uses bundles and a self-hosted repository.
 
 ### Permissions and installation
 
-The sandbox grants Wayland and fallback X11, IPC, DRI, PulseAudio for microphone
-and playback, network access, and `org.freedesktop.secrets` access for keyring.
+The sandbox grants Wayland and fallback X11, IPC, DRI, PulseAudio for microphone,
+system audio (the default output's monitor) and playback, network access, and `org.freedesktop.secrets` access for keyring.
 Import and export use the file chooser portal.
 
 Install a downloaded bundle with:
@@ -223,7 +223,14 @@ signed with the rest of the app, so no downloaded native code needs to be loaded
 Models are still downloaded at runtime.
 
 `Info.plist` includes `NSMicrophoneUsageDescription`, explaining that Kikoe
-records microphone audio to turn speech into text notes.
+records microphone audio to turn speech into text notes. It also includes
+`NSAudioCaptureUsageDescription` for system audio, which macOS lists as System
+Audio Recording in Privacy & Security. When that permission is denied, the
+process tap records silence rather than failing. The spec adds PyObjC's
+`CoreAudio`, which is imported by name, to the hidden imports.
+
+AppImage builds load the host's `libpulse-simple.so.0` for system audio. Without
+it, Record offers only the microphone.
 
 The app uses ad-hoc signing. Developer ID signing and notarization require
 certificates configured as repository secrets. Without those, first launch may
@@ -310,6 +317,19 @@ Test each packaged platform with a configured file-transcription model:
 
 Linux checks cover these capture fundamentals. macOS and Windows microphone
 acceptance requires real hardware; package startup alone is insufficient.
+
+### System audio acceptance
+
+On Linux (PipeWire and PulseAudio, native and Flatpak) and on macOS:
+
+1. Choose System Audio, play a video and record; the meter moves, and the
+   transcript and exported FLAC contain the video's speech.
+2. Choose Microphone and System Audio and talk over the video; both are present.
+3. Play a Kikoe recording during a macOS capture; it must not be recorded.
+4. Switch the default output during capture; capture continues or ends with an
+   actionable error, keeping audio recorded so far.
+5. On macOS, deny System Audio Recording and confirm the recording is silent and
+   granting the permission fixes it after relaunch.
 
 ### Hosted-provider acceptance
 

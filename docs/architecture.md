@@ -171,6 +171,25 @@ The pipeline has six stages:
    little endian, and copies callbacks into a bounded queue. Overflow or device
    loss is reported after accepted blocks drain. A 200 ms buffer favors reliable
    capture. Pause stops the device; resume restarts it.
+   `media.system_audio.create_recorder` chooses the recorder for the saved
+   `core.audio_source.AudioSource` and is the only module that checks the platform:
+   - On Linux, `media.system_audio_pulse.PulseSystemRecorder` loads
+     `libpulse-simple` with ctypes and records `@DEFAULT_MONITOR@` (mono int16,
+     48 kHz, 50 ms fragments) on a reader thread. This works on PulseAudio and on
+     PipeWire through pipewire-pulse. Pause discards blocks.
+   - On macOS, `media.system_audio_macos.TapSystemRecorder` creates a Core Audio
+     process tap through PyObjC: global, mono, and excluding Kikoe's own process.
+     It wraps the tap in a private aggregate device, restarts PortAudio so the
+     device is listed, and records it with `SoundDeviceRecorder`. Stop destroys the
+     device and the tap. `media.devices` hides these temporary devices.
+   - `media.mixed_recorder.MixedRecorder` starts system audio first, because
+     PortAudio's restart would close an open microphone, then the microphone. The
+     microphone's rate and clock pace the output. System audio is resampled with
+     `core.pcm.Resampler`, padded with silence when late and capped at 0.5 s of lag.
+     The two are summed with clipping (`core.pcm.mix`). An error from either
+     source ends the capture.
+   - Where system audio is unavailable, a saved system source records the
+     microphone.
 2. **Retain local audio.** `storage.captures.CaptureStore` incrementally writes
    PCM and versioned JSON metadata to `paths.data_dir()/pending-recordings/`,
    syncing at least once per second. Metadata contains no credentials. On stop,
@@ -484,6 +503,7 @@ Input and output preferences store device names, with `None` meaning System
 Default. `media.devices` resolves names to PortAudio indices. On Linux, desktop
 aliases such as `pipewire`, `pulse` and `default` take priority over PortAudio's
 first hardware device. A missing saved device falls back to the system default.
+The input device also applies to the microphone half of a mixed recording.
 
 ## Interface coordination
 

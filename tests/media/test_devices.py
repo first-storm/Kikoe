@@ -1,4 +1,10 @@
-from kikoe.media.devices import AudioDevice, list_devices, list_devices_sync, resolve_device
+from kikoe.media.devices import (
+    PRIVATE_DEVICE_PREFIX,
+    AudioDevice,
+    list_devices,
+    list_devices_sync,
+    resolve_device,
+)
 from tests.helpers import run_async
 
 ENTRIES = [
@@ -41,3 +47,16 @@ def test_without_sound_server_alias_portaudio_default_is_used() -> None:
 async def test_selectable_devices_hide_aliases_covered_by_system_default() -> None:
     names = [d.name for d in await list_devices("output", FakeBackend())]
     assert names == ["HDMI", "Built-in"]
+
+
+@run_async
+async def test_temporary_system_audio_devices_are_never_offered() -> None:
+    class TapBackend:
+        def query_devices(self, device: int | None = None, kind: str | None = None) -> object:
+            return [
+                {"name": "Built-in", "max_input_channels": 2},
+                {"name": f"{PRIVATE_DEVICE_PREFIX}1a2b3c4d", "max_input_channels": 1},
+            ]
+
+    names = [d.name for d in await list_devices("input", TapBackend())]
+    assert names == ["Built-in"]

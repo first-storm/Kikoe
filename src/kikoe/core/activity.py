@@ -103,6 +103,8 @@ def action_availability(activity: Activity) -> dict[str, bool]:
             "retranscribe-recording": can_use_note and not activity.busy,
             "import-audio": can_transcribe_files,
             "start-recording": available,
+            # The source of a running capture cannot change.
+            "audio-source": not activity.busy,
             "retry-recording": can_transcribe_files and activity.has_note,
             "cancel-import": activity.importing and activity.stage.can_cancel,
             "pause-recording": state is CaptureState.RECORDING and can_control,

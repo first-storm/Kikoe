@@ -6,12 +6,14 @@ from dataclasses import replace
 from gi.repository import Adw, Gdk, GObject, Gtk
 
 from kikoe.core.activity import Stage
+from kikoe.core.audio_source import AudioSource
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models, resolve_choice
 from kikoe.core.formatting import format_timestamp
 from kikoe.core.models import ModeCapabilities
 from kikoe.core.recording import CaptureProgress, CaptureState
 from kikoe.core.transcription import LiveState
 from kikoe.i18n import _
+from kikoe.media.system_audio import system_audio_supported
 from kikoe.storage.preferences import PreferencesRepository
 from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.labels import live_status_label, stage_label, transcription_hint
@@ -22,6 +24,12 @@ from kikoe.ui.transcription_dialog import TranscriptionDialog
 
 _PAGES = {Stage.IDLE: "idle", Stage.RECORDING: "recording"}
 """Every other stage is shown as progress."""
+
+_SOURCE_ICONS = {
+    AudioSource.MICROPHONE: "audio-input-microphone-symbolic",
+    AudioSource.SYSTEM: "audio-speakers-symbolic",
+    AudioSource.MIXED: "audio-input-microphone-symbolic",
+}
 
 
 @Gtk.Template(filename=ui_file("bottom_bar"))
@@ -34,6 +42,7 @@ class BottomBar(Adw.Bin):
     provider_label: Gtk.Label = Gtk.Template.Child()
     paused_label: Gtk.Label = Gtk.Template.Child()
     state_stack: Gtk.Stack = Gtk.Template.Child()
+    record_button: Adw.SplitButton = Gtk.Template.Child()
     record_content: Adw.ButtonContent = Gtk.Template.Child()
     elapsed_label: Gtk.Label = Gtk.Template.Child()
     recording_dot: Gtk.Image = Gtk.Template.Child()
@@ -59,6 +68,10 @@ class BottomBar(Adw.Bin):
         self._wanted = RequestedFeatures()
         """What the user asked for, kept while a model that lacks a feature is chosen."""
         self._defaults_pending = False
+        self._system_audio = system_audio_supported()
+        if not self._system_audio:
+            # Only the microphone is possible, so there is nothing to choose.
+            self.record_button.set_menu_model(None)
 
     @GObject.Signal
     def choice_changed(self) -> None:
@@ -89,8 +102,24 @@ class BottomBar(Adw.Bin):
         providers.connect_changed(self._refresh)
         preferences.connect_changed(self._on_preferences_changed)
         self._refresh()
+        self._show_source()
+
+    def _show_source(self) -> None:
+        source = self._preferences.current.audio_source if self._preferences else None
+        if not self._system_audio or source is None:
+            source = AudioSource.MICROPHONE
+        self.record_content.set_icon_name(_SOURCE_ICONS[source])
+        match source:
+            case AudioSource.MICROPHONE:
+                tooltip = _("Record the microphone")
+            case AudioSource.SYSTEM:
+                tooltip = _("Record what this computer plays")
+            case AudioSource.MIXED:
+                tooltip = _("Record the microphone and what this computer plays")
+        self.record_button.set_tooltip_text(tooltip)
 
     def _on_preferences_changed(self) -> None:
+        self._show_source()
         if self._stage is not Stage.IDLE:
             self._defaults_pending = True
             return

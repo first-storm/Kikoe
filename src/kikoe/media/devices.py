@@ -14,6 +14,8 @@ type DeviceKind = Literal["input", "output"]
 # PortAudio's ALSA default is the first hardware device, not the desktop's choice. The
 # sound server's ALSA plugins follow the desktop setting, so "System Default" prefers them.
 _SYSTEM_DEFAULT_NAMES = ("pipewire", "pulse", "default")
+PRIVATE_DEVICE_PREFIX = "Kikoe System Audio "
+"""Names of the temporary devices that wrap a macOS system audio tap; never user choices."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,7 +55,11 @@ async def list_devices(kind: DeviceKind, backend: DeviceBackend | None = None) -
     seen: set[str] = set()
     selectable: list[AudioDevice] = []
     for device in devices:
-        if device.name in _SYSTEM_DEFAULT_NAMES or device.name in seen:
+        if (
+            device.name in _SYSTEM_DEFAULT_NAMES
+            or device.name in seen
+            or device.name.startswith(PRIVATE_DEVICE_PREFIX)
+        ):
             continue
         seen.add(device.name)
         selectable.append(device)

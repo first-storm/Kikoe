@@ -70,10 +70,12 @@ for distribution in (
 
 # Providers and keyring backends are imported lazily or through entry points; the Mistral
 # SDK resolves its models and resources on first use, so PyInstaller cannot see them.
+# macOS system audio imports PyObjC's CoreAudio by name when a capture starts.
 hiddenimports = (
     collect_submodules("kikoe")
     + collect_submodules("keyring.backends")
     + collect_submodules("mistralai")
+    + (["CoreAudio", "Foundation", "objc"] if sys.platform == "darwin" else [])
 )
 
 a = Analysis(
@@ -145,6 +147,10 @@ if sys.platform == "darwin":
             "NSHighResolutionCapable": True,
             "NSMicrophoneUsageDescription": (
                 "Kikoe records your microphone to turn speech into text notes."
+            ),
+            "NSAudioCaptureUsageDescription": (
+                "Kikoe records what your Mac plays, such as meetings and videos, "
+                "to turn speech into text notes."
             ),
         },
     )
