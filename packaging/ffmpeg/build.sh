@@ -30,7 +30,7 @@ esac
 fetch() {
     local url=$1 sha=$2 out
     out="$work/$(basename "$url")"
-    curl --fail --location --retry 4 --silent --show-error --output "$out" "$url"
+    curl --fail --location --retry 4 --retry-all-errors --silent --show-error --output "$out" "$url"
     # macOS's sha256sum lacks GNU options, and shasum is missing from slim Linux images.
     actual=$({ sha256sum "$out" 2>/dev/null || shasum -a 256 "$out"; } | cut -d' ' -f1)
     if [[ "$actual" != "$sha" ]]; then
