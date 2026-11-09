@@ -223,6 +223,27 @@ class LocalCatalog:
         return tuple(m for m in self.models if m.engine_id == engine_id)
 
 
+@dataclass(frozen=True, slots=True)
+class ModelFamily:
+    """Related sizes and versions of one model, listed together on the preferences page."""
+
+    name: str
+    models: tuple[LocalModelSpec, ...]
+
+
+def group_by_family(models: Iterable[LocalModelSpec]) -> tuple[ModelFamily, ...]:
+    """Speech-to-text models by family, ordered by each family's first model.
+
+    Speaker detection models are left out: they are not alternatives to each other's
+    sizes but an add-on, so the preferences page lists them on their own.
+    """
+    families: dict[str, list[LocalModelSpec]] = {}
+    for model in models:
+        if model.role is ModelRole.ASR:
+            families.setdefault(model.family, []).append(model)
+    return tuple(ModelFamily(name, tuple(members)) for name, members in families.items())
+
+
 def model_spec(model: LocalModelSpec, *, speakers: bool = False) -> ModelSpec:
     """How a local model appears in model choosers, with what it can do.
 

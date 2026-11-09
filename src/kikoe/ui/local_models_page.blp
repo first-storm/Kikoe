@@ -12,6 +12,37 @@ template $KikoeLocalModelsPage: Adw.PreferencesPage {
     );
   }
 
+  Adw.PreferencesGroup engines_group {
+    title: _("Engines");
+  }
+
+  Adw.PreferencesGroup downloaded_group {
+    title: _("Downloaded Models");
+
+    ListBox downloaded_list {
+      selection-mode: none;
+
+      [placeholder]
+      Label {
+        label: _("No models downloaded yet. Open an engine to download one.");
+        wrap: true;
+        justify: center;
+        margin-top: 18;
+        margin-bottom: 18;
+        margin-start: 12;
+        margin-end: 12;
+
+        styles [
+          "dimmed",
+        ]
+      }
+
+      styles [
+        "boxed-list",
+      ]
+    }
+  }
+
   Adw.PreferencesGroup unsupported_group {
     visible: false;
 

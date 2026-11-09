@@ -2,6 +2,7 @@
 
 import copy
 from collections.abc import Callable
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -12,9 +13,11 @@ from kikoe.core.local_models import (
     ArchiveKind,
     EngineBuild,
     LocalCatalogError,
+    LocalModelSpec,
     ModelRole,
     OperatingSystem,
     Platform,
+    group_by_family,
     merge_catalogs,
     model_spec,
     needs_device_access,
@@ -235,3 +238,24 @@ def test_older_catalog_entries_default_to_external_speaker_detection() -> None:
     capabilities = model_spec(models[0]).capabilities.file
     assert capabilities is not None
     assert not capabilities.diarization
+
+
+def _spec(model_id: str, family: str, role: ModelRole = ModelRole.ASR) -> LocalModelSpec:
+    _, models = parse_engine_catalog(document())
+    return replace(models[0], model_id=model_id, family=family, role=role)
+
+
+def test_families_keep_catalog_order_and_leave_out_speaker_detection() -> None:
+    models = (
+        _spec("whisper-tiny", "Whisper"),
+        _spec("parakeet", "Parakeet"),
+        _spec("sortformer", "Speaker Detection", ModelRole.DIARIZE),
+        _spec("whisper-base", "Whisper"),
+    )
+    families = group_by_family(models)
+    assert [f.name for f in families] == ["Whisper", "Parakeet"]
+    assert [m.model_id for m in families[0].models] == ["whisper-tiny", "whisper-base"]
+
+
+def test_no_models_means_no_families() -> None:
+    assert group_by_family(()) == ()

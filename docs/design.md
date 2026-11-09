@@ -456,29 +456,46 @@ Use stock `Adw.NavigationPage`, `Adw.EntryRow`, `Adw.PasswordEntryRow`,
 ### Local Models
 
 Local models transcribe on this device; nothing is uploaded. An introduction says
-so and that an engine plus at least one model are needed. The page lists:
+so and that an engine plus at least one model are needed. The page has two
+groups:
 
-- **One group per engine** (transcribe.cpp everywhere, and speech-swift on Apple
-  Silicon Macs), titled with its name. The
-  description shows “Not downloaded · <size>”, download progress, or “Version
-  <version> · Ready”/“Starting…”/“Could not start”. The header holds Download,
-  Cancel, or a Remove Engine… icon button. **Acceleration** chooses the build:
-  Vulkan (Most GPUs), CUDA (NVIDIA), Metal (Apple GPU) or CPU Only, as available
-  for the platform. Vulkan, or Metal on Apple Silicon, is preselected; CUDA never
-  is, because it is about ten times larger. Choosing another build after install
-  turns Download into Switch. **Device** appears once the engine has started and
-  lists Automatic plus the devices it reported. A dimmed note explains CUDA's
-  driver requirement and, in Flatpak, the `flatpak override --user --device=all`
-  command, because the sandbox hides NVIDIA devices by default.
-- **Models**, one row per model with size, languages and Timestamps/Realtime
-  tags, and Download, Cancel or Remove buttons. A downloaded model whose engine
-  is missing says “Needs <engine>”. The speaker detection model is listed here
-  too and adds Speakers to models with timestamps.
+- **Engines**, one navigation row per engine available here (transcribe.cpp
+  everywhere, and speech-swift on Apple Silicon Macs). The subtitle shows
+  “Not downloaded · <size>”, download progress, or “Version <version> ·
+  Ready”/“Starting…”/“Could not start” followed by the number of downloaded
+  models. Activating a row opens the engine's page.
+- **Downloaded Models**, every downloaded or downloading model of every engine,
+  so that space can be freed in one place. The description totals count and size;
+  each row names its engine and has Cancel or Remove…. A downloaded model whose
+  engine is missing says “Needs <engine>”. With no models, a dimmed placeholder
+  points to the engine pages.
+
+The engine page is a navigation subpage titled with the engine name:
+
+- **Engine**: the description shows the same status; the header holds Download,
+  Switch or Cancel, with a progress bar while downloading. **Acceleration**
+  chooses the build: Vulkan (Most GPUs), CUDA (NVIDIA), Metal (Apple GPU) or CPU
+  Only, as available for the platform. Vulkan, or Metal on Apple Silicon, is
+  preselected; CUDA never is, because it is about ten times larger. Choosing
+  another build after install turns Download into Switch. **Device** appears
+  once the engine has started and lists Automatic plus the devices it reported.
+  A dimmed note explains CUDA's driver requirement and, in Flatpak, the
+  `flatpak override --user --device=all` command, because the sandbox hides
+  NVIDIA devices by default.
+- **Models**: speech-to-text models grouped by family. A family with several
+  models is an expander row summarizing “<n> of <total> downloaded” and opens by
+  default when one of them is present; a family of one is a plain row. Model rows
+  show size, languages and Timestamps/Realtime tags, with Download, a progress bar
+  and Cancel, or Remove….
+- **Speaker Detection** (when the engine has such models): adds Speakers to
+  models with timestamps.
+- **Remove Engine…**, a full-width destructive button row at the end, shown once
+  the engine is downloaded.
 
 Removing an engine asks whether to keep its models; keeping them is the default
 destructive choice, and a second response removes the models as well, with their
 total size. A removed model needs no confirmation beyond its own dialog. On
-macOS transcribe.cpp is included with Kikoe: it has no Remove button and its
+macOS transcribe.cpp is included with Kikoe: it has no Remove Engine… row and its
 acceleration cannot change. speech-swift is downloaded like any other engine.
 
 Installed models appear in model pickers as “<model> · On This Device”. The

@@ -3,6 +3,7 @@
 from gi.repository import GObject
 
 from kikoe.core.choice import ModelChoice
+from kikoe.core.local_models import LocalModelSpec
 from kikoe.core.models import ModelSpec, NoteSummary, Provider, Recording, Segment
 
 
@@ -14,6 +15,12 @@ class ProviderItem(GObject.Object):
 
 class ModelItem(GObject.Object):
     def __init__(self, model: ModelSpec) -> None:
+        super().__init__()
+        self.model = model
+
+
+class LocalModelItem(GObject.Object):
+    def __init__(self, model: LocalModelSpec) -> None:
         super().__init__()
         self.model = model
 

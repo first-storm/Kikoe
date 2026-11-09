@@ -18,6 +18,7 @@ class DownloadRow(Adw.ActionRow):
     __gtype_name__ = "KikoeDownloadRow"
 
     download_button: Gtk.Button = Gtk.Template.Child()
+    progress_bar: Gtk.ProgressBar = Gtk.Template.Child()
     cancel_button: Gtk.Button = Gtk.Template.Child()
     remove_button: Gtk.Button = Gtk.Template.Child()
 
@@ -32,6 +33,7 @@ class DownloadRow(Adw.ActionRow):
         status = state.status
         self.download_button.set_visible(status is InstallStatus.MISSING)
         self.cancel_button.set_visible(status is InstallStatus.DOWNLOADING)
+        show_progress(self.progress_bar, state)
         self.remove_button.set_visible(status is InstallStatus.INSTALLED)
         self.set_subtitle(" · ".join(p for p in (_status_text(state, size), detail, note) if p))
 
@@ -46,6 +48,14 @@ class DownloadRow(Adw.ActionRow):
     @Gtk.Template.Callback()
     def _on_remove_button_clicked(self, _button: Gtk.Button) -> None:
         self.on_remove()
+
+
+def show_progress(bar: Gtk.ProgressBar, state: InstallState) -> None:
+    """Show how much of a download has arrived; hidden unless something is downloading."""
+    downloading = state.status is InstallStatus.DOWNLOADING and state.total > 0
+    bar.set_visible(downloading)
+    if downloading:
+        bar.set_fraction(min(state.received / state.total, 1.0))
 
 
 def _status_text(state: InstallState, size: int) -> str:
