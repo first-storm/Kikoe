@@ -300,7 +300,7 @@ downloadable builds and models, each file pinned by URL and SHA-256, and
 `providers/local/engines/__init__.py` registers each engine package in one line.
 Removing an engine means deleting its folder and that line; architecture tests
 ensure nothing else imports engine packages, and adapters import only
-`providers.local.adapter` and `providers.local.protocol`.
+`providers.local.adapter`, `providers.local.protocol` and their own package.
 
 | Module | Responsibility |
 | --- | --- |
@@ -361,6 +361,21 @@ The [transcribe.cpp 0.4.1 model documentation](https://github.com/handy-computer
 describes the supported checkpoint and its memory use. Kikoe conservatively splits
 MOSS inputs at 600 seconds through the existing upload pipeline. Speaker labels are
 local to each chunk; identities are not matched across chunks.
+
+speech-swift (Apple Silicon, macOS 15 or later) offers Qwen3-ASR 0.6B/1.7B on MLX and
+Parakeet TDT v3, Parakeet EOU, Nemotron 3.5 Streaming and Omnilingual 300M on Core ML.
+Its adapter starts the release's prebuilt `speech-server` on a free `127.0.0.1` port
+and posts WAV files to its OpenAI-style `/v1/audio/transcriptions`; the server returns
+plain text, so these models have no timestamps or speaker detection. Each model is a
+folder of the files speech-swift would fetch itself, regenerated with
+`uv run scripts/speech_swift_catalog.py` and laid out as its cache expects. The server
+runs with `QWEN3_CACHE_DIR` set to that folder, so switching models restarts it, and
+with `HF_ENDPOINT` set to a stand-in hub in the worker that lists the installed files:
+speech-swift always asks the Hub first, and would otherwise retry for minutes offline
+or download behind Kikoe's back. Live audio is buffered in the worker and transcribed
+in pieces that end at a pause (or after 25 seconds); each piece's text is committed to
+the current turn. Parakeet TDT is limited to 30-second requests and Omnilingual to
+40 seconds, so files are split at pauses like cloud uploads.
 
 Catalog entries declare `native_diarization` when speaker attribution is built in.
 These models offer speaker detection without Sortformer installed. The local client

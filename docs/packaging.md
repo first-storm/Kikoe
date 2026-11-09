@@ -342,7 +342,8 @@ and cleanup without real hardware.
 
 ## Local engines
 
-Except on macOS, local transcription engines are not part of any package. Users
+Except for transcribe.cpp on macOS, local transcription engines are not part of any
+package; speech-swift, offered only on Apple Silicon Macs, is always downloaded. Users
 download them in Preferences → Local Models from the engine's own GitHub release,
 pinned by SHA-256 in `providers/local/engines/<engine>/catalog.json`; models come
 from Hugging Face at pinned revisions. Files go to `data_dir()/local`, which Flatpak

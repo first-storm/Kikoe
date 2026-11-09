@@ -458,7 +458,8 @@ Use stock `Adw.NavigationPage`, `Adw.EntryRow`, `Adw.PasswordEntryRow`,
 Local models transcribe on this device; nothing is uploaded. An introduction says
 so and that an engine plus at least one model are needed. The page lists:
 
-- **One group per engine** (currently transcribe.cpp), titled with its name. The
+- **One group per engine** (transcribe.cpp everywhere, and speech-swift on Apple
+  Silicon Macs), titled with its name. The
   description shows “Not downloaded · <size>”, download progress, or “Version
   <version> · Ready”/“Starting…”/“Could not start”. The header holds Download,
   Cancel, or a Remove Engine… icon button. **Acceleration** chooses the build:
@@ -477,8 +478,8 @@ so and that an engine plus at least one model are needed. The page lists:
 Removing an engine asks whether to keep its models; keeping them is the default
 destructive choice, and a second response removes the models as well, with their
 total size. A removed model needs no confirmation beyond its own dialog. On
-macOS the engine is included with Kikoe: it has no Remove button and its
-acceleration cannot change.
+macOS transcribe.cpp is included with Kikoe: it has no Remove button and its
+acceleration cannot change. speech-swift is downloaded like any other engine.
 
 Installed models appear in model pickers as “<model> · On This Device”. The
 Providers page does not list this built-in provider and it needs no API key.
