@@ -44,6 +44,16 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.3.6" date="2026-11-10">
+      <description>
+        <p>Record what your computer plays, not just your microphone.</p>
+        <ul>
+          <li>Record system audio on Linux and macOS, alone or mixed with the microphone.</li>
+          <li>Choose the recording source from a menu next to the Record button.</li>
+          <li>On macOS, leave Kikoe’s own playback out of system audio recordings.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.5" date="2026-11-09">
       <description>
         <p>A second local engine for Apple Silicon Macs and an easier way to manage local models.</p>
