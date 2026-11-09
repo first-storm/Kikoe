@@ -1,0 +1,33 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $KikoeLocalEnginePage: Adw.NavigationPage {
+  hidden => $_on_page_hidden();
+
+  child: Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {}
+
+    content: Adw.PreferencesPage page {
+      Adw.PreferencesGroup speakers_group {
+        title: _("Speaker Detection");
+        description: _("Adds speakers to models with timestamps.");
+        visible: false;
+      }
+
+      Adw.PreferencesGroup remove_group {
+        visible: false;
+
+        Adw.ButtonRow {
+          title: _("_Remove Engine…");
+          use-underline: true;
+          activated => $_on_remove_row_activated();
+
+          styles [
+            "destructive-action",
+          ]
+        }
+      }
+    };
+  };
+}

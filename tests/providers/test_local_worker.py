@@ -3,9 +3,11 @@
 import asyncio
 import io
 import json
+import os
 import sys
 import textwrap
 import threading
+from collections.abc import Callable
 from datetime import timedelta
 from pathlib import Path
 
@@ -147,6 +149,11 @@ FAKE_WORKER = textwrap.dedent(
             sys.exit(3)
         elif mode == "stuck":
             time.sleep(60)
+        elif mode == "helper":
+            import subprocess
+            helper = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+            open(sys.argv[2], "w").write(str(helper.pid))
+            time.sleep(60)
         elif mode == "slow":
             for message2 in sys.stdin:
                 cancel = json.loads(message2)
@@ -161,10 +168,10 @@ FAKE_WORKER = textwrap.dedent(
 )
 
 
-def _host(tmp_path: Path, mode: str) -> WorkerHost:
+def _host(tmp_path: Path, mode: str, *extra: str) -> WorkerHost:
     script = tmp_path / "fake_worker.py"
     script.write_text(FAKE_WORKER, encoding="utf-8")
-    return WorkerHost([sys.executable, str(script), mode])
+    return WorkerHost([sys.executable, str(script), mode, *extra])
 
 
 @run_async
@@ -292,3 +299,38 @@ def test_local_settings_round_trip_and_tolerate_damage(tmp_path: Path) -> None:
     assert store.load() == LocalSettings()
     (tmp_path / "local.json").write_text(json.dumps({"version": 9}), encoding="utf-8")
     assert store.load() == LocalSettings()
+
+
+async def _eventually(condition: Callable[[], bool]) -> None:
+    for _ in range(100):
+        if condition():
+            return
+        await asyncio.sleep(0.05)
+    raise AssertionError("condition never became true")
+
+
+def _alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    return True
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="process groups are POSIX only")
+@run_async
+async def test_killing_a_stuck_worker_also_ends_the_helpers_it_started(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("kikoe.providers.local.worker_host.CANCEL_GRACE", 0.3)
+    pid_file = tmp_path / "helper.pid"
+    host = _host(tmp_path, "helper", str(pid_file))
+    task = asyncio.create_task(host.request(Op.TRANSCRIBE))
+    await _eventually(lambda: pid_file.exists() and bool(pid_file.read_text()))
+    helper = int(pid_file.read_text())
+    task.cancel()
+    async with asyncio.timeout(5):
+        with pytest.raises(asyncio.CancelledError):
+            await task
+    await _eventually(lambda: not _alive(helper))
+    await host.close()

@@ -18,7 +18,8 @@ CATALOG_VERSION = 1
 
 _ID = re.compile(r"[a-z0-9][a-z0-9._-]*")
 _SHA256 = re.compile(r"[0-9a-f]{64}")
-_TARGET = re.compile(r"[a-z0-9_-]*")
+_SEGMENT = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_.-]*")
+"""One folder name of a target; Hugging Face repositories need capitals and dots."""
 
 
 class LocalCatalogError(ValueError):
@@ -181,7 +182,8 @@ class LocalModelSpec:
     family: str
     """Groups related sizes and versions on the preferences page."""
     role: ModelRole
-    file: Download
+    files: tuple[Download, ...]
+    """One file, or with ``folder`` the files of a folder laid out by their targets."""
     languages: tuple[str, ...]
     """Language codes; empty means many languages with automatic detection."""
     timestamps: bool = False
@@ -193,10 +195,17 @@ class LocalModelSpec:
     """Automatic language detection is unavailable; an explicit language is required."""
     native_diarization: bool = False
     """Speaker attribution is built in and needs no separate detection model."""
+    folder: bool = False
+    """The engine loads the model's whole folder rather than one file."""
 
     @property
     def size(self) -> int:
-        return self.file.size
+        return sum(f.size for f in self.files)
+
+    @property
+    def file(self) -> Download:
+        """The model file of a single-file model; the first file of a folder model."""
+        return self.files[0]
 
 
 @dataclass(frozen=True, slots=True)
@@ -212,6 +221,27 @@ class LocalCatalog:
 
     def models_of(self, engine_id: str) -> tuple[LocalModelSpec, ...]:
         return tuple(m for m in self.models if m.engine_id == engine_id)
+
+
+@dataclass(frozen=True, slots=True)
+class ModelFamily:
+    """Related sizes and versions of one model, listed together on the preferences page."""
+
+    name: str
+    models: tuple[LocalModelSpec, ...]
+
+
+def group_by_family(models: Iterable[LocalModelSpec]) -> tuple[ModelFamily, ...]:
+    """Speech-to-text models by family, ordered by each family's first model.
+
+    Speaker detection models are left out: they are not alternatives to each other's
+    sizes but an add-on, so the preferences page lists them on their own.
+    """
+    families: dict[str, list[LocalModelSpec]] = {}
+    for model in models:
+        if model.role is ModelRole.ASR:
+            families.setdefault(model.family, []).append(model)
+    return tuple(ModelFamily(name, tuple(members)) for name, members in families.items())
 
 
 def model_spec(model: LocalModelSpec, *, speakers: bool = False) -> ModelSpec:
@@ -332,9 +362,17 @@ def _build(entry: Mapping[str, object]) -> EngineBuild:
 
 def _model(entry: Mapping[str, object], engine_id: str) -> LocalModelSpec:
     model_id = _identifier(entry.get("id"), "model id")
-    file = _download(_object(entry.get("file"), f"file of {model_id}"))
-    if file.archive is not ArchiveKind.FILE:
-        raise LocalCatalogError(f"model {model_id} must be a single file")
+    folder = "files" in entry
+    if folder == ("file" in entry):
+        raise LocalCatalogError(f"model {model_id} needs either a file or files")
+    if folder:
+        files = _downloads(entry.get("files"))
+    else:
+        files = (_download(_object(entry.get("file"), f"file of {model_id}")),)
+    if not files:
+        raise LocalCatalogError(f"model {model_id} has no files")
+    if any(f.archive is not ArchiveKind.FILE for f in files):
+        raise LocalCatalogError(f"model {model_id} must consist of plain files")
     max_seconds = entry.get("max_seconds")
     if max_seconds is not None and (type(max_seconds) is not int or max_seconds <= 0):
         raise LocalCatalogError(f"model {model_id} has an invalid max_seconds")
@@ -344,13 +382,14 @@ def _model(entry: Mapping[str, object], engine_id: str) -> LocalModelSpec:
         display_name=_string(entry.get("name"), "model name"),
         family=_string(entry.get("family"), "model family"),
         role=_enum(ModelRole, entry.get("role", ModelRole.ASR.value), "role"),
-        file=file,
+        files=files,
         languages=tuple(_string(c, "a language") for c in _list(entry.get("languages", []), "l")),
         timestamps=_flag(entry, "timestamps"),
         streaming=_flag(entry, "streaming"),
         max_seconds=max_seconds,
         requires_language=_flag(entry, "requires_language"),
         native_diarization=_flag(entry, "native_diarization"),
+        folder=folder,
     )
 
 
@@ -369,7 +408,7 @@ def _download(entry: Mapping[str, object]) -> Download:
     if type(size) is not int or size <= 0:
         raise LocalCatalogError(f"{url} needs a positive size")
     target = entry.get("target", "")
-    if not isinstance(target, str) or not _TARGET.fullmatch(target):
+    if not isinstance(target, str) or not _relative_folder(target):
         raise LocalCatalogError(f"{url} has an invalid target folder")
     strip = entry.get("strip", 0)
     if type(strip) is not int or strip < 0:
@@ -386,6 +425,11 @@ def _download(entry: Mapping[str, object]) -> Download:
     if not name or name in (".", "..") or "/" in name or "\\" in name:
         raise LocalCatalogError(f"{url} does not end in a file name")
     return download
+
+
+def _relative_folder(target: str) -> bool:
+    """Empty, or folder names joined by ``/`` that cannot climb out of the install folder."""
+    return target == "" or all(_SEGMENT.fullmatch(part) for part in target.split("/"))
 
 
 def _https(value: object, what: str) -> str:

@@ -4,8 +4,9 @@ Layout under the root (``paths.data_dir()/local`` by default)::
 
     engines/<engine id>/install.json    which build and version is installed
     engines/<engine id>/<target>/...    unpacked components
-    models/<model id>/model.json        checksum of the installed file
-    models/<model id>/<file name>
+    models/<model id>/model.json        checksums of the installed files
+    models/<model id>/<file name>       a single-file model
+    models/<model id>/<target>/<name>   each file of a folder model
     staging/                            downloads in progress; emptied on start
 
 A folder without a valid receipt counts as not installed. Installation fills a folder
@@ -79,6 +80,9 @@ class LocalInstalls:
         return self.root / "models" / model_id
 
     def model_path(self, model: LocalModelSpec) -> Path:
+        """What the engine loads: the model file, or the folder of a folder model."""
+        if model.folder:
+            return self.model_dir(model.model_id)
         return self.model_dir(model.model_id) / model.file.filename
 
     def clean_staging(self) -> None:
@@ -94,12 +98,14 @@ class LocalInstalls:
         return _receipt(self.engine_dir(engine_id), engine_id)
 
     def model_installed(self, model: LocalModelSpec) -> bool:
-        data = _read_json(self.model_dir(model.model_id) / "model.json")
-        return (
-            data is not None
-            and data.get("version") == RECEIPT_VERSION
-            and data.get("sha256") == model.file.sha256
-            and self.model_path(model).is_file()
+        folder = self.model_dir(model.model_id)
+        data = _read_json(folder / "model.json")
+        if data is None or data.get("version") != RECEIPT_VERSION:
+            return False
+        if not model.folder:
+            return data.get("sha256") == model.file.sha256 and self.model_path(model).is_file()
+        return data.get("files") == _checksums(model) and all(
+            (folder / _relative(f)).is_file() for f in model.files
         )
 
     async def install_engine(
@@ -132,8 +138,15 @@ class LocalInstalls:
         try:
             folder = staging / "install"
             await asyncio.to_thread(folder.mkdir)
-            await self._download(model.file, folder / model.file.filename, on_progress)
-            receipt = {"version": RECEIPT_VERSION, "sha256": model.file.sha256}
+            for item in model.files:
+                file = folder / _relative(item)
+                await asyncio.to_thread(file.parent.mkdir, parents=True, exist_ok=True)
+                await self._download(item, file, on_progress)
+            receipt: dict[str, object] = {"version": RECEIPT_VERSION}
+            if model.folder:
+                receipt["files"] = _checksums(model)
+            else:
+                receipt["sha256"] = model.file.sha256
             await asyncio.to_thread(_write_json, folder / "model.json", receipt)
             await asyncio.to_thread(_swap, folder, self.model_dir(model.model_id))
         finally:
@@ -165,6 +178,15 @@ def _receipt(folder: Path, engine_id: str) -> EngineReceipt | None:
     if not isinstance(version, str):
         return None
     return EngineReceipt(engine_id, build, version, folder)
+
+
+def _relative(item: Download) -> str:
+    """Where a model file lives inside its model folder."""
+    return f"{item.target}/{item.filename}" if item.target else item.filename
+
+
+def _checksums(model: LocalModelSpec) -> dict[str, str]:
+    return {_relative(f): f.sha256 for f in model.files}
 
 
 def _swap(source: Path, destination: Path) -> None:

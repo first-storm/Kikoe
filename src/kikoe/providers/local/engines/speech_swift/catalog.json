@@ -1,0 +1,631 @@
+{
+  "version": 1,
+  "engine": {
+    "id": "speech-swift",
+    "name": "speech-swift",
+    "version": "0.0.29",
+    "homepage": "https://github.com/soniqo/speech-swift",
+    "builds": [
+      {
+        "id": "macos-arm64-metal",
+        "os": "macos",
+        "arch": "arm64",
+        "accelerators": [
+          "metal",
+          "cpu"
+        ],
+        "components": [
+          {
+            "url": "https://github.com/soniqo/speech-swift/releases/download/v0.0.29/speech-macos-arm64.tar.gz",
+            "sha256": "ff426a060004dd39b3d00ad014a648747d48cb78b800672aa17221ada2453406",
+            "size": 109874480,
+            "archive": "tar.gz",
+            "target": "bin"
+          }
+        ]
+      }
+    ]
+  },
+  "models": [
+    {
+      "id": "speech-swift-qwen3-asr-0.6b",
+      "name": "Qwen3-ASR 0.6B (4-bit)",
+      "family": "Qwen3-ASR",
+      "files": [
+        {
+          "url": "https://huggingface.co/aufklarer/Qwen3-ASR-0.6B-MLX-4bit/resolve/bc441bd1e4295c1f42d9879f056049a925b6e013/config.json",
+          "sha256": "923618cf5ca452fda0253a6be5c1a17f94a2e4851d3b98beb45848565587bd72",
+          "size": 7187,
+          "target": "qwen3-speech/models/aufklarer/Qwen3-ASR-0.6B-MLX-4bit"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Qwen3-ASR-0.6B-MLX-4bit/resolve/bc441bd1e4295c1f42d9879f056049a925b6e013/merges.txt",
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "size": 1671853,
+          "target": "qwen3-speech/models/aufklarer/Qwen3-ASR-0.6B-MLX-4bit"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Qwen3-ASR-0.6B-MLX-4bit/resolve/bc441bd1e4295c1f42d9879f056049a925b6e013/model.safetensors",
+          "sha256": "70c7e67e588062adce4f10796e47ad42ead51c6671eda61a0987eae38ca95ddf",
+          "size": 708236945,
+          "target": "qwen3-speech/models/aufklarer/Qwen3-ASR-0.6B-MLX-4bit"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Qwen3-ASR-0.6B-MLX-4bit/resolve/bc441bd1e4295c1f42d9879f056049a925b6e013/model.safetensors.index.json",
+          "sha256": "e3bb80ef0fd42a5be07b04e90c97d60460bbde8af3531e0bfe9100a61404d81a",
+          "size": 71814,
+          "target": "qwen3-speech/models/aufklarer/Qwen3-ASR-0.6B-MLX-4bit"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Qwen3-ASR-0.6B-MLX-4bit/resolve/bc441bd1e4295c1f42d9879f056049a925b6e013/tokenizer_config.json",
+          "sha256": "4942d005604266809309cabc9f4e9cb89ce855d59b14681fdc0e1cc62ea26c4c",
+          "size": 12487,
+          "target": "qwen3-speech/models/aufklarer/Qwen3-ASR-0.6B-MLX-4bit"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Qwen3-ASR-0.6B-MLX-4bit/resolve/bc441bd1e4295c1f42d9879f056049a925b6e013/vocab.json",
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "size": 2776833,
+          "target": "qwen3-speech/models/aufklarer/Qwen3-ASR-0.6B-MLX-4bit"
+        }
+      ],
+      "streaming": true,
+      "languages": [
+        "zh",
+        "en",
+        "yue",
+        "ar",
+        "de",
+        "fr",
+        "es",
+        "pt",
+        "id",
+        "it",
+        "ko",
+        "ru",
+        "th",
+        "vi",
+        "ja",
+        "tr",
+        "hi",
+        "ms",
+        "nl",
+        "sv",
+        "da",
+        "fi",
+        "pl",
+        "cs",
+        "fil",
+        "fa",
+        "el",
+        "ro",
+        "hu",
+        "mk"
+      ],
+      "max_seconds": 600
+    },
+    {
+      "id": "speech-swift-qwen3-asr-1.7b",
+      "name": "Qwen3-ASR 1.7B (8-bit)",
+      "family": "Qwen3-ASR",
+      "files": [
+        {
+          "url": "https://huggingface.co/aufklarer/Qwen3-ASR-1.7B-MLX-8bit/resolve/e5450a26d1fd417c45fc9c405651ddc3180a27a6/config.json",
+          "sha256": "1b76b3b6c655fc54595da025f7a96474ad9fa86363303fbdd61a7d8483ccfaf7",
+          "size": 7188,
+          "target": "qwen3-speech/models/aufklarer/Qwen3-ASR-1.7B-MLX-8bit"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Qwen3-ASR-1.7B-MLX-8bit/resolve/e5450a26d1fd417c45fc9c405651ddc3180a27a6/merges.txt",
+          "sha256": "8831e4f1a044471340f7c0a83d7bd71306a5b867e95fd870f74d0c5308a904d5",
+          "size": 1671853,
+          "target": "qwen3-speech/models/aufklarer/Qwen3-ASR-1.7B-MLX-8bit"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Qwen3-ASR-1.7B-MLX-8bit/resolve/e5450a26d1fd417c45fc9c405651ddc3180a27a6/model.safetensors",
+          "sha256": "bf304b009cc7eca79283056f787b44c952d24ac22cec787b39732bba3c23c13c",
+          "size": 2463307541,
+          "target": "qwen3-speech/models/aufklarer/Qwen3-ASR-1.7B-MLX-8bit"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Qwen3-ASR-1.7B-MLX-8bit/resolve/e5450a26d1fd417c45fc9c405651ddc3180a27a6/model.safetensors.index.json",
+          "sha256": "0a5d0ec11188602242ff81a9969883d0fdeb98cd5d85cd1413089d897c201af5",
+          "size": 78968,
+          "target": "qwen3-speech/models/aufklarer/Qwen3-ASR-1.7B-MLX-8bit"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Qwen3-ASR-1.7B-MLX-8bit/resolve/e5450a26d1fd417c45fc9c405651ddc3180a27a6/tokenizer_config.json",
+          "sha256": "4942d005604266809309cabc9f4e9cb89ce855d59b14681fdc0e1cc62ea26c4c",
+          "size": 12487,
+          "target": "qwen3-speech/models/aufklarer/Qwen3-ASR-1.7B-MLX-8bit"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Qwen3-ASR-1.7B-MLX-8bit/resolve/e5450a26d1fd417c45fc9c405651ddc3180a27a6/vocab.json",
+          "sha256": "ca10d7e9fb3ed18575dd1e277a2579c16d108e32f27439684afa0e10b1440910",
+          "size": 2776833,
+          "target": "qwen3-speech/models/aufklarer/Qwen3-ASR-1.7B-MLX-8bit"
+        }
+      ],
+      "streaming": true,
+      "languages": [
+        "zh",
+        "en",
+        "yue",
+        "ar",
+        "de",
+        "fr",
+        "es",
+        "pt",
+        "id",
+        "it",
+        "ko",
+        "ru",
+        "th",
+        "vi",
+        "ja",
+        "tr",
+        "hi",
+        "ms",
+        "nl",
+        "sv",
+        "da",
+        "fi",
+        "pl",
+        "cs",
+        "fil",
+        "fa",
+        "el",
+        "ro",
+        "hu",
+        "mk"
+      ],
+      "max_seconds": 600
+    },
+    {
+      "id": "speech-swift-parakeet-tdt-0.6b-v3",
+      "name": "Parakeet TDT 0.6B v3",
+      "family": "Parakeet",
+      "files": [
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/resolve/8054d9f680cfa4c0012876ed71e854fb20dd563b/config.json",
+          "sha256": "d8974a91b93b54e266ee31181e6d0157b4864e35282cf74f36374ccb01588a8b",
+          "size": 372,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/resolve/8054d9f680cfa4c0012876ed71e854fb20dd563b/decoder.mlmodelc/analytics/coremldata.bin",
+          "sha256": "c68e147320e8b8a073e856f8695e6c4aeb1d45e5d6ce4d1a8fddda66aaff5914",
+          "size": 243,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/decoder.mlmodelc/analytics"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/resolve/8054d9f680cfa4c0012876ed71e854fb20dd563b/decoder.mlmodelc/coremldata.bin",
+          "sha256": "e27b659e7e6bcc617f5e6c05701c721b87589cbe2453f87157f6358f29840c9b",
+          "size": 403,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/decoder.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/resolve/8054d9f680cfa4c0012876ed71e854fb20dd563b/decoder.mlmodelc/model.mil",
+          "sha256": "accd6266fec0dabafb19f1cdf454496c1f5f2d2123d6d848d3caa710666fa424",
+          "size": 10207,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/decoder.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/resolve/8054d9f680cfa4c0012876ed71e854fb20dd563b/decoder.mlmodelc/weights/weight.bin",
+          "sha256": "48adf0f0d47c406c8253d4f7fef967436a39da14f5a65e66d5a4b407be355d41",
+          "size": 23604992,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/decoder.mlmodelc/weights"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/resolve/8054d9f680cfa4c0012876ed71e854fb20dd563b/encoder.mlmodelc/analytics/coremldata.bin",
+          "sha256": "e4629f1149c11c12e55393d525c2037c2530254a8e97c97306f37ba950fbc829",
+          "size": 243,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/encoder.mlmodelc/analytics"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/resolve/8054d9f680cfa4c0012876ed71e854fb20dd563b/encoder.mlmodelc/coremldata.bin",
+          "sha256": "763731b5bb684458833b27de8571d93b9114553c0a2dcebb18d620b29d542919",
+          "size": 364,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/encoder.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/resolve/8054d9f680cfa4c0012876ed71e854fb20dd563b/encoder.mlmodelc/model.mil",
+          "sha256": "e59383a705c6dc55b2f086b649cbbd594c12adfd2a3b7e112fdce8faba01b8d3",
+          "size": 1594073,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/encoder.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/resolve/8054d9f680cfa4c0012876ed71e854fb20dd563b/encoder.mlmodelc/weights/weight.bin",
+          "sha256": "1fc4dadd1b17f2587dbdcc4d721bbfd7d41b3d8c4e281a4db09e522dfb5da841",
+          "size": 602637376,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/encoder.mlmodelc/weights"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/resolve/8054d9f680cfa4c0012876ed71e854fb20dd563b/joint.mlmodelc/analytics/coremldata.bin",
+          "sha256": "dc67ec8784edac962c8ce9a2321473a013c6d00aba1ef65c2a1ac9823167f063",
+          "size": 243,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/joint.mlmodelc/analytics"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/resolve/8054d9f680cfa4c0012876ed71e854fb20dd563b/joint.mlmodelc/coremldata.bin",
+          "sha256": "fb2605341d8ddb91060e129d8c57be0618d05f13e32636571c78ac2eacd059bc",
+          "size": 392,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/joint.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/resolve/8054d9f680cfa4c0012876ed71e854fb20dd563b/joint.mlmodelc/model.mil",
+          "sha256": "50dbb7ecd2631d81c0f02959c8bcdd45eff7c7a52c2fdbe7d6932b8df7476d42",
+          "size": 5748,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/joint.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/resolve/8054d9f680cfa4c0012876ed71e854fb20dd563b/joint.mlmodelc/weights/weight.bin",
+          "sha256": "4e0e63d840032f7f07ddb1d64446051166281e5491bf22da8a945c41f6eedb3e",
+          "size": 12642764,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/joint.mlmodelc/weights"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s/resolve/8054d9f680cfa4c0012876ed71e854fb20dd563b/vocab.json",
+          "sha256": "18494370fcd171912894d494a45936bda67f2269e8249926066560e2a95b0fdf",
+          "size": 159466,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-TDT-v3-CoreML-INT8-30s"
+        }
+      ],
+      "streaming": true,
+      "languages": [
+        "bg",
+        "cs",
+        "da",
+        "de",
+        "el",
+        "en",
+        "es",
+        "et",
+        "fi",
+        "fr",
+        "hr",
+        "hu",
+        "it",
+        "lt",
+        "lv",
+        "mt",
+        "nl",
+        "pl",
+        "pt",
+        "ro",
+        "ru",
+        "sk",
+        "sl",
+        "sv",
+        "uk"
+      ],
+      "max_seconds": 30
+    },
+    {
+      "id": "speech-swift-parakeet-eou-120m",
+      "name": "Parakeet EOU 120M",
+      "family": "Parakeet",
+      "files": [
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-EOU-120M-CoreML-INT8/resolve/fca97346c39ef8cc046e7b13515972f6db48e2ee/config.json",
+          "sha256": "db0d95f8575e6610f4f524c87d647d5bcd5a868ed5102044e5ccdf4352d5da4b",
+          "size": 524,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-EOU-120M-CoreML-INT8"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-EOU-120M-CoreML-INT8/resolve/fca97346c39ef8cc046e7b13515972f6db48e2ee/decoder.mlmodelc/analytics/coremldata.bin",
+          "sha256": "b45480429c7bdb4c48e989d57ac317dd8340a563b4c3f30009a73c49c084c736",
+          "size": 243,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-EOU-120M-CoreML-INT8/decoder.mlmodelc/analytics"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-EOU-120M-CoreML-INT8/resolve/fca97346c39ef8cc046e7b13515972f6db48e2ee/decoder.mlmodelc/coremldata.bin",
+          "sha256": "e2eac04f97f9b9193425bec93d1db7877f5cbb72fcb02ad7f6cd6318daed4a28",
+          "size": 403,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-EOU-120M-CoreML-INT8/decoder.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-EOU-120M-CoreML-INT8/resolve/fca97346c39ef8cc046e7b13515972f6db48e2ee/decoder.mlmodelc/model.mil",
+          "sha256": "17b279bc9b64e676ea346f6aa99f0aa4cd8728d96f1def312a96a283b2f36cf0",
+          "size": 6322,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-EOU-120M-CoreML-INT8/decoder.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-EOU-120M-CoreML-INT8/resolve/fca97346c39ef8cc046e7b13515972f6db48e2ee/decoder.mlmodelc/weights/weight.bin",
+          "sha256": "0b4cacecdcd9df79ab1e56de67230baf5a8664d2afe0bb8f3408eefa972cb2f4",
+          "size": 7873600,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-EOU-120M-CoreML-INT8/decoder.mlmodelc/weights"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-EOU-120M-CoreML-INT8/resolve/fca97346c39ef8cc046e7b13515972f6db48e2ee/encoder.mlmodelc/analytics/coremldata.bin",
+          "sha256": "d4054b2dbc35b07b45cf0644b666f2fa8ac9f0351f01dca4251f810e442baab0",
+          "size": 243,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-EOU-120M-CoreML-INT8/encoder.mlmodelc/analytics"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-EOU-120M-CoreML-INT8/resolve/fca97346c39ef8cc046e7b13515972f6db48e2ee/encoder.mlmodelc/coremldata.bin",
+          "sha256": "eca911beeaaaefa5e016a73a930ea6da1562bffff618948e130f1b8e5cfba961",
+          "size": 670,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-EOU-120M-CoreML-INT8/encoder.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-EOU-120M-CoreML-INT8/resolve/fca97346c39ef8cc046e7b13515972f6db48e2ee/encoder.mlmodelc/model.mil",
+          "sha256": "a7c73856dd742860847b2bb4c3de5c2e52a20a22da5a7e84d98582c6f5a3d1d3",
+          "size": 703396,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-EOU-120M-CoreML-INT8/encoder.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-EOU-120M-CoreML-INT8/resolve/fca97346c39ef8cc046e7b13515972f6db48e2ee/encoder.mlmodelc/weights/weight.bin",
+          "sha256": "586fbc5437d227f1196d5f812053b47c52ac07cbc6986df1e8b1b4459875d3f6",
+          "size": 106694848,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-EOU-120M-CoreML-INT8/encoder.mlmodelc/weights"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-EOU-120M-CoreML-INT8/resolve/fca97346c39ef8cc046e7b13515972f6db48e2ee/joint.mlmodelc/analytics/coremldata.bin",
+          "sha256": "8757bc325c1db8f44d6241593a17e8aa2ab23cae1dcbbdcf186fe4b5d079ba66",
+          "size": 243,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-EOU-120M-CoreML-INT8/joint.mlmodelc/analytics"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-EOU-120M-CoreML-INT8/resolve/fca97346c39ef8cc046e7b13515972f6db48e2ee/joint.mlmodelc/coremldata.bin",
+          "sha256": "18778f8a7c5a5816d86af6399c2f2ca3ee4b864f144725fb39f74b9f663b9f12",
+          "size": 354,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-EOU-120M-CoreML-INT8/joint.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-EOU-120M-CoreML-INT8/resolve/fca97346c39ef8cc046e7b13515972f6db48e2ee/joint.mlmodelc/model.mil",
+          "sha256": "8c5d1360fc5227c35d256e2bfc96c0a34143db907499d058f4c71bc0233119b4",
+          "size": 5058,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-EOU-120M-CoreML-INT8/joint.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-EOU-120M-CoreML-INT8/resolve/fca97346c39ef8cc046e7b13515972f6db48e2ee/joint.mlmodelc/weights/weight.bin",
+          "sha256": "7039b2010a269153f5a96edf28637f921a86ef8822f248f2d6712f7a6bce84b4",
+          "size": 2794182,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-EOU-120M-CoreML-INT8/joint.mlmodelc/weights"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Parakeet-EOU-120M-CoreML-INT8/resolve/fca97346c39ef8cc046e7b13515972f6db48e2ee/vocab.json",
+          "sha256": "83fd42ad33dae1bd3ceee6c0bb6c625f314cf0b2dc8430be441ac1e2643d5c36",
+          "size": 17437,
+          "target": "qwen3-speech/models/aufklarer/Parakeet-EOU-120M-CoreML-INT8"
+        }
+      ],
+      "streaming": true,
+      "languages": [
+        "en"
+      ],
+      "max_seconds": 600
+    },
+    {
+      "id": "speech-swift-nemotron-3.5-streaming-0.6b",
+      "name": "Nemotron 3.5 Streaming 0.6B",
+      "family": "Nemotron",
+      "files": [
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/config.json",
+          "sha256": "f211a2802eae75d05309c4978f129819fa94083fd0c3bc55d7dab06335953113",
+          "size": 589,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/decoder.mlmodelc/analytics/coremldata.bin",
+          "sha256": "4d58297228f44ca23752d3850c60a0559af78a6d4455b348cd8dc6364b8ed0d4",
+          "size": 243,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/decoder.mlmodelc/analytics"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/decoder.mlmodelc/coremldata.bin",
+          "sha256": "15a3baf01a47f013b388b76b940ab5ec33ba84a8bc6025e5d5dba1ec9bf28762",
+          "size": 404,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/decoder.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/decoder.mlmodelc/model.mil",
+          "sha256": "d0cd6c15e2898f834c7fb268e0684f291ac20869639c49cfeab88504a1112e9e",
+          "size": 8981,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/decoder.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/decoder.mlmodelc/weights/weight.bin",
+          "sha256": "dcdeccd4ccf46e2675224f9f030d46c1a89e2bda4abb316e901e1a21f1597f8f",
+          "size": 29870592,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/decoder.mlmodelc/weights"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/encoder.mlmodelc/analytics/coremldata.bin",
+          "sha256": "cdd661c54b5e6f6389b58567c144cba6fad0d9e2c998d8a9048f87e857f9f32b",
+          "size": 243,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/encoder.mlmodelc/analytics"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/encoder.mlmodelc/coremldata.bin",
+          "sha256": "c37a6fb1813130e71e0a19e58c235974234f1b9b3984ec1afa9323bf3c192e8d",
+          "size": 701,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/encoder.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/encoder.mlmodelc/model.mil",
+          "sha256": "28c91a4bf90a15fa0c65c62bdc67e8755ad43f5f5ff42503b13e05768035d8ce",
+          "size": 821810,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/encoder.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/encoder.mlmodelc/weights/weight.bin",
+          "sha256": "5fab9a684e34183d5f19cd1c63c19eefd7b02cc5a68af1367c6489702e746508",
+          "size": 591932416,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/encoder.mlmodelc/weights"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/joint.mlmodelc/analytics/coremldata.bin",
+          "sha256": "e76f3618638fd5cf64805d4ba57942cbc7fcb1b38edd13851a151978871e57c4",
+          "size": 243,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/joint.mlmodelc/analytics"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/joint.mlmodelc/coremldata.bin",
+          "sha256": "1b4924670d16462ab2de77fb7e5f7fa721af139939e5ab2ddcd903734894ce9d",
+          "size": 355,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/joint.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/joint.mlmodelc/model.mil",
+          "sha256": "8a4c0bab78d227f82c2cdf72ecaf0b4b61ce1a26c1299ea1c879cd71af65ede2",
+          "size": 3921,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/joint.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/joint.mlmodelc/weights/weight.bin",
+          "sha256": "c0ef0a3a6598f962d2aad598dc6850e4428874033419817121e11f1fff4a9cfe",
+          "size": 18911744,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/joint.mlmodelc/weights"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/languages.json",
+          "sha256": "a1efe863e1057d4658bce8175c978020ac35a63a3c9a65ae899f324a32c8e4f6",
+          "size": 2020,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/tokenizer.model",
+          "sha256": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
+          "size": 406554,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8/resolve/447095fe87b480b5e6a15367f135303d479de8ac/vocab.json",
+          "sha256": "fd726dc25cc0c0b46403675127e831bab56ca56b8c7ae3ee7781f5c6d7692f4f",
+          "size": 236127,
+          "target": "qwen3-speech/models/aufklarer/Nemotron-3.5-ASR-Streaming-0.6B-CoreML-INT8"
+        }
+      ],
+      "streaming": true,
+      "languages": [
+        "af",
+        "am",
+        "ar",
+        "ay",
+        "az",
+        "bg",
+        "bn",
+        "cs",
+        "da",
+        "de",
+        "el",
+        "en",
+        "es",
+        "et",
+        "fa",
+        "fi",
+        "fr",
+        "gn",
+        "gu",
+        "ha",
+        "haw",
+        "he",
+        "hi",
+        "hr",
+        "hu",
+        "hy",
+        "id",
+        "ig",
+        "it",
+        "ja",
+        "ka",
+        "km",
+        "kn",
+        "ko",
+        "ku",
+        "ky",
+        "ln",
+        "lt",
+        "lv",
+        "mi",
+        "ml",
+        "mr",
+        "ms",
+        "mt",
+        "nah",
+        "nb",
+        "ne",
+        "nl",
+        "nn",
+        "no",
+        "ny",
+        "or",
+        "pl",
+        "pt",
+        "qu",
+        "ro",
+        "ru",
+        "rw",
+        "si",
+        "sk",
+        "sl",
+        "sm",
+        "so",
+        "sv",
+        "sw",
+        "ta",
+        "te",
+        "tg",
+        "th",
+        "to",
+        "tr",
+        "uk",
+        "ur",
+        "uz",
+        "vi",
+        "yo",
+        "zh",
+        "zu"
+      ],
+      "max_seconds": 600
+    },
+    {
+      "id": "speech-swift-omnilingual-300m",
+      "name": "Omnilingual ASR 300M",
+      "family": "Omnilingual",
+      "files": [
+        {
+          "url": "https://huggingface.co/aufklarer/Omnilingual-ASR-CTC-300M-CoreML-INT8-10s/resolve/ce99f14bbc768d8dc6ffd3235a21cd9751ceb139/config.json",
+          "sha256": "97a7fa4e25cd68c00b3543aaba47782bb9e60a145aedb8cd03b24d66f66a3bb8",
+          "size": 482,
+          "target": "qwen3-speech/models/aufklarer/Omnilingual-ASR-CTC-300M-CoreML-INT8-10s"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Omnilingual-ASR-CTC-300M-CoreML-INT8-10s/resolve/ce99f14bbc768d8dc6ffd3235a21cd9751ceb139/omnilingual-ctc-300m-int8.mlmodelc/analytics/coremldata.bin",
+          "sha256": "1c9abc8c44079a78529e89be1ec61d1f7b4f8a4d29c1c6e60a661944815796a4",
+          "size": 243,
+          "target": "qwen3-speech/models/aufklarer/Omnilingual-ASR-CTC-300M-CoreML-INT8-10s/omnilingual-ctc-300m-int8.mlmodelc/analytics"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Omnilingual-ASR-CTC-300M-CoreML-INT8-10s/resolve/ce99f14bbc768d8dc6ffd3235a21cd9751ceb139/omnilingual-ctc-300m-int8.mlmodelc/coremldata.bin",
+          "sha256": "8e7eef184a78f42925af7c9b3b3b1cea18bd7743eda9c036f0eda21f2ca95e18",
+          "size": 373,
+          "target": "qwen3-speech/models/aufklarer/Omnilingual-ASR-CTC-300M-CoreML-INT8-10s/omnilingual-ctc-300m-int8.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Omnilingual-ASR-CTC-300M-CoreML-INT8-10s/resolve/ce99f14bbc768d8dc6ffd3235a21cd9751ceb139/omnilingual-ctc-300m-int8.mlmodelc/model.mil",
+          "sha256": "49db064ee1912d3a82059d43263cfeb7b1ac32a60c9346334035eca4036870bb",
+          "size": 368276,
+          "target": "qwen3-speech/models/aufklarer/Omnilingual-ASR-CTC-300M-CoreML-INT8-10s/omnilingual-ctc-300m-int8.mlmodelc"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Omnilingual-ASR-CTC-300M-CoreML-INT8-10s/resolve/ce99f14bbc768d8dc6ffd3235a21cd9751ceb139/omnilingual-ctc-300m-int8.mlmodelc/weights/weight.bin",
+          "sha256": "158084272159ff8b0583846782beba8b5b118aa1255528b0a21d3a77c8061612",
+          "size": 326444192,
+          "target": "qwen3-speech/models/aufklarer/Omnilingual-ASR-CTC-300M-CoreML-INT8-10s/omnilingual-ctc-300m-int8.mlmodelc/weights"
+        },
+        {
+          "url": "https://huggingface.co/aufklarer/Omnilingual-ASR-CTC-300M-CoreML-INT8-10s/resolve/ce99f14bbc768d8dc6ffd3235a21cd9751ceb139/tokenizer.model",
+          "sha256": "8aa11a1092142ef472537476ef6e76541123e2f0d789b79f3ebd119008240b1e",
+          "size": 91481,
+          "target": "qwen3-speech/models/aufklarer/Omnilingual-ASR-CTC-300M-CoreML-INT8-10s"
+        }
+      ],
+      "streaming": true,
+      "max_seconds": 40
+    }
+  ]
+}

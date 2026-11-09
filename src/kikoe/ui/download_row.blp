@@ -19,6 +19,13 @@ template $KikoeDownloadRow: Adw.ActionRow {
   }
 
   [suffix]
+  ProgressBar progress_bar {
+    valign: center;
+    width-request: 64;
+    visible: false;
+  }
+
+  [suffix]
   Button cancel_button {
     icon-name: "process-stop-symbolic";
     tooltip-text: _("Cancel Download");
@@ -34,7 +41,7 @@ template $KikoeDownloadRow: Adw.ActionRow {
   [suffix]
   Button remove_button {
     icon-name: "user-trash-symbolic";
-    tooltip-text: _("Remove");
+    tooltip-text: _("Remove…");
     valign: center;
     visible: false;
     clicked => $_on_remove_button_clicked();

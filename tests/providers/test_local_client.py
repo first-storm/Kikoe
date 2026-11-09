@@ -28,7 +28,7 @@ SPEC = LocalModelSpec(
     "Tiny",
     "Family",
     ModelRole.ASR,
-    Download("https://files.test/tiny.gguf", "a" * 64, 1),
+    (Download("https://files.test/tiny.gguf", "a" * 64, 1),),
     (),
     timestamps=True,
     max_seconds=600,

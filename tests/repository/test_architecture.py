@@ -146,15 +146,20 @@ def test_engine_packages_are_used_only_through_the_registry() -> None:
     assert found == [], "engines must stay removable: go through the registry and protocol"
 
 
+ENGINES_DIR = SRC / "providers" / "local" / "engines"
+
+
 def test_engine_adapters_only_use_the_worker_side_of_kikoe() -> None:
+    """An engine may split its own package into modules; it is still removed as one."""
     allowed = ("kikoe.providers.local.adapter", "kikoe.providers.local.protocol")
     found: list[str] = []
-    for path in (SRC / "providers" / "local" / "engines").rglob("*.py"):
+    for path in ENGINES_DIR.rglob("*.py"):
         if path.name == "__init__.py" and path.parent.name == "engines":
             continue
+        own = f"kikoe.providers.local.engines.{path.relative_to(ENGINES_DIR).parts[0]}"
         found += [
             f"{_relative(path)} imports {name}"
             for name in _imports(path)
-            if name.startswith("kikoe") and not name.startswith(allowed)
+            if name.startswith("kikoe") and not name.startswith((*allowed, own))
         ]
     assert found == []

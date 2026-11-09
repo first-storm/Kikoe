@@ -1,4 +1,4 @@
-"""One engine on the Local Models page: download state, acceleration and device."""
+"""An engine's own settings on its page: download state, acceleration and device."""
 
 from gi.repository import Adw, GLib, GObject, Gtk
 
@@ -9,12 +9,14 @@ from kikoe.core.local_models import (
     EngineDevice,
     EngineProbe,
     EngineSpec,
+    InstallState,
     InstallStatus,
     needs_device_access,
 )
 from kikoe.i18n import _, ngettext
 from kikoe.providers.base import TranscriptionError
 from kikoe.services.local_models import LocalModelManager
+from kikoe.ui.download_row import show_progress
 from kikoe.ui.guard import Guard
 from kikoe.ui.tasks import run_task
 from kikoe.ui.templates import ui_file
@@ -25,14 +27,14 @@ class LocalEngineGroup(Adw.PreferencesGroup):
     __gtype_name__ = "KikoeLocalEngineGroup"
 
     download_button: Gtk.Button = Gtk.Template.Child()
+    progress_bar: Gtk.ProgressBar = Gtk.Template.Child()
     cancel_button: Gtk.Button = Gtk.Template.Child()
-    remove_button: Gtk.Button = Gtk.Template.Child()
     build_row: Adw.ComboRow = Gtk.Template.Child()
     device_row: Adw.ComboRow = Gtk.Template.Child()
     hint_label: Gtk.Label = Gtk.Template.Child()
 
     def __init__(self, manager: LocalModelManager, engine: EngineSpec) -> None:
-        super().__init__(title=engine.display_name)
+        super().__init__()
         self._manager = manager
         self._engine = engine
         self._updating = Guard()
@@ -67,37 +69,23 @@ class LocalEngineGroup(Adw.PreferencesGroup):
         self.download_button.set_visible(status is InstallStatus.MISSING or switching)
         self.download_button.set_label(_("_Switch") if switching else _("_Download"))
         self.cancel_button.set_visible(status is InstallStatus.DOWNLOADING)
-        self.remove_button.set_visible(status is InstallStatus.INSTALLED and not switching)
         self.build_row.set_sensitive(
             status not in (InstallStatus.DOWNLOADING, InstallStatus.BUNDLED)
         )
         size = sum(d.size for d in self._engine.downloads(self.selected_build))
+        show_progress(self.progress_bar, InstallState(status, state.received, state.total or size))
         match status:
             case InstallStatus.MISSING:
                 text = _("Not downloaded · {size}").format(size=GLib.format_size(size))
             case InstallStatus.DOWNLOADING:
-                text = _("Downloading… {received} of {total}").format(
-                    received=GLib.format_size(state.received),
-                    total=GLib.format_size(state.total or size),
-                )
+                text = progress_text(state, size)
             case InstallStatus.INSTALLED | InstallStatus.BUNDLED if switching:
                 text = _("Switching downloads {size}").format(size=GLib.format_size(size))
             case InstallStatus.INSTALLED | InstallStatus.BUNDLED:
-                text = self._ready_text()
+                text = ready_text(self._manager, self._engine)
         self.set_description(text)
         self._show_devices(status in (InstallStatus.INSTALLED, InstallStatus.BUNDLED))
         self._show_hint()
-
-    def _ready_text(self) -> str:
-        version = _("Version {version}").format(version=self._engine.version)
-        if self._manager.engine_state(self._engine.engine_id).status is InstallStatus.BUNDLED:
-            version = _("Included with Kikoe · {version}").format(version=version)
-        probe = self._manager.probe_result(self._engine.engine_id)
-        if probe is None:
-            return _("{version} · Starting…").format(version=version)
-        if isinstance(probe, TranscriptionError):
-            return _("{version} · Could not start").format(version=version)
-        return _("{version} · Ready").format(version=version)
 
     def _show_devices(self, installed: bool) -> None:
         engine_id = self._engine.engine_id
@@ -144,38 +132,6 @@ class LocalEngineGroup(Adw.PreferencesGroup):
         self._manager.cancel(self._engine.engine_id)
 
     @Gtk.Template.Callback()
-    def _on_remove_button_clicked(self, _button: Gtk.Button) -> None:
-        models = self._manager.installed_models(self._engine.engine_id)
-        dialog = Adw.AlertDialog(
-            heading=_("Remove {engine}?").format(engine=self._engine.display_name),
-            body=_("Local models cannot be used until the engine is downloaded again."),
-        )
-        dialog.add_response("cancel", _("_Cancel"))
-        dialog.add_response("engine", _("_Remove Engine"))
-        dialog.set_response_appearance("engine", Adw.ResponseAppearance.DESTRUCTIVE)
-        if models:
-            size = GLib.format_size(sum(m.size for m in models))
-            label = ngettext(
-                "Remove Engine and {count} _Model ({size})",
-                "Remove Engine and {count} _Models ({size})",
-                len(models),
-            ).format(count=len(models), size=size)
-            dialog.add_response("all", label)
-            dialog.set_response_appearance("all", Adw.ResponseAppearance.DESTRUCTIVE)
-            dialog.set_body(_("Kept models work again once the engine is downloaded again."))
-        dialog.set_default_response("cancel")
-        dialog.set_close_response("cancel")
-        dialog.connect("response", self._on_remove_response)
-        dialog.present(self)
-
-    def _on_remove_response(self, _dialog: Adw.AlertDialog, response: str) -> None:
-        if response in ("engine", "all"):
-            removal = self._manager.remove_engine(
-                self._engine.engine_id, with_models=response == "all"
-            )
-            run_task(removal, self)
-
-    @Gtk.Template.Callback()
     def _on_build_row_notify_selected(self, _row: Adw.ComboRow, _spec: GObject.ParamSpec) -> None:
         if not self._updating.active:
             self.refresh()
@@ -186,6 +142,44 @@ class LocalEngineGroup(Adw.PreferencesGroup):
         if self._updating.active or index >= len(self._devices):
             return
         run_task(self._manager.set_device(self._engine.engine_id, self._devices[index]), self)
+
+
+def ready_text(manager: LocalModelManager, engine: EngineSpec) -> str:
+    """E.g. “Version 1.2 · Ready”, or why an installed engine cannot be used yet."""
+    version = _("Version {version}").format(version=engine.version)
+    if manager.engine_state(engine.engine_id).status is InstallStatus.BUNDLED:
+        version = _("Included with Kikoe · {version}").format(version=version)
+    probe = manager.probe_result(engine.engine_id)
+    if probe is None:
+        return _("{version} · Starting…").format(version=version)
+    if isinstance(probe, TranscriptionError):
+        return _("{version} · Could not start").format(version=version)
+    return _("{version} · Ready").format(version=version)
+
+
+def progress_text(state: InstallState, size: int) -> str:
+    return _("Downloading… {received} of {total}").format(
+        received=GLib.format_size(state.received),
+        total=GLib.format_size(state.total or size),
+    )
+
+
+def engine_summary(manager: LocalModelManager, engine: EngineSpec) -> str:
+    """One line for the engine's row on the overview page."""
+    state = manager.engine_state(engine.engine_id)
+    build = manager.installed_build(engine.engine_id) or manager.recommended_build(engine)
+    size = sum(d.size for d in engine.downloads(build)) if build else 0
+    if state.status is InstallStatus.MISSING:
+        return _("Not downloaded · {size}").format(size=GLib.format_size(size))
+    if state.status is InstallStatus.DOWNLOADING:
+        return progress_text(state, size)
+    status = ready_text(manager, engine)
+    count = len(manager.installed_models(engine.engine_id))
+    if not count:
+        return status
+    return ngettext("{status} · {count} model", "{status} · {count} models", count).format(
+        status=status, count=count
+    )
 
 
 _DEVICE_KINDS = {"vulkan": "Vulkan", "cuda": "CUDA", "metal": "Metal", "rocm": "ROCm"}

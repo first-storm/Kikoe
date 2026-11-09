@@ -19,6 +19,7 @@ from kikoe.core.local_models import parse_engine_catalog as _parse
 
 ENGINES: dict[str, str] = {
     "transcribe-cpp": "kikoe.providers.local.engines.transcribe_cpp",
+    "speech-swift": "kikoe.providers.local.engines.speech_swift",
 }
 """Engine ID → package. The ID is persisted in install folders and settings."""
 

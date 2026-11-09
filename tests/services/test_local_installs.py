@@ -172,7 +172,9 @@ def _engine(server: Server, native: bytes | None = None) -> EngineSpec:
 
 def _model(server: Server, model_id: str = "tiny") -> LocalModelSpec:
     file = server.add(f"{model_id}.gguf", f"{model_id} weights".encode())
-    return LocalModelSpec(model_id, "engine", model_id.title(), "Family", ModelRole.ASR, file, ())
+    return LocalModelSpec(
+        model_id, "engine", model_id.title(), "Family", ModelRole.ASR, (file,), ()
+    )
 
 
 def _manager(
@@ -328,11 +330,56 @@ async def test_a_model_with_a_changed_checksum_counts_as_missing(tmp_path: Path)
     manager = _manager(tmp_path, server, (model,))
     await manager.install_model("tiny")
     newer = LocalModelSpec(
-        "tiny", "engine", "Tiny", "Family", ModelRole.ASR, server.add("tiny2.gguf", b"new"), ()
+        "tiny",
+        "engine",
+        "Tiny",
+        "Family",
+        ModelRole.ASR,
+        (server.add("tiny2.gguf", b"new"),),
+        (),
     )
     restarted = _manager(tmp_path, server, (newer,))
     await restarted.load()
     assert restarted.model_state("tiny").status is InstallStatus.MISSING
+
+
+def _folder_model(server: Server, weights: bytes = b"weights") -> LocalModelSpec:
+    files = (
+        server.add("config.json", b"{}", target="org/Repo-1.0"),
+        server.add("weight.bin", weights, target="org/Repo-1.0/encoder.mlmodelc/weights"),
+    )
+    return LocalModelSpec(
+        "folder", "engine", "Folder", "Family", ModelRole.ASR, files, (), folder=True
+    )
+
+
+@run_async
+async def test_a_folder_model_is_laid_out_by_its_targets(tmp_path: Path) -> None:
+    server = Server()
+    model = _folder_model(server)
+    manager = _manager(tmp_path, server, (model,))
+    received: list[int] = []
+    await manager.install_model("folder")
+    installs = LocalInstalls(tmp_path)
+    root = installs.model_path(model)
+    assert root == installs.model_dir("folder")
+    assert (root / "org/Repo-1.0/config.json").read_bytes() == b"{}"
+    assert (root / "org/Repo-1.0/encoder.mlmodelc/weights/weight.bin").read_bytes() == b"weights"
+    assert installs.model_installed(model)
+    await LocalInstalls(tmp_path / "other", server.transport()).install_model(
+        model, received.append
+    )
+    assert sum(received) == model.size == 2 + len(b"weights")
+
+
+@run_async
+async def test_a_folder_model_with_one_changed_file_counts_as_missing(tmp_path: Path) -> None:
+    server = Server()
+    manager = _manager(tmp_path, server, (_folder_model(server),))
+    await manager.install_model("folder")
+    restarted = _manager(tmp_path, server, (_folder_model(server, b"newer weights"),))
+    await restarted.load()
+    assert restarted.model_state("folder").status is InstallStatus.MISSING
 
 
 @run_async

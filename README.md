@@ -20,7 +20,7 @@ run on your own computer.
 
 - 🎙️ **Record or import** — microphone capture with pause/resume, plus existing audio files.
 - ☁️ **Choose your service** — Deepgram, OpenAI, OpenRouter, Gemini AI Studio, MiMo, Groq, Mistral, an OpenAI-compatible API, or any audio-capable LLM with your own transcription prompt.
-- 💻 **Or stay offline** — download Whisper, Fun-ASR, Parakeet or Voxtral models in Preferences → Local Models; they run with [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) on Vulkan, CUDA, Metal or the CPU.
+- 💻 **Or stay offline** — download Whisper, Fun-ASR, Parakeet or Voxtral models in Preferences → Local Models; they run with [transcribe.cpp](https://github.com/handy-computer/transcribe.cpp) on Vulkan, CUDA, Metal or the CPU, or with [speech-swift](https://github.com/soniqo/speech-swift) on Apple Silicon Macs.
 - 👥 **Follow each voice** — optional timestamps, speaker labels, and matching across recordings.
 - ✏️ **Polish your notes** — edit text and timestamps in place, find and replace across a transcript, with Undo/Redo; search titles and transcripts.
 - 📤 **Take them anywhere** — export text, Markdown, SRT, WebVTT, or original audio. Subtitles need timestamps.

@@ -4,11 +4,16 @@ One host owns at most one process, started on the first request. Each request wa
 for its own reply; cancelling the awaiting task asks the worker to stop, and a worker
 that does not answer in time is killed. A worker that exits fails every pending
 request, and the next request starts a fresh process.
+
+On POSIX systems the worker leads its own process group, so killing it also ends
+helper processes an engine started, such as a local inference server.
 """
 
 import asyncio
 import contextlib
 import logging
+import os
+import signal
 import subprocess
 import sys
 from collections.abc import Callable, Mapping, Sequence
@@ -121,6 +126,7 @@ class WorkerHost:
                 env=self._env,
                 limit=_LINE_LIMIT,
                 creationflags=flags,
+                start_new_session=sys.platform != "win32",
             )
         except OSError as error:
             raise WorkerError(ErrorKind.ENGINE, f"could not start worker: {error}") from error
@@ -226,5 +232,9 @@ def _error(reply: Reply) -> WorkerError:
 
 
 def _kill(process: asyncio.subprocess.Process) -> None:
+    """End the worker and, where process groups exist, everything it started."""
     with contextlib.suppress(ProcessLookupError):
-        process.kill()
+        if sys.platform == "win32":
+            process.kill()
+        else:
+            os.killpg(process.pid, signal.SIGKILL)
