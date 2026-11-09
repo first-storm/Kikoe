@@ -323,6 +323,8 @@ PyInstaller spec ships it as `local-engines/<engine>`. A download is unpacked in
 leftovers are removed at startup. Archive members cannot leave their folder. A
 folder without a valid receipt does not count as installed, and a model whose
 pinned checksum changes needs downloading again.
+A model is either one file or, for engines that load a folder, several files each
+placed at its catalog target; the receipt lists every file's checksum.
 
 The worker is the app's own interpreter: `python -m
 kikoe.providers.local.worker_main <engine> <folder>` from source, or `Kikoe

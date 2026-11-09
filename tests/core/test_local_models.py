@@ -137,7 +137,39 @@ BREAKAGES: dict[str, Callable[[dict[str, Any]], None]] = {
     "required-language-flag": lambda d: _model(d).update(requires_language="yes"),
     "native-diarization-flag": lambda d: _model(d).update(native_diarization="yes"),
     "flag": lambda d: _model(d).update(timestamps="yes"),
+    "file-and-files": lambda d: _model(d).update(files=[_model(d)["file"]]),
+    "no-file": lambda d: _model(d).pop("file"),
+    "empty-files": lambda d: _model(d).update(files=[]) or _model(d).pop("file"),
+    "nested-escape": lambda d: _with_files(d, target="org/../escape"),
+    "dot-folder": lambda d: _with_files(d, target="org/./repo"),
+    "absolute-target": lambda d: _with_files(d, target="/org/repo"),
 }
+
+
+def _with_files(doc: dict[str, Any], **change: str) -> None:
+    model = _model(doc)
+    model["files"] = [{**model.pop("file"), **change}]
+
+
+def test_a_folder_model_keeps_nested_targets_and_sums_its_sizes() -> None:
+    doc = copy.deepcopy(document())
+    model = _model(doc)
+    first = model.pop("file")
+    second = {**first, "url": "https://example.test/weight.bin", "size": 5}
+    model["files"] = [
+        {**first, "target": "qwen3-speech/models/aufklarer/Qwen3-ASR-0.6B-MLX-4bit"},
+        {**second, "target": "qwen3-speech/models/aufklarer/X/encoder.mlmodelc/weights"},
+    ]
+    (spec,) = parse_engine_catalog(doc)[1]
+    assert spec.folder
+    assert spec.size == first["size"] + 5
+    assert spec.files[1].target.endswith("encoder.mlmodelc/weights")
+
+
+def test_a_single_file_model_is_not_a_folder() -> None:
+    (spec,) = parse_engine_catalog(document())[1]
+    assert not spec.folder
+    assert spec.files == (spec.file,)
 
 
 @pytest.mark.parametrize("change", BREAKAGES)

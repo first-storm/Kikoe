@@ -50,7 +50,8 @@ def test_the_shipped_catalog_recommends_vulkan_on_linux() -> None:
 
 def test_shipped_models_are_pinned_to_an_exact_upstream_revision() -> None:
     for model in load_catalog().models:
-        assert re.search(r"/resolve/[0-9a-f]{40}/", model.file.url), model.model_id
+        for file in model.files:
+            assert re.search(r"/resolve/[0-9a-f]{40}/", file.url), model.model_id
 
 
 def test_the_requested_model_families_are_offered() -> None:
