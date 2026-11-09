@@ -332,7 +332,8 @@ kikoe.providers.local.worker_main <engine> <folder>` from source, or `Kikoe
 before GTK loads. It starts on the first request and exits when its stdin closes,
 so it never outlives the app. Native output is moved off the protocol stream to the
 log. A cancel aborts the running native call; a worker that does not answer within
-five seconds is killed. A crashed worker fails its requests as retryable errors and
+five seconds is killed. On macOS and Linux the worker leads its own process group,
+so the kill also ends helper processes its engine started. A crashed worker fails its requests as retryable errors and
 the next request starts a new one. Replacing or removing an engine stops its
 worker first.
 
