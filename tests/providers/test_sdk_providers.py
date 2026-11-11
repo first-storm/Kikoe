@@ -11,7 +11,7 @@ from kikoe.core.models import (
     ModelSpec,
     Segment,
 )
-from kikoe.providers.base import TranscriptionOptions
+from kikoe.providers.base import TranscriptionError, TranscriptionOptions
 from kikoe.providers.deepgram import DeepgramClient, parse_deepgram
 from kikoe.providers.gemini import GeminiClient, parse_gemini
 from kikoe.providers.openrouter import OpenRouterClient
@@ -135,6 +135,37 @@ async def test_openrouter_sdk_encodes_diarization_and_parses_word_speakers(tmp_p
     assert requests[0].headers["authorization"] == "Bearer fake-key"
     assert b'name="diarize"' in requests[0].content
     assert b"verbose_json" in requests[0].content
+
+
+@run_async
+async def test_openrouter_server_error_is_reported_after_one_request(tmp_path: Path) -> None:
+    requests: list[httpx.Request] = []
+
+    def respond(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(500, json={"error": {"message": "overloaded"}})
+
+    audio = tmp_path / "clip.ogg"
+    audio.write_bytes(b"fake ogg")
+    client = OpenRouterClient(
+        "https://example.test/api/v1", "fake-key", httpx.MockTransport(respond)
+    )
+    with pytest.raises(TranscriptionError):
+        await client.transcribe_file(
+            audio, ModelSpec("m", "M", file_caps()), TranscriptionOptions()
+        )
+    assert len(requests) == 1
+
+
+@run_async
+async def test_openrouter_waits_long_enough_for_a_long_recording(tmp_path: Path) -> None:
+    requests: list[httpx.Request] = []
+    audio = tmp_path / "clip.ogg"
+    audio.write_bytes(b"fake ogg")
+    await openrouter_client(requests, {"text": "Hi"}).transcribe_file(
+        audio, ModelSpec("m", "M", file_caps()), TranscriptionOptions()
+    )
+    assert requests[0].extensions["timeout"]["read"] == 900
 
 
 def granularity_fields(request: httpx.Request) -> list[str]:

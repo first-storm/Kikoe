@@ -16,6 +16,9 @@ from kikoe.providers.base import (
 from kikoe.providers.errors import sdk_error
 from kikoe.providers.parsing import parse_segments, parse_words
 
+REQUEST_TIMEOUT_MS = 900_000
+"""Long recordings take minutes to answer; httpx's five-second default would cut them off."""
+
 
 class OpenRouterClient(FileOnlyClient[httpx.AsyncBaseTransport]):
     """Request STT metadata through the SDK's multipart endpoint."""
@@ -37,7 +40,14 @@ class OpenRouterClient(FileOnlyClient[httpx.AsyncBaseTransport]):
         try:
             async with (
                 httpx.AsyncClient(transport=self._transport) as http,
-                OpenRouter(api_key=self._key, server_url=self._url, async_client=http) as sdk,
+                # Retries are Kikoe's job: the SDK's default would re-upload for up to an hour.
+                OpenRouter(
+                    api_key=self._key,
+                    server_url=self._url,
+                    async_client=http,
+                    retry_config=None,
+                    timeout_ms=REQUEST_TIMEOUT_MS,
+                ) as sdk,
             ):
                 result = await sdk.stt.create_transcription_multipart_async(
                     model=model.model_id,
