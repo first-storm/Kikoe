@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from kikoe.core.export import ExportFormat, export_filename, export_note
+from kikoe.core.export import ExportFormat, ExportLabels, export_filename, export_note
 from kikoe.core.models import (
     DisplayOptions,
     Note,
@@ -129,6 +129,33 @@ def test_fallback_speaker_numbering_is_note_wide() -> None:
     assert export_note(note, ExportFormat.TEXT, options) == (
         "Podcast Topics\n\nRecording 1\n\nSpeaker 1: First\n\nRecording 2\n\nSpeaker 2: Second\n"
     )
+
+
+@pytest.mark.parametrize(
+    ("fmt", "expected"),
+    [
+        (
+            ExportFormat.TEXT,
+            "Podcast Topics\n\n录音 1\n\n说话人 1: First\n\n录音 2\n\n说话人 2: Second\n",
+        ),
+        (ExportFormat.MARKDOWN, "## 录音 2\n\n**说话人 2:** Second\n"),
+        (ExportFormat.SRT, "说话人 2: Second\n"),
+        (ExportFormat.WEBVTT, "<v 说话人 2>Second</v>\n"),
+    ],
+)
+def test_unnamed_speakers_and_recordings_use_the_callers_labels(
+    fmt: ExportFormat, expected: str
+) -> None:
+    note = _note(
+        [
+            _recording([_segment("First", speaker="x")]),
+            _recording([_segment("Second", speaker="y")], recording_id="r2"),
+        ]
+    )
+    options = DisplayOptions(show_timestamps=False, show_speakers=True)
+    labels = ExportLabels(speaker="说话人 {number}", recording="录音 {number}")
+
+    assert export_note(note, fmt, options, labels).endswith(expected)
 
 
 def test_prose_export_uses_screen_timestamp_format() -> None:

@@ -13,7 +13,7 @@ from kikoe.core.models import DisplayOptions, Recording
 from kikoe.i18n import _
 from kikoe.ui.export_dialog import ExportDialog
 from kikoe.ui.file_dialogs import pick_save_path
-from kikoe.ui.labels import export_format_label
+from kikoe.ui.labels import export_format_label, export_labels
 from kikoe.ui.tasks import run_task, show_error, show_notice
 from kikoe.ui.window_host import WindowHost
 
@@ -58,14 +58,16 @@ class ExportController:
         note = self._host.note
         if note is None:
             return
-        self._window.get_clipboard().set(export_note(note, ExportFormat.TEXT, note.display))
+        self._window.get_clipboard().set(
+            export_note(note, ExportFormat.TEXT, note.display, export_labels())
+        )
         self._host.toast(_("Copied to clipboard"))
 
     async def _export_note(self, fmt: ExportFormat, options: DisplayOptions) -> None:
         note = self._host.note
         if note is None:
             return
-        content = export_note(note, fmt, options)
+        content = export_note(note, fmt, options, export_labels())
         await self._save_as(
             _("Export Note"),
             export_filename(note.title, fmt.value),
@@ -90,9 +92,10 @@ class ExportController:
         if note is None or source is None:
             return
         suffix = source.suffix or ".ogg"
+        label = export_labels().recording.format(number=number)
         await self._save_as(
             _("Export Original Audio"),
-            export_filename(f"{note.title} - Recording {number}", suffix.lstrip(".")),
+            export_filename(f"{note.title} - {label}", suffix.lstrip(".")),
             _("Audio Files"),
             f"*{suffix}",
             lambda target: shutil.copyfile(source, target),

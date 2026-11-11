@@ -32,6 +32,17 @@ _RESERVED_FILENAME_CHARS = frozenset('<>:"/\\|?*')
 
 
 @dataclass(frozen=True, slots=True)
+class ExportLabels:
+    """Names for unnamed speakers and recordings, so the caller can supply translated ones."""
+
+    speaker: str = "Speaker {number}"
+    recording: str = "Recording {number}"
+
+
+_ENGLISH_LABELS = ExportLabels()
+
+
+@dataclass(frozen=True, slots=True)
 class _Cue:
     number: int
     start_ms: int
@@ -40,7 +51,9 @@ class _Cue:
     text: str
 
 
-def export_note(note: Note, fmt: ExportFormat, options: DisplayOptions) -> str:
+def export_note(
+    note: Note, fmt: ExportFormat, options: DisplayOptions, labels: ExportLabels = _ENGLISH_LABELS
+) -> str:
     """Return ``note`` rendered in ``fmt``.
 
     Prose formats honor ``options``; subtitle formats always include timestamps
@@ -50,13 +63,13 @@ def export_note(note: Note, fmt: ExportFormat, options: DisplayOptions) -> str:
     note = resolved_note(note)
     match fmt:
         case ExportFormat.TEXT:
-            return _render_prose(note, options, markdown=False)
+            return _render_prose(note, options, labels, markdown=False)
         case ExportFormat.MARKDOWN:
-            return _render_prose(note, options, markdown=True)
+            return _render_prose(note, options, labels, markdown=True)
         case ExportFormat.SRT:
-            return _render_srt(note, options)
+            return _render_srt(note, options, labels)
         case ExportFormat.WEBVTT:
-            return _render_vtt(note, options)
+            return _render_vtt(note, options, labels)
 
 
 def export_filename(stem: str, extension: str) -> str:
@@ -73,21 +86,23 @@ def export_filename(stem: str, extension: str) -> str:
     return f"{cleaned or 'Untitled Note'}.{extension}"
 
 
-def _speaker_labels(note: Note) -> dict[str, str]:
+def _speaker_labels(note: Note, labels: ExportLabels) -> dict[str, str]:
     """Display name per speaker id, numbered note-wide like the note view."""
     return {
-        speaker_id: note.speaker_name(speaker_id) or f"Speaker {number}"
+        speaker_id: note.speaker_name(speaker_id) or labels.speaker.format(number=number)
         for speaker_id, number in speaker_numbers(note).items()
     }
 
 
-def _render_prose(note: Note, options: DisplayOptions, *, markdown: bool) -> str:
-    labels = _speaker_labels(note)
+def _render_prose(
+    note: Note, options: DisplayOptions, labels: ExportLabels, *, markdown: bool
+) -> str:
+    speakers = _speaker_labels(note, labels)
     blocks = [f"# {note.title}" if markdown else note.title]
     multi = len(note.recordings) > 1
     for number, recording in enumerate(note.recordings, start=1):
         lines = [
-            _prose_line(segment, labels, options, markdown=markdown)
+            _prose_line(segment, speakers, options, markdown=markdown)
             for segment in recording.segments
             if segment.text.strip()
         ]
@@ -95,7 +110,8 @@ def _render_prose(note: Note, options: DisplayOptions, *, markdown: bool) -> str
             if lines:
                 blocks.append("\n".join(lines))
             continue
-        heading = f"## Recording {number}" if markdown else f"Recording {number}"
+        title = labels.recording.format(number=number)
+        heading = f"## {title}" if markdown else title
         blocks.append(f"{heading}\n\n{'\n'.join(lines)}" if lines else heading)
     return "\n\n".join(blocks) + "\n"
 
@@ -114,8 +130,8 @@ def _prose_line(
     return f"{prefix}{segment.text.strip()}"
 
 
-def _render_srt(note: Note, options: DisplayOptions) -> str:
-    cues = _subtitle_cues(note)
+def _render_srt(note: Note, options: DisplayOptions, labels: ExportLabels) -> str:
+    cues = _subtitle_cues(note, labels)
     if not cues:
         return ""
     blocks: list[str] = []
@@ -127,9 +143,9 @@ def _render_srt(note: Note, options: DisplayOptions) -> str:
     return "\n\n".join(blocks) + "\n"
 
 
-def _render_vtt(note: Note, options: DisplayOptions) -> str:
+def _render_vtt(note: Note, options: DisplayOptions, labels: ExportLabels) -> str:
     blocks = ["WEBVTT"]
-    for cue in _subtitle_cues(note):
+    for cue in _subtitle_cues(note, labels):
         if options.show_speakers and cue.speaker:
             text = f"<v {_escape_vtt(cue.speaker)}>{_escape_vtt(cue.text)}</v>"
         else:
@@ -140,9 +156,9 @@ def _render_vtt(note: Note, options: DisplayOptions) -> str:
     return "\n\n".join(blocks) + "\n"
 
 
-def _subtitle_cues(note: Note) -> tuple[_Cue, ...]:
+def _subtitle_cues(note: Note, labels: ExportLabels) -> tuple[_Cue, ...]:
     """One continuous cue track: recordings are offset by their durations."""
-    labels = _speaker_labels(note)
+    speakers = _speaker_labels(note, labels)
     cues: list[_Cue] = []
     offset_ms = 0
     for recording in note.recordings:
@@ -151,7 +167,7 @@ def _subtitle_cues(note: Note) -> tuple[_Cue, ...]:
         for index, segment in enumerate(segments):
             start_ms = _cue_start_ms(segment, cursor_ms)
             end_ms = _cue_end_ms(segments, index, start_ms)
-            speaker = labels.get(segment.speaker_id) if segment.speaker_id is not None else None
+            speaker = speakers.get(segment.speaker_id) if segment.speaker_id is not None else None
             cues.append(
                 _Cue(
                     len(cues) + 1,

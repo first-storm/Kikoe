@@ -6,7 +6,7 @@ from gi.repository import GLib
 
 from kikoe.core.activity import Stage
 from kikoe.core.choice import ModelChoice, unsupported_features
-from kikoe.core.export import ExportFormat
+from kikoe.core.export import ExportFormat, ExportLabels
 from kikoe.core.formatting import RelativeDay, format_duration, relative_day
 from kikoe.core.models import (
     ApiKind,
@@ -102,6 +102,11 @@ def export_format_label(fmt: ExportFormat) -> str:
             return _("SRT Subtitles (.srt)")
         case ExportFormat.WEBVTT:
             return _("WebVTT Subtitles (.vtt)")
+
+
+def export_labels() -> ExportLabels:
+    """The names the note view shows, so exported text matches the screen."""
+    return ExportLabels(speaker=_("Speaker {number}"), recording=_("Recording {number}"))
 
 
 def provider_error_message(error: ProviderError) -> str:
