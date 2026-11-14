@@ -81,6 +81,17 @@ class _Worker:
                 self._adapter.cancel()
         self._queue.put(None)
 
+    def close(self) -> None:
+        """Let the engine stop its helpers; ``os._exit`` below would skip their cleanup."""
+        with self._lock:
+            adapter = self._adapter
+        if adapter is None:
+            return
+        try:
+            adapter.close()
+        except Exception:  # Exiting must go on whatever the engine does.
+            log.exception("Could not close the engine")
+
     def compute(self) -> None:
         while (request := self._queue.get()) is not None:
             with self._lock:
@@ -150,6 +161,7 @@ def main(argv: list[str] | None = None) -> int:
         worker.receive(request)
     worker.stop()
     compute.join(timeout=5)
+    worker.close()
     out.flush()
     # The compute thread may be stuck in native code; do not wait for it any longer.
     os._exit(0)

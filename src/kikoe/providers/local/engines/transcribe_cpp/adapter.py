@@ -92,6 +92,9 @@ class TranscribeCpp:
             if self._diarizer is not None:
                 self._diarizer[2].cancel()
 
+    def close(self) -> None:
+        pass  # Models live in this process and go away with it.
+
     def _probe(self) -> dict[str, object]:
         devices: list[dict[str, object]] = [
             {"id": device_key(d), "kind": str(d.kind), "name": str(d.description or d.name)}

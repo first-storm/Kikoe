@@ -32,6 +32,10 @@ class EngineAdapter(Protocol):
         """Called from another thread to stop the request being handled."""
         ...
 
+    def close(self) -> None:
+        """Stop helper processes before the worker exits; the exit skips ``atexit`` handlers."""
+        ...
+
 
 class AdapterFactory(Protocol):
     def __call__(self, engine_dir: Path) -> EngineAdapter: ...

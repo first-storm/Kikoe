@@ -65,6 +65,7 @@ class FakeAdapter:
     def __init__(self) -> None:
         self.started = threading.Event()
         self.stop = threading.Event()
+        self.closed = False
 
     def handle(self, op: Op, args: dict[str, object], emit: Emit) -> dict[str, object]:
         if op is Op.PROBE:
@@ -78,6 +79,9 @@ class FakeAdapter:
 
     def cancel(self) -> None:
         self.stop.set()
+
+    def close(self) -> None:
+        self.closed = True
 
 
 def _replies(out: io.BytesIO) -> list[Reply]:
@@ -117,6 +121,30 @@ def test_cancel_stops_the_running_request_and_skips_queued_ones() -> None:
     assert by_id[1].error is ErrorKind.CANCELLED
     assert by_id[2].error is ErrorKind.CANCELLED
     assert by_id[9].result == {} and by_id[10].result == {}
+
+
+def test_closing_the_worker_lets_the_engine_stop_its_helpers() -> None:
+    adapter = FakeAdapter()
+    worker = _Worker(io.BytesIO(), lambda: adapter)
+    worker.close()
+    assert not adapter.closed  # Nothing loaded, nothing to stop.
+    worker.receive(Request(1, Op.PROBE))
+    worker.stop()
+    worker.compute()
+    worker.close()
+    assert adapter.closed
+
+
+def test_an_engine_failing_to_close_does_not_stop_the_worker_exiting() -> None:
+    class Stubborn(FakeAdapter):
+        def close(self) -> None:
+            raise OSError("server already gone")
+
+    worker = _Worker(io.BytesIO(), Stubborn)
+    worker.receive(Request(1, Op.PROBE))
+    worker.stop()
+    worker.compute()
+    worker.close()
 
 
 def test_an_engine_that_cannot_load_fails_each_request_without_crashing() -> None:

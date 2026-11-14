@@ -16,7 +16,6 @@ The server only returns plain text, so models have no timestamps. Live audio is 
 here and sent at pauses; each piece's text is committed to the turn.
 """
 
-import atexit
 import base64
 import contextlib
 import http.client
@@ -122,7 +121,6 @@ class SpeechSwift:
         self._stream: bytearray | None = None
         self._committed = ""
         self._stream_language: str | None = None
-        atexit.register(self.close)
 
     def handle(self, op: Op, args: dict[str, object], emit: Emit) -> dict[str, object]:
         with self._lock:
@@ -150,7 +148,7 @@ class SpeechSwift:
                 connection.sock.shutdown(socket.SHUT_RDWR)
 
     def close(self) -> None:
-        """Stop the server and the hub; also runs when the worker exits."""
+        """Stop the server and the hub, which would otherwise outlive the worker."""
         self._stop_server()
         self._hub.close()
 
