@@ -8,6 +8,7 @@ while audio arrives and replaced by the final text at the flush.
 import asyncio
 import base64
 import contextlib
+import logging
 from collections.abc import AsyncGenerator
 
 from kikoe.core.transcription import TranscriptEvent
@@ -17,8 +18,13 @@ from kikoe.providers.local.protocol import Op
 from kikoe.providers.local.worker_host import WorkerError, WorkerHost
 from kikoe.providers.parsing import parse_text
 
+log = logging.getLogger(__name__)
+
 DRAIN_SECONDS = 2.0
 """How long a flush waits for the recording service to read its final event."""
+
+CLOSE_SECONDS = 1.0
+"""How long closing waits for the worker to end its stream before giving up on it."""
 
 type _Item = TranscriptEvent | TranscriptionError | None
 
@@ -73,10 +79,15 @@ class LocalSession:
             return
         self._closed = True
         self._queue.put_nowait(None)
-        # The worker resets the stream when the next one begins; ending it now frees memory.
-        with contextlib.suppress(TranscriptionError):
-            async with asyncio.timeout(1):
+        # The worker resets the stream when the next one begins; ending it now only frees
+        # memory, so a slow or failed end must not replace how the session itself ended.
+        try:
+            async with asyncio.timeout(CLOSE_SECONDS):
                 await self._call(Op.STREAM_FINISH, {"restart": False})
+        except TimeoutError:
+            log.warning("The engine took too long to end its stream")
+        except TranscriptionError as error:
+            log.warning("The engine could not end its stream: %s", error)
 
     async def events(self) -> AsyncGenerator[TranscriptEvent]:
         while True:

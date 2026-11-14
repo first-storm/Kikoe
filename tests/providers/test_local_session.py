@@ -77,6 +77,33 @@ async def test_previews_become_one_final_turn_per_flush() -> None:
     assert host.requests[-1] == (Op.STREAM_FINISH, {"restart": False})
 
 
+class SlowFinishHost(StreamHost):
+    async def request(
+        self, op: Op, args: dict[str, object] | None = None, on_event: object = None
+    ) -> dict[str, object]:
+        if op is Op.STREAM_FINISH:
+            await asyncio.sleep(5)
+        return await super().request(op, args, on_event)
+
+
+@run_async
+async def test_closing_does_not_fail_when_the_worker_is_slow_to_end_the_stream(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr("kikoe.providers.local.session.CLOSE_SECONDS", 0.05)
+    session = await LocalSession.start(SlowFinishHost(), {})
+    async with asyncio.timeout(2):
+        await session.close()
+
+
+@run_async
+async def test_closing_does_not_fail_when_the_worker_cannot_end_the_stream() -> None:
+    host = StreamHost()
+    session = await LocalSession.start(host, {})
+    host.fail = WorkerError(ErrorKind.ENGINE)
+    await session.close()
+
+
 @run_async
 async def test_flushing_silence_sends_no_event() -> None:
     host = StreamHost()
