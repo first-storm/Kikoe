@@ -350,6 +350,42 @@ def test_replacement_keeps_named_identity_and_other_recording(library: Library) 
     assert updated.recordings[1] == other
 
 
+def test_finishing_a_live_recording_keeps_its_untimed_speakers(library: Library) -> None:
+    from kikoe.core.models import TranscriptionState
+    from kikoe.core.speakers import resolved_segments, speaker_numbers, unresolved_recordings
+
+    checkpoint = (Segment("Hi", speaker_id="a"), Segment("Yo", speaker_id="b"))
+    live = recording(segments=checkpoint)
+    note = library.add_recording(None, "Memo", live)
+    final = (*checkpoint[1:], Segment("Late", speaker_id="c"))
+    updated = library.update_transcription(
+        note.note_id, live.recording_id, TranscriptionState.READY, segments=final, continues=True
+    )
+    numbers = speaker_numbers(updated)
+    segments = resolved_segments(updated.recordings[0])
+    assert [numbers[s.speaker_id or ""] for s in segments] == [2, 3]
+    assert [b.source_id for b in updated.recordings[0].speaker_bindings] == ["b", "c"]
+    assert unresolved_recordings(updated) == ()
+    assert len(updated.speakers) == 3
+
+
+def test_a_new_live_speaker_in_a_note_with_people_waits_for_a_match(library: Library) -> None:
+    from kikoe.core.models import TranscriptionState
+    from kikoe.core.speakers import unresolved_recordings
+
+    note = library.add_recording(None, "Memo", recording(segments=(Segment("Hi", speaker_id="a"),)))
+    live = recording()
+    note = library.add_recording(note.note_id, "", live)
+    updated = library.update_transcription(
+        note.note_id,
+        live.recording_id,
+        TranscriptionState.READY,
+        segments=(Segment("New", speaker_id="x"),),
+        continues=True,
+    )
+    assert unresolved_recordings(updated) == (updated.recordings[1],)
+
+
 def test_v2_library_migrates_existing_speaker_names(tmp_path: Path) -> None:
     from kikoe.storage.schema import MIGRATIONS
 

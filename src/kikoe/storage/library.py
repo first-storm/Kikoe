@@ -37,6 +37,7 @@ from kikoe.storage.note_rows import (
     to_ms,
 )
 from kikoe.storage.schema import MIGRATIONS, SCHEMA_VERSION
+from kikoe.storage.speaker_bindings import extend_bindings, replace_bindings
 
 log = logging.getLogger(__name__)
 
@@ -241,7 +242,7 @@ class Library:
             ),
         )
         self._insert_segments(connection, recording.recording_id, recording.segments)
-        self._replace_bindings(connection, note_id, recording.recording_id, recording.segments)
+        replace_bindings(connection, note_id, recording.recording_id, recording.segments)
 
     def update_transcription(
         self,
@@ -252,8 +253,13 @@ class Library:
         segments: tuple[Segment, ...] | None = None,
         provider_name: str | None = None,
         model_id: str | None = None,
+        continues: bool = False,
     ) -> Note:
-        """Commit a retry to the same recording, including a successful empty transcript."""
+        """Commit a retry to the same recording, including a successful empty transcript.
+
+        ``continues`` means ``segments`` extend the stored ones, as when a live recording
+        ends: the same speaker IDs are the same people, so their bindings stay as they are.
+        """
         with self._connect() as connection, connection:
             cursor = connection.execute(
                 "UPDATE recordings SET transcription_state = ?, "
@@ -262,13 +268,17 @@ class Library:
                 (state.value, provider_name, model_id, recording_id, note_id),
             )
             require_found(cursor.rowcount)
-            if segments is not None:
+            if segments is not None and continues:
+                connection.execute("DELETE FROM segments WHERE recording_id = ?", (recording_id,))
+                self._insert_segments(connection, recording_id, segments)
+                extend_bindings(connection, note_id, recording_id, segments)
+            elif segments is not None:
                 old = self._read_note(connection, note_id)
                 previous = next(r for r in old.recordings if r.recording_id == recording_id)
                 inherited = preserved_identities(previous, segments)
                 connection.execute("DELETE FROM segments WHERE recording_id = ?", (recording_id,))
                 self._insert_segments(connection, recording_id, segments)
-                self._replace_bindings(
+                replace_bindings(
                     connection,
                     note_id,
                     recording_id,
@@ -365,51 +375,6 @@ class Library:
                     (binding.speaker_id, binding.confirmed, recording_id, binding.source_id),
                 )
             return self._read_note(connection, note_id)
-
-    def _replace_bindings(
-        self,
-        connection: sqlite3.Connection,
-        note_id: str,
-        recording_id: str,
-        segments: tuple[Segment, ...],
-        inherited: dict[str, str] | None = None,
-        *,
-        replacing: bool = False,
-        confirmed_people: set[str] | None = None,
-    ) -> None:
-        inherited = inherited or {}
-        has_people = bool(
-            connection.execute(
-                "SELECT 1 FROM recording_speakers b JOIN recordings r ON r.id = b.recording_id "
-                "WHERE r.note_id = ? AND r.id != ? LIMIT 1",
-                (note_id, recording_id),
-            ).fetchone()
-        )
-        connection.execute("DELETE FROM recording_speakers WHERE recording_id = ?", (recording_id,))
-        ordinal = connection.execute(
-            "SELECT COALESCE(MAX(ordinal), 0) FROM speakers WHERE note_id = ?", (note_id,)
-        ).fetchone()[0]
-        sources = dict.fromkeys(s.speaker_id for s in segments if s.speaker_id is not None)
-        for source in sources:
-            original = uuid.uuid4().hex
-            person = inherited.get(source, original)
-            ordinal += 1
-            connection.execute(
-                "INSERT INTO speakers (note_id, id, name, ordinal) VALUES (?, ?, '', ?)",
-                (note_id, original, ordinal),
-            )
-            connection.execute(
-                "INSERT INTO recording_speakers VALUES (?, ?, ?, ?, ?)",
-                (
-                    recording_id,
-                    source,
-                    person,
-                    original,
-                    (person in (confirmed_people or set()))
-                    if source in inherited
-                    else not (has_people or replacing),
-                ),
-            )
 
     def _insert_segments(
         self, connection: sqlite3.Connection, recording_id: str, segments: tuple[Segment, ...]

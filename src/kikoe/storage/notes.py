@@ -144,6 +144,7 @@ class NoteRepository:
         segments: tuple[Segment, ...] | None = None,
         provider_name: str | None = None,
         model_id: str | None = None,
+        continues: bool = False,
     ) -> Note:
         """Persist the result without adding another recording on retries."""
         return await self._change_content(
@@ -155,6 +156,7 @@ class NoteRepository:
             segments=segments,
             provider_name=provider_name,
             model_id=model_id,
+            continues=continues,
         )
 
     async def _change_summaries[**P, R](

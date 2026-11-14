@@ -20,6 +20,7 @@ from kikoe.core.models import (
     TranscriptionState,
 )
 from kikoe.core.recording import CaptureProgress
+from kikoe.core.speakers import speaker_numbers, unresolved_recordings
 from kikoe.core.transcription import LiveSnapshot, LiveState, RealtimeProfile, TranscriptEvent
 from kikoe.core.upload import UploadLimits
 from kikoe.media import transcode
@@ -90,16 +91,20 @@ class BatchClient:
 
 
 class LiveSession:
-    def __init__(self) -> None:
+    def __init__(self, speakers: bool = False) -> None:
         self.queue: asyncio.Queue[TranscriptEvent] = asyncio.Queue()
         self.processed = asyncio.Event()
         self.count = 0
+        self.speakers = speakers
 
     async def send(self, pcm: bytes) -> None:
         self.count += 1
         self.processed.clear()
+        speaker = str(self.count % 2) if self.speakers else None
         await self.queue.put(
-            TranscriptEvent(str(self.count), (Segment(f"Part {self.count}"),), True)
+            TranscriptEvent(
+                str(self.count), (Segment(f"Part {self.count}", speaker_id=speaker),), True
+            )
         )
         await self.processed.wait()
 
@@ -119,6 +124,9 @@ class LiveSession:
 
 
 class LiveClient:
+    def __init__(self, speakers: bool = False) -> None:
+        self.speakers = speakers
+
     def realtime_profile(self, model: ModelSpec) -> RealtimeProfile:
         return RealtimeProfile()
 
@@ -138,7 +146,7 @@ class LiveClient:
     async def open_realtime(
         self, model: ModelSpec, options: TranscriptionOptions
     ) -> RealtimeSession:
-        return LiveSession()
+        return LiveSession(self.speakers)
 
 
 class IdentityConverter:
@@ -390,6 +398,23 @@ async def test_live_recording_stores_final_text_and_is_not_uploaded(
     texts = [s.text for s in final.segments]
     assert texts and texts == [f"Part {n}" for n in range(1, len(texts) + 1)]
     assert screen.uploads == []
+
+
+@run_async
+async def test_live_speakers_keep_their_numbers_when_the_recording_is_saved(
+    notes: NoteRepository, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(realtime, "PCMStream", IdentityConverter)
+    screen = Screen()
+    recorder = ScriptedRecorder(chunks=3)
+    workflow = make_workflow(notes, tmp_path, screen, recorder, client=LiveClient(speakers=True))
+    await record_and_stop(notes, workflow, screen, LIVE_CHOICE)
+    final = screen.saved[-1]
+    sources = {b.source_id for b in final.recordings[0].speaker_bindings}
+    assert len(sources) == 2
+    assert sorted(speaker_numbers(final).values()) == [1, 2]
+    assert len(final.speakers) == 2
+    assert unresolved_recordings(final) == ()
 
 
 class ExplodingLive:

@@ -171,7 +171,7 @@ class RecordingWorkflow:
                 else TranscriptionState.FAILED
             )
             saved = await self._notes.update_transcription(
-                saved.note_id, recording_id, state, segments=self.live.segments
+                saved.note_id, recording_id, state, segments=self.live.segments, continues=True
             )
             self._callbacks.saved(saved)
         elif error is None and not self._is_closing():

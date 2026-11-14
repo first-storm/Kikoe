@@ -84,6 +84,7 @@ The database modules have separate responsibilities:
 | `storage.schema` | `SCHEMA_VERSION` and ordered migrations |
 | `storage.library` | Queries and writes |
 | `storage.note_rows` | Converting database rows to domain objects |
+| `storage.speaker_bindings` | Binding a recording's speaker labels to note speakers |
 | `storage.audio_files` | Copying and removing retained audio |
 | `storage.errors` | `LibraryError` and `NoteNotFoundError` |
 | `storage.notes` | Async repository, cached sidebar summaries and typed change notifications |
@@ -490,6 +491,10 @@ preservation requires valid timed speech: at least 80% of a new label's speech
 must overlap an old person, with a strictly better score at least twice the
 runner-up. Missing or invalid times require manual matching. Preserving an
 unconfirmed identity does not confirm it.
+
+Finishing a live recording is not a re-transcription: its final text extends the
+last checkpoint with the same labels, so existing bindings stay and only labels
+first heard after the checkpoint are bound, as on a first save.
 
 `media.player` uses sounddevice `RawOutputStream` at the selected device's native
 rate. `media.ffmpeg.decode_audio` supplies bounded mono int16 blocks and drains
