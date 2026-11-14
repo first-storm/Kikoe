@@ -135,7 +135,9 @@ def test_closing_the_worker_lets_the_engine_stop_its_helpers() -> None:
     assert adapter.closed
 
 
-def test_an_engine_failing_to_close_does_not_stop_the_worker_exiting() -> None:
+def test_an_engine_failing_to_close_does_not_stop_the_worker_exiting(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     class Stubborn(FakeAdapter):
         def close(self) -> None:
             raise OSError("server already gone")
@@ -145,6 +147,7 @@ def test_an_engine_failing_to_close_does_not_stop_the_worker_exiting() -> None:
     worker.stop()
     worker.compute()
     worker.close()
+    assert "Could not close the engine" in caplog.text
 
 
 def test_an_engine_that_cannot_load_fails_each_request_without_crashing() -> None:
@@ -375,3 +378,69 @@ async def test_killing_a_stuck_worker_also_ends_the_helpers_it_started(
             await task
     await _eventually(lambda: not _alive(helper))
     await host.close()
+
+
+HELPER_ENGINE = textwrap.dedent(
+    """
+    import subprocess, sys
+    from pathlib import Path
+
+    class HelperAdapter:
+        def __init__(self, folder):
+            self.folder = folder
+            self.helper = None
+
+        def handle(self, op, args, emit):
+            self.helper = subprocess.Popen(
+                [sys.executable, "-c", "import time; time.sleep(60)"],
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            (self.folder / "helper.pid").write_text(str(self.helper.pid))
+            return {}
+
+        def cancel(self):
+            pass
+
+        def close(self):
+            if self.helper is not None:
+                self.helper.terminate()
+                self.helper.wait()
+
+    def create(folder):
+        return HelperAdapter(Path(folder))
+    """
+)
+
+ENGINE_LAUNCHER = textwrap.dedent(
+    """
+    import sys
+    sys.path.insert(0, sys.argv.pop(1))
+    from kikoe.providers.local.engines import ENGINES
+    ENGINES["helper-engine"] = "helper_engine"
+    from kikoe.providers.local.worker_main import main
+    sys.exit(main())
+    """
+)
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="process groups are POSIX only")
+@run_async
+async def test_a_worker_closed_normally_stops_the_helpers_its_engine_started(
+    tmp_path: Path,
+) -> None:
+    package = tmp_path / "helper_engine"
+    package.mkdir()
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "adapter.py").write_text(HELPER_ENGINE, encoding="utf-8")
+    launcher = tmp_path / "launch.py"
+    launcher.write_text(ENGINE_LAUNCHER, encoding="utf-8")
+    host = WorkerHost(
+        [sys.executable, str(launcher), str(tmp_path), "helper-engine", str(tmp_path)]
+    )
+    await host.request(Op.PROBE)
+    helper = int((tmp_path / "helper.pid").read_text())
+    assert _alive(helper)
+    await host.close()
+    await _eventually(lambda: not _alive(helper))
