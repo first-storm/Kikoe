@@ -24,7 +24,10 @@ DRAIN_SECONDS = 2.0
 """How long a flush waits for the recording service to read its final event."""
 
 CLOSE_SECONDS = 1.0
-"""How long closing waits for the worker to end its stream before giving up on it."""
+"""How long closing waits for the stream to end before cancelling the request.
+
+Cancelling still waits for the worker to acknowledge, up to ``CANCEL_GRACE``.
+"""
 
 type _Item = TranscriptEvent | TranscriptionError | None
 
