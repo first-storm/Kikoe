@@ -44,6 +44,20 @@
     <control>touch</control>
   </supports>
   <releases>
+    <release version="0.3.7" date="2026-11-21">
+      <description>
+        <p>Import audio by dropping a file on the window, and fixes for local models and exports.</p>
+        <ul>
+          <li>Drop an audio or video file on a note to import it.</li>
+          <li>Keep speaker names and numbers when a live recording is saved.</li>
+          <li>Stop the speech-swift helper when Kikoe quits or switches engines.</li>
+          <li>Fix local live sessions failing when the engine is slow to finish.</li>
+          <li>Translate speaker and recording names in copied and exported text.</li>
+          <li>Show why local model settings could not be saved.</li>
+          <li>Stop repeated uploads to OpenRouter after a server error, and allow long requests.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.3.6" date="2026-11-10">
       <description>
         <p>Record what your computer plays, not just your microphone.</p>
