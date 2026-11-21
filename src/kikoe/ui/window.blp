@@ -121,6 +121,11 @@ template $KikoeWindow: Adw.ApplicationWindow {
 
         child: Adw.ToolbarView {
           bottom-bar-style: raised_border;
+          // Capture, so a file dropped over transcript text is imported, not typed in as a path.
+          DropTarget content_drop {
+            actions: copy;
+            propagation-phase: capture;
+          }
 
           styles [
             "view",

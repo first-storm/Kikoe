@@ -208,7 +208,26 @@ async def scenario(
     await settle()
     result["leaving_search_restores_the_list"] = window.notes_list.get_row_at_index(1) is not None
     await find_replace_scenario(window, notes, result)
+    await drop_scenario(window, result)
     await close_retry_scenario(window, result)
+
+
+async def drop_scenario(window: Window, result: dict[str, object]) -> None:
+    """Refused drops must not start an import; a real drag cannot be simulated here."""
+    transcribe = window._transcribe  # pyright: ignore[reportPrivateUsage]  # the drop handler's target
+    work = window._work  # pyright: ignore[reportPrivateUsage]  # where a started import shows
+    stage = work.stage
+    window.set_action_enabled("import-audio", True)
+    transcribe.import_dropped([Path("a.mp3"), Path("b.mp3")])
+    transcribe.import_dropped([Path("notes.txt")])
+    transcribe.import_dropped([Path(tempfile.gettempdir())])
+    await settle()
+    result["a_refused_drop_starts_no_import"] = work.import_task is None and work.stage is stage
+    window.set_action_enabled("import-audio", False)
+    transcribe.import_dropped([Path("a.mp3")])
+    await settle()
+    result["a_drop_is_refused_while_import_is_unavailable"] = work.import_task is None
+    window.refresh_actions()
 
 
 async def find_replace_scenario(

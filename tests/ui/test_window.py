@@ -87,3 +87,11 @@ def test_sidebar_behavior(outcome: dict[str, object], check: str) -> None:
 )
 def test_find_and_replace_behavior(outcome: dict[str, object], check: str) -> None:
     assert outcome.get(check) is True
+
+
+@pytest.mark.parametrize(
+    "check",
+    ["a_refused_drop_starts_no_import", "a_drop_is_refused_while_import_is_unavailable"],
+)
+def test_dropped_files(outcome: dict[str, object], check: str) -> None:
+    assert outcome.get(check) is True

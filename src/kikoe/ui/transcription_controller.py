@@ -2,14 +2,16 @@
 
 import asyncio
 import logging
+from collections.abc import Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from gi.repository import Adw, Gio, GLib
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
 from kikoe.core.activity import Stage
 from kikoe.core.choice import ModelChoice, RequestedFeatures, available_models
+from kikoe.core.drop import DropRejection, dropped_audio
 from kikoe.core.models import Recording, RecordingSource, TranscriptionState
 from kikoe.i18n import _
 from kikoe.providers.base import TranscriptionOptions
@@ -24,7 +26,7 @@ from kikoe.storage.providers import ProviderRepository
 from kikoe.ui.bottom_bar import BottomBar
 from kikoe.ui.file_dialogs import pick_audio_file
 from kikoe.ui.file_transcription import FileTranscriptionDisplay
-from kikoe.ui.labels import stage_label
+from kikoe.ui.labels import drop_rejection_message, stage_label
 from kikoe.ui.note_view import NoteView
 from kikoe.ui.retranscribe_dialog import RetranscribeDialog
 from kikoe.ui.speaker_controller import SpeakerController
@@ -57,6 +59,7 @@ class TranscriptionController:
         speakers: SpeakerController,
         note_view: NoteView,
         clients: ClientFactory,
+        drop_target: Gtk.DropTarget,
     ) -> None:
         self._window = window
         self._host = host
@@ -69,6 +72,9 @@ class TranscriptionController:
         self._workflow = FileTranscriptionWorkflow(providers, notes, clients)
         self.display = FileTranscriptionDisplay(note_view)
         """The preview of the transcription in progress, if any."""
+        # Blueprint cannot write the content formats a drop target accepts.
+        drop_target.set_gtypes([Gdk.FileList])
+        drop_target.connect("drop", self._on_drop)
 
     def transcription_options(self, features: RequestedFeatures) -> TranscriptionOptions:
         """Capture the current language with the entry point's selected features."""
@@ -92,12 +98,38 @@ class TranscriptionController:
         self._host.set_stage(Stage.CANCELLING)
         task.cancel()
 
+    def _on_drop(self, _target: Gtk.DropTarget, files: Gdk.FileList, _x: float, _y: float) -> bool:
+        paths = [Path(path) if (path := file.get_path()) else None for file in files.get_files()]
+        self.import_dropped(paths)
+        return True
+
+    def import_dropped(self, paths: Sequence[Path | None]) -> None:
+        """Import the file dropped on the window, or say why it cannot be imported."""
+        if not self._window.get_action_enabled("import-audio"):
+            self._host.toast(_("Audio cannot be imported right now."))
+            return
+        match dropped_audio(paths):
+            case DropRejection() as rejection:
+                self._host.toast(drop_rejection_message(rejection))
+            case path:
+                run_task(self._import_dropped(path), self._window)
+
+    async def _import_dropped(self, path: Path) -> None:
+        # A folder has no extension to judge it by, and ffmpeg's complaint about one is obscure.
+        if not await asyncio.to_thread(path.is_file):
+            self._host.toast(drop_rejection_message(DropRejection.NOT_MEDIA))
+            return
+        await self._import_path(path)
+
     async def _pick_and_import(self) -> None:
         path = await pick_audio_file(self._window)
+        if path is not None:
+            await self._import_path(path)
+
+    async def _import_path(self, path: Path) -> None:
         choice = self._bottom_bar.choice
         if (
-            path is None
-            or choice is None
+            choice is None
             or self._work.import_task is not None
             or self._work.recording_task is not None
         ):

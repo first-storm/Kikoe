@@ -6,6 +6,7 @@ from gi.repository import GLib
 
 from kikoe.core.activity import Stage
 from kikoe.core.choice import ModelChoice, unsupported_features
+from kikoe.core.drop import DropRejection
 from kikoe.core.export import ExportFormat, ExportLabels
 from kikoe.core.formatting import RelativeDay, format_duration, relative_day
 from kikoe.core.models import (
@@ -230,6 +231,16 @@ def stage_label(stage: Stage, part: int = 1, parts: int = 1) -> str:
             return _("Cancelling…")
         case Stage.RECOVERING:
             return _("Recovering recordings…")
+
+
+def drop_rejection_message(rejection: DropRejection) -> str:
+    match rejection:
+        case DropRejection.SEVERAL:
+            return _("Drop one file at a time.")
+        case DropRejection.NOT_LOCAL:
+            return _("Only files on this computer can be imported.")
+        case DropRejection.NOT_MEDIA:
+            return _("Only audio and video files can be imported.")
 
 
 def unsupported_option_subtitle() -> str:

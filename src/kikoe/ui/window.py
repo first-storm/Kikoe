@@ -67,6 +67,7 @@ class Window(Adw.ApplicationWindow):
     note_menu_button: Gtk.MenuButton = Gtk.Template.Child()
     display_options_button: Gtk.MenuButton = Gtk.Template.Child()
     content_stack: Gtk.Stack = Gtk.Template.Child()
+    content_drop: Gtk.DropTarget = Gtk.Template.Child()
     find_bar_slot: Adw.Bin = Gtk.Template.Child()
     note_view_slot: Adw.Bin = Gtk.Template.Child()
     bottom_bar_slot: Adw.Bin = Gtk.Template.Child()
@@ -159,6 +160,7 @@ class Window(Adw.ApplicationWindow):
             speakers=self._speakers,
             note_view=self.note_view,
             clients=self._clients,
+            drop_target=self.content_drop,
         )
         self._recorder = RecordingController(
             self,

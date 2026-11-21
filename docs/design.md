@@ -261,6 +261,14 @@ Progress and Cancel appear in the bottom bar; failures that need explanation use
 a dialog. Clicking Cancel immediately shows Cancelling… and disables repeated
 cancellation until resource cleanup finishes.
 
+Dropping one audio or video file on the content pane does the same as choosing it
+in Import Audio…; the sidebar takes no drops. The pane shows the stock drop
+highlight while a file is dragged over it. A drop that cannot be imported changes
+nothing and says why in a toast: several files at once, a file that is not on
+this computer, a file or folder that is not audio or video, or a moment when
+Import Audio is unavailable. A file dropped over transcript text is imported, never
+inserted as text.
+
 Models with Streaming Preview show temporary text during imports, stopped
 recording uploads, retries and re-transcription. Completed segments use normal
 text; unfinished text is dimmed with an accent-colored blinking caret. Scrolling
